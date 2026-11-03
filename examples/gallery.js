@@ -9,6 +9,7 @@ import { NOTES_EN, SECTIONS_EN } from './notes-en.js';
 import { geoGallery } from './specs-geo.js';
 import { networkGallery } from './specs-network.js';
 import { flowGallery } from './specs-flow.js';
+import { dashedGallery } from './specs-dashed.js';
 
 export { NOTES_EN, SECTIONS_EN };
 
@@ -30,6 +31,7 @@ const all = [
   ...tag(geoGallery, 'Mapas'),
   ...tag(networkGallery, 'Redes y flujos'),
   ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
+  ...dashedGallery,
 ];
 
 export const gallery = ORDER.flatMap((sec) => all.filter((e) => e.section === sec && !drop.has(e.id)));

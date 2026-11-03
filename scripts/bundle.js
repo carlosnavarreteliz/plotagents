@@ -1,6 +1,6 @@
 // Empaqueta src/ para el navegador, sin dependencias:
 //   dist/plotagents.js      → <script> que define window.plotagents (sin mapas)
-//   dist/plotagents-geo.js  → registra Chile y el mundo en window.plotagents
+//   dist/plotagents-geo.js  → registra Chile, EE. UU. y el mundo en window.plotagents
 // Cada módulo queda en su propio ámbito; los import/export se reescriben.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const GEO = ['src/geo/chile.js', 'src/geo/world.js'];
+const GEO = ['src/geo/chile.js', 'src/geo/world.js', 'src/geo/usa.js'];
 
 function build(entries, { exclude = new Set(), external = {} } = {}) {
   const mods = new Map();

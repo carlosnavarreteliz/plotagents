@@ -1,6 +1,8 @@
 // Proyecciones y trazado de GeoJSON a SVG (sin dependencias).
-// mercator (países alargados como Chile) y equalEarth (mapamundi de áreas
-// iguales, Šavrič et al. 2018). fit() ajusta una colección a un rectángulo.
+// mercator (países alargados como Chile), equalEarth (mapamundi de áreas
+// iguales, Šavrič et al. 2018) y albersUsa (EE. UU. con Alaska, Hawái y
+// Puerto Rico en recuadros, como d3.geoAlbersUsa). fit() ajusta una
+// colección a un rectángulo.
 
 const RAD = Math.PI / 180;
 
@@ -23,7 +25,43 @@ export function equalEarth() {
   };
 }
 
-export const projections = { mercator, equalEarth, 'equal-earth': equalEarth };
+/**
+ * Cónica de áreas iguales (Albers) con rotación y centro, en escala unitaria:
+ * misma fórmula que d3.geoConicEqualArea. Devuelve [x, y] con y hacia abajo.
+ */
+function conic(rot, center, [p0, p1], k = 1, [tx, ty] = [0, 0]) {
+  const sy0 = Math.sin(p0 * RAD), n = (sy0 + Math.sin(p1 * RAD)) / 2;
+  const c = 1 + sy0 * (2 * n - sy0), r0 = Math.sqrt(c) / n;
+  const raw = (lon, lat) => {
+    let l = lon + rot;
+    l = ((((l + 180) % 360) + 360) % 360) - 180;
+    const r = Math.sqrt(Math.max(0, c - 2 * n * Math.sin(lat * RAD))) / n;
+    const a = l * RAD * n;
+    return [r * Math.sin(a), r0 - r * Math.cos(a)];
+  };
+  const [cx, cy] = raw(center[0], center[1]);
+  return (lon, lat) => { const [x, y] = raw(lon, lat); return [tx + k * (x - cx), ty - k * (y - cy)]; };
+}
+
+/**
+ * EE. UU. compuesto: 48 estados contiguos en Albers y recuadros para Alaska
+ * (a 0,35×), Hawái y Puerto Rico abajo, como en d3 / d3-composite-projections.
+ * Cada punto va al recuadro de su territorio (las geometrías no cruzan).
+ */
+export function albersUsa() {
+  const lower48 = conic(96, [-96.6, 38.7], [29.5, 45.5]);
+  const alaska = conic(154, [-156, 58.5], [55, 65], 0.35, [-0.307, 0.201]);
+  const hawaii = conic(157, [-160, 19.9], [8, 18], 1, [-0.205, 0.212]);
+  const puertoRico = conic(66, [-66, 18], [8, 18], 1, [0.35, 0.224]);
+  const which = ([lon, lat]) => (lat > 50 ? 'AK' : lat < 23 && lon < -150 ? 'HI' : lon > -68.5 && lon < -64 && lat < 19.5 ? 'PR' : null);
+  const P = { AK: alaska, HI: hawaii, PR: puertoRico };
+  const f = (p) => (P[which(p)] || lower48)(p[0], p[1]);
+  f.continuous = true; // sin corte en el antimeridiano: los recuadros ya son continuos
+  f.inset = which;
+  return f;
+}
+
+export const projections = { mercator, equalEarth, 'equal-earth': equalEarth, albersUsa, 'albers-usa': albersUsa, albers: albersUsa };
 
 /** Recorre todos los anillos de una geometría. */
 export function rings(geom) {
@@ -56,6 +94,8 @@ export function fit(features, raw, [x0, y0, x1, y1], { align = 'center' } = {}) 
   const oy = y0 + (h - mh) / 2;
   const proj = (p) => { const [x, y] = raw(p); return [ox + (x - bx0) * k, oy + (y - by0) * k]; };
   proj.bounds = { x: ox, y: oy, w: mw, h: mh };
+  proj.continuous = !!raw.continuous;
+  proj.inset = raw.inset;
   proj.aspect = (by1 - by0) / (bx1 - bx0 || 1);
   return proj;
 }
@@ -78,10 +118,11 @@ const r1 = (v) => Math.round(v * 10) / 10;
  */
 export function pathD(geom, proj) {
   let d = '';
+  const cut = !proj.continuous;
   for (const ring of rings(geom)) {
     let started = false, lastLon = null, lx = null, ly = null, n = 0;
     for (const p of ring) {
-      if (lastLon !== null && Math.abs(p[0] - lastLon) > 180) started = false;
+      if (cut && lastLon !== null && Math.abs(p[0] - lastLon) > 180) started = false;
       lastLon = p[0];
       const [x, y] = proj(p);
       const X = r1(x), Y = r1(y);

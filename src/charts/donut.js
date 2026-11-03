@@ -6,7 +6,8 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, textOn } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize } from '../data.js';
-import { createFrame } from '../frame.js';
+import { createFrame, hash } from '../frame.js';
+import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
 
 const f = (n) => n.toFixed(2);
@@ -54,6 +55,13 @@ export function donut(spec, theme) {
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const colorOf = (s) => (s.other ? theme.other : hl && !hl.has(s.k) ? theme.dim : cmap.get(s.k));
   const pct = (v) => formatNumber((v / (total || 1)) * 100, (v / (total || 1)) * 100 < 10 ? 1 : 0, locale, true) + '%';
+  // Segmentos punteados: rayado del mismo color (p. ej. una parte estimada).
+  const dm = dashedMatcher(spec, data, labelF, null);
+  const isDashed = (s) => !!(dm && !s.other && dm(s.k));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const H = hatcher(theme, 'pa-d' + Math.abs(hash(String(spec.title) + theme.mode + labelF)).toString(36));
+  const paint = (s) => (isDashed(s) ? { fill: H.fill(colorOf(s)), 'data-dashed': '1', 'data-color': colorOf(s) } : { fill: colorOf(s) });
+  const tipOf = (s) => tip(s.k, `${fmt(s.v)} · ${pct(s.v)}`, isDashed(s) ? dashedLabel : '');
 
   // Modo de etiquetas
   let mode = spec.labels === false ? 'none' : spec.labels ?? 'auto';
@@ -123,7 +131,9 @@ export function donut(spec, theme) {
   }
   const sep = theme.marks?.gap ?? 2;
   for (const q of geo) {
-    body.push(el('path', { class: 'pa-m', d: arc(cx, cy, R, r0, q.a0, q.a1), fill: colorOf(q.s), stroke: theme.surface, strokeWidth: sep, strokeLinejoin: 'round', 'data-tip': tip(q.s.k, `${fmt(q.s.v)} · ${pct(q.s.v)}`) }));
+    body.push(el('path', { class: 'pa-m', d: arc(cx, cy, R, r0, q.a0, q.a1), ...paint(q.s), stroke: theme.surface, strokeWidth: sep, strokeLinejoin: 'round', 'data-tip': tipOf(q.s) }));
+    // Borde discontinuo por dentro del segmento punteado (el borde exterior separa segmentos).
+    if (isDashed(q.s)) body.push(el('path', { d: arc(cx, cy, R - sep, r0 > 0 ? r0 + sep : 0, q.a0 + sep / R, q.a1 - sep / R), fill: 'none', stroke: H.stroke(colorOf(q.s)), strokeWidth: 1.2, strokeDasharray: DASH.outline, 'pointer-events': 'none' }));
   }
 
   // Porcentajes dentro de los segmentos que tienen espacio.
@@ -132,15 +142,16 @@ export function donut(spec, theme) {
     const thick = R - r0;
     for (const q of geo) {
       const fill = colorOf(q.s);
-      const ink = textOn(fill, theme);
+      const ink = isDashed(q.s) ? theme.ink : textOn(fill, theme);
+      const halo = isDashed(q.s) ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
       const p = pct(q.s.v);
       const size = isPie ? 13 : 12;
       const chord = (q.a1 - q.a0) * rl;
       const x = cx + rl * Math.cos(q.mid), y = cy + rl * Math.sin(q.mid);
       const showName = mode === 'inside' && chord >= measure(q.s.k, 11.5) + 12 && (isPie || thick >= 40);
       if (chord >= measure(p, size, 600) + 10 && (isPie || thick >= size + 8)) {
-        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none' }));
-        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none' }));
+        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none', ...halo }));
+        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none', ...halo }));
       }
     }
   }
@@ -169,7 +180,7 @@ export function donut(spec, theme) {
       const parts = side > 0
         ? [text(lx, it.y + 4, name, { fill: strong ? theme.ink : theme.muted, fontSize: 12.5 }), text(lx + nameW + 6, it.y + 4, pct(q.s.v), { fill: theme.ink, fontSize: 12.5, fontWeight: 600 })]
         : [text(lx, it.y + 4, pct(q.s.v), { fill: theme.ink, fontSize: 12.5, fontWeight: 600, textAnchor: anchor }), text(lx - measure(pct(q.s.v), 12.5, 600) - 6, it.y + 4, name, { fill: strong ? theme.ink : theme.muted, fontSize: 12.5, textAnchor: anchor })];
-      body.push(g({ 'data-tip': tip(q.s.k, `${fmt(q.s.v)} · ${pct(q.s.v)}`) }, parts));
+      body.push(g({ 'data-tip': tipOf(q.s) }, parts));
     }
   }
 
@@ -199,18 +210,20 @@ export function donut(spec, theme) {
       const strong = !hl || hl.has(s.k);
       const parts = [
         el('rect', { x: tx, y: y - 15, width: lw, height: rowH, fill: 'transparent' }),
-        el('rect', { x: tx, y: y - 5, width: 10, height: 10, rx: 2.5, fill: colorOf(s) }),
+        isDashed(s)
+          ? el('rect', { x: tx + 0.6, y: y - 4.4, width: 8.8, height: 8.8, rx: 2, fill: H.fill(colorOf(s)), stroke: H.stroke(colorOf(s)), strokeWidth: 1.1, strokeDasharray: DASH.legend })
+          : el('rect', { x: tx, y: y - 5, width: 10, height: 10, rx: 2.5, fill: colorOf(s) }),
         text(tx + 18, y + 4.5, truncate(s.k, lw - 18 - valW - pctW - 28, 13), { fill: strong ? theme.ink : theme.muted, fontSize: 13 }),
         text(tx + lw - valW - 14, y + 4.5, pct(s.v), { fill: theme.ink, fontSize: 13, fontWeight: 600, textAnchor: 'end' }),
         text(tx + lw, y + 4.5, fmt(s.v), { fill: theme.muted, fontSize: 12.5, textAnchor: 'end' }),
       ];
-      body.push(g({ 'data-tip': tip(s.k, `${fmt(s.v)} · ${pct(s.v)}`) }, parts));
+      body.push(g({ 'data-tip': tipOf(s) }, parts));
     });
   }
 
   const kind = isPie ? (en ? 'Pie chart' : 'Gráfico de torta') : en ? 'Donut chart' : 'Gráfico de dona';
   const desc = `${kind} ${en ? 'of' : 'de'} ${humanize(valueF).toLowerCase()}. ` + slices.map((s) => `${s.k} ${pct(s.v)}`).join(', ') + '.';
-  return frame.finish(body, { desc, type: isPie ? 'pie' : 'donut' });
+  return frame.finish(body, { desc, type: isPie ? 'pie' : 'donut', defs: H.defs() });
 }
 
 /** Torta: dona sin agujero, con porcentajes dentro. */

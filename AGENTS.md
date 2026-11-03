@@ -35,7 +35,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Hierarchical part-to-whole | `treemap` or `sunburst` | `path: [level1, level2, …]`, `value` |
 | Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
 | Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
-| A value per region or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "world"`, `key`, `value` |
+| A value per region, state or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "usa" \| "world"`, `key`, `value` |
 | Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group` |
 | Exchanges between a few groups | `chord` | `from`, `to`, `value` |
 | Age structure | `pyramid` | `age`, `sex`, `value` |
@@ -48,6 +48,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 ## Most useful options
 
 - `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
+- `dashed` for what is not a firm number (estimates, projections, provisional figures): a name, a list, or a data field (`dashed: "provisional"`). Shapes keep their color, with a hatched fill and a dashed outline. On a time axis, `dashedFrom: 2025` dashes lines, areas and columns from that year on. **Always set `dashedLabel`** ("Projection", "Preliminary") so readers know what the hatching means.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
 - `time: "year"`: one period at a time (the latest) with % change vs the previous one; in the browser, a slider with play (`slider: false` / `play: false` to turn them off). Treemaps can be colored by change with `colorBy: "change"`.
 - `refLines: [{ y: 600, label: "Target" }]` and `annotations: [{ x: "2024-01", label: "New branch" }]`.
@@ -56,6 +57,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `theme: "noche"` or a JSON object (`{ extends, categorical, type, marks, font }`); `palette: [...]` for your own colors.
 - `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
 - `network` + `focus: "node id"`: center a node and highlight its neighbors.
+- `geo: "usa"`: states match by postal code ("TX"), English or Spanish name, or FIPS ("48"). Alaska and Hawaii are insets; Puerto Rico appears only when your data has it. In the browser, maps zoom on click, Ctrl/⌘ + scroll or pinch.
 
 ## Mistakes the library already handles
 

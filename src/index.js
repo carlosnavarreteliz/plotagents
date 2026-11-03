@@ -22,10 +22,11 @@ import { pyramid } from './charts/pyramid.js';
 import { flowchart } from './charts/flowchart.js';
 import { choropleth, symbolMap } from './charts/choropleth.js';
 import { registerGeo, getGeo, registeredGeo } from './geo/registry.js';
-// Mapas incluidos (Chile por regiones y países del mundo): listos sin importar nada más.
+// Mapas incluidos (Chile por regiones, estados de EE. UU. y países del mundo): listos sin importar nada más.
 // El bundle del navegador los separa en dist/plotagents-geo.js.
 import './geo/chile.js';
 import './geo/world.js';
+import './geo/usa.js';
 import { heatmap } from './charts/heatmap.js';
 import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';

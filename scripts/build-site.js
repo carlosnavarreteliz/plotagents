@@ -338,7 +338,7 @@ const { ok, svg, errors, suggestions } = safePlot(call.input);
 <section class="band">
   <p class="kicker">Gallery</p>
   <h2>${TYPES.length} chart types, seaborn’s included</h2>
-  <p class="sub">From bars and lines to multi-level treemaps, choropleth maps of Chile and the world, networks, chord diagrams and flow charts. seaborn names work too: <code>histplot</code>, <code>violinplot</code>, <code>lmplot</code>…</p>
+  <p class="sub">From bars and lines to multi-level treemaps, choropleth maps of Chile, the United States and the world, networks, chord diagrams and flow charts. seaborn names work too: <code>histplot</code>, <code>violinplot</code>, <code>lmplot</code>…</p>
   <div class="thumbs">
     ${thumbs.map((e) => `<a class="thumb" href="examples/#${e.id}"><span class="img">${pics(e, p)}</span><span class="t">${esc(e.name)}<small>type: '${esc(e.type)}'</small></span></a>`).join('\n    ')}
   </div>

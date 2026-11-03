@@ -90,10 +90,26 @@ export function render(target, spec, opts = {}) {
       if (n) n.animate([{ opacity: 0 }, { opacity: 0 }, { opacity: 1 }], { duration: 750, easing: 'ease-out' });
     }
   };
+  // Colores anteriores de las regiones (mapas): al mover el slider, el color
+  // de cada región transita al nuevo en vez de saltar.
+  const regionFills = () => {
+    const m = new Map();
+    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-k'), f); }
+    return m;
+  };
+  const tweenFills = (before) => {
+    if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
+    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) {
+      const old = before.get(n.getAttribute('data-k')), now = n.getAttribute('fill');
+      if (old && /^#/.test(now || '') && old.toLowerCase() !== now.toLowerCase()) n.animate([{ fill: old }, { fill: now }], { duration: 420, easing: 'ease-out' });
+    }
+  };
   const draw = () => {
     const before = nodePos();
+    const fills = regionFills();
     chart.innerHTML = plotFn({ ...state, width: width() });
     animateFrom(before);
+    tweenFills(fills);
     chart.__pa = false;
     attach(chart);
     // Red: clic en un nodo lo lleva al centro y destaca sus conexiones; otro clic (o Esc) vuelve.

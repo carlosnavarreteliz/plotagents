@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import '../src/geo/chile.js';
 import '../src/geo/world.js';
+import '../src/geo/usa.js';
 import { choropleth, symbolMap, normKey, colorScale } from '../src/charts/choropleth.js';
 import { getGeo, registerGeo, registeredGeo } from '../src/geo/registry.js';
-import { fit, mercator, equalEarth, pathD, rings } from '../src/geo/projection.js';
+import { fit, mercator, equalEarth, albersUsa, pathD, rings } from '../src/geo/projection.js';
 import { themeFor } from '../src/theme.js';
 import { geoGallery } from '../examples/specs-geo.js';
 
@@ -42,7 +43,7 @@ test('países por ISO-3, nombre en español o en inglés; sin coincidencia se re
 });
 
 test('la proyección ajustada cabe en el rectángulo', () => {
-  for (const [name, raw] of [['chile', mercator()], ['world', equalEarth()]]) {
+  for (const [name, raw] of [['chile', mercator()], ['world', equalEarth()], ['usa', albersUsa()]]) {
     const fc = getGeo(name);
     const box = [10, 20, 310, 420];
     const p = fit(fc.features, raw, box);
@@ -71,4 +72,47 @@ test('registro: GeoJSON propio y error útil', () => {
   assert.ok(registeredGeo().includes('cuadrado'));
   assert.ok(clean(choropleth({ geo: fc, data: [{ k: 'A', v: 1 }], key: 'k', value: 'v' }, themeFor({}))));
   assert.throws(() => getGeo('marte'), /Disponibles/);
+});
+
+test('EE. UU.: estados por sigla, nombre en inglés o español y FIPS; Puerto Rico solo con datos', () => {
+  const keys = ['CA', 'Texas', 'Nueva York', 'north carolina', '06', 12, 'Washington DC', 'Hawái', 'Alaska', 'US-WA'];
+  const _unmatched = [];
+  const svg = choropleth({ geo: 'usa', data: keys.map((k, i) => ({ k, v: i + 1 })), key: 'k', value: 'v', _unmatched }, themeFor({}));
+  assert.deepEqual(_unmatched, []);
+  assert.ok(clean(svg));
+  // 50 estados + DC; sin Puerto Rico porque no viene en los datos.
+  assert.equal((svg.match(/class="pa-m" d=/g) || []).length, 51);
+  const withPR = choropleth({ geo: 'usa', data: [{ k: 'PR', v: 1 }, { k: 'TX', v: 2 }], key: 'k', value: 'v' }, themeFor({}));
+  assert.equal((withPR.match(/class="pa-m" d=/g) || []).length, 52);
+  // Siglas dentro del mapa, estados chicos del noreste afuera y recuadros de Alaska y Hawái.
+  assert.match(svg, />TX</);
+  assert.match(svg, /class="pa-callouts/);
+  assert.match(svg, /class="pa-insets"/);
+  assert.match(svg, /class="pa-zoom" data-zoom="/);
+});
+
+test('albersUsa: Alaska y Hawái quedan en recuadros abajo a la izquierda', () => {
+  const p = albersUsa();
+  const [ak] = p([-150, 64]), [hi] = p([-157, 20.8]), [me] = p([-69, 45]), [wa, waY] = p([-120, 47.5]);
+  const [, akY] = p([-150, 64]);
+  assert.ok(ak < me && hi < me && akY > waY, 'Alaska debe ir abajo, no al noroeste');
+  assert.ok(wa < me);
+});
+
+test('dashed en mapas: rayado por nombre o por campo, con clave de leyenda', () => {
+  const data = [{ s: 'TX', v: 3, est: true }, { s: 'CA', v: 5, est: false }, { s: 'NY', v: 4, est: 'sí' }];
+  for (const dashed of ['est', ['Texas', 'New York'], { field: 'est' }]) {
+    const svg = choropleth({ geo: 'usa', data, key: 's', value: 'v', dashed, dashedLabel: 'Preliminar' }, themeFor({}));
+    assert.equal((svg.match(/data-dashed="1"/g) || []).length, 2, JSON.stringify(dashed));
+    assert.match(svg, /<pattern id="[^"]+-h0"/);
+    assert.match(svg, /data-color="dashed"/);
+    assert.match(svg, /Preliminar/);
+  }
+  const sym = symbolMap({ geo: 'usa', data, key: 's', value: 'v', dashed: 'est' }, themeFor({}));
+  assert.equal((sym.match(/<circle[^>]+data-dashed="1"/g) || []).length, 2);
+});
+
+test('escala divergente: extremos simétricos en la leyenda', () => {
+  const d = colorScale([-2.6, 1, 8.9], { midpoint: 0 }, themeFor({}));
+  assert.equal(d.min, -d.max);
 });

@@ -4,7 +4,7 @@
 
 **[Documentation, live examples and playground →](https://carlosnavarreteliz.github.io/plotagents/)**
 
-Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 32 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile and the world, networks, chord diagrams, population pyramids and flow charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
+Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 32 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids and flow charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
 npm install plotagents
@@ -30,7 +30,7 @@ const svg = plot({
 
 ![Columns](examples/svg/barras.svg)
 
-The [interactive gallery](https://carlosnavarreteliz.github.io/plotagents/examples/), 53 charts with the code for each one, is also in [`examples/index.html`](examples/index.html). Try any spec live in the [playground](https://carlosnavarreteliz.github.io/plotagents/playground/).
+The [interactive gallery](https://carlosnavarreteliz.github.io/plotagents/examples/), 61 charts with the code for each one, is also in [`examples/index.html`](examples/index.html). Try any spec live in the [playground](https://carlosnavarreteliz.github.io/plotagents/playground/).
 
 ## Why
 
@@ -42,6 +42,8 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
 - **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider. One solid color per category.
 - **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels and tooltip headers wear their series color.
+- **Estimates look like estimates.** `dashed` hatches the shapes that are projections or provisional figures (same color, striped fill, dashed outline) and `dashedFrom: 2025` turns lines, areas and columns dashed from that point on, over a soft labeled band. The legend says what the hatching means; hovering it lights up just those shapes.
+- **Maps you can explore.** Click a state or region to zoom to it, Ctrl/⌘ + scroll or pinch to zoom, drag to pan; +/−/reset buttons for the keyboard. Hovering outlines the shape instead of dimming the map, and each color class in the legend lights up its regions. With a time slider, colors glide from one year to the next.
 - **Networks you can explore.** Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
 - **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
 - **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
@@ -56,7 +58,7 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Profiles | `radar` (`spider`) |
 | Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
 | Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie` |
-| Maps | `choropleth` (Chile by region, world by country, any GeoJSON), `symbolmap` |
+| Maps | `choropleth` (Chile by region, US by state, world by country, any GeoJSON), `symbolmap` |
 | Networks and flows | `network`, `chord`, `sankey`, `flowchart` (with swimlanes) |
 | Populations | `pyramid` |
 | Grids | `heatmap` |
