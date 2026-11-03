@@ -1,9 +1,8 @@
 # plotagents
 
-**Gráficos bellos con una sola llamada, pensados para agentes de IA.**
-Un objeto JSON con datos y nombres de campos entra; sale un SVG accesible, con buena tipografía, colores validados para daltonismo y tooltips. 26 tipos de gráfico, incluidos los más usados de seaborn, sin dependencias. Funciona en Node, Deno, Bun y el navegador.
+**Beautiful charts from a single JSON spec, built for AI agents.**
 
-*Beautiful charts from one JSON spec, built for AI agents. 26 chart types including seaborn's (regplot, histplot, kdeplot, boxplot, violinplot…), multi-level treemaps and sunbursts, time sliders, small multiples and fully JSON-configurable themes. Zero dependencies, SVG output.*
+Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 26 chart types, including the ones people reach for in seaborn, multi-level treemaps and sunbursts, time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
 npm install plotagents
@@ -13,49 +12,50 @@ npm install plotagents
 import { plot } from 'plotagents';
 
 const svg = plot({
-  title: 'Biobío concentra el 30% de las ventas del sur',
-  subtitle: 'Ventas por región, millones de pesos, 2025',
-  source: 'datos ilustrativos',
+  title: 'Biobío accounts for 30% of southern sales',
+  subtitle: 'Sales by region, CLP millions, 2025',
+  source: 'illustrative data',
   data: [
-    { region: 'Biobío', ventas: 1240 },
-    { region: 'Araucanía', ventas: 880 },
-    { region: 'Ñuble', ventas: 610 },
+    { region: 'Biobío', sales: 1240 },
+    { region: 'Araucanía', sales: 880 },
+    { region: 'Ñuble', sales: 610 },
   ],
   x: 'region',
-  y: 'ventas',
+  y: 'sales',
+  locale: 'en',
 });
 ```
 
-![Columnas](examples/svg/barras.svg)
+![Columns](examples/svg/barras.svg)
 
-La galería interactiva con 42 gráficos y el código de cada uno está en [`examples/index.html`](examples/index.html).
+The interactive gallery, 41 charts with the code for each one, lives in [`examples/index.html`](examples/index.html).
 
-## Por qué
+## Why
 
-Los agentes producen buenos datos y malos gráficos: dobles ejes, tortas de 12 colores, títulos que no dicen nada. plotagents saca las decisiones de diseño de las manos del agente. Las reglas vienen de los cursos de visualización de datos para la gestión (Wilke, *Fundamentals of Data Visualization*; datavizcatalogue; el Atlas de Complejidad Económica) y están escritas en el código:
+Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that say nothing. plotagents takes design decisions out of the agent's hands. The rules come from data-visualization teaching for management (Wilke's *Fundamentals of Data Visualization*, the Data Viz Catalogue, the Atlas of Economic Complexity) and are written into the code:
 
-- **El título es un hecho.** `lint` lo sugiere y `describe` genera el texto alternativo.
-- **Un eje.** No hay doble eje; `index: true` lleva series de escalas distintas a base 100, y `facet` hace paneles con la misma escala.
-- **Etiquetas al final de cada línea**, siempre. Si chocan, se separan y una línea guía las une con su punto; la leyenda solo aparece si hace falta.
-- **Todo el ancho para los datos.** El eje y va por dentro, sobre su línea de grilla; barras horizontales, heatmap y KPI calculan su alto.
-- **Color por identidad, en orden fijo.** Ocho colores validados para daltonismo; desde la novena serie, gris "Otros".
-- **Marcas finas, grilla recesiva.** Extremos de 4 px de radio, líneas de 2,25 px, separación de 2 px entre segmentos, sin bordes.
-- **Formato chileno por defecto.** `1.234,5`, `56,1%`, `$18.500`, `1.250 M`. `locale: 'en'` para inglés.
+- **The title states the finding.** `lint` nudges toward it and `describe` writes the alt text.
+- **One axis.** There is no dual axis; `index: true` rebases series to 100 and `facet` draws panels on a shared scale.
+- **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
+- **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
+- **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider.
+- **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
+- **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
 
-## Tipos
+## Chart types
 
-| Para | `type` (alias) |
+| Purpose | `type` (aliases) |
 |---|---|
-| Comparar categorías | `bar` (`barplot` con intervalo), `count` (`countplot`) |
-| Evolución en el tiempo | `line` (`lineplot`, con `ci` para banda de confianza), `area` |
-| Relación entre medidas | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot` |
-| Perfiles | `radar` (`spider`) |
-| Distribuciones | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
-| Partes de un todo | `treemap` (varios niveles), `sunburst`, `donut`, `pie` |
-| Grillas y flujos | `heatmap`, `sankey` |
-| Números | `kpi` |
+| Compare categories | `bar` (`barplot` with confidence intervals), `count` (`countplot`) |
+| Change over time | `line` (`lineplot`, `ci` for a confidence band), `area` |
+| Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot` |
+| Profiles | `radar` (`spider`) |
+| Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
+| Part-to-whole | `treemap` (any depth), `sunburst`, `donut`, `pie` |
+| Grids and flows | `heatmap`, `sankey` |
+| Numbers | `kpi` |
 
-Si no indicas `type`, se infiere: fechas → `line`, dos medidas → `scatter`, `source`/`target` → `sankey`, `path` → `treemap`, categorías → `bar`.
+Leave `type` out and it is inferred: dates → `line`, two measures → `scatter`, `source`/`target` → `sankey`, `path` → `treemap`, categories → `bar`. Every option is documented in [`docs/charts.md`](docs/charts.md).
 
 | | | |
 |---|---|---|
@@ -63,35 +63,35 @@ Si no indicas `type`, se infiere: fechas → `line`, dos medidas → `scatter`, 
 | ![](examples/svg/violin.svg) | ![](examples/svg/sunburst.svg) | ![](examples/svg/histograma.svg) |
 | ![](examples/svg/radar.svg) | ![](examples/svg/sankey.svg) | ![](examples/svg/conjunto.svg) |
 
-## Tiempo, paneles y niveles
+## Time, panels and drill-down
 
 ```js
-// Slider por periodo con botón de reproducir (estilo d3plus): un año a la vez.
-plot({ type: 'treemap', data, path: ['sector', 'producto'], value: 'valor', time: 'año' });
+// One period at a time with a slider and a play button (d3plus-style `time`).
+plot({ type: 'treemap', data, path: ['sector', 'product'], value: 'value', time: 'year' });
 
-// Series de tiempo: en el navegador aparece un slider de rango con vista general.
-render('#grafico', { type: 'line', data, x: 'mes', y: 'ventas', series: 'region' });
+// Time series: in the browser, render() adds a range slider with an overview.
+render('#chart', { type: 'line', data, x: 'month', y: 'sales', series: 'region' });
 
-// Small multiples (col / col_wrap de seaborn), con escala y colores compartidos.
-plot({ type: 'area', data, x: 'mes', y: 'ventas', facet: 'region', columns: 3 });
+// Small multiples (seaborn's col / col_wrap) with shared scales and colors.
+plot({ type: 'area', data, x: 'month', y: 'sales', facet: 'region', columns: 3 });
 
-// Treemap y sunburst de cualquier profundidad; clic para entrar a un nivel.
-plot({ type: 'sunburst', data, path: ['area', 'unidad', 'item'], value: 'monto', focus: ['Docencia'] });
+// Treemaps and sunbursts of any depth; click a group to drill down.
+plot({ type: 'sunburst', data, path: ['area', 'unit', 'item'], value: 'amount', focus: ['Teaching'] });
 
-// Escala logarítmica con marcas 1-2-5.
-plot({ type: 'line', data, x: 'mes', y: 'usuarios', series: 'plataforma', yScale: 'log' });
+// Log scales with 1-2-5 ticks and no empty decades.
+plot({ type: 'line', data, x: 'month', y: 'users', series: 'platform', yScale: 'log' });
 ```
 
-## Tema 100% JSON
+## Themes are JSON
 
-Todo se configura con un objeto JSON que se fusiona sobre un tema base. Así un agente puede ajustar marca, tipografía y marcas sin tocar código:
+Everything visual is a JSON object merged over a base theme, so an agent can apply a brand without touching code. See [`docs/themes.md`](docs/themes.md).
 
 ```js
 plot({
   ...spec,
   theme: {
-    extends: 'papel',                // o 'noche' (oscuro)
-    categorical: 'okabe-ito',        // nombre de paleta o lista de colores en orden fijo
+    extends: 'papel',              // or 'noche' (dark)
+    categorical: 'okabe-ito',      // palette name or a list of colors in fixed order
     surface: '#FFFFFF',
     font: { family: "'Poppins', sans-serif" },
     type: { title: 22, titleWeight: 700 },
@@ -101,16 +101,17 @@ plot({
 });
 ```
 
-| Clave | Contiene |
-|---|---|
-| colores | `surface`, `ink`, `lede`, `muted`, `grid`, `axis`, `tint`, `dim`, `other`, `status` |
-| `categorical`, `sequential`, `diverging` | listas de colores o nombres: `cdia`, `okabe-ito`, `tableau10`, `udec`; `indigo`, `magenta`, `teal`, `amber` |
-| `font` | `family`, `mono`, `import` (URL de Google Fonts) |
-| `type` | `title`, `subtitle`, `label`, `axis`, `legend`, `source`, `titleWeight` |
-| `marks` | `barRadius`, `barMax`, `lineWidth`, `pointRadius`, `gap`, `ring`, `areaOpacity`, `bandOpacity`, `dotOpacity` |
-| `axes`, `layout` | `inside` (eje y por dentro), `padding` |
+`validatePalette(colors)` checks a custom palette with the same tests the built-in one passed (lightness band, chroma floor, colorblind separation, normal-vision separation), and `lint` runs it for you.
 
-Atajos: `palette: [...]` y `ramp: 'teal'`. `validatePalette(colores)` revisa una paleta propia con los mismos criterios que la de fábrica (luminosidad, croma, separación bajo daltonismo y con visión normal), y `lint` la revisa sola.
+## SVG, not Canvas
+
+plotagents renders SVG. Dense charts (more than 1,500 points) are drawn automatically as one path per color, with a nearest-point tooltip layer, which paints faster than Canvas while keeping vector output, server-side rendering and accessible text. The benchmark and the reasoning are in [`docs/rendering.md`](docs/rendering.md).
+
+| Points | SVG, one node per point | Canvas | plotagents (batched SVG) |
+|---|---|---|---|
+| 5,000 | 62 ms | 30 ms | 12 ms |
+| 20,000 | 671 ms | 100 ms | 38 ms |
+| 50,000 | 1,468 ms | 357 ms | 123 ms |
 
 ## API
 
@@ -118,22 +119,20 @@ Atajos: `palette: [...]` y `ramp: 'teal'`. `validatePalette(colores)` revisa una
 import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition, validatePalette } from 'plotagents';
 ```
 
-| Función | Devuelve |
+| Function | Returns |
 |---|---|
-| `plot(spec)` | SVG (string). Lanza `PlotError` con una pista de corrección. |
-| `safePlot(spec)` | `{ ok, svg, description, errors, warnings, suggestions }`. Nunca lanza. |
-| `lint(spec)` | Revisión del spec sin dibujar: errores y sugerencias de diseño. |
-| `describe(spec)` | Texto alternativo ("Mayor: Biobío con 1.240 (30%)…"). |
-| `render(el, spec)` | Navegador: tooltips, ancho adaptable, slider temporal y navegación por niveles. |
-| `toHTML(specs)` | Página HTML autónoma, interactiva, en un solo archivo. |
-| `schema` / `toolDefinition({ flavor })` | JSON Schema del spec y definición de herramienta para Claude (`anthropic`) u OpenAI (`openai`). |
-| `validatePalette(colores, opts)` | `{ ok, checks }`. |
+| `plot(spec)` | SVG string. Throws `PlotError` with a fix hint. |
+| `safePlot(spec)` | `{ ok, svg, description, errors, warnings, suggestions }`. Never throws. |
+| `lint(spec)` | Review of the spec without drawing: errors and design suggestions. |
+| `describe(spec)` | Alt text ("Highest: Biobío with 1,240 (30%)…"). |
+| `render(el, spec)` | Browser: tooltips, responsive width, time sliders and drill-down. |
+| `toHTML(specs)` | A self-contained, interactive HTML page in one file. |
+| `schema` / `toolDefinition({ flavor })` | JSON Schema of the spec and a tool definition for Claude (`anthropic`) or OpenAI (`openai`). |
+| `validatePalette(colors, opts)` | `{ ok, checks }`. |
 
-En el navegador sin bundler: `<script src="dist/plotagents.js"></script>` define `window.plotagents`.
+In the browser without a bundler, `<script src="dist/plotagents.js"></script>` defines `window.plotagents`. Full types are in [`index.d.ts`](index.d.ts) and every option in [`schema.json`](schema.json).
 
-Los tipos completos y todas las opciones están en [`index.d.ts`](index.d.ts) y [`schema.json`](schema.json).
-
-## Como herramienta de un agente
+## As an agent tool
 
 ```js
 import Anthropic from '@anthropic-ai/sdk';
@@ -141,42 +140,42 @@ import { safePlot, toolDefinition } from 'plotagents';
 
 const client = new Anthropic();
 const res = await client.messages.create({
-  model: process.env.ANTHROPIC_MODEL, // el modelo que uses
+  model: process.env.ANTHROPIC_MODEL, // the model you use
   max_tokens: 4096,
   tools: [toolDefinition()],
-  messages: [{ role: 'user', content: 'Grafica la distribución de tiempos de atención por centro: …' }],
+  messages: [{ role: 'user', content: 'Plot the distribution of service times per clinic: …' }],
 });
 const call = res.content.find((b) => b.type === 'tool_use');
 const { ok, svg, errors, suggestions } = safePlot(call.input);
-// Si !ok, devuelve `errors` al modelo como tool_result: cada error trae su `fix`.
+// If !ok, send `errors` back as the tool_result: every error carries a `fix`.
 ```
 
-[`AGENTS.md`](AGENTS.md) es una guía corta para pegar en el prompt de sistema de un agente.
+[`AGENTS.md`](AGENTS.md) is a short guide meant to be pasted into an agent's system prompt.
 
 ## CLI
 
 ```bash
-npx plotagents spec.json -o grafico.svg      # SVG
-npx plotagents specs.json -o reporte.html    # varios gráficos interactivos en una página
-npx plotagents spec.json --lint              # revisión y sugerencias
-npx plotagents --tool                        # definición de herramienta
+npx plotagents spec.json -o chart.svg       # SVG
+npx plotagents specs.json -o report.html    # several interactive charts on one page
+npx plotagents spec.json --lint             # review and suggestions
+npx plotagents --tool                       # tool definition
 ```
 
-## Paleta de fábrica
+## Built-in palette
 
-| Tema | Fondo | Categórica (orden fijo) |
+| Theme | Surface | Categorical (fixed order) |
 |---|---|---|
 | `papel` | `#FCFBF9` | `#3A47B8` `#D42A5E` `#E8A33D` `#1E9C89` `#7B5CD6` `#B5562E` `#5BA3E0` `#8E9A2F` |
 | `noche` | `#0B0F2B` | `#6170E0` `#E63369` `#C4851C` `#22A892` `#9780E8` `#D06A3E` `#499BDA` `#909D2D` |
 
-Ambas pasan las comprobaciones de banda de luminosidad, croma mínimo, separación bajo daltonismo entre vecinos (ΔE OKLab ≥ 8) y separación con visión normal (≥ 15). El orden es parte de la validación. Tipografía: Mozilla Text, con respaldo `system-ui`.
+Both pass the lightness, chroma, colorblind (adjacent ΔE OKLab ≥ 8) and normal-vision (≥ 15) checks. The order is part of the validation. Typeface: Mozilla Text, falling back to `system-ui`.
 
-## Desarrollo
+## Development
 
 ```bash
-npm test                 # pruebas (node:test)
-npm run build            # dist/plotagents.js para el navegador
-npm run examples         # regenera examples/svg y examples/index.html
+npm test                 # tests (node:test)
+npm run build            # dist/plotagents.js for the browser
+npm run examples         # regenerates examples/svg and examples/index.html
 ```
 
 MIT © Carlos Navarrete

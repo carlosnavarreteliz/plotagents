@@ -11,6 +11,7 @@ import { statsGallery } from './specs-stats.js';
 import { catGallery } from './specs-cat.js';
 import { partsGallery } from './specs-parts.js';
 import { moreGallery } from './specs-more.js';
+import { NOTES_EN, SECTIONS_EN } from './notes-en.js';
 
 // Galería por secciones. Orden pensado para leer de lo simple a lo avanzado.
 const SECTION = {
@@ -30,7 +31,7 @@ const all = [
 ];
 // El ejemplo de líneas original pasa a ser el del slider.
 const lineas = all.find((e) => e.id === 'lineas');
-if (lineas) lineas.note = 'Etiquetas siempre al final de cada línea; si chocan, se separan con una línea guía. En el navegador aparece un slider para acotar el periodo.';
+
 const gallery = ORDER.flatMap((sec) => all.filter((e) => e.section === sec && !drop.has(e.id)));
 const extra = all.filter((e) => !ORDER.includes(e.section));
 gallery.push(...extra);
@@ -65,15 +66,15 @@ for (const ex of gallery) {
   // Un SVG estático (tema claro) para la primera pintura; en el navegador
   // render() lo reemplaza en el tema del lector, con slider y tooltips.
   const fixedDark = ex.spec.theme === 'noche' || ex.spec.theme?.extends === 'noche';
-  const svg = plot({ ...ex.spec, width: 600 });
+  const svg = plot({ ...ex.spec, width: 640, padding: 18 });
   const report = lint(ex.spec);
   const issues = [...report.errors, ...report.warnings];
   if (issues.length) console.warn(`[${ex.id}]`, issues.map((i) => i.message).join(' | '));
   specsJSON.push({ id: ex.id, spec: ex.spec, fixed: fixedDark || (ex.spec.theme && typeof ex.spec.theme === 'object') });
   cards.push({ section: ex.section, html: `<article class="card${fixedDark ? ' always-dark' : ''}" id="${ex.id}">
-  <header><h2>${esc(ex.name)}</h2><p>${esc(ex.note).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></header>
+  <header><h2>${esc((NOTES_EN[ex.id] || [ex.name])[0])}</h2><p>${esc((NOTES_EN[ex.id] || [, ex.note])[1]).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></header>
   <figure class="pa" data-id="${ex.id}">${svg}</figure>
-  <details><summary>Ver código</summary><pre><code>${esc(snippet(ex.spec))}</code></pre></details>
+  <details><summary>Show code</summary><pre><code>${esc(snippet(ex.spec))}</code></pre></details>
 </article>` });
 }
 
@@ -109,12 +110,13 @@ nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 nav a{font-size:13px;color:var(--lede);text-decoration:none;background:var(--chip);padding:6px 10px;border-radius:999px}
 nav a:hover,nav a:focus-visible{color:var(--ink);background:var(--tint);outline:none}
 main{padding-block:4px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:20px}
-.card{background:var(--card);border-radius:16px;padding:20px 20px 10px;min-width:0;color:var(--ink)}
+.card{--cp:18px;background:var(--card);border-radius:16px;padding:var(--cp) var(--cp) 8px;min-width:0;color:var(--ink);overflow:hidden}
+@media (max-width:520px){.card{--cp:12px;border-radius:12px}.wrap{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}}
 .card.always-dark{background:var(--dark-card);color:var(--dark-ink);--lede:var(--dark-lede);--tint:var(--dark-tint);--accent:var(--dark-accent);--ink:var(--dark-ink)}
 .card header h2{font-size:13px;font-weight:600;letter-spacing:.02em;margin:0 0 4px;color:var(--accent)}
 .card header p{font-size:14px;line-height:1.45;color:var(--lede);margin:0 0 6px;max-width:70ch}
 .card code{font-family:var(--mono);font-size:.92em}
-figure.pa{margin:0 -4px}
+figure.pa{margin:4px calc(-1 * var(--cp)) 0}
 figure.pa svg{width:100%;height:auto;display:block}
 details{margin-top:4px}
 summary{cursor:pointer;font-size:13px;color:var(--src);padding:6px 0}
@@ -130,15 +132,15 @@ footer{padding-block:0 48px;color:var(--src);font-size:13px}
 const content = `<div class="wrap">
 <section class="top">
   <h1>plot<b>agents</b></h1>
-  <p>Gráficos bellos con una sola llamada. Un objeto JSON con datos y nombres de campos entra; sale un SVG accesible, con buena tipografía, colores validados para daltonismo y tooltips. Diseñado para que un agente de IA lo use sin pensar en diseño.</p>
+  <p>Beautiful charts from one JSON spec. Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. Built so an AI agent can chart anything without thinking about design: 26 chart types, seaborn's included, time sliders, small multiples and JSON themes.</p>
   <span class="install">npm install plotagents</span>
-  <nav>${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<a href="#sec-${slug(sec)}">${esc(sec)}</a>`).join('')}</nav>
+  <nav>${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<a href="#sec-${slug(sec)}">${esc(SECTIONS_EN[sec] || sec)}</a>`).join('')}</nav>
 </section>
-${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<section class="sec" id="sec-${slug(sec)}"><h2 class="sec-t">${esc(sec)} <span>${cards.filter((c) => c.section === sec).length}</span></h2>
+${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<section class="sec" id="sec-${slug(sec)}"><h2 class="sec-t">${esc(SECTIONS_EN[sec] || sec)} <span>${cards.filter((c) => c.section === sec).length}</span></h2>
 <main>
 ${cards.filter((c) => c.section === sec).map((c) => c.html).join('\n')}
 </main></section>`).join('\n')}
-<footer>Todos los datos de esta galería son ilustrativos. Pasa el mouse sobre los gráficos para ver los valores, usa los sliders de tiempo y haz clic en el treemap o el sunburst para entrar a un nivel. La página sigue el modo claro u oscuro de tu sistema.</footer>
+<footer>All data in this gallery is illustrative. Chart text uses the default Spanish (Chile) locale; set <code>locale: "en"</code> for English formats. Hover for values, drag the time sliders, and click a treemap or sunburst group to drill down. The page follows your system's light or dark mode.</footer>
 </div>
 <script>${bundleSource().replace(/<\/(script)/gi, '<\\/$1')}</script>
 <script type="application/json" id="pa-specs">${JSON.stringify(specsJSON).replace(/</g, '\\u003c')}</script>
@@ -160,6 +162,8 @@ ${cards.filter((c) => c.section === sec).map((c) => c.html).join('\n')}
       if (!fig) return;
       var s = Object.assign({}, e.spec);
       if (!e.fixed) s.theme = dark ? 'noche' : 'papel';
+      // El margen del gráfico es el mismo de la tarjeta: texto alineado y todo el ancho para los datos.
+      if (s.padding === undefined) s.padding = window.innerWidth <= 520 ? 12 : 18;
       if (handles[e.id]) handles[e.id].destroy();
       handles[e.id] = plotagents.render(fig, s);
     });
@@ -171,7 +175,7 @@ ${cards.filter((c) => c.section === sec).map((c) => c.html).join('\n')}
 </script>`;
 
 const html = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 ${head}
 </head>
 <body>

@@ -1,16 +1,18 @@
-// JSON Schema del spec: para definir plotagents como herramienta (tool use)
-// de un agente, o para validar la salida estructurada de un LLM.
+// JSON Schema of the spec: use it to declare plotagents as an agent tool, or
+// to validate an LLM's structured output. Descriptions are in English because
+// agents read them; chart text follows `locale`.
 import { TYPES, ALIASES } from './infer.js';
 
 const field = (d) => ({ type: 'string', description: d });
 const fieldOrList = (d) => ({ anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }], description: d });
+const strOrList = { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] };
 
 export const schema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: 'https://unpkg.com/plotagents/schema.json',
   title: 'plotagents spec',
   description:
-    'Especificación declarativa de un gráfico. Datos en formato de filas (tidy) y nombres de campos para cada rol. Todo lo demás tiene valores por defecto bien diseñados.',
+    'Declarative chart spec. Data as rows (tidy) plus the field name for each role. Everything else has well-designed defaults.',
   type: 'object',
   required: ['data'],
   properties: {
@@ -18,119 +20,133 @@ export const schema = {
       type: 'string',
       enum: ['auto', ...TYPES, ...Object.keys(ALIASES)],
       description:
-        'Comparar: bar, count. Tiempo: line, area. Relación: scatter, bubble, regplot, residplot, jointplot, radar. Distribución (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Partes de un todo: treemap, sunburst, donut, pie. Otros: heatmap, sankey, kpi. Acepta los nombres de seaborn (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (por defecto) elige según los datos.',
+        'Compare: bar, count. Time: line, area. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
-      description: 'Arreglo de filas. Ej: [{ "region": "Biobío", "ventas": 1240 }]. Para kpi puede omitirse y usar `items`.',
+      description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
       anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }],
     },
-    title: { type: 'string', description: 'El hallazgo como frase completa, idealmente con la cifra clave. Ej: "Biobío concentra el 32% de las ventas".' },
-    subtitle: { type: 'string', description: 'Cómo leer el gráfico: medida, unidad y periodo. Ej: "Ventas por región, millones de pesos, 2025".' },
-    source: { type: 'string', description: 'Fuente de los datos. Se muestra abajo a la derecha.' },
-    x: field('Campo del eje x / categorías (bar, line, area, scatter, heatmap).'),
-    y: fieldOrList('Campo de valor. En line/bar acepta una lista de campos (tabla ancha) y cada uno se vuelve una serie.'),
-    series: field('Campo que separa series (color). Alias: color.'),
-    value: field('Campo de valor para treemap, donut, heatmap y sankey.'),
-    label: field('Campo de nombre (treemap, donut, etiquetas en scatter).'),
-    group: field('Campo de grupo de primer nivel en treemap (color).'),
-    path: { type: 'array', items: { type: 'string' }, description: 'Jerarquía del treemap: [grupo, elemento].' },
-    size: field('Campo de tamaño en burbujas (área proporcional).'),
-    from: field('Campo de origen en sankey.'),
-    to: field('Campo de destino en sankey.'),
+    title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
+    subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
+    source: { type: 'string', description: 'Data source, shown at the bottom right.' },
+    locale: { type: 'string', enum: ['es', 'en'], description: 'Language and number format. Default "es" (1.234,5); use "en" for 1,234.5.' },
+    x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
+    y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
+    series: field('Field that splits the data into colored series. Alias: hue.'),
+    hue: field('Alias of series (seaborn naming).'),
+    value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
+    label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path).'),
+    path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
+    size: field('Bubble size field (area-proportional).'),
+    from: field('Sankey source field.'),
+    to: field('Sankey target field.'),
+    axis: field('radar: field with the axis names (long format).'),
+    axes: { type: 'array', items: { type: 'string' }, description: 'radar: fields to use as axes (wide format, one row per series).' },
     items: {
       type: 'array',
-      description: 'Para kpi: indicadores a mostrar.',
+      description: 'kpi: the indicators to show.',
       items: {
         type: 'object',
         required: ['label', 'value'],
         properties: {
           label: { type: 'string' },
           value: { type: 'number' },
-          delta: { type: 'number', description: 'Variación relativa como fracción (0.12 = +12%).' },
-          previous: { type: 'number', description: 'Valor anterior; si se da, la variación se calcula sola.' },
-          period: { type: 'string', description: 'Contra qué se compara. Ej: "vs 2025".' },
-          good: { type: 'string', enum: ['up', 'down'], description: 'Si subir es bueno (up) o malo (down, p. ej. costos).' },
-          trend: { type: 'array', items: { type: 'number' }, description: 'Serie corta para la línea de tendencia.' },
-          target: { type: 'number', description: 'Meta: dibuja un medidor de avance.' },
+          delta: { type: 'number', description: 'Relative change as a fraction (0.12 = +12%).' },
+          previous: { type: 'number', description: 'Previous value; when given, the change is computed.' },
+          period: { type: 'string', description: 'What it is compared against, e.g. "vs 2025".' },
+          good: { type: 'string', enum: ['up', 'down'], description: 'Whether going up is good (up) or bad (down, e.g. costs).' },
+          trend: { type: 'array', items: { type: 'number' }, description: 'Short series for the sparkline.' },
+          target: { type: 'number', description: 'Target: draws a progress meter.' },
           format: { type: 'string' },
         },
       },
     },
-    hue: field('Alias de series (nombre de seaborn).'),
-    facet: field('Un panel por cada valor de este campo (small multiples, col de seaborn). Escalas y colores compartidos.'),
-    columns: { type: 'integer', description: 'Paneles por fila en facet (col_wrap de seaborn).' },
-    sharey: { type: 'boolean', description: 'facet: misma escala y en todos los paneles (por defecto true).' },
-    time: field('Campo de tiempo (estilo d3plus): muestra un periodo a la vez (el último por defecto) y en el navegador agrega un slider con play. No aplica a line/area, que usan un slider de rango.'),
-    timeValue: { description: 'Periodo a mostrar cuando se usa `time`.' },
-    slider: { type: 'boolean', description: 'Navegador: false quita el slider temporal.' },
-    xRange: { type: 'array', description: 'line/area: rango visible del eje x [desde, hasta] (lo que mueve el slider).' },
-    xDomain: { type: 'array', items: { type: 'number' }, description: 'Dominio fijo del eje x [min, max].' },
-    yDomain: { type: 'array', items: { type: 'number' }, description: 'Dominio fijo del eje de valores [min, max].' },
-    ci: { description: 'line/bar/regplot: intervalo de confianza (true = 95, o un número). En line/bar cambia el estimador a la media.', anyOf: [{ type: 'boolean' }, { type: 'number' }] },
-    errorbar: { type: 'string', enum: ['ci', 'sd', 'se', 'pi', 'none'], description: 'Tipo de barra o banda de error.' },
-    estimator: { type: 'string', enum: ['mean', 'median', 'sum', 'count'], description: 'Cómo resumir varias observaciones por categoría.' },
-    focus: { type: 'array', items: { type: 'string' }, description: 'treemap/sunburst: ruta del nivel a mostrar, p. ej. ["Minería"]. En el navegador se navega con clic.' },
-    depth: { type: 'integer', description: 'treemap/sunburst: cuántos niveles mostrar.' },
-    half: { type: 'boolean', description: 'donut: semicírculo.' },
-    bins: { type: 'integer', description: 'hist: número de barras.' },
-    binWidth: { type: 'number', description: 'hist: ancho de cada barra.' },
-    stat: { type: 'string', enum: ['count', 'percent', 'density', 'probability'], description: 'hist: qué mide el eje y.' },
-    kde: { type: 'boolean', description: 'hist: superpone la curva de densidad.' },
-    multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde con hue: cómo combinar grupos.' },
-    fill: { type: 'boolean', description: 'kde: rellenar el área.' },
-    order: { description: 'regplot: grado del polinomio (número). box/violin/strip/swarm/point: orden de categorías (lista).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
-    lowess: { type: 'boolean', description: 'regplot: suavizado local en vez de recta.' },
-    logx: { type: 'boolean', description: 'regplot: ajusta y ~ log(x) con eje x logarítmico.' },
-    annotate: { type: 'boolean', description: 'regplot: muestra R² y n.' },
-    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: gráfico central.' },
-    marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: gráficos de los márgenes.' },
-    inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'none'], description: 'violin: qué va dentro.' },
-    split: { type: 'boolean', description: 'violin: con 2 niveles de hue, una mitad para cada uno.' },
-    points: { type: 'boolean', description: 'box: puntos encima de la caja. line: marcadores en cada punto.' },
-    axis: field('radar: campo de los ejes (formato largo).'),
-    axes: { type: 'array', items: { type: 'string' }, description: 'radar: campos a usar como ejes (formato ancho, una fila por serie).' },
-    normalize: { type: 'boolean', description: 'radar: escala cada eje 0–1 según su máximo.' },
-    palette: { description: 'Atajo de paleta: nombre ("cdia", "okabe-ito", "tableau10", "udec") o lista de colores en orden fijo.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-    ramp: { description: 'Rampa secuencial: nombre ("indigo", "magenta", "teal", "amber") o lista de colores claro → oscuro.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+
+    // Layout and interaction
+    facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
+    columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
+    sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
+    time: field('Time field (d3plus-style): shows one period at a time (the latest by default) and, in the browser, a slider with play. Not used by line/area, which get a range slider.'),
+    timeValue: { description: 'Period to show when `time` is set.' },
+    slider: { type: 'boolean', description: 'Browser: false removes the time slider.' },
+    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets).' },
+    focus: { type: 'array', items: { type: 'string' }, description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. In the browser, clicking a group does it.' },
+    depth: { type: 'integer', description: 'treemap/sunburst: how many levels to show.' },
+
+    // Scales and axes
+    xScale: { type: 'string', enum: ['linear', 'log'] },
+    yScale: { type: 'string', enum: ['linear', 'log'] },
+    xDomain: { type: 'array', items: { type: 'number' }, description: 'Fixed x domain [min, max].' },
+    yDomain: { type: 'array', items: { type: 'number' }, description: 'Fixed value-axis domain [min, max].' },
+    zero: { type: 'boolean', description: 'line: force (or prevent) a y axis starting at zero.' },
+    xLabel: { type: 'string', description: 'x-axis title.' },
+    yLabel: { type: 'string', description: 'y-axis title (drawn horizontally above the axis).' },
     format: {
-      description: 'Formato de los valores: "number" | "compact" | "percent" | "currency" | "integer", o { type, prefix, suffix, decimals, currency }.',
+      description: 'Value format: "number" | "compact" | "percent" | "currency" | "integer", or { type, prefix, suffix, decimals, currency }.',
       anyOf: [
         { type: 'string', enum: ['number', 'compact', 'percent', 'currency', 'integer'] },
         { type: 'object', properties: { type: { type: 'string' }, prefix: { type: 'string' }, suffix: { type: 'string' }, decimals: { type: 'integer' }, currency: { type: 'string' } } },
       ],
     },
-    stack: { description: 'bar/area: true apila; "percent" apila al 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
-    horizontal: { type: 'boolean', description: 'bar: fuerza barras horizontales. Por defecto se decide solo.' },
-    sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: orden de categorías (desc por defecto si no son tiempo).' },
-    top: { type: 'integer', description: 'bar: muestra las N mayores y agrupa el resto en "Otros".' },
-    highlight: { description: 'Destaca una o más categorías/series y atenúa el resto.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-    labels: { description: 'Etiquetas de valor: true, false o "auto". En scatter: número de puntos o lista de nombres a rotular.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
-    refLines: { type: 'array', description: 'Líneas de referencia (metas, promedios).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
-    annotations: { type: 'array', description: 'line/area: eventos en el eje x.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
-    index: { type: 'boolean', description: 'line: lleva cada serie a base 100 en su primer valor (compara crecimientos sin doble eje).' },
-    curve: { type: 'string', enum: ['linear', 'smooth'] },
-    zero: { type: 'boolean', description: 'line: forzar (o no) que el eje y parta en cero.' },
-    xScale: { type: 'string', enum: ['linear', 'log'] },
-    yScale: { type: 'string', enum: ['linear', 'log'] },
-    trend: { type: 'boolean', description: 'scatter: agrega recta de tendencia y R².' },
-    xLabel: { type: 'string' },
-    yLabel: { type: 'string' },
-    aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'Cómo combinar filas repetidas. Por defecto sum.' },
-    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Color fijo por entidad: { "Biobío": "#3A47B8" }.' },
+
+    // Emphasis and annotation
+    highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    labels: { description: 'Value labels: true, false or "auto". In scatter/regplot: a number of points or a list of names to label.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
+    refLines: { type: 'array', description: 'Reference lines (targets, averages).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
+    annotations: { type: 'array', description: 'line/area: events on the x axis.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
+
+    // Bars and lines
+    stack: { description: 'bar/area: true stacks; "percent" stacks to 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
+    horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
+    sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: category order (desc by default unless the categories are time).' },
+    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
+    curve: { type: 'string', enum: ['linear', 'smooth', 'step'] },
+    aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'How to combine repeated rows. Default sum.' },
+    ci: { description: 'line/bar/regplot: confidence interval (true = 95, or a number). In line/bar it switches the estimator to the mean.', anyOf: [{ type: 'boolean' }, { type: 'number' }] },
+    errorbar: { type: 'string', enum: ['ci', 'sd', 'se', 'pi', 'none'], description: 'Error bar or band type.' },
+    estimator: { type: 'string', enum: ['mean', 'median', 'sum', 'count'], description: 'How to summarize several observations per category.' },
+
+    // Statistics (seaborn)
+    bins: { type: 'integer', description: 'hist: number of bins.' },
+    binWidth: { type: 'number', description: 'hist: bin width.' },
+    stat: { type: 'string', enum: ['count', 'percent', 'density', 'probability'], description: 'hist: what the y axis measures.' },
+    kde: { type: 'boolean', description: 'hist: overlay a density curve.' },
+    multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde with hue: how groups are combined.' },
+    fill: { type: 'boolean', description: 'kde: fill the area. line: false removes the gradient under a single line.' },
+    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
+    lowess: { type: 'boolean', description: 'regplot: local regression instead of a straight line.' },
+    logx: { type: 'boolean', description: 'regplot: fit y ~ log(x) with a log x axis.' },
+    trend: { type: 'boolean', description: 'scatter: add a least-squares line and R².' },
+    annotate: { type: 'boolean', description: 'regplot: show R² and n.' },
+    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot.' },
+    marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: marginal plots.' },
+    inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'none'], description: 'violin: what goes inside.' },
+    split: { type: 'boolean', description: 'violin: with two hue levels, one half each.' },
+    points: { type: 'boolean', description: 'box: overlay the observations. line: markers on every point.' },
+    normalize: { type: 'boolean', description: 'radar: scale each axis 0–1 by its own maximum.' },
+
+    // Part-to-whole
+    half: { type: 'boolean', description: 'donut: semicircle.' },
+
+    // Appearance
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }.' },
+    palette: { description: 'Palette shortcut: a name ("cdia", "okabe-ito", "tableau10", "udec") or a list of colors in fixed order.', ...strOrList },
+    ramp: { description: 'Sequential ramp: a name ("indigo", "magenta", "teal", "amber") or a list of colors from light to dark.', ...strOrList },
     theme: {
-      description: 'Tema: "papel" (claro, por defecto), "noche" (oscuro) u objeto JSON que se fusiona sobre `extends`. Claves: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (lista o nombre de paleta), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.',
+      description: 'Theme: "papel" (light, default), "noche" (dark), or a JSON object deep-merged over `extends`. Keys: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (list or palette name), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.',
       anyOf: [{ type: 'string', enum: ['papel', 'noche', 'light', 'dark'] }, { type: 'object' }],
     },
-    locale: { type: 'string', enum: ['es', 'en'], description: 'Idioma y formato numérico. Por defecto es (1.234,5).' },
-    width: { type: 'number', description: 'Ancho en px (por defecto 720).' },
-    height: { type: 'number', description: 'Alto en px. Barras horizontales, heatmap y kpi lo calculan solos.' },
+    width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
+    height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
   },
 };
 
-/** Definición de herramienta lista para Claude (Anthropic) u OpenAI. */
+/** Tool definition ready for Claude (Anthropic) or OpenAI. */
 export function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Dibuja un gráfico estético y accesible a partir de datos tabulares. Entrega filas en `data`, indica los campos (x, y, series/hue…) y escribe un `title` que diga el hallazgo. Devuelve un SVG. Tipos: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (acepta nombres de seaborn). `facet` hace paneles; `time` agrega un slider por periodo.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

@@ -2,7 +2,7 @@
 // puntos con dispersión (strip), enjambre (swarm) y estimación con
 // intervalo (point). Categorías en un eje, valores numéricos en el otro;
 // `hue` (alias de `series`) separa grupos por color.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, dotLayer } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
@@ -293,8 +293,9 @@ export function strip(spec, theme) {
     const w = s.slot * (jitter === true ? 0.6 : jitter || 0);
     const parts = vs.map((v, i) => {
       const [x, y] = s.P(cpos + (rand(ci * 7919 + hi2 * 104729 + i) - 0.5) * w, v);
-      return el('circle', { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': tip(fmtTipLabel(c, h), s.fmt(v)) });
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': tip(fmtTipLabel(c, h), s.fmt(v)) };
     });
+    parts.splice(0, parts.length, dotLayer(parts));
     if (spec.mean || spec.showMeans) {
       const mu = mean(vs);
       parts.push(seg(s, cpos - Math.min(s.slot * 0.42, 34), mu, cpos + Math.min(s.slot * 0.42, 34), mu, { stroke: theme.ink, strokeWidth: 2.5, strokeLinecap: 'round' }));
@@ -353,8 +354,9 @@ export function swarm(spec, theme) {
       const o = Math.max(-room / 2 + r, Math.min(room / 2 - r, grp.offs[i]));
       const [x, y] = s.vertical ? [cpos + o, s.valS(it.v)] : [s.valS(it.v), cpos + o];
       const color = s.colorOf(grp.c, it.h);
-      return el('circle', { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': tip(fmtTipLabel(grp.c, it.h), s.fmt(it.v)) });
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': tip(fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
+    parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
   return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');

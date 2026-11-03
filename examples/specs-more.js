@@ -70,7 +70,7 @@ export const moreGallery = [
     section: 'Tiempo',
     name: 'Periodo con play (estilo d3plus)',
     note: '`time: "año"` muestra un año a la vez con un slider y botón de reproducir. Funciona con treemap, barras, dona, dispersión, radar y más.',
-    spec: { type: 'treemap', title: `El cobre bajó de ${shareCobre(2018)}% a ${shareCobre(2025)}% de las exportaciones`, subtitle: 'Exportaciones por sector y producto, miles de millones de US$', source: SRC, data: exportacionesAnuales, path: ['sector', 'producto'], value: 'valor', time: 'año', height: 460 },
+    spec: { type: 'treemap', title: `El cobre bajó de ${shareCobre(2018)}% a ${shareCobre(2025)}% de las exportaciones`, subtitle: 'Exportaciones por sector y producto, miles de millones de US$', source: SRC, data: exportacionesAnuales, path: ['sector', 'producto'], value: 'valor', time: 'año' },
   },
   {
     id: 'facetas',

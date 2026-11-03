@@ -1,6 +1,6 @@
 // Dispersión y burbujas: relación entre dos variables numéricas, con tamaño
 // opcional (área proporcional), escalas log y línea de tendencia.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
@@ -91,12 +91,13 @@ export function scatter(spec, theme) {
 
   // Burbujas grandes debajo, chicas arriba; anillo del color de fondo.
   const sorted = [...pts].sort((a, b) => (focus(a) - focus(b)) || b.s - a.s);
-  for (const p of sorted) {
+  const circles = sorted.map((p) => {
     const lines = [p.name || '', `${humanize(x)}: ${fx(p.x)}`, `${humanize(y)}: ${fy(p.y)}`];
     if (size) lines.push(`${humanize(size)}: ${fs(p.s)}`);
     if (series) lines.splice(1, 0, p.k);
-    body.push(el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : 2, 'data-tip': tip(...lines) }));
-  }
+    return { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : pts.length > 400 ? 1 : 2, 'data-tip': tip(...lines) };
+  });
+  body.push(dotLayer(circles));
 
   body.push(yTickLabels(yS.ticks(dy.step), yS, inner, theme, ytf));
 

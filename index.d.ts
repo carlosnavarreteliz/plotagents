@@ -1,11 +1,11 @@
-// Tipos de plotagents.
+// plotagents type declarations.
 
 export type ChartType =
   | 'auto' | 'bar' | 'column' | 'count' | 'line' | 'area' | 'scatter' | 'bubble'
   | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
-  // Alias (seaborn y otros)
+  // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider';
 
@@ -18,7 +18,7 @@ export type Format =
 export interface KpiItem {
   label: string;
   value: number;
-  /** Variación relativa como fracción (0.12 = +12%). */
+  /** Relative change as a fraction (0.12 = +12%). */
   delta?: number;
   previous?: number;
   period?: string;
@@ -49,7 +49,7 @@ export interface Theme {
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends any[] ? T[K] | string : DeepPartial<T[K]>) : T[K] };
-/** Tema JSON: se fusiona en profundidad sobre `extends` (por defecto "papel"). */
+/** JSON theme: deep-merged over `extends` (default "papel"). */
 export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (DeepPartial<Theme> & { extends?: 'papel' | 'noche' })
 
 export interface Spec {
@@ -155,20 +155,19 @@ export interface SafeResult extends Omit<LintReport, 'ok'> { ok: boolean; svg: s
 
 export declare class PlotError extends Error { hint?: string }
 
-/** Dibuja y devuelve un SVG. Lanza PlotError con pista si el spec no se puede dibujar. */
+/** Draws and returns an SVG string. Throws PlotError with a fix hint when the spec cannot be drawn. */
 export declare function plot(spec: Spec): string;
-/** Nunca lanza: devuelve SVG + errores, advertencias y sugerencias de diseño. */
+/** Never throws: returns the SVG plus errors, warnings and design suggestions. */
 export declare function safePlot(spec: Spec): SafeResult;
-/** Revisa un spec y sugiere mejoras sin dibujar. */
+/** Reviews a spec and suggests improvements without drawing. */
 export declare function lint(spec: Spec): LintReport;
-/** Descripción en texto del gráfico (también está en el <desc> del SVG). */
+/** Text description of the chart (also in the SVG <desc>). */
 export declare function describe(spec: Spec): string;
-/** Navegador: dibuja en un elemento con tooltips y ancho adaptable. */
-/** Navegador: dibuja con tooltips, ancho adaptable, slider temporal y navegación por niveles. */
+/** Browser: draws into an element with tooltips, responsive width, time sliders and drill-down. */
 export declare function render(target: string | Element, spec: Spec, opts?: { controls?: boolean }): { readonly svg: SVGSVGElement | null; readonly spec: Spec; update(spec: Spec): unknown; destroy(): void };
-/** Página HTML autónoma con uno o varios gráficos interactivos. */
+/** Self-contained HTML page with one or more interactive charts. */
 export declare function toHTML(specs: Spec | Spec[], opts?: { title?: string; lang?: string; columns?: number }): string;
-/** Agrega tooltips a un contenedor que ya tiene un SVG de plotagents. */
+/** Adds tooltips to a container that already holds a plotagents SVG. */
 export declare function attach(root: Element): void;
 export declare function resolve(spec: Spec): Spec;
 

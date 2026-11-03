@@ -56,8 +56,10 @@ export function treemap(spec, theme) {
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = findNode(root, spec.focus);
   const levels = height(focus);
-  const single = levels <= 1 && spec.colorBy !== 'label';
-  assignColors(focus, theme, spec, { single });
+  // El color sigue a la entidad: se asigna sobre el árbol completo, así al
+  // entrar a un grupo sus elementos conservan la familia de color del padre.
+  const single = height(root) <= 1 && spec.colorBy !== 'label';
+  assignColors(root, theme, spec, { single });
   const allValues = [];
   (function walk(n) { allValues.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, allValues);
@@ -67,13 +69,15 @@ export function treemap(spec, theme) {
   // Leyenda del primer nivel visible (cuando hay más de un nivel).
   const top = focus.children;
   let legend = [];
-  if (levels > 1 && top.length > 1 && spec.legend !== false) {
+  if (levels > 1 && top.length > 1 && spec.legend !== false && !focus.path.length) {
     const shown = top.filter((c) => !c.folded);
     legend = shown.map((c) => ({ label: c.name, color: c.color, shape: 'square' }));
     if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
 
-  const frame = createFrame(spec, theme, { height: 480 });
+  // En pantallas angostas el treemap crece hacia abajo: rectángulos legibles.
+  const W = spec.width || 720;
+  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(Math.min(780, W * 1.15 + 170)) : Math.round(Math.max(440, Math.min(620, W * 0.62))) });
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);

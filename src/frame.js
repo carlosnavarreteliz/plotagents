@@ -16,15 +16,19 @@ export const SIZES = {
 export function createFrame(spec, theme, defaults = {}) {
   const width = Math.max(240, +spec.width || defaults.width || 720);
   let height = Math.max(160, +spec.height || defaults.height || 420);
-  const T = { ...SIZES, ...(theme.type || {}) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 16 : theme.layout?.padding ?? 24);
+  // Responsivo: en pantallas angostas, menos margen y títulos algo menores
+  // (nunca bajo 11 px en ejes). El ancho útil es lo que más importa en móvil.
+  const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
+  const T0 = { ...SIZES, ...(theme.type || {}) };
+  const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
+  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
 
   const tw = T.titleWeight ?? 600;
-  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 2) : [];
-  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 3) : [];
+  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
+  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
   const header = [];
   const tlh = Math.round(T.title * 1.3), slh = Math.round(T.subtitle * 1.42);
   titleLines.forEach((l, i) => {

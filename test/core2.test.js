@@ -78,3 +78,32 @@ test('toHTML incluye la biblioteca para sliders y navegación', () => {
   assert.match(html, /plotagents\.render/);
   assert.ok(!/<\/script>(?![\s\S]*<\/body>)/.test(html.slice(0, 50)));
 });
+
+test('el color sigue a la entidad: entre periodos y al navegar por niveles', async () => {
+  const { exportacionesAnuales: d } = await import('../examples/specs-more.js');
+  const fillOf = (svg, name) => (new RegExp(`data-tip="${name}[^"]*"><rect[^>]*fill="(#[0-9A-F]{6})"`, 'i').exec(svg) || [])[1];
+  const base = { type: 'treemap', data: d, path: ['sector', 'producto'], value: 'valor', time: 'año' };
+  const a = fillOf(plot({ ...base, timeValue: 2018 }), 'Agro › Cerezas');
+  const b = fillOf(plot({ ...base, timeValue: 2025 }), 'Agro › Cerezas');
+  const top = fillOf(plot({ ...base, timeValue: 2025 }), 'Pesca y acuicultura › Salmón');
+  const focused = fillOf(plot({ ...base, focus: ['Pesca y acuicultura'] }), 'Pesca y acuicultura › Salmón');
+  assert.ok(a && a === b, `Agro cambió de color: ${a} → ${b}`);
+  assert.ok(top && top === focused, `Pesca cambió de color al entrar: ${top} → ${focused}`);
+});
+
+test('muchos puntos: un path por color y capa de tooltip por cercanía', () => {
+  let s = 3;
+  const u = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const data = Array.from({ length: 4000 }, () => ({ x: u(), y: u(), g: u() < 0.5 ? 'A' : 'B' }));
+  const svg = plot({ type: 'scatter', data, x: 'x', y: 'y', series: 'g' });
+  assert.ok((svg.match(/<circle/g) || []).length <= 2); // solo la leyenda
+  assert.match(svg, /class="pa-near"/);
+  assert.ok(svg.length < 600_000);
+});
+
+test('títulos largos nunca se cortan y el margen se achica en móvil', () => {
+  const title = 'Los usuarios de la aplicación móvil se multiplicaron por ciento setenta y seis en apenas cuatro años de operación';
+  const svg = plot({ data: [{ a: 'x', b: 1 }, { a: 'y', b: 2 }], title, width: 360 });
+  assert.ok(!svg.includes('…'));
+  for (const w of title.split(' ')) assert.ok(svg.includes(w));
+});

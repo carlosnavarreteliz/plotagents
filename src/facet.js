@@ -32,7 +32,10 @@ export function facet(spec, theme, renderOne) {
   const frame = createFrame({ ...spec, height: 200 }, theme, { width: 720 });
   const area = frame.layout(legend);
   const gap = spec.panelGap ?? 18;
-  const cols = Math.max(1, Math.min(keys.length, spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230))));
+  // Columnas pedidas, pero nunca paneles de menos de ~150 px (en móvil se apilan).
+  const fit = Math.max(1, Math.floor((area.w + gap) / 150));
+  const want = spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
+  const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;
   const ph = spec.panelHeight ?? Math.round(Math.min(300, Math.max(160, pw * 0.66)));
   const rows = Math.ceil(keys.length / cols);

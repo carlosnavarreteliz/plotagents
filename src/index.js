@@ -3,7 +3,7 @@
 //   import { plot } from 'plotagents';
 //   const svg = plot({ data, x: 'region', y: 'ventas', title: 'Biobío lidera las ventas' });
 //
-import { getTheme, themeFor, themes, palettes, ramps, FONT_CSS } from './theme.js';
+import { getTheme, themeFor, themes, palettes, ramps, colorMap, FONT_CSS } from './theme.js';
 import { validatePalette } from './palette.js';
 import { bar } from './charts/bar.js';
 import { line } from './charts/line.js';
@@ -114,9 +114,29 @@ function applyTime(s) {
   const vals = timeValues(s);
   if (!vals.length) return s;
   const cur = s.timeValue ?? vals[vals.length - 1];
-  const data = ensureData(s).filter((r) => String(r[s.time]) === String(cur));
+  const all = ensureData(s);
+  const data = all.filter((r) => String(r[s.time]) === String(cur));
   const label = String(cur);
-  return { ...s, data, subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals } };
+  return { ...s, data, colors: stableColors(s, all), subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals } };
+}
+
+/**
+ * Colores fijos por entidad a lo largo de TODOS los periodos: al mover el
+ * slider, "Minería" sigue siendo índigo aunque cambie su tamaño o su orden.
+ */
+function stableColors(s, all) {
+  const idf = s.series ?? s.hue ?? (Array.isArray(s.path) ? s.path[0] : null) ?? s.group ?? s.from
+    ?? (['donut', 'pie'].includes(s.type) ? s.label ?? s.x : null);
+  if (!idf || !all.length || !(idf in all[0])) return s.colors;
+  const vf = s.value ?? (typeof s.y === 'string' ? s.y : null);
+  const tot = new Map();
+  for (const r of all) {
+    const k = String(r[idf]);
+    tot.set(k, (tot.get(k) || 0) + (vf && Number.isFinite(num(r[vf])) ? Math.abs(num(r[vf])) : 1));
+  }
+  const keys = [...tot.keys()].sort((a, b) => tot.get(b) - tot.get(a));
+  const cmap = colorMap(keys, themeFor(s), s.colors);
+  return { ...Object.fromEntries(cmap), ...(s.colors || {}) };
 }
 
 /**

@@ -148,9 +148,9 @@ export function render(target, spec, opts = {}) {
     const track = document.createElement('div'); track.className = 'pa-track';
     const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
     const d = xs.map((p, k) => `${k ? 'L' : 'M'}${px(p.t).toFixed(2)},${py(tv[k]).toFixed(2)}`).join('');
-    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.18 }));
+    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.12 }));
     ov.appendChild(svgEl('path', { d, fill: 'none', stroke: theme.muted, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
-    const sel = svgEl('rect', { y: 0, height: 28, fill: theme.categorical[0], 'fill-opacity': 0.14 });
+    const sel = svgEl('rect', { y: 0, height: 28, rx: 3, fill: theme.categorical[0], 'fill-opacity': 0.08 });
     ov.appendChild(sel);
     track.appendChild(ov);
     const fmtX = (p) => (kind === 'date' ? formatDate(p.t, dateUnit(xs.map((q) => q.t)), state.locale || 'es') : String(p.v));

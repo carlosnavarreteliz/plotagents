@@ -1,6 +1,6 @@
 // Regresión al estilo seaborn: regplot / lmplot (puntos + ajuste + banda de
 // confianza), residplot (residuos) y jointplot (dispersión con marginales).
-import { el, g, text, tip, esc, barPath } from '../svg.js';
+import { el, g, text, tip, esc, barPath, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap } from '../theme.js';
@@ -117,12 +117,12 @@ export function regplot(spec, theme) {
   });
   if (spec.scatter !== false) {
     const order = [...pts].sort((a, b) => (focusKey(a.k) ? 1 : 0) - (focusKey(b.k) ? 1 : 0));
-    const dots = order.map((p) => el('circle', {
+    const dots = order.map((p) => ({
       class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: K === 1 ? (M.dotOpacity ?? 0.85) * 0.75 : M.dotOpacity ?? 0.85,
       stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25,
       'data-tip': tip(p.name || p.k || '', `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : ''),
     }));
-    body.push(g({ class: 'pa-points' }, dots));
+    body.push(g({ class: 'pa-points' }, dotLayer(dots)));
   }
   const ends = [];
   keys.forEach((k, i) => {
@@ -226,7 +226,7 @@ export function residplot(spec, theme) {
   const body = [yGrid(yAx.ticks, yS, inner, theme, { baseline: NaN })];
   const y0 = Math.round(yS(0)) + 0.5;
   body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: y0, y2: y0, stroke: theme.ink, strokeWidth: 1.25, opacity: 0.6 }));
-  body.push(g({}, res.map((p) => el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.r), r, fill: theme.categorical[0], fillOpacity: (M.dotOpacity ?? 0.85) * 0.8, stroke: theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name, `${humanize(P.x)}: ${fx(p.x)}`, `${en ? 'Residual' : 'Residuo'}: ${fy(p.r)}`) }))));
+  body.push(g({}, dotLayer(res.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.r), r, fill: theme.categorical[0], fillOpacity: (M.dotOpacity ?? 0.85) * 0.8, stroke: theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name, `${humanize(P.x)}: ${fx(p.x)}`, `${en ? 'Residual' : 'Residuo'}: ${fy(p.r)}`) })))));
   if (spec.lowess) {
     const lw = lowess(res.map((p) => p.x), res.map((p) => p.r));
     body.push(el('path', { d: lw.map(([a, b], i) => `${i ? 'L' : 'M'}${xS(a).toFixed(2)},${yS(b).toFixed(2)}`).join(''), fill: 'none', stroke: theme.categorical[1], strokeWidth: M.lineWidth ?? 2 }));
@@ -341,7 +341,7 @@ export function jointplot(spec, theme) {
       body.push(el('path', { d: L(f.line), fill: 'none', stroke: K === 1 ? theme.ink : colorOf(k), strokeWidth: M.lineWidth ?? 2, opacity: 0.9 }));
     });
   }
-  body.push(g({}, pts.map((p) => el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') }))));
+  body.push(g({}, dotLayer(pts.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') })))));
   body.push(pointLabels(pts, spec, xS, yS, r, inner, theme, P));
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(yAx.ticks, yS, inner, theme, yt));

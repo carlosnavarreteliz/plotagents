@@ -33,16 +33,17 @@ const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - 
  * Revisa una paleta categórica. Devuelve { ok, checks: [{ name, status, detail }] }.
  * status: 'pass' | 'warn' | 'fail'. `pairs: 'all'` para dispersión y mapas.
  */
-export function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent' } = {}) {
+export function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent', locale = 'es' } = {}) {
+  const en = String(locale).startsWith('en');
   const pal = colors.map(String);
   surface = surface || (mode === 'dark' ? '#0B0F2B' : '#FCFBF9');
   const checks = [];
   const [lo, hi] = BAND[mode] || BAND.light;
   const Ls = pal.map((c) => oklab(rgbLin(c)));
   const off = pal.filter((c, i) => Ls[i][0] < lo || Ls[i][0] > hi);
-  checks.push({ name: 'lightness', status: off.length ? 'fail' : 'pass', detail: off.length ? `Fuera de la banda de luminosidad ${lo}–${hi}: ${off.join(', ')}` : 'Todos dentro de la banda de luminosidad.' });
+  checks.push({ name: 'lightness', status: off.length ? 'fail' : 'pass', detail: off.length ? (en ? `Outside the lightness band ${lo}–${hi}: ` : `Fuera de la banda de luminosidad ${lo}–${hi}: `) + off.join(', ') : en ? 'All inside the lightness band.' : 'Todos dentro de la banda de luminosidad.' });
   const gray = pal.filter((c, i) => Math.hypot(Ls[i][1], Ls[i][2]) < CHROMA_FLOOR);
-  checks.push({ name: 'chroma', status: gray.length ? 'fail' : 'pass', detail: gray.length ? `Se leen como gris: ${gray.join(', ')}` : 'Todos con color suficiente.' });
+  checks.push({ name: 'chroma', status: gray.length ? 'fail' : 'pass', detail: gray.length ? (en ? 'Read as gray: ' : 'Se leen como gris: ') + gray.join(', ') : en ? 'All have enough chroma.' : 'Todos con color suficiente.' });
   const list = pairs === 'all' ? pal.flatMap((_, i) => pal.slice(i + 1).map((__, k) => [i, i + 1 + k])) : pal.slice(1).map((_, i) => [i, i + 1]);
   let worst = null, nworst = null;
   for (const [i, j] of list) {
@@ -50,9 +51,9 @@ export function validatePalette(colors, { mode = 'light', surface, pairs = 'adja
     const n = dE(pal[i], pal[j]);
     if (!nworst || n < nworst[0]) nworst = [n, pal[i], pal[j]];
   }
-  if (worst) checks.push({ name: 'cvd', status: worst[0] >= CVD_TARGET ? 'pass' : worst[0] >= CVD_FLOOR ? 'warn' : 'fail', detail: `Peor par para daltonismo (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (meta ≥ ${CVD_TARGET}).` });
-  if (nworst) checks.push({ name: 'normal', status: nworst[0] >= NORMAL_FLOOR ? 'pass' : 'fail', detail: `Peor par con visión normal: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (mínimo ${NORMAL_FLOOR}).` });
+  if (worst) checks.push({ name: 'cvd', status: worst[0] >= CVD_TARGET ? 'pass' : worst[0] >= CVD_FLOOR ? 'warn' : 'fail', detail: en ? `Worst colorblind pair (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (target ≥ ${CVD_TARGET}).` : `Peor par para daltonismo (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (meta ≥ ${CVD_TARGET}).` });
+  if (nworst) checks.push({ name: 'normal', status: nworst[0] >= NORMAL_FLOOR ? 'pass' : 'fail', detail: en ? `Worst normal-vision pair: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (minimum ${NORMAL_FLOOR}).` : `Peor par con visión normal: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (mínimo ${NORMAL_FLOOR}).` });
   const low = pal.filter((c) => contrast(c, surface) < 3);
-  checks.push({ name: 'contrast', status: low.length ? 'warn' : 'pass', detail: low.length ? `Bajo 3:1 contra el fondo (usa etiquetas visibles): ${low.join(', ')}` : 'Todos ≥ 3:1 contra el fondo.' });
+  checks.push({ name: 'contrast', status: low.length ? 'warn' : 'pass', detail: low.length ? (en ? 'Below 3:1 against the surface (use visible labels): ' : 'Bajo 3:1 contra el fondo (usa etiquetas visibles): ') + low.join(', ') : en ? 'All ≥ 3:1 against the surface.' : 'Todos ≥ 3:1 contra el fondo.' });
   return { ok: !checks.some((c) => c.status === 'fail'), checks };
 }

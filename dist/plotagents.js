@@ -1,11 +1,11 @@
-/*! plotagents 0.2.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
+/*! plotagents 0.3.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
 (function (global) {
 'use strict';
 var __defs = {}, __cache = {};
 function __def(id, fn) { __defs[id] = fn; }
 function __req(id) { if (!__cache[id]) { __cache[id] = { loading: true }; __cache[id] = __defs[id](); } return __cache[id]; }
 __def("src/index.js", function () {
-const { getTheme, themeFor, themes, palettes, ramps, FONT_CSS } = __req("src/theme.js");
+const { getTheme, themeFor, themes, palettes, ramps, colorMap, FONT_CSS } = __req("src/theme.js");
 const { validatePalette } = __req("src/palette.js");
 const { bar } = __req("src/charts/bar.js");
 const { line } = __req("src/charts/line.js");
@@ -116,9 +116,29 @@ function applyTime(s) {
   const vals = timeValues(s);
   if (!vals.length) return s;
   const cur = s.timeValue ?? vals[vals.length - 1];
-  const data = ensureData(s).filter((r) => String(r[s.time]) === String(cur));
+  const all = ensureData(s);
+  const data = all.filter((r) => String(r[s.time]) === String(cur));
   const label = String(cur);
-  return { ...s, data, subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals } };
+  return { ...s, data, colors: stableColors(s, all), subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals } };
+}
+
+/**
+ * Colores fijos por entidad a lo largo de TODOS los periodos: al mover el
+ * slider, "Minería" sigue siendo índigo aunque cambie su tamaño o su orden.
+ */
+function stableColors(s, all) {
+  const idf = s.series ?? s.hue ?? (Array.isArray(s.path) ? s.path[0] : null) ?? s.group ?? s.from
+    ?? (['donut', 'pie'].includes(s.type) ? s.label ?? s.x : null);
+  if (!idf || !all.length || !(idf in all[0])) return s.colors;
+  const vf = s.value ?? (typeof s.y === 'string' ? s.y : null);
+  const tot = new Map();
+  for (const r of all) {
+    const k = String(r[idf]);
+    tot.set(k, (tot.get(k) || 0) + (vf && Number.isFinite(num(r[vf])) ? Math.abs(num(r[vf])) : 1));
+  }
+  const keys = [...tot.keys()].sort((a, b) => tot.get(b) - tot.get(a));
+  const cmap = colorMap(keys, themeFor(s), s.colors);
+  return { ...Object.fromEntries(cmap), ...(s.colors || {}) };
 }
 
 /**
@@ -212,7 +232,7 @@ const STRUCT = {
   type: { title: 20, subtitle: 14, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
   marks: { barRadius: 4, barMax: 30, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
   axes: { inside: true, grid: true },
-  layout: { padding: 24, paddingSmall: 16 },
+  layout: { padding: 24, paddingSmall: 12 },
 };
 
 const papel = {
@@ -413,16 +433,17 @@ const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - 
  * Revisa una paleta categórica. Devuelve { ok, checks: [{ name, status, detail }] }.
  * status: 'pass' | 'warn' | 'fail'. `pairs: 'all'` para dispersión y mapas.
  */
-function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent' } = {}) {
+function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent', locale = 'es' } = {}) {
+  const en = String(locale).startsWith('en');
   const pal = colors.map(String);
   surface = surface || (mode === 'dark' ? '#0B0F2B' : '#FCFBF9');
   const checks = [];
   const [lo, hi] = BAND[mode] || BAND.light;
   const Ls = pal.map((c) => oklab(rgbLin(c)));
   const off = pal.filter((c, i) => Ls[i][0] < lo || Ls[i][0] > hi);
-  checks.push({ name: 'lightness', status: off.length ? 'fail' : 'pass', detail: off.length ? `Fuera de la banda de luminosidad ${lo}–${hi}: ${off.join(', ')}` : 'Todos dentro de la banda de luminosidad.' });
+  checks.push({ name: 'lightness', status: off.length ? 'fail' : 'pass', detail: off.length ? (en ? `Outside the lightness band ${lo}–${hi}: ` : `Fuera de la banda de luminosidad ${lo}–${hi}: `) + off.join(', ') : en ? 'All inside the lightness band.' : 'Todos dentro de la banda de luminosidad.' });
   const gray = pal.filter((c, i) => Math.hypot(Ls[i][1], Ls[i][2]) < CHROMA_FLOOR);
-  checks.push({ name: 'chroma', status: gray.length ? 'fail' : 'pass', detail: gray.length ? `Se leen como gris: ${gray.join(', ')}` : 'Todos con color suficiente.' });
+  checks.push({ name: 'chroma', status: gray.length ? 'fail' : 'pass', detail: gray.length ? (en ? 'Read as gray: ' : 'Se leen como gris: ') + gray.join(', ') : en ? 'All have enough chroma.' : 'Todos con color suficiente.' });
   const list = pairs === 'all' ? pal.flatMap((_, i) => pal.slice(i + 1).map((__, k) => [i, i + 1 + k])) : pal.slice(1).map((_, i) => [i, i + 1]);
   let worst = null, nworst = null;
   for (const [i, j] of list) {
@@ -430,10 +451,10 @@ function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent' }
     const n = dE(pal[i], pal[j]);
     if (!nworst || n < nworst[0]) nworst = [n, pal[i], pal[j]];
   }
-  if (worst) checks.push({ name: 'cvd', status: worst[0] >= CVD_TARGET ? 'pass' : worst[0] >= CVD_FLOOR ? 'warn' : 'fail', detail: `Peor par para daltonismo (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (meta ≥ ${CVD_TARGET}).` });
-  if (nworst) checks.push({ name: 'normal', status: nworst[0] >= NORMAL_FLOOR ? 'pass' : 'fail', detail: `Peor par con visión normal: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (mínimo ${NORMAL_FLOOR}).` });
+  if (worst) checks.push({ name: 'cvd', status: worst[0] >= CVD_TARGET ? 'pass' : worst[0] >= CVD_FLOOR ? 'warn' : 'fail', detail: en ? `Worst colorblind pair (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (target ≥ ${CVD_TARGET}).` : `Peor par para daltonismo (${worst[3]}): ${worst[1]} ↔ ${worst[2]}, ΔE ${worst[0].toFixed(1)} (meta ≥ ${CVD_TARGET}).` });
+  if (nworst) checks.push({ name: 'normal', status: nworst[0] >= NORMAL_FLOOR ? 'pass' : 'fail', detail: en ? `Worst normal-vision pair: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (minimum ${NORMAL_FLOOR}).` : `Peor par con visión normal: ${nworst[1]} ↔ ${nworst[2]}, ΔE ${nworst[0].toFixed(1)} (mínimo ${NORMAL_FLOOR}).` });
   const low = pal.filter((c) => contrast(c, surface) < 3);
-  checks.push({ name: 'contrast', status: low.length ? 'warn' : 'pass', detail: low.length ? `Bajo 3:1 contra el fondo (usa etiquetas visibles): ${low.join(', ')}` : 'Todos ≥ 3:1 contra el fondo.' });
+  checks.push({ name: 'contrast', status: low.length ? 'warn' : 'pass', detail: low.length ? (en ? 'Below 3:1 against the surface (use visible labels): ' : 'Bajo 3:1 contra el fondo (usa etiquetas visibles): ') + low.join(', ') : en ? 'All ≥ 3:1 against the surface.' : 'Todos ≥ 3:1 contra el fondo.' });
   return { ok: !checks.some((c) => c.status === 'fail'), checks };
 }
 
@@ -810,7 +831,32 @@ function barPath(x, y, w, h, dir = 'up', radius = 4) {
 /** Texto de tooltip: líneas unidas por \n en un atributo data-tip. */
 const tip = (...lines) => lines.filter((l) => l !== undefined && l !== null && l !== '').join('\n');
 
-return { "el": el, "text": text, "barPath": barPath, "esc": esc, "r2": r2, "g": g, "tip": tip };
+/**
+ * Capa de puntos. Con pocos puntos, un <circle> por punto (tooltip propio).
+ * Con muchos (> threshold), un solo <path> por estilo —los círculos como
+ * arcos— y una capa invisible que busca el punto más cercano al pasar el
+ * mouse. Es tan rápido como Canvas y conserva lo vectorial (ver docs).
+ */
+function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
+  if (circles.length <= threshold) return circles.map((c) => el('circle', c)).join('');
+  const groups = new Map();
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const near = [];
+  for (const c of circles) {
+    const k = [c.fill, c.fillOpacity, c.r, c.stroke, c.strokeWidth].join('|');
+    if (!groups.has(k)) groups.set(k, { attrs: c, d: [] });
+    const r = +c.r, cx = +c.cx, cy = +c.cy;
+    groups.get(k).d.push(`M${r2(cx - r)},${r2(cy)}a${r},${r} 0 1,0 ${r2(2 * r)},0a${r},${r} 0 1,0 ${r2(-2 * r)},0`);
+    x0 = Math.min(x0, cx - r); y0 = Math.min(y0, cy - r); x1 = Math.max(x1, cx + r); y1 = Math.max(y1, cy + r);
+    if (near.length < maxTips) near.push([r2(cx), r2(cy), c['data-tip'] || '', c.fill]);
+  }
+  const paths = [...groups.values()].map(({ attrs, d }) =>
+    el('path', { d: d.join(''), fill: attrs.fill, fillOpacity: attrs.fillOpacity, stroke: attrs.stroke && attrs.stroke !== 'none' ? attrs.stroke : null, strokeWidth: attrs.stroke && attrs.stroke !== 'none' ? Math.min(+attrs.strokeWidth || 1, 0.75) : null }));
+  const hover = el('rect', { class: 'pa-near', x: x0, y: y0, width: Math.max(1, x1 - x0), height: Math.max(1, y1 - y0), fill: 'transparent', 'data-near': JSON.stringify(near) });
+  return g({ class: 'pa-dense' }, [...paths, hover]);
+}
+
+return { "el": el, "text": text, "barPath": barPath, "dotLayer": dotLayer, "esc": esc, "r2": r2, "g": g, "tip": tip };
 });
 __def("src/text.js", function () {
 
@@ -1486,15 +1532,17 @@ const SIZES = {
 function createFrame(spec, theme, defaults = {}) {
   const width = Math.max(240, +spec.width || defaults.width || 720);
   let height = Math.max(160, +spec.height || defaults.height || 420);
-  const T = { ...SIZES, ...(theme.type || {}) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 16 : theme.layout?.padding ?? 24);
+  const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
+  const T0 = { ...SIZES, ...(theme.type || {}) };
+  const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
+  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
 
   const tw = T.titleWeight ?? 600;
-  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 2) : [];
-  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 3) : [];
+  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
+  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
   const header = [];
   const tlh = Math.round(T.title * 1.3), slh = Math.round(T.subtitle * 1.42);
   titleLines.forEach((l, i) => {
@@ -2211,7 +2259,7 @@ function describeLine(m, fmt, xFmt, locale = 'es') {
 return { "prepareLine": prepareLine, "line": line, "describeLine": describeLine };
 });
 __def("src/charts/scatter.js", function () {
-const { el, g, text, tip } = __req("src/svg.js");
+const { el, g, text, tip, dotLayer } = __req("src/svg.js");
 const { measure } = __req("src/text.js");
 const { makeFormat } = __req("src/format.js");
 const { niceDomain, niceStep, linear, log, logDomain } = __req("src/scale.js");
@@ -2298,12 +2346,13 @@ function scatter(spec, theme) {
   body.push(refLinesX(spec.refLines || [], xS, inner, theme, fx));
 
   const sorted = [...pts].sort((a, b) => (focus(a) - focus(b)) || b.s - a.s);
-  for (const p of sorted) {
+  const circles = sorted.map((p) => {
     const lines = [p.name || '', `${humanize(x)}: ${fx(p.x)}`, `${humanize(y)}: ${fy(p.y)}`];
     if (size) lines.push(`${humanize(size)}: ${fs(p.s)}`);
     if (series) lines.splice(1, 0, p.k);
-    body.push(el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : 2, 'data-tip': tip(...lines) }));
-  }
+    return { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : pts.length > 400 ? 1 : 2, 'data-tip': tip(...lines) };
+  });
+  body.push(dotLayer(circles));
 
   body.push(yTickLabels(yS.ticks(dy.step), yS, inner, theme, ytf));
 
@@ -2392,8 +2441,8 @@ function treemap(spec, theme) {
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = findNode(root, spec.focus);
   const levels = height(focus);
-  const single = levels <= 1 && spec.colorBy !== 'label';
-  assignColors(focus, theme, spec, { single });
+  const single = height(root) <= 1 && spec.colorBy !== 'label';
+  assignColors(root, theme, spec, { single });
   const allValues = [];
   (function walk(n) { allValues.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, allValues);
@@ -2402,13 +2451,14 @@ function treemap(spec, theme) {
 
   const top = focus.children;
   let legend = [];
-  if (levels > 1 && top.length > 1 && spec.legend !== false) {
+  if (levels > 1 && top.length > 1 && spec.legend !== false && !focus.path.length) {
     const shown = top.filter((c) => !c.folded);
     legend = shown.map((c) => ({ label: c.name, color: c.color, shape: 'square' }));
     if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
 
-  const frame = createFrame(spec, theme, { height: 480 });
+  const W = spec.width || 720;
+  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(Math.min(780, W * 1.15 + 170)) : Math.round(Math.max(440, Math.min(620, W * 0.62))) });
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);
@@ -2884,7 +2934,7 @@ function sunburst(spec, theme) {
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = findNode(root, spec.focus);
   const levels = Math.max(1, height(focus));
-  assignColors(focus, theme, spec);
+  assignColors(root, theme, spec); // colores estables al navegar
   const vals = [];
   (function walk(n) { vals.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, vals);
@@ -2893,11 +2943,11 @@ function sunburst(spec, theme) {
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
 
   const top = focus.children;
-  const legend = top.length > 1 && spec.legend !== false
+  const legend = top.length > 1 && spec.legend !== false && !focus.path.length
     ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
     : [];
 
-  const frame = createFrame(spec, theme, { height: Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
+  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);
@@ -3485,7 +3535,7 @@ function hashStr(str) {
 return { "hueField": hueField, "groupValues": groupValues, "axisDomain": axisDomain, "axisTitles": axisTitles, "hist": hist, "kde": kde, "ecdf": ecdf, "tickFmt": tickFmt };
 });
 __def("src/charts/regplot.js", function () {
-const { el, g, text, tip, esc, barPath } = __req("src/svg.js");
+const { el, g, text, tip, esc, barPath, dotLayer } = __req("src/svg.js");
 const { measure } = __req("src/text.js");
 const { makeFormat, formatNumber } = __req("src/format.js");
 const { colorMap } = __req("src/theme.js");
@@ -3599,12 +3649,12 @@ function regplot(spec, theme) {
   });
   if (spec.scatter !== false) {
     const order = [...pts].sort((a, b) => (focusKey(a.k) ? 1 : 0) - (focusKey(b.k) ? 1 : 0));
-    const dots = order.map((p) => el('circle', {
+    const dots = order.map((p) => ({
       class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: K === 1 ? (M.dotOpacity ?? 0.85) * 0.75 : M.dotOpacity ?? 0.85,
       stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25,
       'data-tip': tip(p.name || p.k || '', `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : ''),
     }));
-    body.push(g({ class: 'pa-points' }, dots));
+    body.push(g({ class: 'pa-points' }, dotLayer(dots)));
   }
   const ends = [];
   keys.forEach((k, i) => {
@@ -3704,7 +3754,7 @@ function residplot(spec, theme) {
   const body = [yGrid(yAx.ticks, yS, inner, theme, { baseline: NaN })];
   const y0 = Math.round(yS(0)) + 0.5;
   body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: y0, y2: y0, stroke: theme.ink, strokeWidth: 1.25, opacity: 0.6 }));
-  body.push(g({}, res.map((p) => el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.r), r, fill: theme.categorical[0], fillOpacity: (M.dotOpacity ?? 0.85) * 0.8, stroke: theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name, `${humanize(P.x)}: ${fx(p.x)}`, `${en ? 'Residual' : 'Residuo'}: ${fy(p.r)}`) }))));
+  body.push(g({}, dotLayer(res.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.r), r, fill: theme.categorical[0], fillOpacity: (M.dotOpacity ?? 0.85) * 0.8, stroke: theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name, `${humanize(P.x)}: ${fx(p.x)}`, `${en ? 'Residual' : 'Residuo'}: ${fy(p.r)}`) })))));
   if (spec.lowess) {
     const lw = lowess(res.map((p) => p.x), res.map((p) => p.r));
     body.push(el('path', { d: lw.map(([a, b], i) => `${i ? 'L' : 'M'}${xS(a).toFixed(2)},${yS(b).toFixed(2)}`).join(''), fill: 'none', stroke: theme.categorical[1], strokeWidth: M.lineWidth ?? 2 }));
@@ -3815,7 +3865,7 @@ function jointplot(spec, theme) {
       body.push(el('path', { d: L(f.line), fill: 'none', stroke: K === 1 ? theme.ink : colorOf(k), strokeWidth: M.lineWidth ?? 2, opacity: 0.9 }));
     });
   }
-  body.push(g({}, pts.map((p) => el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') }))));
+  body.push(g({}, dotLayer(pts.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') })))));
   body.push(pointLabels(pts, spec, xS, yS, r, inner, theme, P));
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(yAx.ticks, yS, inner, theme, yt));
@@ -3836,7 +3886,7 @@ function hashStr(s) {
 return { "regplot": regplot, "residplot": residplot, "jointplot": jointplot };
 });
 __def("src/charts/categorical.js", function () {
-const { el, g, text, tip } = __req("src/svg.js");
+const { el, g, text, tip, dotLayer } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
 const { makeFormat } = __req("src/format.js");
 const { niceDomain, niceStep, linear, log, logDomain, band } = __req("src/scale.js");
@@ -4119,8 +4169,9 @@ function strip(spec, theme) {
     const w = s.slot * (jitter === true ? 0.6 : jitter || 0);
     const parts = vs.map((v, i) => {
       const [x, y] = s.P(cpos + (rand(ci * 7919 + hi2 * 104729 + i) - 0.5) * w, v);
-      return el('circle', { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': tip(fmtTipLabel(c, h), s.fmt(v)) });
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': tip(fmtTipLabel(c, h), s.fmt(v)) };
     });
+    parts.splice(0, parts.length, dotLayer(parts));
     if (spec.mean || spec.showMeans) {
       const mu = mean(vs);
       parts.push(seg(s, cpos - Math.min(s.slot * 0.42, 34), mu, cpos + Math.min(s.slot * 0.42, 34), mu, { stroke: theme.ink, strokeWidth: 2.5, strokeLinecap: 'round' }));
@@ -4177,8 +4228,9 @@ function swarm(spec, theme) {
       const o = Math.max(-room / 2 + r, Math.min(room / 2 - r, grp.offs[i]));
       const [x, y] = s.vertical ? [cpos + o, s.valS(it.v)] : [s.valS(it.v), cpos + o];
       const color = s.colorOf(grp.c, it.h);
-      return el('circle', { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': tip(fmtTipLabel(grp.c, it.h), s.fmt(it.v)) });
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': tip(fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
+    parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
   return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
@@ -4354,7 +4406,7 @@ function radar(spec, theme) {
   const colorOf = (s) => (focus(s) ? (seriesKeys.length === 1 ? cmap.get(s) || theme.categorical[0] : cmap.get(s)) : theme.dim);
   const legend = seriesKeys.length > 1 ? seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 460 });
+  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) * 0.95 + 170) : 460 });
   let area = frame.layout(spec.legend === false ? [] : legend);
 
   const ls = (theme.type?.label ?? 12) + 0.5;
@@ -4763,7 +4815,9 @@ function facet(spec, theme, renderOne) {
   const frame = createFrame({ ...spec, height: 200 }, theme, { width: 720 });
   const area = frame.layout(legend);
   const gap = spec.panelGap ?? 18;
-  const cols = Math.max(1, Math.min(keys.length, spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230))));
+  const fit = Math.max(1, Math.floor((area.w + gap) / 150));
+  const want = spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
+  const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;
   const ph = spec.panelHeight ?? Math.round(Math.min(300, Math.max(160, pw * 0.66)));
   const rows = Math.ceil(keys.length / cols);
@@ -4974,13 +5028,14 @@ const { TYPES, ALIASES } = __req("src/infer.js");
 
 const field = (d) => ({ type: 'string', description: d });
 const fieldOrList = (d) => ({ anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }], description: d });
+const strOrList = { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] };
 
 const schema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: 'https://unpkg.com/plotagents/schema.json',
   title: 'plotagents spec',
   description:
-    'Especificación declarativa de un gráfico. Datos en formato de filas (tidy) y nombres de campos para cada rol. Todo lo demás tiene valores por defecto bien diseñados.',
+    'Declarative chart spec. Data as rows (tidy) plus the field name for each role. Everything else has well-designed defaults.',
   type: 'object',
   required: ['data'],
   properties: {
@@ -4988,119 +5043,126 @@ const schema = {
       type: 'string',
       enum: ['auto', ...TYPES, ...Object.keys(ALIASES)],
       description:
-        'Comparar: bar, count. Tiempo: line, area. Relación: scatter, bubble, regplot, residplot, jointplot, radar. Distribución (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Partes de un todo: treemap, sunburst, donut, pie. Otros: heatmap, sankey, kpi. Acepta los nombres de seaborn (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (por defecto) elige según los datos.',
+        'Compare: bar, count. Time: line, area. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
-      description: 'Arreglo de filas. Ej: [{ "region": "Biobío", "ventas": 1240 }]. Para kpi puede omitirse y usar `items`.',
+      description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
       anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }],
     },
-    title: { type: 'string', description: 'El hallazgo como frase completa, idealmente con la cifra clave. Ej: "Biobío concentra el 32% de las ventas".' },
-    subtitle: { type: 'string', description: 'Cómo leer el gráfico: medida, unidad y periodo. Ej: "Ventas por región, millones de pesos, 2025".' },
-    source: { type: 'string', description: 'Fuente de los datos. Se muestra abajo a la derecha.' },
-    x: field('Campo del eje x / categorías (bar, line, area, scatter, heatmap).'),
-    y: fieldOrList('Campo de valor. En line/bar acepta una lista de campos (tabla ancha) y cada uno se vuelve una serie.'),
-    series: field('Campo que separa series (color). Alias: color.'),
-    value: field('Campo de valor para treemap, donut, heatmap y sankey.'),
-    label: field('Campo de nombre (treemap, donut, etiquetas en scatter).'),
-    group: field('Campo de grupo de primer nivel en treemap (color).'),
-    path: { type: 'array', items: { type: 'string' }, description: 'Jerarquía del treemap: [grupo, elemento].' },
-    size: field('Campo de tamaño en burbujas (área proporcional).'),
-    from: field('Campo de origen en sankey.'),
-    to: field('Campo de destino en sankey.'),
+    title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
+    subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
+    source: { type: 'string', description: 'Data source, shown at the bottom right.' },
+    locale: { type: 'string', enum: ['es', 'en'], description: 'Language and number format. Default "es" (1.234,5); use "en" for 1,234.5.' },
+    x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
+    y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
+    series: field('Field that splits the data into colored series. Alias: hue.'),
+    hue: field('Alias of series (seaborn naming).'),
+    value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
+    label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path).'),
+    path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
+    size: field('Bubble size field (area-proportional).'),
+    from: field('Sankey source field.'),
+    to: field('Sankey target field.'),
+    axis: field('radar: field with the axis names (long format).'),
+    axes: { type: 'array', items: { type: 'string' }, description: 'radar: fields to use as axes (wide format, one row per series).' },
     items: {
       type: 'array',
-      description: 'Para kpi: indicadores a mostrar.',
+      description: 'kpi: the indicators to show.',
       items: {
         type: 'object',
         required: ['label', 'value'],
         properties: {
           label: { type: 'string' },
           value: { type: 'number' },
-          delta: { type: 'number', description: 'Variación relativa como fracción (0.12 = +12%).' },
-          previous: { type: 'number', description: 'Valor anterior; si se da, la variación se calcula sola.' },
-          period: { type: 'string', description: 'Contra qué se compara. Ej: "vs 2025".' },
-          good: { type: 'string', enum: ['up', 'down'], description: 'Si subir es bueno (up) o malo (down, p. ej. costos).' },
-          trend: { type: 'array', items: { type: 'number' }, description: 'Serie corta para la línea de tendencia.' },
-          target: { type: 'number', description: 'Meta: dibuja un medidor de avance.' },
+          delta: { type: 'number', description: 'Relative change as a fraction (0.12 = +12%).' },
+          previous: { type: 'number', description: 'Previous value; when given, the change is computed.' },
+          period: { type: 'string', description: 'What it is compared against, e.g. "vs 2025".' },
+          good: { type: 'string', enum: ['up', 'down'], description: 'Whether going up is good (up) or bad (down, e.g. costs).' },
+          trend: { type: 'array', items: { type: 'number' }, description: 'Short series for the sparkline.' },
+          target: { type: 'number', description: 'Target: draws a progress meter.' },
           format: { type: 'string' },
         },
       },
     },
-    hue: field('Alias de series (nombre de seaborn).'),
-    facet: field('Un panel por cada valor de este campo (small multiples, col de seaborn). Escalas y colores compartidos.'),
-    columns: { type: 'integer', description: 'Paneles por fila en facet (col_wrap de seaborn).' },
-    sharey: { type: 'boolean', description: 'facet: misma escala y en todos los paneles (por defecto true).' },
-    time: field('Campo de tiempo (estilo d3plus): muestra un periodo a la vez (el último por defecto) y en el navegador agrega un slider con play. No aplica a line/area, que usan un slider de rango.'),
-    timeValue: { description: 'Periodo a mostrar cuando se usa `time`.' },
-    slider: { type: 'boolean', description: 'Navegador: false quita el slider temporal.' },
-    xRange: { type: 'array', description: 'line/area: rango visible del eje x [desde, hasta] (lo que mueve el slider).' },
-    xDomain: { type: 'array', items: { type: 'number' }, description: 'Dominio fijo del eje x [min, max].' },
-    yDomain: { type: 'array', items: { type: 'number' }, description: 'Dominio fijo del eje de valores [min, max].' },
-    ci: { description: 'line/bar/regplot: intervalo de confianza (true = 95, o un número). En line/bar cambia el estimador a la media.', anyOf: [{ type: 'boolean' }, { type: 'number' }] },
-    errorbar: { type: 'string', enum: ['ci', 'sd', 'se', 'pi', 'none'], description: 'Tipo de barra o banda de error.' },
-    estimator: { type: 'string', enum: ['mean', 'median', 'sum', 'count'], description: 'Cómo resumir varias observaciones por categoría.' },
-    focus: { type: 'array', items: { type: 'string' }, description: 'treemap/sunburst: ruta del nivel a mostrar, p. ej. ["Minería"]. En el navegador se navega con clic.' },
-    depth: { type: 'integer', description: 'treemap/sunburst: cuántos niveles mostrar.' },
-    half: { type: 'boolean', description: 'donut: semicírculo.' },
-    bins: { type: 'integer', description: 'hist: número de barras.' },
-    binWidth: { type: 'number', description: 'hist: ancho de cada barra.' },
-    stat: { type: 'string', enum: ['count', 'percent', 'density', 'probability'], description: 'hist: qué mide el eje y.' },
-    kde: { type: 'boolean', description: 'hist: superpone la curva de densidad.' },
-    multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde con hue: cómo combinar grupos.' },
-    fill: { type: 'boolean', description: 'kde: rellenar el área.' },
-    order: { description: 'regplot: grado del polinomio (número). box/violin/strip/swarm/point: orden de categorías (lista).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
-    lowess: { type: 'boolean', description: 'regplot: suavizado local en vez de recta.' },
-    logx: { type: 'boolean', description: 'regplot: ajusta y ~ log(x) con eje x logarítmico.' },
-    annotate: { type: 'boolean', description: 'regplot: muestra R² y n.' },
-    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: gráfico central.' },
-    marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: gráficos de los márgenes.' },
-    inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'none'], description: 'violin: qué va dentro.' },
-    split: { type: 'boolean', description: 'violin: con 2 niveles de hue, una mitad para cada uno.' },
-    points: { type: 'boolean', description: 'box: puntos encima de la caja. line: marcadores en cada punto.' },
-    axis: field('radar: campo de los ejes (formato largo).'),
-    axes: { type: 'array', items: { type: 'string' }, description: 'radar: campos a usar como ejes (formato ancho, una fila por serie).' },
-    normalize: { type: 'boolean', description: 'radar: escala cada eje 0–1 según su máximo.' },
-    palette: { description: 'Atajo de paleta: nombre ("cdia", "okabe-ito", "tableau10", "udec") o lista de colores en orden fijo.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-    ramp: { description: 'Rampa secuencial: nombre ("indigo", "magenta", "teal", "amber") o lista de colores claro → oscuro.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+
+    facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
+    columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
+    sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
+    time: field('Time field (d3plus-style): shows one period at a time (the latest by default) and, in the browser, a slider with play. Not used by line/area, which get a range slider.'),
+    timeValue: { description: 'Period to show when `time` is set.' },
+    slider: { type: 'boolean', description: 'Browser: false removes the time slider.' },
+    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets).' },
+    focus: { type: 'array', items: { type: 'string' }, description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. In the browser, clicking a group does it.' },
+    depth: { type: 'integer', description: 'treemap/sunburst: how many levels to show.' },
+
+    xScale: { type: 'string', enum: ['linear', 'log'] },
+    yScale: { type: 'string', enum: ['linear', 'log'] },
+    xDomain: { type: 'array', items: { type: 'number' }, description: 'Fixed x domain [min, max].' },
+    yDomain: { type: 'array', items: { type: 'number' }, description: 'Fixed value-axis domain [min, max].' },
+    zero: { type: 'boolean', description: 'line: force (or prevent) a y axis starting at zero.' },
+    xLabel: { type: 'string', description: 'x-axis title.' },
+    yLabel: { type: 'string', description: 'y-axis title (drawn horizontally above the axis).' },
     format: {
-      description: 'Formato de los valores: "number" | "compact" | "percent" | "currency" | "integer", o { type, prefix, suffix, decimals, currency }.',
+      description: 'Value format: "number" | "compact" | "percent" | "currency" | "integer", or { type, prefix, suffix, decimals, currency }.',
       anyOf: [
         { type: 'string', enum: ['number', 'compact', 'percent', 'currency', 'integer'] },
         { type: 'object', properties: { type: { type: 'string' }, prefix: { type: 'string' }, suffix: { type: 'string' }, decimals: { type: 'integer' }, currency: { type: 'string' } } },
       ],
     },
-    stack: { description: 'bar/area: true apila; "percent" apila al 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
-    horizontal: { type: 'boolean', description: 'bar: fuerza barras horizontales. Por defecto se decide solo.' },
-    sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: orden de categorías (desc por defecto si no son tiempo).' },
-    top: { type: 'integer', description: 'bar: muestra las N mayores y agrupa el resto en "Otros".' },
-    highlight: { description: 'Destaca una o más categorías/series y atenúa el resto.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-    labels: { description: 'Etiquetas de valor: true, false o "auto". En scatter: número de puntos o lista de nombres a rotular.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
-    refLines: { type: 'array', description: 'Líneas de referencia (metas, promedios).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
-    annotations: { type: 'array', description: 'line/area: eventos en el eje x.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
-    index: { type: 'boolean', description: 'line: lleva cada serie a base 100 en su primer valor (compara crecimientos sin doble eje).' },
-    curve: { type: 'string', enum: ['linear', 'smooth'] },
-    zero: { type: 'boolean', description: 'line: forzar (o no) que el eje y parta en cero.' },
-    xScale: { type: 'string', enum: ['linear', 'log'] },
-    yScale: { type: 'string', enum: ['linear', 'log'] },
-    trend: { type: 'boolean', description: 'scatter: agrega recta de tendencia y R².' },
-    xLabel: { type: 'string' },
-    yLabel: { type: 'string' },
-    aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'Cómo combinar filas repetidas. Por defecto sum.' },
-    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Color fijo por entidad: { "Biobío": "#3A47B8" }.' },
+
+    highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    labels: { description: 'Value labels: true, false or "auto". In scatter/regplot: a number of points or a list of names to label.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
+    refLines: { type: 'array', description: 'Reference lines (targets, averages).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
+    annotations: { type: 'array', description: 'line/area: events on the x axis.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
+
+    stack: { description: 'bar/area: true stacks; "percent" stacks to 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
+    horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
+    sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: category order (desc by default unless the categories are time).' },
+    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
+    curve: { type: 'string', enum: ['linear', 'smooth', 'step'] },
+    aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'How to combine repeated rows. Default sum.' },
+    ci: { description: 'line/bar/regplot: confidence interval (true = 95, or a number). In line/bar it switches the estimator to the mean.', anyOf: [{ type: 'boolean' }, { type: 'number' }] },
+    errorbar: { type: 'string', enum: ['ci', 'sd', 'se', 'pi', 'none'], description: 'Error bar or band type.' },
+    estimator: { type: 'string', enum: ['mean', 'median', 'sum', 'count'], description: 'How to summarize several observations per category.' },
+
+    bins: { type: 'integer', description: 'hist: number of bins.' },
+    binWidth: { type: 'number', description: 'hist: bin width.' },
+    stat: { type: 'string', enum: ['count', 'percent', 'density', 'probability'], description: 'hist: what the y axis measures.' },
+    kde: { type: 'boolean', description: 'hist: overlay a density curve.' },
+    multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde with hue: how groups are combined.' },
+    fill: { type: 'boolean', description: 'kde: fill the area. line: false removes the gradient under a single line.' },
+    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
+    lowess: { type: 'boolean', description: 'regplot: local regression instead of a straight line.' },
+    logx: { type: 'boolean', description: 'regplot: fit y ~ log(x) with a log x axis.' },
+    trend: { type: 'boolean', description: 'scatter: add a least-squares line and R².' },
+    annotate: { type: 'boolean', description: 'regplot: show R² and n.' },
+    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot.' },
+    marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: marginal plots.' },
+    inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'none'], description: 'violin: what goes inside.' },
+    split: { type: 'boolean', description: 'violin: with two hue levels, one half each.' },
+    points: { type: 'boolean', description: 'box: overlay the observations. line: markers on every point.' },
+    normalize: { type: 'boolean', description: 'radar: scale each axis 0–1 by its own maximum.' },
+
+    half: { type: 'boolean', description: 'donut: semicircle.' },
+
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }.' },
+    palette: { description: 'Palette shortcut: a name ("cdia", "okabe-ito", "tableau10", "udec") or a list of colors in fixed order.', ...strOrList },
+    ramp: { description: 'Sequential ramp: a name ("indigo", "magenta", "teal", "amber") or a list of colors from light to dark.', ...strOrList },
     theme: {
-      description: 'Tema: "papel" (claro, por defecto), "noche" (oscuro) u objeto JSON que se fusiona sobre `extends`. Claves: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (lista o nombre de paleta), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.',
+      description: 'Theme: "papel" (light, default), "noche" (dark), or a JSON object deep-merged over `extends`. Keys: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (list or palette name), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.',
       anyOf: [{ type: 'string', enum: ['papel', 'noche', 'light', 'dark'] }, { type: 'object' }],
     },
-    locale: { type: 'string', enum: ['es', 'en'], description: 'Idioma y formato numérico. Por defecto es (1.234,5).' },
-    width: { type: 'number', description: 'Ancho en px (por defecto 720).' },
-    height: { type: 'number', description: 'Alto en px. Barras horizontales, heatmap y kpi lo calculan solos.' },
+    width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
+    height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
   },
 };
 
-/** Definición de herramienta lista para Claude (Anthropic) u OpenAI. */
+/** Tool definition ready for Claude (Anthropic) or OpenAI. */
 function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Dibuja un gráfico estético y accesible a partir de datos tabulares. Entrega filas en `data`, indica los campos (x, y, series/hue…) y escribe un `title` que diga el hallazgo. Devuelve un SVG. Tipos: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (acepta nombres de seaborn). `facet` hace paneles; `time` agrega un slider por periodo.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
@@ -5174,6 +5236,16 @@ function attach(root) {
         best.v.map((v) => `<circle cx="${best.x}" cy="${v[2]}" r="4.5" fill="${v[1]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
       const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${v[1]}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
       show(`<div style="font-weight:600;margin-bottom:2px">${esc(best.t)}</div>${rows}`, ev);
+      return;
+    }
+    if (t && t.classList && t.classList.contains('pa-near')) {
+      const pts = t.__near || (t.__near = JSON.parse(t.getAttribute('data-near')));
+      const p = toSvg(ev);
+      let best = null, bd = 196;
+      for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
+      if (!best) { hide(); return; }
+      overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
+      if (best[2]) show(linesHtml(best[2]), ev); else tipEl.style.opacity = '0';
       return;
     }
     const tg = t && t.closest ? t.closest('[data-tip]') : null;
@@ -5338,9 +5410,9 @@ function render(target, spec, opts = {}) {
     const track = document.createElement('div'); track.className = 'pa-track';
     const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
     const d = xs.map((p, k) => `${k ? 'L' : 'M'}${px(p.t).toFixed(2)},${py(tv[k]).toFixed(2)}`).join('');
-    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.18 }));
+    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.12 }));
     ov.appendChild(svgEl('path', { d, fill: 'none', stroke: theme.muted, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
-    const sel = svgEl('rect', { y: 0, height: 28, fill: theme.categorical[0], 'fill-opacity': 0.14 });
+    const sel = svgEl('rect', { y: 0, height: 28, rx: 3, fill: theme.categorical[0], 'fill-opacity': 0.08 });
     ov.appendChild(sel);
     track.appendChild(ov);
     const fmtX = (p) => (kind === 'date' ? formatDate(p.t, dateUnit(xs.map((q) => q.t)), state.locale || 'es') : String(p.v));

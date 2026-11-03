@@ -152,7 +152,7 @@ export const gallery = [
     id: 'treemap',
     name: 'Treemap',
     note: 'Partes de un todo con jerarquía, al estilo del Atlas de Complejidad Económica. Color por sector y participación en cada rectángulo.',
-    spec: { type: 'treemap', title: 'El cobre explica más de la mitad de las exportaciones', subtitle: 'Exportaciones por sector y producto, miles de millones de US$', source: SRC, data: exportaciones, path: ['sector', 'producto'], value: 'valor', height: 480 },
+    spec: { type: 'treemap', title: 'El cobre explica más de la mitad de las exportaciones', subtitle: 'Exportaciones por sector y producto, miles de millones de US$', source: SRC, data: exportaciones, path: ['sector', 'producto'], value: 'valor' },
   },
   {
     id: 'dona',

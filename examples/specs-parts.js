@@ -45,19 +45,19 @@ export const partsGallery = [
     id: 'treemap-niveles',
     name: 'Treemap de tres niveles',
     note: 'Sector › subsector › producto con `path`. Encabezados de grupo cuando hay espacio, variación sutil de tono dentro de cada sector y etiquetas solo donde caben.',
-    spec: { type: 'treemap', title: 'El cobre por sí solo explica el 54% de las exportaciones', subtitle: 'Exportaciones por sector, subsector y producto, miles de millones de US$', source: SRC, data: exportaciones3, path: ['sector', 'subsector', 'producto'], value: 'valor', height: 500 },
+    spec: { type: 'treemap', title: 'El cobre por sí solo explica el 54% de las exportaciones', subtitle: 'Exportaciones por sector, subsector y producto, miles de millones de US$', source: SRC, data: exportaciones3, path: ['sector', 'subsector', 'producto'], value: 'valor' },
   },
   {
     id: 'treemap-foco',
     name: 'Treemap con foco (drill-down)',
     note: '`focus: ["Agro"]` muestra solo esa rama, con migas de pan para volver. En el navegador, un clic en un grupo hace lo mismo.',
-    spec: { type: 'treemap', title: 'Dentro del agro, la fruta fresca suma el 73%', subtitle: 'Exportaciones agropecuarias por subsector y producto, miles de millones de US$', source: SRC, data: exportaciones3, path: ['sector', 'subsector', 'producto'], value: 'valor', focus: ['Agro'], height: 420 },
+    spec: { type: 'treemap', title: 'Dentro del agro, la fruta fresca suma el 73%', subtitle: 'Exportaciones agropecuarias por subsector y producto, miles de millones de US$', source: SRC, data: exportaciones3, path: ['sector', 'subsector', 'producto'], value: 'valor', focus: ['Agro'] },
   },
   {
     id: 'sunburst',
     name: 'Sunburst',
     note: 'La misma jerarquía en anillos: el interior es el primer nivel; los exteriores heredan el color. Total al centro.',
-    spec: { type: 'sunburst', title: 'Docencia concentra el 49% del presupuesto', subtitle: 'Presupuesto por área, unidad e ítem, millones de pesos', source: SRC, data: presupuesto3, path: ['area', 'unidad', 'item'], value: 'monto', format: 'currency', height: 560 },
+    spec: { type: 'sunburst', title: 'Docencia concentra el 49% del presupuesto', subtitle: 'Presupuesto por área, unidad e ítem, millones de pesos', source: SRC, data: presupuesto3, path: ['area', 'unidad', 'item'], value: 'monto', format: 'currency' },
   },
   {
     id: 'torta',

@@ -1,7 +1,7 @@
 {
   "name": "plotagents",
-  "version": "0.2.0",
-  "description": "Gráficos bellos con una sola llamada, pensados para agentes de IA: barras, líneas, treemaps, sunburst, sankey y los gráficos de seaborn (regplot, hist, kde, box, violin…) desde un spec JSON. SVG accesible, sin dependencias.",
+  "version": "0.3.0",
+  "description": "Beautiful charts from one JSON spec, built for AI agents: bars, lines, multi-level treemaps, sunbursts, sankeys and seaborn-style plots (regplot, hist, kde, box, violin…). Accessible SVG, time sliders, JSON themes, zero dependencies.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -20,6 +20,7 @@
   "files": [
     "src",
     "dist",
+    "docs",
     "bin",
     "index.d.ts",
     "schema.json",
@@ -30,6 +31,7 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "build": "node scripts/bundle.js",
+    "bench": "node scripts/bench.js",
     "prepublishOnly": "node scripts/bundle.js && node --test test/*.test.js",
     "examples": "node examples/build.js",
     "schema": "node -e \"import('./src/index.js').then(m=>process.stdout.write(JSON.stringify(m.schema,null,2)))\" > schema.json"

@@ -1,68 +1,69 @@
-# plotagents · guía para agentes de IA
+# plotagents · guide for AI agents
 
-Una función, un objeto JSON. Sin decisiones de diseño: la biblioteca las toma.
+One function, one JSON object. No design decisions: the library makes them.
 
 ```js
 import { plot, safePlot } from 'plotagents';
 const svg = plot({ type, data, x, y, series, title, subtitle, source });
 ```
 
-## Reglas para un buen gráfico
+## Rules for a good chart
 
-1. **`title` es el hallazgo**, una frase completa con la cifra clave: "Biobío concentra el 30% de las ventas", no "Ventas por región".
-2. **`subtitle` dice cómo leerlo**: medida, unidad y periodo.
-3. **`source` siempre**. Si los datos son inventados, `source: "datos ilustrativos"`.
-4. `data` va en filas (`[{ region: "Biobío", ventas: 1240 }]`). Si tienes una tabla ancha, pasa `y: ["ingresos", "costos"]`.
-5. Usa `safePlot(spec)` como herramienta: nunca lanza y devuelve `errors`, `warnings` y `suggestions` con la corrección (`fix`). Si `ok` es `false`, corrige y vuelve a llamar.
+1. **`title` is the finding**, a full sentence with the key number: "Biobío accounts for 30% of sales", not "Sales by region".
+2. **`subtitle` says how to read it**: measure, unit and period.
+3. **Always set `source`.** If the data is made up, use `source: "illustrative data"`.
+4. `data` is a list of rows (`[{ region: "Biobío", sales: 1240 }]`). For a wide table, pass `y: ["revenue", "costs"]`.
+5. Call `safePlot(spec)` as your tool: it never throws and returns `errors`, `warnings` and `suggestions`, each with a `fix`. If `ok` is `false`, fix the spec and call again.
+6. Set `locale: "en"` for English number formats (default is Spanish: `1.234,5`).
 
-## Qué tipo elegir
+## Which type
 
-| Quiero mostrar | `type` | Campos clave |
+| To show | `type` | Key fields |
 |---|---|---|
-| Comparar categorías | `bar` | `x`, `y`, `series?`, `stack?` (`true` / `"percent"`), `top?` |
-| Contar filas por categoría | `countplot` | `x` |
-| Media por categoría con intervalo | `barplot` o `point` | `x`, `y`, `hue?` |
-| Evolución en el tiempo | `line` | `x` fecha (`"2024-03"`) o año, `y`, `series?`; `ci: true` si hay varias observaciones por x |
-| Volumen en el tiempo | `area` | igual que `line`; con `series` se apila |
-| Medidas con escalas distintas | `line` + `index: true`, o `facet` | **no existe doble eje** |
-| Crecimiento exponencial | `line` + `yScale: "log"` | |
-| Relación entre dos medidas | `regplot` (recta + intervalo) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
-| Relación + distribuciones | `jointplot` | `x`, `y` |
-| Distribución de una medida | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
-| Distribución por categoría | `box`, `violin`, `strip`, `swarm` | `x` categoría, `y` medida, `hue?` |
-| Perfil en varias dimensiones | `radar` | `axis`, `value`, `series` (≤ 4 series) |
-| Partes de un todo con jerarquía | `treemap` o `sunburst` | `path: [nivel1, nivel2, …]`, `value` |
-| Parte-todo con ≤ 6 partes | `donut` / `pie` | `label`, `value`; `half: true` para semicírculo |
-| Magnitud en una grilla | `heatmap` | `x`, `y`, `value` |
-| Flujos entre etapas | `sankey` | `from`, `to`, `value` |
-| Uno o varios números | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
+| Compare categories | `bar` | `x`, `y`, `series?`, `stack?` (`true` / `"percent"`), `top?` |
+| Count rows per category | `countplot` | `x` |
+| Mean per category with a CI | `barplot` or `point` | `x`, `y`, `hue?` |
+| Change over time | `line` | `x` date (`"2024-03"`) or year, `y`, `series?`; `ci: true` with several observations per x |
+| Volume over time | `area` | like `line`; stacks with `series` |
+| Measures on different scales | `line` + `index: true`, or `facet` | **there is no dual axis** |
+| Exponential growth | `line` + `yScale: "log"` | |
+| Relationship between two measures | `regplot` (fit + CI) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
+| Relationship + marginals | `jointplot` | `x`, `y` |
+| Distribution of one measure | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
+| Distribution by category | `box`, `violin`, `strip`, `swarm` | `x` category, `y` measure, `hue?` |
+| Multi-dimensional profile | `radar` | `axis`, `value`, `series` (≤ 4 series) |
+| Hierarchical part-to-whole | `treemap` or `sunburst` | `path: [level1, level2, …]`, `value` |
+| Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
+| Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
+| Flows between stages | `sankey` | `from`, `to`, `value` |
+| One or more numbers | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
 
-Se aceptan los nombres de seaborn (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `stripplot`, `swarmplot`, `pointplot`) y `hue` como alias de `series`. Si omites `type`, se infiere de los datos.
+seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `stripplot`, `swarmplot`, `pointplot`), and `hue` is an alias of `series`. Leave `type` out to infer it from the data.
 
-## Opciones que más sirven
+## Most useful options
 
-- `highlight: "Ñuble"`: destaca una categoría o serie y atenúa el resto.
-- `facet: "region"` (+ `columns`): un panel por valor, con la misma escala.
-- `time: "año"`: un periodo a la vez (el último); en el navegador, slider con play.
-- `refLines: [{ y: 600, label: "Meta" }]` y `annotations: [{ x: "2024-01", label: "Nueva sucursal" }]`.
-- `format: "percent" | "currency" | "compact" | "integer"` o `{ prefix, suffix, decimals }`.
+- `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
+- `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
+- `time: "year"`: one period at a time (the latest); in the browser, a slider with play.
+- `refLines: [{ y: 600, label: "Target" }]` and `annotations: [{ x: "2024-01", label: "New branch" }]`.
+- `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.
-- `theme: "noche"` o un objeto JSON (`{ extends, categorical, type, marks, font }`); `palette: [...]` para colores propios.
-- `locale: "en"`: formato en inglés.
+- `theme: "noche"` or a JSON object (`{ extends, categorical, type, marks, font }`); `palette: [...]` for your own colors.
 
-## Errores comunes que la biblioteca ya resuelve
+## Mistakes the library already handles
 
-- Más de 8 series → desde la 9.ª van en gris; `lint` sugiere `highlight` o `facet`.
-- Etiquetas de líneas que chocan → se separan con líneas guía.
-- Dona con más de 6 partes → agrupa en "Otros".
-- Etiquetas largas en columnas o categorías → cambia a horizontal.
-- Paleta propia poco distinguible → `lint` avisa con el par problemático.
-- Números en texto ("1.234,5", "12%", "$ 3.000") → se convierten solos.
+- More than 8 series → the 9th onward turn gray; `lint` suggests `highlight` or `facet`.
+- Colliding line labels → spread apart with leader lines.
+- Donut with more than 6 parts → folds into "Other".
+- Long category labels → switches to horizontal.
+- Hard-to-tell custom palette → `lint` names the offending pair.
+- Numbers as text ("1.234,5", "12%", "$ 3.000") → parsed automatically.
+- Tens of thousands of points → drawn as batched paths, still fast.
 
-## Salidas
+## Outputs
 
-- `plot(spec)` → SVG (string). Va directo a HTML, Markdown, un archivo `.svg` o un PDF.
-- `toHTML([spec1, spec2])` → página autónoma con tooltips, sliders y navegación por niveles.
-- `describe(spec)` → texto alternativo del gráfico.
-- `schema` / `toolDefinition()` → JSON Schema y definición de herramienta (Anthropic u OpenAI).
-- CLI: `npx plotagents spec.json -o grafico.svg`.
+- `plot(spec)` → SVG string. Drop it into HTML, Markdown, an `.svg` file or a PDF.
+- `toHTML([spec1, spec2])` → self-contained page with tooltips, sliders and drill-down.
+- `describe(spec)` → alt text for the chart.
+- `schema` / `toolDefinition()` → JSON Schema and tool definition (Anthropic or OpenAI).
+- CLI: `npx plotagents spec.json -o chart.svg`.

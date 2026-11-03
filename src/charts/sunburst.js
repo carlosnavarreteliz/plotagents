@@ -26,7 +26,7 @@ export function sunburst(spec, theme) {
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = findNode(root, spec.focus);
   const levels = Math.max(1, height(focus));
-  assignColors(focus, theme, spec);
+  assignColors(root, theme, spec); // colores estables al navegar
   const vals = [];
   (function walk(n) { vals.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, vals);
@@ -35,11 +35,11 @@ export function sunburst(spec, theme) {
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
 
   const top = focus.children;
-  const legend = top.length > 1 && spec.legend !== false
+  const legend = top.length > 1 && spec.legend !== false && !focus.path.length
     ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
     : [];
 
-  const frame = createFrame(spec, theme, { height: Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
+  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);

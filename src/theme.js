@@ -20,7 +20,7 @@ const STRUCT = {
   type: { title: 20, subtitle: 14, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
   marks: { barRadius: 4, barMax: 30, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
   axes: { inside: true, grid: true },
-  layout: { padding: 24, paddingSmall: 16 },
+  layout: { padding: 24, paddingSmall: 12 },
 };
 
 const papel = {

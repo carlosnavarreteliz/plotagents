@@ -67,6 +67,17 @@ export function attach(root) {
       show(`<div style="font-weight:600;margin-bottom:2px">${esc(best.t)}</div>${rows}`, ev);
       return;
     }
+    if (t && t.classList && t.classList.contains('pa-near')) {
+      // Capa densa: busca el punto más cercano (≤ 14 px).
+      const pts = t.__near || (t.__near = JSON.parse(t.getAttribute('data-near')));
+      const p = toSvg(ev);
+      let best = null, bd = 196;
+      for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
+      if (!best) { hide(); return; }
+      overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
+      if (best[2]) show(linesHtml(best[2]), ev); else tipEl.style.opacity = '0';
+      return;
+    }
     const tg = t && t.closest ? t.closest('[data-tip]') : null;
     if (!tg) { hide(); return; }
     const mark = tg.classList.contains('pa-m') ? tg : tg.querySelector('.pa-m') && tg.querySelectorAll('.pa-m').length === 1 ? tg.querySelector('.pa-m') : null;
