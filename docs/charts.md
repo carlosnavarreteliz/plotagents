@@ -157,20 +157,37 @@ Age groups (`age` or `y`), two sides (`sex`, `series` or `hue`) and a value. Bac
 
 ### `choropleth` (`map`) · `symbolmap` (`bubblemap`)
 
-Chilean regions (`geo: "chile"`, default) and world countries (`geo: "world"`) ship with the library; any GeoJSON FeatureCollection works too. `key` is the data field to match and `value` the measure. Matching is forgiving: names, codes and aliases, ignoring accents, case and "Región de" ("RM", "Biobio", "XIII", "Aisén", "ARG", "EE.UU.").
+Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world countries (`geo: "world"`) ship with the library; any GeoJSON FeatureCollection works too. `key` is the data field to match and `value` the measure. Matching is forgiving: names, codes and aliases, ignoring accents, case and "Región de" ("RM", "Biobio", "XIII", "Aisén", "ARG", "EE.UU.", "TX", "Nueva York", "48").
+
+**United States.** 50 states and DC in an Albers equal-area projection (`albersUsa`, the same composite as `d3.geoAlbersUsa`): Alaska (at 0.35×) and Hawaii sit in insets at the bottom left with a fine dashed frame; Puerto Rico gets its own inset only when the data includes it (`territories: true` forces it). Each state shows its postal code, plus the value when it fits; the small northeastern states (VT, NH, MA, RI, CT, NJ, DE, MD, DC) are labeled in a column on the right with leader lines. `values: false` keeps only the codes; `labels: false` removes them.
 
 | Option | Meaning |
 |---|---|
-| `geo` | `"chile"`, `"world"`, a name registered with `registerGeo()`, or a GeoJSON object. |
+| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, or a GeoJSON object. |
 | `featureKey` | Feature property to match (default: tries code, id, ISO-3, name and aliases). |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
 | `missing` | `"plain"` drops the hatch and the "No data" legend entry. |
 | `labels`, `bars` | Chile gets a north-to-south column with name, bar and value; `bars: false` hides the bars. World maps label the top N. |
-| `projection` | `"mercator"` or `"equalEarth"` (picked automatically). |
+| `projection` | `"mercator"`, `"equalEarth"` or `"albersUsa"` (picked automatically). |
+| `dashed`, `dashedLabel` | Hatch some regions (preliminary figures, disputed areas): names, codes or a data field. They keep their class color. |
 | `maxRadius` | `symbolmap`: largest circle radius. |
 
-`lint` warns about rows that match no region or country. Sources: Natural Earth 1:110m (public domain) for the world; Biblioteca del Congreso Nacional for Chilean regions (attribution in `src/geo/data/chile-regiones.js`). In the browser, `dist/plotagents-geo.js` adds the geometries; `toHTML()` includes it only when a page has a map.
+In the browser (`render()` or `toHTML()`), maps are interactive: hovering outlines the shape; clicking a region zooms to fit it (click again, double-click, Esc or the reset button to go back); Ctrl/⌘ + scroll zooms around the pointer (plain scroll keeps scrolling the page, as `chartjs-plugin-zoom` recommends with its `modifierKey`); pinch zooms on touch screens; drag pans when zoomed; +/− buttons work from the keyboard. Each color class in the legend is a key: hover it to light up its regions, click to pin. With `time`, every region's color transitions into the next period's instead of jumping, and the zoom is kept while the slider plays.
+
+`lint` warns about rows that match no region or country. Sources: Natural Earth 1:110m (public domain) for the world; Biblioteca del Congreso Nacional for Chilean regions (attribution in `src/geo/data/chile-regiones.js`); U.S. Census Bureau cartographic boundaries 1:10m (public domain) via us-atlas 3.0.1 for US states. In the browser, `dist/plotagents-geo.js` adds the geometries; `toHTML()` includes it only when a page has a map.
+
+## Dashed shapes: estimates, projections, provisional figures
+
+Some numbers are not firm yet. Instead of a new color (which reads as a new category), plotagents keeps the shape's color and changes its texture: a hatched fill (stripes of the color over a light tint of it) and a dashed outline at 3:1 contrast. Lines get a dashed stroke with hollow points. It works in `bar`, `line`, `area`, `donut`/`pie`, `choropleth` and `symbolmap`.
+
+| Option | Meaning |
+|---|---|
+| `dashed` | A category, series or region name, or a list (`["Texas", "Ohio"]`); a data field whose truthy rows are dashed (`"provisional"`, accepts `true`, `1`, `"sí"`, `"yes"`, `"x"`); `{ field, equals }`; or `true` for everything. |
+| `dashedFrom` | On a time axis (`line`, `area`, `bar`): the first x that is projected. The line turns dashed from the last firm point, projected points are hollow, stacked areas are hatched in each series' color and a soft band with `dashedLabel` marks the stretch. |
+| `dashedLabel` | What it means: "Projection", "Preliminary", "Estimate". It is the legend entry (hover it to light up only the dashed shapes), the band label and a line in the tooltip. Defaults to "Estimado"/"Estimate"; `lint` suggests setting it. |
+
+This follows the Chart.js advice of using patterns (as `patternomaly` does) and `segment.borderDash` for projected stretches, so the distinction never depends on color alone.
 
 ## Networks and flows
 

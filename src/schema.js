@@ -64,8 +64,10 @@ export const schema = {
     },
 
     // Maps, networks, flows
-    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
-    key: field('choropleth/symbolmap: data field with the region or country name/code to match.'),
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    key: field('choropleth/symbolmap: data field with the region, state or country name/code to match (US: "TX", "Texas", "06").'),
+    projection: { type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa'], description: 'choropleth/symbolmap: map projection (picked automatically).' },
+    values: { type: 'boolean', description: 'choropleth with state codes (usa): false shows only the codes, without values.' },
     featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
     midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
     classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
@@ -113,6 +115,9 @@ export const schema = {
 
     // Emphasis and annotation
     highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    dashed: { description: 'Draw some shapes dashed (hatched fill + dashed outline; dashed stroke for lines) to mark estimates, projections or provisional figures. A category/series/region name or a list of them, a data field whose truthy rows are dashed, { field, equals }, or true for all.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', properties: { field: { type: 'string' }, equals: {} } }] },
+    dashedFrom: { description: 'line/area/bar on a time axis: x value from which marks are dashed (a projection). Lines turn dashed from the last firm point, over a soft labeled band.', anyOf: [{ type: 'string' }, { type: 'number' }] },
+    dashedLabel: { description: 'What the dashed shapes mean ("Projection", "Preliminary"): legend entry, band label and tooltip line. false hides the band label.', anyOf: [{ type: 'string' }, { type: 'boolean' }] },
     labels: { description: 'Value labels: true, false or "auto". In scatter/regplot: a number of points or a list of names to label.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
     refLines: { type: 'array', description: 'Reference lines (targets, averages).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
     annotations: { type: 'array', description: 'line/area: events on the x axis.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },

@@ -26,6 +26,7 @@ const { choropleth, symbolMap } = __req("src/charts/choropleth.js");
 const { registerGeo, getGeo, registeredGeo } = __req("src/geo/registry.js");
 
 
+
 const { heatmap } = __req("src/charts/heatmap.js");
 const { sankey } = __req("src/charts/sankey.js");
 const { kpi } = __req("src/charts/kpi.js");
@@ -558,7 +559,9 @@ const { colorMap } = __req("src/theme.js");
 const { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } = __req("src/data.js");
 const { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } = __req("src/axes.js");
 const { mean, sd, meanCI } = __req("src/stats.js");
-const { createFrame, SIZES } = __req("src/frame.js");
+const { createFrame, SIZES, hash } = __req("src/frame.js");
+const { parseDate } = __req("src/format.js");
+const { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } = __req("src/dashed.js");
 const { ctx } = __req("src/context.js");
 
 function prepareBar(spec) {
@@ -675,6 +678,17 @@ function bar(spec, theme) {
   };
   const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
 
+  const H = hatcher(theme, 'pa-b' + Math.abs(hash(String(spec.title) + theme.mode + frame.width)).toString(36));
+  const dm = dashedMatcher(spec, m.data, m.x, m.series);
+  const xNum = (c) => (m.kind === 'date' ? parseDate(c) : num(c));
+  const from = m.nominal ? null : fromTest(spec, xNum);
+  const isDashed = (c, si) => !!((dm && dm(c, multi ? seriesKeys[si] : m.series ? seriesKeys[0] : undefined)) || (from && from(xNum(c))));
+  const anyDashed = (dm || from) && cats.some((c) => seriesKeys.some((_, i) => isDashed(c, i)));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const dl = (c, si) => (isDashed(c, si) ? dashedLabel : '');
+  const paint = (c, si) => (isDashed(c, si) ? dashedAttrs(H, colorFor(c, si)) : { fill: colorFor(c, si) });
+  if (anyDashed && spec.legend !== false) legend.push({ label: dashedLabel, key: 'dashed', color: theme.muted, shape: 'square', dashed: true, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) });
+
   const labelMode = spec.labels ?? 'auto';
   const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
   const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : fmt(values.get(c)[0]));
@@ -719,14 +733,14 @@ function bar(spec, theme) {
           if (s.vv > 0) h -= gap; else { top += gap; h -= gap; }
           const outer = s.vv > 0 ? i === lastPos : i === lastNeg;
           const d = barPath(x0, top, w, Math.max(0, h), s.vv > 0 ? 'up' : 'down', outer ? 4 : 0);
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`) }, [el('path', { d, fill: colorFor(c, i) })]));
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [el('path', { d, ...paint(c, i) })]));
         });
         if (showLabels && !pct) {
           const t = m.total(c);
           const ty = t >= 0 ? yS(Math.max(0, ...sg.map((s) => s.to))) - 7 : yS(Math.min(0, ...sg.map((s) => s.to))) + 15;
           parts.push(text(bx + bw / 2, ty, fmt(t), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600, textAnchor: 'middle' }));
         }
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`), pct ? '' : `Total: ${fmt(m.total(c))}`) }, [hit, ...parts]));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
       } else {
         const w = Math.min(maxBar, (bw - 2 * (k - 1)) / k);
         const groupW = w * k + 2 * (k - 1);
@@ -738,9 +752,9 @@ function bar(spec, theme) {
           const d = barPath(bxI, top, w, h, v >= 0 ? 'up' : 'down');
           const er0 = m.errs.get(c)?.[i];
           const label = (multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v)) + (er0 ? ` (IC ${fmt(er0[0])}–${fmt(er0[1])})` : '');
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label) }, [
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label, dl(c, i)) }, [
             el('rect', { x: bxI - 1, y: inner.y, width: w + 2, height: inner.h, fill: 'transparent' }),
-            el('path', { d, fill: colorFor(c, i) }),
+            el('path', { d, ...paint(c, i) }),
             errBar(m.errs.get(c)?.[i], (e) => [bxI + w / 2, yS(e)], true, theme),
           ]));
           if (showLabels && !multi) {
@@ -796,13 +810,14 @@ function bar(spec, theme) {
           const fill = colorFor(c, i);
           const lab = pct ? fmt(s.vv) : '';
           const fits = lab && measure(lab, 11, 600) + 10 < w;
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`) }, [
-            el('path', { d, fill }),
-            fits ? text(left + 6, y0b + h / 2 + 4, lab, { fill: textColor(fill, theme), fontSize: 11, fontWeight: 600 }) : '',
+          const hatched = isDashed(c, i);
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [
+            el('path', { d, ...paint(c, i) }),
+            fits ? text(left + 6, y0b + h / 2 + 4, lab, { fill: hatched ? theme.ink : textColor(fill, theme), fontSize: 11, fontWeight: 600, ...(hatched ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke' } : {}) }) : '',
           ]));
         });
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`)) }, parts));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
       } else {
         const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
@@ -813,7 +828,7 @@ function bar(spec, theme) {
           const d = barPath(Math.min(xv, x0), yy, Math.abs(xv - x0), h, v >= 0 ? 'right' : 'left');
           const er = m.errs.get(c)?.[i];
           const erTxt = er ? ` (IC ${fmt(er[0])}–${fmt(er[1])})` : '';
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt) }, [el('path', { d, fill: colorFor(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt, dl(c, i)) }, [el('path', { d, ...paint(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
           if (showLabels && !multi) {
             parts.push(text(v >= 0 ? xv + 7 : xv - 7, yy + h / 2 + 4.5, fmt(v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: v >= 0 ? 'start' : 'end' }));
           }
@@ -826,7 +841,7 @@ function bar(spec, theme) {
   }
 
   const desc = describeBar(m, fmt, locale);
-  return frame.finish(body, { desc, type: 'bar' });
+  return frame.finish(body, { desc, type: 'bar', defs: H.defs() });
 }
 
 /** Barra de error fina con remates cortos (seaborn). */
@@ -1704,7 +1719,8 @@ function createFrame(spec, theme, defaults = {}) {
       }
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width)).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
-      const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`;
+      const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`
+        + (/^(choropleth|symbolmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '');
       return el(
         'svg',
         {
@@ -1718,6 +1734,7 @@ function createFrame(spec, theme, defaults = {}) {
           class: 'pa-chart',
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
+          'data-pa-lang': String(spec.locale || 'es').slice(0, 2),
           style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
         },
         [
@@ -1761,10 +1778,11 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     const w = 18 * X + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
     const cy = y + 6.5 * X;
-    out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
+    out.push(`<g class="pa-key" data-color="${esc(it.key ?? it.color)}" style="cursor:pointer">`);
     out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: rowH - 1, rx: 4, fill: 'transparent' }));
     const sw = 10 * Math.min(1.6, X);
-    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
+    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: it.dashed ? 'butt' : 'round', strokeDasharray: it.dashed ? '4 2.5' : null }));
+    else if (it.shape === 'square' && it.dashed) out.push(el('rect', { x: x + 0.6, y: cy - sw / 2 + 0.6, width: sw - 1.2, height: sw - 1.2, rx: 2, fill: it.fill || it.color, stroke: it.stroke || it.color, strokeWidth: 1.2, strokeDasharray: '3 2' }));
     else if (it.shape === 'square') out.push(el('rect', { x, y: cy - sw / 2, width: sw, height: sw, rx: 2.5, fill: it.color }));
     else out.push(el('circle', { cx: x + sw / 2, cy, r: sw / 2, fill: it.color }));
     out.push(text(x + sw + 6, y + 11 * X, label, { fill: theme.lede, fontSize: size }));
@@ -2026,6 +2044,87 @@ function lowess(xs, ys, { frac = 2 / 3, iters = 2 } = {}) {
 
 return { "variance": variance, "quantile": quantile, "zQuantile": zQuantile, "tQuantile": tQuantile, "meanCI": meanCI, "fiveNumber": fiveNumber, "histogram": histogram, "scottBandwidth": scottBandwidth, "kde": kde, "ecdf": ecdf, "polyfit": polyfit, "pearson": pearson, "lowess": lowess, "finite": finite, "sum": sum, "mean": mean, "sd": sd, "median": median };
 });
+__def("src/dashed.js", function () {
+const { el } = __req("src/svg.js");
+const { ramp, readable } = __req("src/theme.js");
+
+/** Trazos discontinuos: contornos cortos y finos; líneas algo más largas. */
+const DASH = { outline: '4 2.5', line: '5 6', legend: '3.5 2.5' };
+
+const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
+const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
+
+/**
+ * Devuelve una función (clave, serie?) → boolean, o null si no hay `dashed`.
+ * `keyField` y `seriesField` dicen qué campos identifican cada forma.
+ */
+function dashedMatcher(spec, data, keyField, seriesField, norm = String) {
+  const d = spec.dashed;
+  if (d === undefined || d === null || d === false) return null;
+  if (d === true) return () => true;
+  const row0 = data && data[0];
+  const field = typeof d === 'object' && !Array.isArray(d) ? d.field : typeof d === 'string' && row0 && d in row0 ? d : null;
+  if (field) {
+    const eq = typeof d === 'object' ? d.equals ?? d.value : undefined;
+    const pairs = new Set();
+    for (const r of data) {
+      const hit = eq !== undefined ? [].concat(eq).map(String).includes(String(r[field])) : truthy(r[field]);
+      if (hit) pairs.add(norm(r[keyField]) + '\u0000' + (seriesField ? norm(r[seriesField]) : ''));
+    }
+    return (k, s) => pairs.has(norm(k) + '\u0000' + (seriesField ? norm(s ?? '') : ''));
+  }
+  const keys = new Set([].concat(d).map(norm));
+  return (k, s) => keys.has(norm(k)) || (s !== undefined && s !== null && keys.has(norm(s)));
+}
+
+/** ¿El valor x está en el tramo proyectado (x ≥ dashedFrom)? */
+function fromTest(spec, toNum) {
+  if (spec.dashedFrom === undefined || spec.dashedFrom === null) return null;
+  const t = toNum(spec.dashedFrom);
+  return Number.isFinite(t) ? (x) => Number.isFinite(x) && x >= t : null;
+}
+
+const isHex = (c) => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(c || ''));
+
+/**
+ * Fábrica de rellenos rayados, uno por color. `fill(c)` da el url(#…) y
+ * `defs()` los <pattern> que hay que poner en el SVG.
+ */
+function hatcher(theme, id) {
+  const pats = new Map();
+  return {
+    fill(color) {
+      if (!pats.has(color)) pats.set(color, `${id}-h${pats.size}`);
+      return `url(#${pats.get(color)})`;
+    },
+    /** Contorno: el mismo tono, con al menos 3:1 contra el fondo (WCAG, gráficos). */
+    stroke(color) { return isHex(color) ? readable(color, theme, 3) : color; },
+    defs() {
+      return [...pats].map(([c, pid]) => pattern(pid, c, theme)).join('');
+    },
+    get size() { return pats.size; },
+  };
+}
+
+function pattern(pid, color, theme) {
+  const bg = isHex(color) && isHex(theme.surface) ? ramp([theme.surface, color], theme.mode === 'dark' ? 0.3 : 0.22) : null;
+  return el('pattern', { id: pid, width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, [
+    bg ? el('rect', { width: 6, height: 6, fill: bg }) : el('rect', { width: 6, height: 6, fill: color, fillOpacity: 0.22 }),
+    el('rect', { width: 2.6, height: 6, fill: color }),
+  ]);
+}
+
+/** Atributos de una forma punteada: relleno rayado + contorno discontinuo. */
+function dashedAttrs(H, color, { width = 1.25 } = {}) {
+  return { fill: H.fill(color), stroke: H.stroke(color), strokeWidth: width, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': color };
+}
+
+const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+/** Texto por defecto para la leyenda cuando el agente no da `dashedLabel`. */
+const dashedDefaultLabel = (locale) => T(locale, 'Estimado', 'Estimate');
+
+return { "dashedMatcher": dashedMatcher, "fromTest": fromTest, "hatcher": hatcher, "dashedAttrs": dashedAttrs, "DASH": DASH, "dashedDefaultLabel": dashedDefaultLabel };
+});
 __def("src/charts/line.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
@@ -2038,6 +2137,7 @@ const { createFrame } = __req("src/frame.js");
 const { ctx } = __req("src/context.js");
 const { meanCI, mean, sd } = __req("src/stats.js");
 const { hash } = __req("src/frame.js");
+const { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } = __req("src/dashed.js");
 
 function prepareLine(spec) {
   let data = ensureData(spec);
@@ -2148,6 +2248,11 @@ function line(spec, theme, variant = 'line') {
   const focus = (k) => !hl || hl.has(k);
   const colorOf = (k) => (focus(k) ? (!multi ? (spec.colors?.[k] || theme.categorical[0]) : cmap.get(k)) : theme.dim);
 
+  const dm = dashedMatcher(spec, [], null, null);
+  const dashedSeries = (k) => !!(dm && dm(k));
+  const fromT = fromTest(spec, (v) => (m.kind === 'category' ? m.cats.indexOf(String(v)) : typeof v === 'number' && m.kind === 'date' ? v : xValue(v, m.kind)));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+
   const labelMode = spec.labels ?? 'auto';
   const lastOf = (l) => [...l.points].reverse().find((p) => Number.isFinite(p.y));
   const labelSize = theme.type?.label ?? 12;
@@ -2165,7 +2270,7 @@ function line(spec, theme, variant = 'line') {
   const labeled = want ? m.lines.filter((l) => focus(l.key)).sort((a, b) => (lastOf(b)?.y ?? -Infinity) - (lastOf(a)?.y ?? -Infinity)).slice(0, maxLabels) : [];
   const allLabeled = labeled.length === m.lines.filter((l) => focus(l.key)).length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true) && spec.legend !== false;
-  const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line' })) : [];
+  const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line', dashed: dashedSeries(s) })) : [];
   const area = frame.layout(legend);
 
   const endW = labeled.length
@@ -2227,6 +2332,21 @@ function line(spec, theme, variant = 'line') {
     }
   }
 
+  let cutX = null;
+  if (fromT) {
+    const firm = xsAll.filter((xv) => !fromT(xv));
+    const startX = firm.length ? firm[firm.length - 1] : xsAll.find((xv) => fromT(xv));
+    if (startX !== undefined && xsAll.some((xv) => fromT(xv)) && startX <= x1) {
+      cutX = Math.max(inner.x, xS(Math.max(startX, x0)));
+      body.push(el('rect', { x: cutX, y: inner.y, width: Math.max(0, inner.x + inner.w - cutX), height: inner.h, fill: theme.tint, opacity: 0.55, 'pointer-events': 'none' }));
+      body.push(el('line', { x1: cutX, x2: cutX, y1: inner.y, y2: inner.y + inner.h, stroke: theme.muted, strokeWidth: 1, strokeDasharray: '2 3', opacity: 0.8 }));
+      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+    }
+  }
+  const gidD = 'pa-dash-' + Math.abs(hash(String(spec.title) + m.y + inner.w + theme.mode)).toString(36);
+  const H = hatcher(theme, gidD);
+  const clipL = `${gidD}-l`, clipR = `${gidD}-r`;
+
   const ordered = [...m.lines].sort((a, b) => (focus(a.key) ? 1 : 0) - (focus(b.key) ? 1 : 0));
   const showDots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
   const curve = spec.curve === 'smooth' ? monotonePath : spec.curve === 'step' ? stepPath : linearPath;
@@ -2257,17 +2377,34 @@ function line(spec, theme, variant = 'line') {
         const base0 = yS(Math.max(nd.min, 0));
         const bottom = stack ? sgm.map(([a, , p]) => [a, yS(p.y0)]).reverse() : [[sgm[sgm.length - 1][0], base0], [sgm[0][0], base0]];
         const d = top + 'L' + bottom.map(([a, b]) => `${a.toFixed(2)},${b.toFixed(2)}`).join('L') + 'Z';
-        parts.push(el('path', { d, fill: washSingle ? `url(#${gid})` : c, fillOpacity: washSingle ? 1 : stack ? 0.9 : M.areaOpacity ?? 0.12, stroke: stack ? theme.surface : 'none', strokeWidth: stack ? 1.5 : 0 }));
+        const areaAttrs = { d, fill: washSingle ? `url(#${gid})` : c, fillOpacity: washSingle ? 1 : stack ? 0.9 : M.areaOpacity ?? 0.12, stroke: stack ? theme.surface : 'none', strokeWidth: stack ? 1.5 : 0 };
+        const hatchedArea = stack || dashedSeries(l.key);
+        if (cutX !== null && hatchedArea) {
+          parts.push(el('path', { ...areaAttrs, 'clip-path': `url(#${clipL})` }));
+          parts.push(el('path', { ...areaAttrs, fill: H.fill(c), fillOpacity: stack ? 0.95 : 0.5, 'clip-path': `url(#${clipR})` }));
+        } else if (dashedSeries(l.key) && !washSingle) parts.push(el('path', { ...areaAttrs, fill: H.fill(c), fillOpacity: stack ? 0.95 : 0.5 }));
+        else parts.push(el('path', areaAttrs));
       }
     }
-    if (!stack) for (const sgm of segs) parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), fill: 'none', stroke: c, strokeWidth: focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5, strokeLinejoin: 'round', strokeLinecap: 'round' }));
-    const pts = segs.flat();
-    if (showDots && focus(l.key) && !stack) for (const [a, b] of pts) parts.push(el('circle', { cx: a, cy: b, r: (M.pointRadius ?? 4) - 0.5, fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }));
-    if (focus(l.key) && !stack) {
-      const [a, b] = pts[pts.length - 1];
-      parts.push(el('circle', { cx: a, cy: b, r: (M.pointRadius ?? 4) + 0.5, fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }));
+    const sw = focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5;
+    const lineAttrs = { fill: 'none', stroke: c, strokeWidth: sw, strokeLinejoin: 'round', strokeLinecap: 'round' };
+    const dashAttrs = { ...lineAttrs, strokeDasharray: DASH.line };
+    if (!stack) for (const sgm of segs) {
+      if (dashedSeries(l.key)) { parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), ...dashAttrs })); continue; }
+      const k = fromT ? sgm.findIndex(([, , p]) => fromT(p.x)) : -1;
+      if (k < 0) parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), ...lineAttrs }));
+      else {
+        if (k > 0) parts.push(el('path', { d: curve(sgm.slice(0, k).map(([a, b]) => [a, b])), ...lineAttrs }));
+        const rest = sgm.slice(Math.max(0, k - 1));
+        if (rest.length > 1) parts.push(el('path', { d: curve(rest.map(([a, b]) => [a, b])), ...dashAttrs }));
+      }
     }
-    body.push(g({ class: 'pa-m', 'data-series': l.key }, parts));
+    const pts = segs.flat();
+    const hollow = (p) => dashedSeries(l.key) || (fromT && fromT(p.x));
+    const dot = ([a, b, p], r) => el('circle', { cx: a, cy: b, r, ...(hollow(p) ? { fill: theme.surface, stroke: c, strokeWidth: 1.75 } : { fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }) });
+    if (showDots && focus(l.key) && !stack) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+    if (focus(l.key) && !stack) parts.push(dot(pts[pts.length - 1], (M.pointRadius ?? 4) + 0.5));
+    body.push(g({ class: 'pa-m', 'data-series': l.key, ...(dashedSeries(l.key) ? { 'data-dashed': '1' } : {}) }, parts));
   }
 
   body.push(refLinesY(refs, yS, inner, theme, fmt));
@@ -2301,7 +2438,7 @@ function line(spec, theme, variant = 'line') {
 
   const cross = xsAll.map((xv) => ({
     x: +xS(xv).toFixed(1),
-    t: xFmt(xv),
+    t: xFmt(xv) + (fromT && fromT(xv) ? ` · ${dashedLabel}` : ''),
     v: m.lines.filter((l) => focus(l.key)).map((l) => {
       const p = l.points.find((q) => q.x === xv);
       if (!p || !Number.isFinite(p.y)) return null;
@@ -2312,7 +2449,8 @@ function line(spec, theme, variant = 'line') {
   body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
 
   const desc = describeLine(m, fmt, xFmt, locale);
-  return frame.finish(body, { desc, type: isArea ? 'area' : 'line', defs });
+  if (cutX !== null) defs += el('clipPath', { id: clipL }, el('rect', { x: 0, y: 0, width: cutX, height: frame.height })) + el('clipPath', { id: clipR }, el('rect', { x: cutX, y: 0, width: frame.width, height: frame.height }));
+  return frame.finish(body, { desc, type: isArea ? 'area' : 'line', defs: defs + H.defs() });
 }
 
 /** Separa etiquetas en 1D: empuja hacia abajo y, si se pasan, hacia arriba. */
@@ -2845,7 +2983,8 @@ const { measure, truncate } = __req("src/text.js");
 const { makeFormat, formatNumber } = __req("src/format.js");
 const { colorMap, textOn } = __req("src/theme.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, humanize } = __req("src/data.js");
-const { createFrame } = __req("src/frame.js");
+const { createFrame, hash } = __req("src/frame.js");
+const { dashedMatcher, hatcher, dashedDefaultLabel, DASH } = __req("src/dashed.js");
 const { ctx } = __req("src/context.js");
 
 const f = (n) => n.toFixed(2);
@@ -2893,6 +3032,12 @@ function donut(spec, theme) {
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const colorOf = (s) => (s.other ? theme.other : hl && !hl.has(s.k) ? theme.dim : cmap.get(s.k));
   const pct = (v) => formatNumber((v / (total || 1)) * 100, (v / (total || 1)) * 100 < 10 ? 1 : 0, locale, true) + '%';
+  const dm = dashedMatcher(spec, data, labelF, null);
+  const isDashed = (s) => !!(dm && !s.other && dm(s.k));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const H = hatcher(theme, 'pa-d' + Math.abs(hash(String(spec.title) + theme.mode + labelF)).toString(36));
+  const paint = (s) => (isDashed(s) ? { fill: H.fill(colorOf(s)), 'data-dashed': '1', 'data-color': colorOf(s) } : { fill: colorOf(s) });
+  const tipOf = (s) => tip(s.k, `${fmt(s.v)} · ${pct(s.v)}`, isDashed(s) ? dashedLabel : '');
 
   let mode = spec.labels === false ? 'none' : spec.labels ?? 'auto';
   if (mode === true) mode = 'auto';
@@ -2957,7 +3102,8 @@ function donut(spec, theme) {
   }
   const sep = theme.marks?.gap ?? 2;
   for (const q of geo) {
-    body.push(el('path', { class: 'pa-m', d: arc(cx, cy, R, r0, q.a0, q.a1), fill: colorOf(q.s), stroke: theme.surface, strokeWidth: sep, strokeLinejoin: 'round', 'data-tip': tip(q.s.k, `${fmt(q.s.v)} · ${pct(q.s.v)}`) }));
+    body.push(el('path', { class: 'pa-m', d: arc(cx, cy, R, r0, q.a0, q.a1), ...paint(q.s), stroke: theme.surface, strokeWidth: sep, strokeLinejoin: 'round', 'data-tip': tipOf(q.s) }));
+    if (isDashed(q.s)) body.push(el('path', { d: arc(cx, cy, R - sep, r0 > 0 ? r0 + sep : 0, q.a0 + sep / R, q.a1 - sep / R), fill: 'none', stroke: H.stroke(colorOf(q.s)), strokeWidth: 1.2, strokeDasharray: DASH.outline, 'pointer-events': 'none' }));
   }
 
   if (inner) {
@@ -2965,15 +3111,16 @@ function donut(spec, theme) {
     const thick = R - r0;
     for (const q of geo) {
       const fill = colorOf(q.s);
-      const ink = textOn(fill, theme);
+      const ink = isDashed(q.s) ? theme.ink : textOn(fill, theme);
+      const halo = isDashed(q.s) ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
       const p = pct(q.s.v);
       const size = isPie ? 13 : 12;
       const chord = (q.a1 - q.a0) * rl;
       const x = cx + rl * Math.cos(q.mid), y = cy + rl * Math.sin(q.mid);
       const showName = mode === 'inside' && chord >= measure(q.s.k, 11.5) + 12 && (isPie || thick >= 40);
       if (chord >= measure(p, size, 600) + 10 && (isPie || thick >= size + 8)) {
-        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none' }));
-        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none' }));
+        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none', ...halo }));
+        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none', ...halo }));
       }
     }
   }
@@ -3001,7 +3148,7 @@ function donut(spec, theme) {
       const parts = side > 0
         ? [text(lx, it.y + 4, name, { fill: strong ? theme.ink : theme.muted, fontSize: 12.5 }), text(lx + nameW + 6, it.y + 4, pct(q.s.v), { fill: theme.ink, fontSize: 12.5, fontWeight: 600 })]
         : [text(lx, it.y + 4, pct(q.s.v), { fill: theme.ink, fontSize: 12.5, fontWeight: 600, textAnchor: anchor }), text(lx - measure(pct(q.s.v), 12.5, 600) - 6, it.y + 4, name, { fill: strong ? theme.ink : theme.muted, fontSize: 12.5, textAnchor: anchor })];
-      body.push(g({ 'data-tip': tip(q.s.k, `${fmt(q.s.v)} · ${pct(q.s.v)}`) }, parts));
+      body.push(g({ 'data-tip': tipOf(q.s) }, parts));
     }
   }
 
@@ -3029,18 +3176,20 @@ function donut(spec, theme) {
       const strong = !hl || hl.has(s.k);
       const parts = [
         el('rect', { x: tx, y: y - 15, width: lw, height: rowH, fill: 'transparent' }),
-        el('rect', { x: tx, y: y - 5, width: 10, height: 10, rx: 2.5, fill: colorOf(s) }),
+        isDashed(s)
+          ? el('rect', { x: tx + 0.6, y: y - 4.4, width: 8.8, height: 8.8, rx: 2, fill: H.fill(colorOf(s)), stroke: H.stroke(colorOf(s)), strokeWidth: 1.1, strokeDasharray: DASH.legend })
+          : el('rect', { x: tx, y: y - 5, width: 10, height: 10, rx: 2.5, fill: colorOf(s) }),
         text(tx + 18, y + 4.5, truncate(s.k, lw - 18 - valW - pctW - 28, 13), { fill: strong ? theme.ink : theme.muted, fontSize: 13 }),
         text(tx + lw - valW - 14, y + 4.5, pct(s.v), { fill: theme.ink, fontSize: 13, fontWeight: 600, textAnchor: 'end' }),
         text(tx + lw, y + 4.5, fmt(s.v), { fill: theme.muted, fontSize: 12.5, textAnchor: 'end' }),
       ];
-      body.push(g({ 'data-tip': tip(s.k, `${fmt(s.v)} · ${pct(s.v)}`) }, parts));
+      body.push(g({ 'data-tip': tipOf(s) }, parts));
     });
   }
 
   const kind = isPie ? (en ? 'Pie chart' : 'Gráfico de torta') : en ? 'Donut chart' : 'Gráfico de dona';
   const desc = `${kind} ${en ? 'of' : 'de'} ${humanize(valueF).toLowerCase()}. ` + slices.map((s) => `${s.k} ${pct(s.v)}`).join(', ') + '.';
-  return frame.finish(body, { desc, type: isPie ? 'pie' : 'donut' });
+  return frame.finish(body, { desc, type: isPie ? 'pie' : 'donut', defs: H.defs() });
 }
 
 /** Torta: dona sin agujero, con porcentajes dentro. */
@@ -5705,12 +5854,13 @@ __def("src/charts/choropleth.js", function () {
 const { el, g, text } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
 const { makeFormat } = __req("src/format.js");
-const { ramp } = __req("src/theme.js");
+const { ramp, textOn } = __req("src/theme.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } = __req("src/data.js");
 const { createFrame, hash } = __req("src/frame.js");
 const { niceStep } = __req("src/scale.js");
 const { getGeo } = __req("src/geo/registry.js");
-const { mercator, equalEarth, fit, aspectOf, pathD, centroid, rings } = __req("src/geo/projection.js");
+const { mercator, equalEarth, projections, fit, aspectOf, pathD, centroid, rings } = __req("src/geo/projection.js");
+const { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } = __req("src/dashed.js");
 
 const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
@@ -5769,7 +5919,7 @@ function colorScale(values, spec, theme) {
     const breaks = Array.from({ length: 2 * k - 1 }, (_, j) => +(mid + step * (j + 1 - k)).toPrecision(12));
     const n = 2 * k;
     const colors = Array.from({ length: n }, (_, i) => ramp(stops, 0.5 + ((i + 0.5 - k) / k) * 0.5));
-    return { ...classed(breaks, colors, min, max), mid };
+    return { ...classed(breaks, colors, Math.min(min, +(mid - k * step).toPrecision(12)), Math.max(max, +(mid + k * step).toPrecision(12))), mid };
   }
   const stops = theme.sequential;
   if (mode === 'continuous') return { mode, min, max, color: (x) => ramp(stops.slice(1), (x - min) / (range || 1)), stops: stops.slice(1) };
@@ -5793,7 +5943,7 @@ function classed(breaks, colors, min, max) {
 }
 
 /** Leyenda escalonada (o degradado), pegada al mapa. Devuelve { svg, h }. */
-function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) {
+function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid, dashed }) {
   const out = [];
   let lx = x;
   const size = theme.type?.axis ?? 11.5;
@@ -5802,14 +5952,24 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
     out.push(text(lx, y + 13, truncate(title, tw, 12, 500), { fill: theme.lede, fontSize: 12, fontWeight: 500 }));
     lx += tw + 12;
   }
-  const missW = missing ? measure(T(locale, 'Sin dato', 'No data'), size) + 24 : 0;
-  const barW = Math.max(120, Math.min(360, x + maxW - lx - missW));
+  const missW = missing ? measure(T(locale, 'Sin dato', 'No data'), size) + 14 + (dashed ? 14 : 0) : 0;
+  const dashW = dashed ? measure(dashed.label, size) + 16 : 0;
+  const extra = missW + dashW ? 14 + missW + dashW : 0;
+  const wrapX = 140 + extra > x + maxW - lx;
+  const barW = Math.max(120, Math.min(360, x + maxW - lx - (wrapX ? 0 : extra)));
   const by = y + 4;
   if (sc.mode === 'classes') {
     const n = sc.colors.length, gap = 2;
     const sw = (barW - gap * (n - 1)) / n;
-    sc.colors.forEach((c, i) => out.push(el('rect', { x: lx + i * (sw + gap), y: by, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c })));
-    const labels = [{ x: lx, v: sc.min, anchor: 'start' }, ...sc.breaks.map((b, i) => ({ x: lx + (i + 1) * (sw + gap) - gap / 2, v: b, anchor: 'middle' })), { x: lx + barW, v: sc.max, anchor: 'end' }];
+    sc.colors.forEach((c, i) => out.push(g({ class: 'pa-key', 'data-color': c, style: 'cursor:pointer' }, [
+      el('rect', { x: lx + i * (sw + gap), y: by - 4, width: sw + gap, height: 18, fill: 'transparent' }),
+      el('rect', { x: lx + i * (sw + gap), y: by, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c }),
+    ])));
+    const labels = [
+      ...(sc.min < sc.breaks[0] || !sc.breaks.length ? [{ x: lx, v: sc.min, anchor: 'start' }] : []),
+      ...sc.breaks.map((b, i) => ({ x: lx + (i + 1) * (sw + gap) - gap / 2, v: b, anchor: 'middle' })),
+      ...(sc.max >= sc.breaks[sc.breaks.length - 1] || !sc.breaks.length ? [{ x: lx + barW, v: sc.max, anchor: 'end' }] : []),
+    ];
     let last = -Infinity;
     for (const L of labels) {
       const s = fmt(L.v), w = measure(s, size);
@@ -5827,12 +5987,22 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
     if (sc.mid !== undefined) out.push(text(lx + barW / 2, by + 24, fmt(sc.mid), { fill: theme.muted, fontSize: size, textAnchor: 'middle' }));
     out.push(text(lx + barW, by + 24, fmt(sc.max), { fill: theme.muted, fontSize: size, textAnchor: 'end' }));
   }
+  let mx = wrapX ? x : lx + barW + 14;
+  const ey = wrapX ? by + 32 : by;
   if (missing) {
-    const mx = lx + barW + 14;
-    out.push(el('rect', { x: mx, y: by, width: 10, height: 10, rx: 2, fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }));
-    out.push(text(mx + 14, by + 9, T(locale, 'Sin dato', 'No data'), { fill: theme.muted, fontSize: size }));
+    out.push(g({ class: 'pa-key', 'data-color': `url(#${gid}-nd)`, style: 'cursor:pointer' }, [
+      el('rect', { x: mx, y: ey, width: 10, height: 10, rx: 2, fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }),
+      text(mx + 14, ey + 9, T(locale, 'Sin dato', 'No data'), { fill: theme.muted, fontSize: size }),
+    ]));
+    mx += missW;
   }
-  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: 34 };
+  if (dashed) {
+    out.push(g({ class: 'pa-key', 'data-color': 'dashed', style: 'cursor:pointer' }, [
+      el('rect', { x: mx + 0.6, y: ey + 0.6, width: 9.8, height: 9.8, rx: 2, fill: dashed.fill, stroke: dashed.stroke, strokeWidth: 1.1, strokeDasharray: DASH.legend }),
+      text(mx + 15, ey + 9, dashed.label, { fill: theme.lede, fontSize: size }),
+    ]));
+  }
+  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: wrapX && (missing || dashed) ? 50 : 34 };
 }
 
 /** Patrón rayado para regiones sin dato. */
@@ -5850,7 +6020,12 @@ function prepare(spec, locale) {
   requireField(data, valueF, 'value');
   let features = fc.features.filter((f) => f.geometry && rings(f.geometry).length);
   if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
-  const idx = featureIndex(features, spec.featureKey);
+  let idx = featureIndex(features, spec.featureKey);
+  if (features.some((f) => f.properties?.optional)) {
+    const used = new Set(data.map((r) => idx.get(normKey(r[key]))).filter(Boolean));
+    features = features.filter((f) => !f.properties?.optional || used.has(f) || spec.territories === true);
+    idx = featureIndex(features, spec.featureKey);
+  }
   const buckets = new Map();
   const unmatched = [];
   for (const r of data) {
@@ -5864,10 +6039,12 @@ function prepare(spec, locale) {
   if (Array.isArray(spec._unmatched)) spec._unmatched.push(...new Set(unmatched));
   const ranked = [...values.entries()].sort((a, b) => b[1] - a[1]);
   const rank = new Map(ranked.map(([f], i) => [f, i + 1]));
-  const projName = spec.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
+  const projName = spec.projection ?? fc.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
   const lonSpan = (() => { let a = Infinity, b = -Infinity; for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < a) a = p[0]; if (p[0] > b) b = p[0]; } return b - a; })();
-  const raw = (projName === 'mercator' ? mercator : projName === 'equalEarth' || projName === 'equal-earth' || lonSpan > 100 ? equalEarth : mercator)();
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data };
+  const raw = (projName && projections[projName] ? projections[projName] : lonSpan > 100 ? equalEarth : mercator)();
+  const dm = dashedMatcher(spec, data, key, null, normKey);
+  const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed };
 }
 
 /**
@@ -5936,10 +6113,80 @@ function chooseLabeled(m, spec, locale, defaultN) {
   const top = m.ranked.slice(0, n).map(([f]) => f);
   return [...new Set([...m.features.filter(isHl), ...top])];
 }
-function featureIndexHas(f, keys) {
+function featureKeys(f) {
   const p = f.properties || {};
-  const own = [p.code, p.num, p.id, p.iso3, p.name, p.nameEn, ...(p.aliases || [])].map(normKey);
+  return [p.code, p.num, p.id, p.iso3, p.fips, p.name, p.nameEn, ...(p.aliases || [])].filter((v) => v !== undefined && v !== null).map(normKey);
+}
+function featureIndexHas(f, keys) {
+  const own = featureKeys(f);
   return keys.some((k) => own.includes(k));
+}
+
+/**
+ * Siglas sobre el mapa (estados de EE. UU. u otra geometría con `abbr`): la
+ * sigla va dentro si cabe, con el valor debajo cuando hay espacio. Las
+ * marcadas `callout` (estados chicos) van en una columna a la derecha con
+ * línea guía, ordenadas por altura.
+ */
+function abbrLabels(items, proj, theme, { calloutX, showValues, top, bottom }) {
+  const inside = [], callouts = [];
+  const fs = Math.max(8.5, Math.min(11, proj.bounds.w / 62));
+  for (const it of items) {
+    const p = it.f.properties || {};
+    if (!p.abbr) continue;
+    const at = p.labelAt ? proj(p.labelAt) : [it.cx, it.cy];
+    if (p.callout && calloutX) { callouts.push({ ...it, ax: it.cx, ay: it.cy }); continue; }
+    const s = Math.sqrt(it.area);
+    const aw = measure(p.abbr, fs, 600);
+    if (aw + 3 > s * 0.95) {
+      if (!proj.inset || !proj.inset(p.labelAt || it.f.geometry && rings(it.f.geometry)[0][0])) continue;
+      let x1 = -Infinity;
+      for (const r of rings(it.f.geometry)) for (const pt of r) x1 = Math.max(x1, proj(pt)[0]);
+      inside.push(text(x1 + 5, at[1] + fs * 0.36, p.abbr, { fill: theme.lede, fontSize: fs, fontWeight: 600 }));
+      continue;
+    }
+    const ink = it.dashedShape ? theme.ink : textOn(it.color, theme);
+    const val = showValues && !it.missing && s > fs * 3.4 && measure(it.label, fs - 1) + 4 < s * 0.92;
+    const y0 = at[1] + (val ? -1 : fs * 0.36);
+    const halo = it.dashedShape ? { stroke: theme.surface, strokeWidth: 2.5, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
+    inside.push(text(at[0], y0, p.abbr, { fill: ink, fontSize: fs, fontWeight: 600, textAnchor: 'middle', ...halo }));
+    if (val) inside.push(text(at[0], y0 + fs + 0.5, it.label, { fill: ink, fontSize: fs - 1, textAnchor: 'middle', opacity: 0.88, ...halo }));
+  }
+  const out = [g({ class: 'pa-map-label pa-zoom-hide', 'pointer-events': 'none' }, inside)];
+  if (callouts.length) {
+    const rowH = fs + 5.5;
+    const rows = callouts.sort((a, b) => a.ay - b.ay).map((c) => ({ ...c, y: c.ay }));
+    for (let i = 0; i < rows.length; i++) rows[i].y = Math.max(rows[i].y, i ? rows[i - 1].y + rowH : top + rowH / 2);
+    for (let i = rows.length - 1; i >= 0; i--) { const lim = i === rows.length - 1 ? bottom - rowH / 2 : rows[i + 1].y - rowH; if (rows[i].y > lim) rows[i].y = lim; }
+    const parts = rows.map((r) => {
+      const p = r.f.properties;
+      const ax = r.ax.toFixed(1), ay = r.ay.toFixed(1);
+      return g({ class: 'pa-m', 'data-tip': r.tip, 'data-color': r.color }, [
+        el('path', { d: `M${ax},${ay}L${(calloutX - 12).toFixed(1)},${r.y.toFixed(1)}L${(calloutX - 3).toFixed(1)},${r.y.toFixed(1)}`, fill: 'none', stroke: theme.muted, strokeWidth: 0.6, opacity: 0.7 }),
+        el('circle', { cx: ax, cy: ay, r: 1.6, fill: theme.ink, opacity: 0.75 }),
+        el('rect', { x: calloutX, y: r.y - 4.5, width: 9, height: 9, rx: 2, ...(r.dashedShape ? { fill: r.fill, stroke: r.stroke, strokeWidth: 1, strokeDasharray: DASH.legend } : { fill: r.missing ? r.fill : r.color }) }),
+        text(calloutX + 13, r.y + fs * 0.36, p.abbr, { fill: theme.ink, fontSize: fs, fontWeight: 600 }),
+        showValues ? text(calloutX + 18 + measure(p.abbr, fs, 600), r.y + fs * 0.36, r.label, { fill: theme.lede, fontSize: fs }) : '',
+      ]);
+    });
+    out.push(g({ class: 'pa-callouts pa-zoom-hide' }, parts));
+  }
+  return out;
+}
+
+/** Recuadros (Alaska, Hawái, Puerto Rico): un marco fino y discontinuo. */
+function insetFrames(features, proj, theme) {
+  if (!proj.inset) return '';
+  const boxes = new Map();
+  for (const f of features) for (const r of rings(f.geometry)) {
+    const k = proj.inset(r[0]);
+    if (!k) continue;
+    const b = boxes.get(k) || [Infinity, Infinity, -Infinity, -Infinity];
+    for (const pt of r) { const [x, y] = proj(pt); b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); }
+    boxes.set(k, b);
+  }
+  const pad = 7;
+  return g({ class: 'pa-insets', 'pointer-events': 'none' }, [...boxes.values()].map((b) => el('rect', { x: b[0] - pad, y: b[1] - pad, width: b[2] - b[0] + 2 * pad, height: b[3] - b[1] + 2 * pad, rx: 6, fill: 'none', stroke: theme.axis, strokeWidth: 0.8, strokeDasharray: '2 3' })));
 }
 
 function baseChart(spec, theme, kind) {
@@ -5957,14 +6204,55 @@ function baseChart(spec, theme, kind) {
   const missingAny = spec.missing !== 'plain' && m.features.some((f) => !m.values.has(f));
   const body = [];
   let sc = null;
+  const H = hatcher(theme, gid);
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const dashedKey = m.dashed.size && spec.legend !== false ? { label: dashedLabel, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) } : null;
   if (kind === 'choropleth' && vals.length) {
     sc = colorScale(vals, spec, theme);
-    const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid });
+    const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid, dashed: dashedKey });
     body.push(lg.svg);
     area = { ...area, y: area.y + lg.h + 8, h: area.h - lg.h - 8 };
   }
+  let rMax = null;
+  if (kind === 'symbol') {
+    const N = m.values.size;
+    const wEst = area.w, hEst = wEst * Math.min(1.1, aspect);
+    rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt(tall ? (area.h / aspect) * area.h : wEst * hEst) / (tall ? 9 : N > 30 ? 22 : 16)));
+  }
+  let lx = area.x;
+  const rowItems = [];
+  if (kind === 'symbol' && !tall && vals.length) {
+    const maxV = Math.max(...vals.map(Math.abs), 0) || 1;
+    const size = theme.type?.axis ?? 11.5;
+    const base = area.y + 2 * rMax + 2;
+    for (const v of [maxV / 16, maxV / 4, maxV]) {
+      const r = Math.sqrt(v / maxV) * rMax;
+      rowItems.push(el('circle', { cx: lx + r, cy: base - r, r, fill: 'none', stroke: theme.muted, strokeWidth: 0.8 }));
+      rowItems.push(text(lx + 2 * r + 5, base - 1, fmt(v), { fill: theme.muted, fontSize: size }));
+      lx += 2 * r + 12 + measure(fmt(v), size);
+    }
+    lx += 10;
+  }
+  if (dashedKey && !(kind === 'choropleth' && vals.length)) {
+    const size = theme.type?.axis ?? 11.5;
+    const ky = rowItems.length ? area.y + 2 * rMax - 9 : area.y + 4.6;
+    rowItems.push(g({ class: 'pa-key', 'data-color': 'dashed', style: 'cursor:pointer' }, [
+      el('rect', { x: lx + 0.6, y: ky, width: 9.8, height: 9.8, rx: 2, fill: dashedKey.fill, stroke: dashedKey.stroke, strokeWidth: 1.1, strokeDasharray: DASH.legend }),
+      text(lx + 15, ky + 8.4, dashedLabel, { fill: theme.lede, fontSize: size }),
+    ]));
+  }
+  if (rowItems.length) {
+    const h = kind === 'symbol' && !tall ? 2 * rMax + 12 : 26;
+    body.push(g({ class: 'pa-legend pa-size-legend' }, rowItems));
+    area = { ...area, y: area.y + h, h: area.h - h };
+  }
+  const callouts = kind === 'choropleth' && !tall && spec.labels !== false ? m.features.filter((f) => f.properties?.callout && f.properties?.abbr) : [];
+  const fsC = Math.max(8.5, Math.min(11, (area.w * 0.9) / 62));
+  const calloutW = callouts.length
+    ? 18 + Math.max(...callouts.map((f) => measure(f.properties.abbr, fsC, 600) + (kind === 'choropleth' && m.values.has(f) ? measure(fmt(m.values.get(f)), fsC) + 4 : 0)))
+    : 0;
   if (!tall && spec.height === undefined) {
-    const mapH = area.w * Math.min(1.1, aspect);
+    const mapH = (area.w - calloutW) * Math.min(1.1, aspect);
     frame.setHeight(area.y + mapH + frame.chrome);
     area = { ...area, h: frame.bottom - area.y };
   }
@@ -5973,65 +6261,96 @@ function baseChart(spec, theme, kind) {
     const colMin = W < 480 ? 0.56 : 0.5;
     let mapW = Math.min(area.w * (1 - colMin), area.h / aspect);
     box = [area.x, area.y, area.x + mapW, area.y + area.h];
-  } else box = [area.x, area.y, area.x + area.w, area.y + area.h];
+  } else box = [area.x, area.y, area.x + area.w - calloutW, area.y + area.h];
   const proj = fit(m.features, m.raw, box, { align: tall ? 'left' : 'center' });
-  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall };
+  const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
+  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax };
 }
 
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
+/** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
+function zoomLayer(B, children) {
+  const { area, gid } = B;
+  const box = [area.x, area.y, area.w, area.h].map((v) => Math.round(v * 10) / 10);
+  return [
+    el('clipPath', { id: `${gid}-clip` }, el('rect', { x: box[0], y: box[1] - 2, width: box[2], height: box[3] + 4 })),
+    g({ class: 'pa-zoom-clip', 'clip-path': `url(#${gid}-clip)` }, [el('rect', { x: box[0], y: box[1], width: box[2], height: box[3], fill: 'transparent' }), g({ class: 'pa-zoom', 'data-zoom': box.join(',') }, children)]),
+  ];
+}
+
 function choropleth(spec, theme) {
   const B = baseChart(spec, theme, 'choropleth');
-  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall } = B;
+  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX } = B;
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl && featureIndexHas(f, hl);
   const N = m.values.size;
-  const regions = [], outlines = [];
+  const regions = [], dashedRegions = [], outlines = [];
   const items = [];
   for (const f of m.features) {
     const v = m.values.get(f);
     const has = v !== undefined;
-    const fill = has ? sc.color(v) : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
+    const base = has ? sc.color(v) : null;
+    const isDashed = m.dashed.has(f);
     const name = nameOf(f, locale);
-    const tipTxt = has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`;
-    regions.push(el('path', { class: 'pa-m', d: pathD(f.geometry, proj), fill, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt }));
-    if (isHl(f)) outlines.push(el('path', { d: pathD(f.geometry, proj), fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
+    const tipTxt = (has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
+    const d = pathD(f.geometry, proj);
+    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt, 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name) };
+    let fill = has ? base : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
+    let stroke = null;
+    if (isDashed && has) {
+      const a = dashedAttrs(H, base, { width: 1.2 });
+      fill = a.fill; stroke = a.stroke;
+      dashedRegions.push(el('path', { ...common, ...a }));
+    } else if (isDashed) {
+      stroke = theme.muted;
+      dashedRegions.push(el('path', { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill }));
+    } else regions.push(el('path', { ...common, fill, stroke: theme.surface, strokeWidth: 0.75, 'data-color': fill }));
+    if (isHl(f)) outlines.push(el('path', { d, fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
     const c = centroid(f.geometry, proj);
-    items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? sc.color(v) : theme.tint, missing: !has, tip: tipTxt });
+    items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
-  body.push(g({ class: 'pa-regions' }, regions), g({ class: 'pa-outlines' }, outlines));
+  const layer = [g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme)];
+  const after = [];
   if (tall && spec.labels !== false) {
     const x = proj.bounds.x + proj.bounds.w + 26;
     const maxV = Math.max(...[...m.values.values()].map(Math.abs));
-    body.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+    after.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+  } else if (spec.labels !== false && m.features.some((f) => f.properties?.abbr) && !Array.isArray(spec.labels) && typeof spec.labels !== 'number') {
+    const [lab, ...rest] = abbrLabels(items, proj, theme, { calloutX, showValues: spec.values !== false, top: area.y, bottom: area.y + area.h });
+    layer.push(lab);
+    after.push(...rest);
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, m.features.length <= 30 ? m.features.length : 0));
     const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area);
-    body.push(...mapLabels(ordered, theme));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme)));
   }
+  body.push(...(tall ? layer : zoomLayer(B, layer)), ...after);
   const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map'));
-  return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) });
+  return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs() });
 }
 
 /** Mapa de símbolos: círculos de área proporcional en el centroide. */
 function symbolMap(spec, theme) {
   const B = baseChart(spec, theme, 'symbol');
-  const { locale, m, fmt, frame, area, body, proj, tall, gid } = B;
+  const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax } = B;
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
-  const rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt(proj.bounds.w * proj.bounds.h) / (tall ? 9 : 16)));
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  body.push(g({ class: 'pa-regions' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round' }))));
+  const layer = [g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)) }))), insetFrames(m.features, proj, theme)];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);
     const v = m.values.get(f);
     const name = nameOf(f, locale);
-    return { f, name, v, cx: c.x, cy: c.y, area: c.area, r: v === undefined ? 0 : Math.sqrt(Math.abs(v) / maxV) * rMax, label: v === undefined ? '—' : fmt(v), color, missing: v === undefined,
-      tip: v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` };
+    const isDashed = m.dashed.has(f);
+    const at = f.properties?.labelAt ? proj(f.properties.labelAt) : [c.x, c.y];
+    return { f, name, v, cx: at[0], cy: at[1], area: c.area, r: v === undefined ? 0 : Math.sqrt(Math.abs(v) / maxV) * rMax, label: v === undefined ? '—' : fmt(v), color, missing: v === undefined, dashedShape: isDashed,
+      tip: (v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}`) + (isDashed ? `\n${dashedLabel}` : '') };
   });
   const circles = items.filter((it) => !it.missing).sort((a, b) => b.r - a.r)
-    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': it.tip }));
-  body.push(g({ class: 'pa-symbols' }, circles));
+    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': it.tip, 'data-color': color,
+      ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
+  layer.push(g({ class: 'pa-symbols' }, circles));
   const sizes = [maxV, maxV / 4, maxV / 16].map((v) => ({ v, r: Math.sqrt(v / maxV) * rMax }));
   const lx = tall ? proj.bounds.x + proj.bounds.w + 26 : area.x + 4, ly = tall ? area.y + area.h - 4 : area.y + area.h - 4;
   const leg = sizes.map((s) => [
@@ -6042,14 +6361,15 @@ function symbolMap(spec, theme) {
   if (tall && spec.labels !== false) {
     const x = proj.bounds.x + proj.bounds.w + 26;
     const legH = rMax * 2 + 12;
-    body.push(...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+    body.push(...layer, ...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, Math.min(5, m.values.size)));
-    body.push(...mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme)));
+    body.push(...zoomLayer(B, layer));
   }
-  body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
+  if (tall) body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
   const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map'));
-  return frame.finish(body, { desc, type: 'symbolmap' });
+  return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs() });
 }
 
 function describeMap(m, fmt, locale, what) {
@@ -6087,7 +6407,7 @@ function getGeo(geo) {
     const known = [...new Set(REG.keys())];
     throw new PlotError(
       `No hay una geometría registrada con el nombre "${geo}".`,
-      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
+      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile', 'plotagents/geo/usa' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
     );
   }
   return fc;
@@ -6120,7 +6440,43 @@ function equalEarth() {
   };
 }
 
-const projections = { mercator, equalEarth, 'equal-earth': equalEarth };
+/**
+ * Cónica de áreas iguales (Albers) con rotación y centro, en escala unitaria:
+ * misma fórmula que d3.geoConicEqualArea. Devuelve [x, y] con y hacia abajo.
+ */
+function conic(rot, center, [p0, p1], k = 1, [tx, ty] = [0, 0]) {
+  const sy0 = Math.sin(p0 * RAD), n = (sy0 + Math.sin(p1 * RAD)) / 2;
+  const c = 1 + sy0 * (2 * n - sy0), r0 = Math.sqrt(c) / n;
+  const raw = (lon, lat) => {
+    let l = lon + rot;
+    l = ((((l + 180) % 360) + 360) % 360) - 180;
+    const r = Math.sqrt(Math.max(0, c - 2 * n * Math.sin(lat * RAD))) / n;
+    const a = l * RAD * n;
+    return [r * Math.sin(a), r0 - r * Math.cos(a)];
+  };
+  const [cx, cy] = raw(center[0], center[1]);
+  return (lon, lat) => { const [x, y] = raw(lon, lat); return [tx + k * (x - cx), ty - k * (y - cy)]; };
+}
+
+/**
+ * EE. UU. compuesto: 48 estados contiguos en Albers y recuadros para Alaska
+ * (a 0,35×), Hawái y Puerto Rico abajo, como en d3 / d3-composite-projections.
+ * Cada punto va al recuadro de su territorio (las geometrías no cruzan).
+ */
+function albersUsa() {
+  const lower48 = conic(96, [-96.6, 38.7], [29.5, 45.5]);
+  const alaska = conic(154, [-156, 58.5], [55, 65], 0.35, [-0.307, 0.201]);
+  const hawaii = conic(157, [-160, 19.9], [8, 18], 1, [-0.205, 0.212]);
+  const puertoRico = conic(66, [-66, 18], [8, 18], 1, [0.35, 0.224]);
+  const which = ([lon, lat]) => (lat > 50 ? 'AK' : lat < 23 && lon < -150 ? 'HI' : lon > -68.5 && lon < -64 && lat < 19.5 ? 'PR' : null);
+  const P = { AK: alaska, HI: hawaii, PR: puertoRico };
+  const f = (p) => (P[which(p)] || lower48)(p[0], p[1]);
+  f.continuous = true; // sin corte en el antimeridiano: los recuadros ya son continuos
+  f.inset = which;
+  return f;
+}
+
+const projections = { mercator, equalEarth, 'equal-earth': equalEarth, albersUsa, 'albers-usa': albersUsa, albers: albersUsa };
 
 /** Recorre todos los anillos de una geometría. */
 function rings(geom) {
@@ -6153,6 +6509,8 @@ function fit(features, raw, [x0, y0, x1, y1], { align = 'center' } = {}) {
   const oy = y0 + (h - mh) / 2;
   const proj = (p) => { const [x, y] = raw(p); return [ox + (x - bx0) * k, oy + (y - by0) * k]; };
   proj.bounds = { x: ox, y: oy, w: mw, h: mh };
+  proj.continuous = !!raw.continuous;
+  proj.inset = raw.inset;
   proj.aspect = (by1 - by0) / (bx1 - bx0 || 1);
   return proj;
 }
@@ -6175,10 +6533,11 @@ const r1 = (v) => Math.round(v * 10) / 10;
  */
 function pathD(geom, proj) {
   let d = '';
+  const cut = !proj.continuous;
   for (const ring of rings(geom)) {
     let started = false, lastLon = null, lx = null, ly = null, n = 0;
     for (const p of ring) {
-      if (lastLon !== null && Math.abs(p[0] - lastLon) > 180) started = false;
+      if (cut && lastLon !== null && Math.abs(p[0] - lastLon) > 180) started = false;
       lastLon = p[0];
       const [x, y] = proj(p);
       const X = r1(x), Y = r1(y);
@@ -6207,7 +6566,7 @@ function centroid(geom, proj) {
   return best ? { x: best.x, y: best.y, area: Math.abs(best.area) } : { x: 0, y: 0, area: 0 };
 }
 
-return { "mercator": mercator, "equalEarth": equalEarth, "rings": rings, "polygonsOf": polygonsOf, "fit": fit, "aspectOf": aspectOf, "pathD": pathD, "centroid": centroid, "projections": projections };
+return { "mercator": mercator, "equalEarth": equalEarth, "albersUsa": albersUsa, "rings": rings, "polygonsOf": polygonsOf, "fit": fit, "aspectOf": aspectOf, "pathD": pathD, "centroid": centroid, "projections": projections };
 });
 __def("src/charts/heatmap.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
@@ -6755,7 +7114,11 @@ function lint(spec = {}) {
   if (type === 'choropleth' || type === 'symbolmap') {
     const _unmatched = [];
     try { RENDER_PROBE?.({ ...spec, _unmatched }); } catch { /* el error ya se reporta al dibujar */ }
-    if (_unmatched.length) warn('geo-unmatched', `${_unmatched.length} fila(s) no coinciden con el mapa: ${_unmatched.slice(0, 5).join(', ')}.`, 'Revisa los nombres o usa códigos (p. ej. "XIII", "ARG"), o indica `featureKey`.');
+    if (_unmatched.length) warn('geo-unmatched', `${_unmatched.length} fila(s) no coinciden con el mapa: ${_unmatched.slice(0, 5).join(', ')}.`, 'Revisa los nombres o usa códigos (p. ej. "XIII", "ARG", "TX"), o indica `featureKey`.');
+  }
+  if ((spec.dashed !== undefined && spec.dashed !== false) || spec.dashedFrom !== undefined) {
+    if (spec.dashedLabel === undefined) sug('dashed-label', 'Hay formas punteadas pero no se dice qué significan (la leyenda dirá "Estimado").', 'Agrega `dashedLabel: "Proyección"`, "Cifra preliminar" o lo que corresponda.');
+    if (spec.dashedFrom !== undefined && !['line', 'area', 'bar', 'column', 'count'].includes(type)) warn('dashed-from-type', '`dashedFrom` solo aplica a líneas, áreas y columnas con eje de tiempo.', 'Usa `dashed` con una lista de categorías o un campo de los datos.');
   }
   if (type === 'pyramid') {
     const sf = spec.sex ?? spec.series ?? spec.hue;
@@ -6836,8 +7199,10 @@ const schema = {
       },
     },
 
-    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
-    key: field('choropleth/symbolmap: data field with the region or country name/code to match.'),
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    key: field('choropleth/symbolmap: data field with the region, state or country name/code to match (US: "TX", "Texas", "06").'),
+    projection: { type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa'], description: 'choropleth/symbolmap: map projection (picked automatically).' },
+    values: { type: 'boolean', description: 'choropleth with state codes (usa): false shows only the codes, without values.' },
     featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
     midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
     classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
@@ -6882,6 +7247,9 @@ const schema = {
     },
 
     highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    dashed: { description: 'Draw some shapes dashed (hatched fill + dashed outline; dashed stroke for lines) to mark estimates, projections or provisional figures. A category/series/region name or a list of them, a data field whose truthy rows are dashed, { field, equals }, or true for all.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', properties: { field: { type: 'string' }, equals: {} } }] },
+    dashedFrom: { description: 'line/area/bar on a time axis: x value from which marks are dashed (a projection). Lines turn dashed from the last firm point, over a soft labeled band.', anyOf: [{ type: 'string' }, { type: 'number' }] },
+    dashedLabel: { description: 'What the dashed shapes mean ("Projection", "Preliminary"): legend entry, band label and tooltip line. false hides the band label.', anyOf: [{ type: 'string' }, { type: 'boolean' }] },
     labels: { description: 'Value labels: true, false or "auto". In scatter/regplot: a number of points or a list of names to label.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
     refLines: { type: 'array', description: 'Reference lines (targets, averages).', items: { type: 'object', properties: { y: { type: 'number' }, x: { type: 'number' }, value: { type: 'number' }, label: { type: 'string' } } } },
     annotations: { type: 'array', description: 'line/area: events on the x axis.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
@@ -6980,11 +7348,18 @@ function attach(root) {
     tipEl.style.left = x + 'px';
     tipEl.style.top = y + 'px';
   };
+  const type = svg.getAttribute('data-pa-type') || '';
+  const isMap = type === 'choropleth' || type === 'symbolmap';
+  const zoomG = svg.querySelector('.pa-zoom');
+  const mapOverlay = document.createElementNS(NS, 'g');
+  mapOverlay.setAttribute('pointer-events', 'none');
+  if (zoomG) zoomG.appendChild(mapOverlay);
   const hide = () => {
     tipEl.style.opacity = '0';
     if (on) on.classList.remove('pa-on');
     on = null;
     overlay.innerHTML = '';
+    mapOverlay.innerHTML = '';
     if (!pinned) svg.classList.remove('pa-focus');
   };
   const tipBg = dark ? '#F2F3FA' : '#141A3F';
@@ -7001,6 +7376,8 @@ function attach(root) {
   };
   const markColor = (node) => {
     if (!node) return null;
+    const dc = node.getAttribute && (node.getAttribute('data-color') || (node.querySelector('[data-color]') || { getAttribute: () => null }).getAttribute('data-color'));
+    if (dc && /^#/.test(dc)) return dc;
     const cands = [node, ...node.querySelectorAll('[fill],[stroke]')];
     for (const n of cands) {
       const f = n.getAttribute && n.getAttribute('fill');
@@ -7057,7 +7434,11 @@ function attach(root) {
     if (mark !== on) {
       if (on) on.classList.remove('pa-on');
       on = mark;
-      if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); } else svg.classList.remove('pa-focus');
+      if (isMap) {
+        mapOverlay.innerHTML = '';
+        if (on && on.tagName === 'path') mapOverlay.innerHTML = `<path d="${on.getAttribute('d')}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+        else if (on && on.tagName === 'circle') mapOverlay.innerHTML = `<circle cx="${on.getAttribute('cx')}" cy="${on.getAttribute('cy')}" r="${on.getAttribute('r')}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+      } else if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); } else svg.classList.remove('pa-focus');
     }
     show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev);
   });
@@ -7069,8 +7450,10 @@ function attach(root) {
     const c = norm(color);
     const out = new Set();
     if (!body) return out;
-    for (const n of body.querySelectorAll('[fill],[stroke]')) {
-      if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c) {
+    if (c === 'dashed') { for (const n of body.querySelectorAll('[data-dashed]')) out.add(n.closest('.pa-m') || n); return out; }
+    for (const n of body.querySelectorAll('[fill],[stroke],[data-color]')) {
+      if (n.closest('.pa-legend')) continue;
+      if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c || norm(n.getAttribute('data-color')) === c) {
         const m = n.closest('.pa-m') || n;
         out.add(m);
       }
@@ -7082,7 +7465,7 @@ function attach(root) {
     svg.querySelectorAll('.pa-key').forEach((k) => (k.style.opacity = color && norm(k.getAttribute('data-color')) !== norm(color) ? '0.4' : ''));
     if (!color) { svg.classList.remove('pa-focus'); return; }
     const ms = marksOf(color);
-    for (const n of body ? body.querySelectorAll('[fill],[stroke]') : []) if (ms.has(n) && !n.classList.contains('pa-m')) n.classList.add('pa-m');
+    for (const n of body ? body.querySelectorAll('[fill],[stroke],[data-color]') : []) if (ms.has(n) && !n.classList.contains('pa-m')) n.classList.add('pa-m');
     ms.forEach((m) => m.classList.add('pa-on'));
     svg.classList.add('pa-focus');
   };
@@ -7095,9 +7478,179 @@ function attach(root) {
     k.addEventListener('click', toggle);
     k.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
   }
+
+  if (zoomG) mapZoom(root, svg, zoomG, { dark, hide });
 }
 
-const attachSource = attach.toString();
+/**
+ * Zoom y paneo de mapas (buenas prácticas de chartjs-plugin-zoom: la rueda
+ * sola desplaza la página; el zoom pide Ctrl/⌘, para no secuestrar el scroll).
+ * - clic en una región: acerca hasta encuadrarla; otro clic (o Esc, o doble
+ *   clic, o el botón) vuelve a la vista completa.
+ * - Ctrl/⌘ + rueda: zoom alrededor del puntero. Pellizco en pantallas táctiles.
+ * - arrastre con zoom > 1: desplaza. Botones +, − y restablecer (teclado).
+ * El estado sobrevive a los redibujos (slider temporal) en root.__paZoom.
+ */
+function mapZoom(root, svg, z, { dark, hide }) {
+  const [bx, by, bw, bh] = z.getAttribute('data-zoom').split(',').map(Number);
+  const en = svg.getAttribute('data-pa-lang') === 'en';
+  const L = en ? { in: 'Zoom in', out: 'Zoom out', reset: 'Reset zoom', hint: 'Use Ctrl + scroll to zoom the map' } : { in: 'Acercar', out: 'Alejar', reset: 'Restablecer zoom', hint: 'Usa Ctrl + rueda para hacer zoom en el mapa' };
+  const MAX = 14;
+  let st = root.__paZoom && root.__paZoom.box === String([bx, by, bw, bh]) ? root.__paZoom : { k: 1, x: 0, y: 0, key: null };
+  let raf = 0;
+  const clamp = (s) => {
+    const k = Math.max(1, Math.min(MAX, s.k));
+    const minX = bx + bw - (bx + bw) * k, maxX = bx - bx * k;
+    const minY = by + bh - (by + bh) * k, maxY = by - by * k;
+    return { ...s, k, x: Math.min(maxX, Math.max(minX, s.x)), y: Math.min(maxY, Math.max(minY, s.y)) };
+  };
+  const apply = (s) => {
+    z.setAttribute('transform', `translate(${s.x.toFixed(2)},${s.y.toFixed(2)}) scale(${s.k.toFixed(4)})`);
+    svg.classList.toggle('pa-zoomed', s.k > 1.02);
+    svg.style.touchAction = s.k > 1.02 ? 'none' : 'pan-x pan-y';
+    z.style.cursor = s.k > 1.02 ? 'grab' : '';
+    btnReset.hidden = s.k <= 1.02;
+  };
+  const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const go = (target, animate = true) => {
+    const to = clamp(target);
+    cancelAnimationFrame(raf);
+    const from = { ...st };
+    st = to; root.__paZoom = { ...st, box: String([bx, by, bw, bh]) };
+    if (!animate || reduced) { apply(to); return; }
+    const t0 = performance.now(), D = 520;
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / D), e = 1 - (1 - t) ** 3;
+      const k = Math.exp(Math.log(from.k) + (Math.log(to.k) - Math.log(from.k)) * e);
+      const cx = (bx + bw / 2 - from.x) / from.k + ((bx + bw / 2 - to.x) / to.k - (bx + bw / 2 - from.x) / from.k) * e;
+      const cy = (by + bh / 2 - from.y) / from.k + ((by + bh / 2 - to.y) / to.k - (by + bh / 2 - from.y) / from.k) * e;
+      apply({ k, x: bx + bw / 2 - cx * k, y: by + bh / 2 - cy * k });
+      if (t < 1) raf = requestAnimationFrame(step); else apply(to);
+    };
+    raf = requestAnimationFrame(step);
+  };
+  const zoomAt = (k, px, py, animate) => {
+    const lx = (px - st.x) / st.k, ly = (py - st.y) / st.k;
+    go({ ...st, k, x: px - lx * k, y: py - ly * k, key: null }, animate);
+  };
+  const reset = () => go({ k: 1, x: 0, y: 0, key: null });
+  const toSvg = (cx, cy) => { const p = svg.createSVGPoint(); p.x = cx; p.y = cy; return p.matrixTransform(svg.getScreenCTM().inverse()); };
+
+  const box = document.createElement('div');
+  box.className = 'pa-zoomctl';
+  const fg = dark ? '#F2F3FA' : '#141A3F', bg = dark ? 'rgba(20,26,63,.92)' : 'rgba(252,251,249,.94)', bd = dark ? 'rgba(242,243,250,.22)' : 'rgba(20,26,63,.16)';
+  box.style.cssText = `position:absolute;display:flex;gap:4px;z-index:5;opacity:.0;transition:opacity .15s`;
+  const mk = (label, svgIcon) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
+    b.innerHTML = svgIcon.replace('<svg ', '<svg style="width:12px;height:12px;display:block;flex:none" ');
+    b.style.cssText = `width:28px;height:28px;display:grid;place-items:center;padding:0;border-radius:7px;border:1px solid ${bd};background:${bg};color:${fg};cursor:pointer;box-shadow:0 1px 3px rgba(11,15,43,.12)`;
+    box.appendChild(b);
+    return b;
+  };
+  const btnIn = mk(L.in, '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+  const btnOut = mk(L.out, '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+  const btnReset = mk(L.reset, '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 6a3.5 3.5 0 1 0 1.1-2.55M2.5 1.8v2.2h2.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  const hint = document.createElement('div');
+  hint.style.cssText = `position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;border-radius:8px;background:${dark ? '#F2F3FA' : '#141A3F'};color:${dark ? '#141A3F' : '#FCFBF9'};font:12.5px/1.4 ${svg.getAttribute('font-family') || 'system-ui'};pointer-events:none;opacity:0;transition:opacity .2s;z-index:6`;
+  hint.textContent = L.hint;
+  root.appendChild(box); root.appendChild(hint);
+  svg.style.userSelect = 'none';
+  svg.style.webkitUserSelect = 'none';
+  const place = () => {
+    const r = svg.getBoundingClientRect(), rr = root.getBoundingClientRect();
+    const s = r.width / (svg.viewBox.baseVal.width || r.width);
+    box.style.left = (r.left - rr.left + (bx + bw) * s - 3 * 32) + 'px';
+    box.style.top = (r.top - rr.top + by * s + 4) + 'px';
+  };
+  place();
+  root.addEventListener('pointerenter', () => { place(); box.style.opacity = '1'; });
+  root.addEventListener('pointerleave', () => { box.style.opacity = st.k > 1.02 ? '1' : '0'; });
+  root.addEventListener('focusin', () => { place(); box.style.opacity = '1'; });
+  const center = () => [bx + bw / 2, by + bh / 2];
+  btnIn.addEventListener('click', () => zoomAt(st.k * 1.6, ...center(), true));
+  btnOut.addEventListener('click', () => zoomAt(st.k / 1.6, ...center(), true));
+  btnReset.addEventListener('click', reset);
+  apply(st);
+
+  let moved = false;
+  svg.addEventListener('click', (ev) => {
+    if (moved) { moved = false; return; }
+    if (!(ev.target.closest && ev.target.closest('.pa-zoom'))) return;
+    const m = ev.target.closest && ev.target.closest('.pa-m');
+    if (!m || !m.getBBox) return;
+    const key = m.getAttribute('data-k') || m.getAttribute('d') || m.getAttribute('cx');
+    if (st.key === key) { reset(); return; }
+    const b = m.getBBox();
+    const k = Math.max(1.4, Math.min(MAX, 0.62 * Math.min(bw / Math.max(b.width, 4), bh / Math.max(b.height, 4))));
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    hide();
+    go({ k, x: bx + bw / 2 - cx * k, y: by + bh / 2 - cy * k, key });
+  });
+  svg.addEventListener('dblclick', (ev) => { if (ev.target.closest && ev.target.closest('.pa-zoom')) { ev.preventDefault(); reset(); } });
+  const onKey = (e) => { if (e.key === 'Escape' && st.k > 1.02 && root.isConnected) reset(); };
+  if (root.__paKey) document.removeEventListener('keydown', root.__paKey);
+  root.__paKey = onKey;
+  document.addEventListener('keydown', onKey);
+
+  let hintT = 0;
+  svg.addEventListener('wheel', (ev) => {
+    if (!(ev.target.closest && ev.target.closest('.pa-zoom-clip'))) return;
+    if (!ev.ctrlKey && !ev.metaKey) {
+      if (st.k > 1.02) return;
+      hint.style.opacity = '1'; clearTimeout(hintT); hintT = setTimeout(() => (hint.style.opacity = '0'), 1100);
+      return;
+    }
+    ev.preventDefault();
+    const p = toSvg(ev.clientX, ev.clientY);
+    zoomAt(st.k * Math.exp(-ev.deltaY * 0.004), p.x, p.y, false);
+  }, { passive: false });
+
+  const ptrs = new Map();
+  let drag = null, pinch = null;
+  svg.addEventListener('pointerdown', (ev) => {
+    if (!(ev.target.closest && ev.target.closest('.pa-zoom-clip'))) return;
+    moved = false;
+    ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      const mid = toSvg((a.x + b.x) / 2, (a.y + b.y) / 2);
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: st.k, mid };
+      drag = null;
+    } else if (st.k > 1.02) {
+      ev.preventDefault(); // sin selección de texto al arrastrar
+      drag = { x: ev.clientX, y: ev.clientY, sx: st.x, sy: st.y };
+    }
+  });
+  svg.addEventListener('pointermove', (ev) => {
+    if (!ptrs.has(ev.pointerId)) return;
+    ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    const s = (svg.viewBox.baseVal.width || 1) / svg.getBoundingClientRect().width;
+    if (pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      zoomAt(pinch.k * Math.hypot(a.x - b.x, a.y - b.y) / (pinch.d || 1), pinch.mid.x, pinch.mid.y, false);
+      moved = true;
+    } else if (drag) {
+      const dx = (ev.clientX - drag.x) * s, dy = (ev.clientY - drag.y) * s;
+      if (Math.abs(dx) + Math.abs(dy) > 3) {
+        moved = true;
+        z.style.cursor = 'grabbing';
+        if (!svg.hasPointerCapture(ev.pointerId)) svg.setPointerCapture(ev.pointerId);
+        go({ ...st, x: drag.sx + dx, y: drag.sy + dy, key: null }, false);
+        hide();
+      }
+    }
+  });
+  const up = (ev) => {
+    ptrs.delete(ev.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (!ptrs.size) { drag = null; z.style.cursor = st.k > 1.02 ? 'grab' : ''; }
+  };
+  svg.addEventListener('pointerup', up);
+  svg.addEventListener('pointercancel', up);
+}
+
+const attachSource = `(function(){${mapZoom.toString()}\nreturn ${attach.toString()};})()`;
 
 return { "attach": attach, "attachSource": attachSource };
 });
@@ -7189,10 +7742,24 @@ function render(target, spec, opts = {}) {
       if (n) n.animate([{ opacity: 0 }, { opacity: 0 }, { opacity: 1 }], { duration: 750, easing: 'ease-out' });
     }
   };
+  const regionFills = () => {
+    const m = new Map();
+    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-k'), f); }
+    return m;
+  };
+  const tweenFills = (before) => {
+    if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
+    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) {
+      const old = before.get(n.getAttribute('data-k')), now = n.getAttribute('fill');
+      if (old && /^#/.test(now || '') && old.toLowerCase() !== now.toLowerCase()) n.animate([{ fill: old }, { fill: now }], { duration: 420, easing: 'ease-out' });
+    }
+  };
   const draw = () => {
     const before = nodePos();
+    const fills = regionFills();
     chart.innerHTML = plotFn({ ...state, width: width() });
     animateFrom(before);
+    tweenFills(fills);
     chart.__pa = false;
     attach(chart);
     for (const n of chart.querySelectorAll('[data-node]')) {

@@ -78,6 +78,12 @@ export interface Spec {
   sort?: 'desc' | 'asc' | 'none' | 'alpha';
   top?: number;
   highlight?: string | string[];
+  /** Dashed shapes (hatched fill + dashed outline): names, a data field, { field, equals } or true. */
+  dashed?: string | string[] | boolean | { field: string; equals?: unknown };
+  /** line/area/bar on a time axis: dashed from this x on (a projection). */
+  dashedFrom?: string | number;
+  /** Meaning of the dashed shapes: legend, band label and tooltip. */
+  dashedLabel?: string | false;
   labels?: boolean | 'auto' | number | string[];
   labelsFor?: Record<string, string>;
   refLines?: RefLine[];
@@ -155,6 +161,10 @@ export interface Spec {
   centerLabel?: string;
   midpoint?: number;
   diverging?: boolean;
+  /** choropleth/symbolmap: "chile" (default), "usa", "world", a registered name or a GeoJSON FeatureCollection. */
+  geo?: 'chile' | 'usa' | 'world' | string | object;
+  key?: string;
+  projection?: 'mercator' | 'equalEarth' | 'albersUsa';
   columns?: number;
   [key: string]: unknown;
 }

@@ -15,6 +15,7 @@ import { NOTES_EN, SECTIONS_EN } from './notes-en.js';
 import { geoGallery } from './specs-geo.js';
 import { networkGallery } from './specs-network.js';
 import { flowGallery } from './specs-flow.js';
+import { dashedGallery } from './specs-dashed.js';
 
 // Galería por secciones. Orden pensado para leer de lo simple a lo avanzado.
 const SECTION = {
@@ -34,6 +35,7 @@ const all = [
   ...tag(geoGallery, 'Mapas'),
   ...tag(networkGallery, 'Redes y flujos'),
   ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
+  ...dashedGallery,
 ];
 // El ejemplo de líneas original pasa a ser el del slider.
 const lineas = all.find((e) => e.id === 'lineas');

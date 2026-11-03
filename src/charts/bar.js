@@ -9,7 +9,9 @@ import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
 import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
-import { createFrame, SIZES } from '../frame.js';
+import { createFrame, SIZES, hash } from '../frame.js';
+import { parseDate } from '../format.js';
+import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
 
 export function prepareBar(spec) {
@@ -131,6 +133,18 @@ export function bar(spec, theme) {
   };
   const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
 
+  // Barras punteadas (estimaciones, cifras provisorias): relleno rayado + borde discontinuo.
+  const H = hatcher(theme, 'pa-b' + Math.abs(hash(String(spec.title) + theme.mode + frame.width)).toString(36));
+  const dm = dashedMatcher(spec, m.data, m.x, m.series);
+  const xNum = (c) => (m.kind === 'date' ? parseDate(c) : num(c));
+  const from = m.nominal ? null : fromTest(spec, xNum);
+  const isDashed = (c, si) => !!((dm && dm(c, multi ? seriesKeys[si] : m.series ? seriesKeys[0] : undefined)) || (from && from(xNum(c))));
+  const anyDashed = (dm || from) && cats.some((c) => seriesKeys.some((_, i) => isDashed(c, i)));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const dl = (c, si) => (isDashed(c, si) ? dashedLabel : '');
+  const paint = (c, si) => (isDashed(c, si) ? dashedAttrs(H, colorFor(c, si)) : { fill: colorFor(c, si) });
+  if (anyDashed && spec.legend !== false) legend.push({ label: dashedLabel, key: 'dashed', color: theme.muted, shape: 'square', dashed: true, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) });
+
   // Etiquetas de valor
   const labelMode = spec.labels ?? 'auto';
   const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
@@ -177,14 +191,14 @@ export function bar(spec, theme) {
           if (s.vv > 0) h -= gap; else { top += gap; h -= gap; }
           const outer = s.vv > 0 ? i === lastPos : i === lastNeg;
           const d = barPath(x0, top, w, Math.max(0, h), s.vv > 0 ? 'up' : 'down', outer ? 4 : 0);
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`) }, [el('path', { d, fill: colorFor(c, i) })]));
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [el('path', { d, ...paint(c, i) })]));
         });
         if (showLabels && !pct) {
           const t = m.total(c);
           const ty = t >= 0 ? yS(Math.max(0, ...sg.map((s) => s.to))) - 7 : yS(Math.min(0, ...sg.map((s) => s.to))) + 15;
           parts.push(text(bx + bw / 2, ty, fmt(t), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600, textAnchor: 'middle' }));
         }
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`), pct ? '' : `Total: ${fmt(m.total(c))}`) }, [hit, ...parts]));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
       } else {
         const w = Math.min(maxBar, (bw - 2 * (k - 1)) / k);
         const groupW = w * k + 2 * (k - 1);
@@ -196,9 +210,9 @@ export function bar(spec, theme) {
           const d = barPath(bxI, top, w, h, v >= 0 ? 'up' : 'down');
           const er0 = m.errs.get(c)?.[i];
           const label = (multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v)) + (er0 ? ` (IC ${fmt(er0[0])}–${fmt(er0[1])})` : '');
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label) }, [
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label, dl(c, i)) }, [
             el('rect', { x: bxI - 1, y: inner.y, width: w + 2, height: inner.h, fill: 'transparent' }),
-            el('path', { d, fill: colorFor(c, i) }),
+            el('path', { d, ...paint(c, i) }),
             errBar(m.errs.get(c)?.[i], (e) => [bxI + w / 2, yS(e)], true, theme),
           ]));
           if (showLabels && !multi) {
@@ -257,13 +271,14 @@ export function bar(spec, theme) {
           const fill = colorFor(c, i);
           const lab = pct ? fmt(s.vv) : '';
           const fits = lab && measure(lab, 11, 600) + 10 < w;
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`) }, [
-            el('path', { d, fill }),
-            fits ? text(left + 6, y0b + h / 2 + 4, lab, { fill: textColor(fill, theme), fontSize: 11, fontWeight: 600 }) : '',
+          const hatched = isDashed(c, i);
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [
+            el('path', { d, ...paint(c, i) }),
+            fits ? text(left + 6, y0b + h / 2 + 4, lab, { fill: hatched ? theme.ink : textColor(fill, theme), fontSize: 11, fontWeight: 600, ...(hatched ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke' } : {}) }) : '',
           ]));
         });
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`)) }, parts));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
       } else {
         const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
@@ -274,7 +289,7 @@ export function bar(spec, theme) {
           const d = barPath(Math.min(xv, x0), yy, Math.abs(xv - x0), h, v >= 0 ? 'right' : 'left');
           const er = m.errs.get(c)?.[i];
           const erTxt = er ? ` (IC ${fmt(er[0])}–${fmt(er[1])})` : '';
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt) }, [el('path', { d, fill: colorFor(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt, dl(c, i)) }, [el('path', { d, ...paint(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
           if (showLabels && !multi) {
             parts.push(text(v >= 0 ? xv + 7 : xv - 7, yy + h / 2 + 4.5, fmt(v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: v >= 0 ? 'start' : 'end' }));
           }
@@ -287,7 +302,7 @@ export function bar(spec, theme) {
   }
 
   const desc = describeBar(m, fmt, locale);
-  return frame.finish(body, { desc, type: 'bar' });
+  return frame.finish(body, { desc, type: 'bar', defs: H.defs() });
 }
 
 /** Barra de error fina con remates cortos (seaborn). */
