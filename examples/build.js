@@ -3,14 +3,42 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { plot, lint } from '../src/index.js';
+import { plot, lint, bundleSource } from '../src/index.js';
 import { attachSource } from '../src/interact.js';
 import { FONT_CSS } from '../src/theme.js';
-import { gallery } from './specs.js';
+import { gallery as base } from './specs.js';
+import { statsGallery } from './specs-stats.js';
+import { catGallery } from './specs-cat.js';
+import { partsGallery } from './specs-parts.js';
+import { moreGallery } from './specs-more.js';
+
+// Galería por secciones. Orden pensado para leer de lo simple a lo avanzado.
+const SECTION = {
+  barras: 'Comparar', 'barras-horizontales': 'Comparar', 'barras-agrupadas': 'Comparar', 'barras-100': 'Comparar',
+  lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración',
+  burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Flujos y números', kpi: 'Flujos y números',
+};
+const ORDER = ['Comparar', 'Tiempo', 'Partes de un todo', 'Distribuciones', 'Relaciones', 'Flujos y números', 'Configuración'];
+const drop = new Set(['treemap', 'dona', 'slider-rango']); // reemplazados por versiones nuevas
+const tag = (list, sec) => list.map((e) => ({ ...e, section: e.section || sec }));
+const all = [
+  ...base.filter((e) => !drop.has(e.id)).map((e) => ({ ...e, section: SECTION[e.id] || 'Comparar' })),
+  ...tag(moreGallery, 'Tiempo'),
+  ...tag(partsGallery, 'Partes de un todo'),
+  ...statsGallery.map((e) => ({ ...e, section: ['regplot', 'residplot', 'jointplot'].includes(e.spec.type) ? 'Relaciones' : 'Distribuciones' })),
+  ...catGallery.map((e) => ({ ...e, section: e.spec.type === 'radar' ? 'Relaciones' : 'Distribuciones' })),
+];
+// El ejemplo de líneas original pasa a ser el del slider.
+const lineas = all.find((e) => e.id === 'lineas');
+if (lineas) lineas.note = 'Etiquetas siempre al final de cada línea; si chocan, se separan con una línea guía. En el navegador aparece un slider para acotar el periodo.';
+const gallery = ORDER.flatMap((sec) => all.filter((e) => e.section === sec && !drop.has(e.id)));
+const extra = all.filter((e) => !ORDER.includes(e.section));
+gallery.push(...extra);
 
 const here = dirname(fileURLToPath(import.meta.url));
 mkdirSync(join(here, 'svg'), { recursive: true });
 
+const slug = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 /** Código de ejemplo legible: los datos se abrevian a 2 filas. */
@@ -31,24 +59,22 @@ function snippet(spec) {
 }
 
 const cards = [];
+const specsJSON = [];
 for (const ex of gallery) {
   writeFileSync(join(here, 'svg', ex.id + '.svg'), plot(ex.spec));
-  // Cada gráfico en los dos temas: la página muestra el que corresponde al
-  // modo claro u oscuro del lector. El ejemplo "noche" queda siempre oscuro.
-  const fixedDark = ex.spec.theme === 'noche';
-  const light = plot({ ...ex.spec, width: 600 });
-  const dark = fixedDark ? light : plot({ ...ex.spec, width: 600, theme: 'noche' });
+  // Un SVG estático (tema claro) para la primera pintura; en el navegador
+  // render() lo reemplaza en el tema del lector, con slider y tooltips.
+  const fixedDark = ex.spec.theme === 'noche' || ex.spec.theme?.extends === 'noche';
+  const svg = plot({ ...ex.spec, width: 600 });
   const report = lint(ex.spec);
   const issues = [...report.errors, ...report.warnings];
   if (issues.length) console.warn(`[${ex.id}]`, issues.map((i) => i.message).join(' | '));
-  const figs = fixedDark
-    ? `<figure class="pa">${light}</figure>`
-    : `<figure class="pa pa-l">${light}</figure><figure class="pa pa-d">${dark}</figure>`;
-  cards.push(`<article class="card${fixedDark ? ' always-dark' : ''}" id="${ex.id}">
+  specsJSON.push({ id: ex.id, spec: ex.spec, fixed: fixedDark || (ex.spec.theme && typeof ex.spec.theme === 'object') });
+  cards.push({ section: ex.section, html: `<article class="card${fixedDark ? ' always-dark' : ''}" id="${ex.id}">
   <header><h2>${esc(ex.name)}</h2><p>${esc(ex.note).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></header>
-  ${figs}
+  <figure class="pa" data-id="${ex.id}">${svg}</figure>
   <details><summary>Ver código</summary><pre><code>${esc(snippet(ex.spec))}</code></pre></details>
-</article>`);
+</article>` });
 }
 
 const head = `<title>plotagents</title>
@@ -82,20 +108,22 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);-w
 nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 nav a{font-size:13px;color:var(--lede);text-decoration:none;background:var(--chip);padding:6px 10px;border-radius:999px}
 nav a:hover,nav a:focus-visible{color:var(--ink);background:var(--tint);outline:none}
-main{padding-block:8px 48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:20px}
+main{padding-block:4px 36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:20px}
 .card{background:var(--card);border-radius:16px;padding:20px 20px 10px;min-width:0;color:var(--ink)}
 .card.always-dark{background:var(--dark-card);color:var(--dark-ink);--lede:var(--dark-lede);--tint:var(--dark-tint);--accent:var(--dark-accent);--ink:var(--dark-ink)}
 .card header h2{font-size:13px;font-weight:600;letter-spacing:.02em;margin:0 0 4px;color:var(--accent)}
 .card header p{font-size:14px;line-height:1.45;color:var(--lede);margin:0 0 6px;max-width:70ch}
 .card code{font-family:var(--mono);font-size:.92em}
 figure.pa{margin:0 -4px}
-figure.pa-l{display:var(--show-l)} figure.pa-d{display:var(--show-d)}
 figure.pa svg{width:100%;height:auto;display:block}
 details{margin-top:4px}
 summary{cursor:pointer;font-size:13px;color:var(--src);padding:6px 0}
 summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 pre{background:var(--tint);border-radius:10px;padding:14px;overflow:auto;font-size:12px;line-height:1.5;margin:4px 0 8px;color:var(--ink)}
 pre code{font-family:var(--mono)}
+figure.pa .pa-ctl{border-radius:0 0 12px 12px}
+.sec-t{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:24px 0 12px;display:flex;align-items:baseline;gap:10px}
+.sec-t span{font-size:13px;font-weight:500;color:var(--src)}
 footer{padding-block:0 48px;color:var(--src);font-size:13px}
 </style>`;
 
@@ -104,14 +132,43 @@ const content = `<div class="wrap">
   <h1>plot<b>agents</b></h1>
   <p>Gráficos bellos con una sola llamada. Un objeto JSON con datos y nombres de campos entra; sale un SVG accesible, con buena tipografía, colores validados para daltonismo y tooltips. Diseñado para que un agente de IA lo use sin pensar en diseño.</p>
   <span class="install">npm install plotagents</span>
-  <nav>${gallery.map((g) => `<a href="#${g.id}">${esc(g.name)}</a>`).join('')}</nav>
+  <nav>${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<a href="#sec-${slug(sec)}">${esc(sec)}</a>`).join('')}</nav>
 </section>
+${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<section class="sec" id="sec-${slug(sec)}"><h2 class="sec-t">${esc(sec)} <span>${cards.filter((c) => c.section === sec).length}</span></h2>
 <main>
-${cards.join('\n')}
-</main>
-<footer>Todos los datos de esta galería son ilustrativos. Pasa el mouse sobre los gráficos para ver los valores; la página sigue el modo claro u oscuro de tu sistema.</footer>
+${cards.filter((c) => c.section === sec).map((c) => c.html).join('\n')}
+</main></section>`).join('\n')}
+<footer>Todos los datos de esta galería son ilustrativos. Pasa el mouse sobre los gráficos para ver los valores, usa los sliders de tiempo y haz clic en el treemap o el sunburst para entrar a un nivel. La página sigue el modo claro u oscuro de tu sistema.</footer>
 </div>
-<script>document.querySelectorAll('figure.pa').forEach(function(f){(${attachSource})(f)});</script>`;
+<script>${bundleSource().replace(/<\/(script)/gi, '<\\/$1')}</script>
+<script type="application/json" id="pa-specs">${JSON.stringify(specsJSON).replace(/</g, '\\u003c')}</script>
+<script>
+(function () {
+  var specs = JSON.parse(document.getElementById('pa-specs').textContent);
+  var root = document.documentElement;
+  function isDark() {
+    var t = root.getAttribute('data-theme');
+    if (t === 'dark') return true;
+    if (t === 'light') return false;
+    return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  var handles = {};
+  function drawAll() {
+    var dark = isDark();
+    specs.forEach(function (e) {
+      var fig = document.querySelector('figure.pa[data-id="' + e.id + '"]');
+      if (!fig) return;
+      var s = Object.assign({}, e.spec);
+      if (!e.fixed) s.theme = dark ? 'noche' : 'papel';
+      if (handles[e.id]) handles[e.id].destroy();
+      handles[e.id] = plotagents.render(fig, s);
+    });
+  }
+  drawAll();
+  if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+  new MutationObserver(drawAll).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>`;
 
 const html = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -125,4 +182,4 @@ ${content}
 const outArg = process.argv.indexOf('--fragment');
 if (outArg > 0) writeFileSync(process.argv[outArg + 1], head + '\n' + content);
 writeFileSync(join(here, 'index.html'), html);
-console.log(`Galería: ${gallery.length} gráficos → examples/index.html y examples/svg/`);
+console.log(`Galería: ${gallery.length} gráficos en ${ORDER.length} secciones → examples/index.html y examples/svg/`);

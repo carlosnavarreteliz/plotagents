@@ -47,14 +47,49 @@ export function xLabels(items, area, theme, { y, size = SIZES.axis, color } = {}
     let anchor = 'middle';
     let px = it.pos;
     const half = widths[i] / 2;
-    if (px - half < area.x - 20) { anchor = 'start'; px = Math.max(px - 4, area.x - 20); }
-    if (px + half > area.x + area.w + 20) { anchor = 'end'; px = Math.min(px + 4, area.x + area.w + 20); }
+    // Puede sobresalir del área hasta el margen disponible (0 en paneles).
+    const ov = Math.min(20, Math.max(0, area.x));
+    if (px - half < area.x - ov) { anchor = 'start'; px = Math.max(px - 4, area.x - ov); }
+    if (px + half > area.x + area.w + ov) { anchor = 'end'; px = Math.min(px + 4, area.x + area.w + ov); }
     out.push(text(px, ly, it.label, { fill: color || theme.muted, fontSize: size, textAnchor: anchor }));
   });
   return g({}, out);
 }
 
 export const ticksWidth = (ticks, fmt, size = SIZES.axis) => Math.max(0, ...ticks.map((t) => measure(fmt(t), size)));
+
+// ── Eje y "interior": la etiqueta va sobre su línea de grilla, dentro del
+// área de trazado (estilo FT / Datawrapper). Ahorra el margen izquierdo.
+// Uso: margen = yAxisMargin(...); dibuja yGrid(...) antes de las marcas y
+// yTickLabels(...) después, para que queden legibles sobre los datos.
+
+export const isInside = (theme, inside) => inside ?? theme.axes?.inside ?? true;
+
+/** Margen izquierdo que necesita el eje y (0 si las etiquetas van dentro). */
+export function yAxisMargin(ticks, fmt, theme, inside) {
+  return isInside(theme, inside) ? 0 : ticksWidth(ticks, fmt, theme.type?.axis ?? SIZES.axis) + 10;
+}
+/** Espacio superior para la etiqueta de la marca más alta. */
+export const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 : 6);
+
+export function yGrid(ticks, y, area, theme, { baseline = 0 } = {}) {
+  return g({ class: 'pa-grid' }, ticks.map((t) => {
+    const py = Math.round(y(t)) + 0.5;
+    return el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: t === baseline ? theme.axis : theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' });
+  }));
+}
+
+export function yTickLabels(ticks, y, area, theme, fmt, { inside, unit } = {}) {
+  const size = theme.type?.axis ?? SIZES.axis;
+  const ins = isInside(theme, inside);
+  return g({ class: 'pa-axis pa-axis-y' }, ticks.map((t, i) => {
+    const py = Math.round(y(t)) + 0.5;
+    const label = fmt(t) + (unit && i === ticks.length - 1 ? ' ' + unit : '');
+    return ins
+      ? text(area.x, py - 5, label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
+      : text(area.x - 8, py + 4, label, { fill: theme.muted, fontSize: size, textAnchor: 'end' });
+  }));
+}
 
 /** Líneas de referencia: metas, promedios, umbrales. Sólidas, nunca punteadas. */
 export function refLinesY(refs = [], y, area, theme, fmt) {

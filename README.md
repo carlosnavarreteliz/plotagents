@@ -1,9 +1,9 @@
 # plotagents
 
 **Gráficos bellos con una sola llamada, pensados para agentes de IA.**
-Un objeto JSON con datos y nombres de campos entra; sale un SVG accesible, con buena tipografía, colores validados para daltonismo y tooltips. Sin dependencias. Funciona en Node, Deno, Bun y el navegador.
+Un objeto JSON con datos y nombres de campos entra; sale un SVG accesible, con buena tipografía, colores validados para daltonismo y tooltips. 26 tipos de gráfico, incluidos los más usados de seaborn, sin dependencias. Funciona en Node, Deno, Bun y el navegador.
 
-*Beautiful charts from one JSON spec, built for AI agents. Zero dependencies, SVG output, Spanish and English number formats.*
+*Beautiful charts from one JSON spec, built for AI agents. 26 chart types including seaborn's (regplot, histplot, kdeplot, boxplot, violinplot…), multi-level treemaps and sunbursts, time sliders, small multiples and fully JSON-configurable themes. Zero dependencies, SVG output.*
 
 ```bash
 npm install plotagents
@@ -28,39 +28,94 @@ const svg = plot({
 
 ![Columnas](examples/svg/barras.svg)
 
-Abre [`examples/index.html`](examples/index.html) para ver la galería interactiva con el código de cada gráfico.
+La galería interactiva con 42 gráficos y el código de cada uno está en [`examples/index.html`](examples/index.html).
 
 ## Por qué
 
 Los agentes producen buenos datos y malos gráficos: dobles ejes, tortas de 12 colores, títulos que no dicen nada. plotagents saca las decisiones de diseño de las manos del agente. Las reglas vienen de los cursos de visualización de datos para la gestión (Wilke, *Fundamentals of Data Visualization*; datavizcatalogue; el Atlas de Complejidad Económica) y están escritas en el código:
 
 - **El título es un hecho.** `lint` lo sugiere y `describe` genera el texto alternativo.
-- **Un eje.** No hay doble eje; `index: true` lleva series de escalas distintas a base 100.
-- **Color por identidad, en orden fijo.** Ocho colores validados para daltonismo (ΔE OKLab ≥ 8 entre vecinos bajo protanopía y deuteranopía); desde la novena serie, gris "Otros".
-- **Marcas finas, grilla recesiva.** Barras de 4 px de radio en el extremo del dato, líneas de 2 px, separación de 2 px entre segmentos, sin bordes.
-- **Etiquetas selectivas.** Valor en la punta de las barras, al final de las líneas, solo los puntos que importan en una dispersión.
+- **Un eje.** No hay doble eje; `index: true` lleva series de escalas distintas a base 100, y `facet` hace paneles con la misma escala.
+- **Etiquetas al final de cada línea**, siempre. Si chocan, se separan y una línea guía las une con su punto; la leyenda solo aparece si hace falta.
+- **Todo el ancho para los datos.** El eje y va por dentro, sobre su línea de grilla; barras horizontales, heatmap y KPI calculan su alto.
+- **Color por identidad, en orden fijo.** Ocho colores validados para daltonismo; desde la novena serie, gris "Otros".
+- **Marcas finas, grilla recesiva.** Extremos de 4 px de radio, líneas de 2,25 px, separación de 2 px entre segmentos, sin bordes.
 - **Formato chileno por defecto.** `1.234,5`, `56,1%`, `$18.500`, `1.250 M`. `locale: 'en'` para inglés.
 
 ## Tipos
 
-| `type` | Para | Ejemplo |
-|---|---|---|
-| `bar` | Comparar categorías. Columnas o barras horizontales según las etiquetas; agrupadas, apiladas o al 100%. | ![](examples/svg/barras-horizontales.svg) |
-| `line` | Evolución en el tiempo, con anotaciones, metas e índice base 100. | ![](examples/svg/lineas.svg) |
-| `area` | Volumen en el tiempo; apila si hay series. | ![](examples/svg/area-apilada.svg) |
-| `scatter` / `bubble` | Relación entre dos medidas; tamaño, escala log, tendencia y R². | ![](examples/svg/burbujas.svg) |
-| `treemap` | Partes de un todo con jerarquía. | ![](examples/svg/treemap.svg) |
-| `donut` / `pie` | Parte-todo con 6 partes como máximo. | ![](examples/svg/dona.svg) |
-| `heatmap` | Magnitud en una grilla de dos categorías. | ![](examples/svg/calor.svg) |
-| `sankey` | Flujos entre etapas. | ![](examples/svg/sankey.svg) |
-| `kpi` | Uno o varios números con variación, tendencia y meta. | ![](examples/svg/kpi.svg) |
+| Para | `type` (alias) |
+|---|---|
+| Comparar categorías | `bar` (`barplot` con intervalo), `count` (`countplot`) |
+| Evolución en el tiempo | `line` (`lineplot`, con `ci` para banda de confianza), `area` |
+| Relación entre medidas | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot` |
+| Perfiles | `radar` (`spider`) |
+| Distribuciones | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
+| Partes de un todo | `treemap` (varios niveles), `sunburst`, `donut`, `pie` |
+| Grillas y flujos | `heatmap`, `sankey` |
+| Números | `kpi` |
 
-Si no indicas `type`, se infiere: fechas → `line`, dos medidas → `scatter`, `source`/`target` → `sankey`, categorías → `bar`.
+Si no indicas `type`, se infiere: fechas → `line`, dos medidas → `scatter`, `source`/`target` → `sankey`, `path` → `treemap`, categorías → `bar`.
+
+| | | |
+|---|---|---|
+| ![](examples/svg/lineas.svg) | ![](examples/svg/treemap-niveles.svg) | ![](examples/svg/regresion.svg) |
+| ![](examples/svg/violin.svg) | ![](examples/svg/sunburst.svg) | ![](examples/svg/histograma.svg) |
+| ![](examples/svg/radar.svg) | ![](examples/svg/sankey.svg) | ![](examples/svg/conjunto.svg) |
+
+## Tiempo, paneles y niveles
+
+```js
+// Slider por periodo con botón de reproducir (estilo d3plus): un año a la vez.
+plot({ type: 'treemap', data, path: ['sector', 'producto'], value: 'valor', time: 'año' });
+
+// Series de tiempo: en el navegador aparece un slider de rango con vista general.
+render('#grafico', { type: 'line', data, x: 'mes', y: 'ventas', series: 'region' });
+
+// Small multiples (col / col_wrap de seaborn), con escala y colores compartidos.
+plot({ type: 'area', data, x: 'mes', y: 'ventas', facet: 'region', columns: 3 });
+
+// Treemap y sunburst de cualquier profundidad; clic para entrar a un nivel.
+plot({ type: 'sunburst', data, path: ['area', 'unidad', 'item'], value: 'monto', focus: ['Docencia'] });
+
+// Escala logarítmica con marcas 1-2-5.
+plot({ type: 'line', data, x: 'mes', y: 'usuarios', series: 'plataforma', yScale: 'log' });
+```
+
+## Tema 100% JSON
+
+Todo se configura con un objeto JSON que se fusiona sobre un tema base. Así un agente puede ajustar marca, tipografía y marcas sin tocar código:
+
+```js
+plot({
+  ...spec,
+  theme: {
+    extends: 'papel',                // o 'noche' (oscuro)
+    categorical: 'okabe-ito',        // nombre de paleta o lista de colores en orden fijo
+    surface: '#FFFFFF',
+    font: { family: "'Poppins', sans-serif" },
+    type: { title: 22, titleWeight: 700 },
+    marks: { lineWidth: 3, barRadius: 8, barMax: 44 },
+    axes: { inside: false },
+  },
+});
+```
+
+| Clave | Contiene |
+|---|---|
+| colores | `surface`, `ink`, `lede`, `muted`, `grid`, `axis`, `tint`, `dim`, `other`, `status` |
+| `categorical`, `sequential`, `diverging` | listas de colores o nombres: `cdia`, `okabe-ito`, `tableau10`, `udec`; `indigo`, `magenta`, `teal`, `amber` |
+| `font` | `family`, `mono`, `import` (URL de Google Fonts) |
+| `type` | `title`, `subtitle`, `label`, `axis`, `legend`, `source`, `titleWeight` |
+| `marks` | `barRadius`, `barMax`, `lineWidth`, `pointRadius`, `gap`, `ring`, `areaOpacity`, `bandOpacity`, `dotOpacity` |
+| `axes`, `layout` | `inside` (eje y por dentro), `padding` |
+
+Atajos: `palette: [...]` y `ramp: 'teal'`. `validatePalette(colores)` revisa una paleta propia con los mismos criterios que la de fábrica (luminosidad, croma, separación bajo daltonismo y con visión normal), y `lint` la revisa sola.
 
 ## API
 
 ```js
-import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition } from 'plotagents';
+import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition, validatePalette } from 'plotagents';
 ```
 
 | Función | Devuelve |
@@ -69,30 +124,14 @@ import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition 
 | `safePlot(spec)` | `{ ok, svg, description, errors, warnings, suggestions }`. Nunca lanza. |
 | `lint(spec)` | Revisión del spec sin dibujar: errores y sugerencias de diseño. |
 | `describe(spec)` | Texto alternativo ("Mayor: Biobío con 1.240 (30%)…"). |
-| `render(el, spec)` | Navegador: dibuja con tooltips y ancho adaptable. |
-| `toHTML(specs)` | Página HTML autónoma con uno o varios gráficos interactivos. |
-| `schema` | JSON Schema del spec. |
-| `toolDefinition({ flavor })` | Definición de herramienta para Claude (`anthropic`) u OpenAI (`openai`). |
+| `render(el, spec)` | Navegador: tooltips, ancho adaptable, slider temporal y navegación por niveles. |
+| `toHTML(specs)` | Página HTML autónoma, interactiva, en un solo archivo. |
+| `schema` / `toolDefinition({ flavor })` | JSON Schema del spec y definición de herramienta para Claude (`anthropic`) u OpenAI (`openai`). |
+| `validatePalette(colores, opts)` | `{ ok, checks }`. |
 
-### Spec
+En el navegador sin bundler: `<script src="dist/plotagents.js"></script>` define `window.plotagents`.
 
-| Campo | Qué hace |
-|---|---|
-| `data` | Filas: `[{ region: 'Biobío', ventas: 1240 }]`. También `{ A: 1, B: 2 }`. |
-| `x`, `y`, `series` | Campos de cada rol. `y` acepta una lista (tabla ancha → series). |
-| `value`, `label`, `path`, `size`, `from`, `to` | Campos de treemap, dona, burbujas y sankey. |
-| `title`, `subtitle`, `source` | Hallazgo, cómo leerlo y fuente. |
-| `highlight` | Destaca una o más categorías/series y atenúa el resto. |
-| `stack` | `true` o `'percent'` en barras y áreas. |
-| `refLines`, `annotations` | Metas, umbrales y eventos. |
-| `format` | `'number'`, `'compact'`, `'percent'`, `'currency'`, `'integer'` o `{ prefix, suffix, decimals, currency }`. |
-| `index` | Líneas en base 100. |
-| `top`, `sort` | Corte y orden en barras. |
-| `theme` | `'papel'` (claro), `'noche'` (oscuro) u objeto `{ extends: 'papel', categorical: [...] }`. |
-| `locale` | `'es'` (por defecto) o `'en'`. |
-| `width`, `height` | En px. Barras horizontales, heatmap y KPI calculan su alto. |
-
-Los tipos completos están en [`index.d.ts`](index.d.ts).
+Los tipos completos y todas las opciones están en [`index.d.ts`](index.d.ts) y [`schema.json`](schema.json).
 
 ## Como herramienta de un agente
 
@@ -105,7 +144,7 @@ const res = await client.messages.create({
   model: process.env.ANTHROPIC_MODEL, // el modelo que uses
   max_tokens: 4096,
   tools: [toolDefinition()],
-  messages: [{ role: 'user', content: 'Grafica las ventas por región de este CSV: …' }],
+  messages: [{ role: 'user', content: 'Grafica la distribución de tiempos de atención por centro: …' }],
 });
 const call = res.content.find((b) => b.type === 'tool_use');
 const { ok, svg, errors, suggestions } = safePlot(call.input);
@@ -118,24 +157,25 @@ const { ok, svg, errors, suggestions } = safePlot(call.input);
 
 ```bash
 npx plotagents spec.json -o grafico.svg      # SVG
-npx plotagents specs.json -o reporte.html    # varios gráficos en una página
+npx plotagents specs.json -o reporte.html    # varios gráficos interactivos en una página
 npx plotagents spec.json --lint              # revisión y sugerencias
 npx plotagents --tool                        # definición de herramienta
 ```
 
-## Paleta
+## Paleta de fábrica
 
 | Tema | Fondo | Categórica (orden fijo) |
 |---|---|---|
 | `papel` | `#FCFBF9` | `#3A47B8` `#D42A5E` `#E8A33D` `#1E9C89` `#7B5CD6` `#B5562E` `#5BA3E0` `#8E9A2F` |
 | `noche` | `#0B0F2B` | `#6170E0` `#E63369` `#C4851C` `#22A892` `#9780E8` `#D06A3E` `#499BDA` `#909D2D` |
 
-Ambas pasan las comprobaciones de banda de luminosidad, croma mínimo, separación bajo daltonismo entre vecinos y separación con visión normal. El orden es parte de la validación: índigo, magenta y ámbar se distinguen entre todos los pares, por eso una dispersión con más de 3 grupos recibe una advertencia. Tipografía: Mozilla Text (con respaldo `system-ui`).
+Ambas pasan las comprobaciones de banda de luminosidad, croma mínimo, separación bajo daltonismo entre vecinos (ΔE OKLab ≥ 8) y separación con visión normal (≥ 15). El orden es parte de la validación. Tipografía: Mozilla Text, con respaldo `system-ui`.
 
 ## Desarrollo
 
 ```bash
 npm test                 # pruebas (node:test)
+npm run build            # dist/plotagents.js para el navegador
 npm run examples         # regenera examples/svg y examples/index.html
 ```
 

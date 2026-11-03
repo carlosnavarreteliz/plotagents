@@ -14,6 +14,15 @@ export const MONO = "'Fragment Mono', ui-monospace, 'SFMono-Regular', Menlo, mon
 export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
+// Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
+const STRUCT = {
+  font: { family: FONT, mono: MONO, import: FONT_CSS },
+  type: { title: 20, subtitle: 14, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
+  marks: { barRadius: 4, barMax: 30, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
+  axes: { inside: true, grid: true },
+  layout: { padding: 24, paddingSmall: 16 },
+};
+
 const papel = {
   name: 'papel',
   mode: 'light',
@@ -43,6 +52,7 @@ const papel = {
   // Divergente: índigo ↔ gris neutro ↔ magenta.
   diverging: ['#26307F', '#5A66C7', '#A9B0E2', '#ECEBE6', '#EFA9BE', '#D9557E', '#9E1D45'],
   status: { good: '#178A68', warning: '#B87A00', critical: '#C9531A' },
+  ...STRUCT,
 };
 
 const noche = {
@@ -63,15 +73,61 @@ const noche = {
   sequential: ['#141A3F', '#1F2862', '#2C3888', '#3A47B8', '#6170E0', '#8E99EA', '#BEC5F3', '#E6E9FB'],
   diverging: ['#BEC5F3', '#7F8BE6', '#3F4CA8', '#2A2E48', '#A3294F', '#E8577F', '#F7B3C7'],
   status: { good: '#2BB38A', warning: '#E0A030', critical: '#E8743F' },
+  ...STRUCT,
 };
 
 export const themes = { papel, noche, light: papel, dark: noche };
 
+// Paletas con nombre (categóricas). La de fábrica está validada; las demás
+// son conocidas y se pueden revisar con validatePalette().
+export const palettes = {
+  cdia: papel.categorical,
+  'cdia-noche': noche.categorical,
+  'okabe-ito': ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#000000'],
+  tableau10: ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC'],
+  udec: ['#223C6A', '#E69B0A', '#D21428', '#5C7DB8'],
+};
+// Rampas secuenciales (un tono, claro → oscuro) y divergentes.
+export const ramps = {
+  indigo: papel.sequential,
+  magenta: ['#FBEAF0', '#F6CADA', '#EE9DBA', '#E46F98', '#D42A5E', '#A81F4A', '#7A1636', '#4D0E22'],
+  teal: ['#E6F5F2', '#C2E8E1', '#8CD3C6', '#52BBA8', '#1E9C89', '#167A6B', '#0F5A4F', '#093B34'],
+  amber: ['#FDF3E1', '#F9E0B5', '#F4C77E', '#EEAD4E', '#E8A33D', '#BF7F1F', '#8C5C14', '#5C3C0C'],
+  'indigo-magenta': papel.diverging,
+  'teal-rust': ['#0F5A4F', '#1E9C89', '#8CD3C6', '#ECEBE6', '#E8B49A', '#C46A3F', '#7F3A1B'],
+};
+
+const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+export function deepMerge(base, over) {
+  if (!isObj(over)) return base;
+  const out = { ...base };
+  for (const [k, v] of Object.entries(over)) out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  return out;
+}
+
+/**
+ * Tema = JSON. Acepta un nombre ("papel", "noche") o un objeto parcial que se
+ * fusiona en profundidad sobre `extends` (por defecto "papel"):
+ *   { extends: "noche", categorical: ["#..."], type: { title: 24 }, marks: { lineWidth: 3 } }
+ * `categorical`, `sequential` y `diverging` aceptan también un nombre de paleta.
+ */
 export function getTheme(t) {
   if (!t) return papel;
   if (typeof t === 'string') return themes[t] || papel;
-  const base = themes[t.extends] || papel;
-  return { ...base, ...t, status: { ...base.status, ...(t.status || {}) } };
+  const base = themes[t.extends] || (t.mode === 'dark' ? noche : papel);
+  const merged = deepMerge(base, t);
+  if (typeof merged.categorical === 'string') merged.categorical = palettes[merged.categorical] || base.categorical;
+  if (typeof merged.sequential === 'string') merged.sequential = ramps[merged.sequential] || base.sequential;
+  if (typeof merged.diverging === 'string') merged.diverging = ramps[merged.diverging] || base.diverging;
+  return merged;
+}
+
+/** Tema efectivo de un spec: `theme` + atajos `palette` y `ramp`. */
+export function themeFor(spec = {}) {
+  let t = getTheme(spec.theme);
+  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? spec.palette : palettes[spec.palette] || t.categorical };
+  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? spec.ramp : ramps[spec.ramp] || t.sequential };
+  return t;
 }
 
 // ---------------------------------------------------------------------------

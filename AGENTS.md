@@ -17,42 +17,52 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 
 ## Qué tipo elegir
 
-| Quiero mostrar | `type` | Campos |
+| Quiero mostrar | `type` | Campos clave |
 |---|---|---|
-| Comparar categorías | `bar` | `x` categoría, `y` valor, `series?`, `stack?` (`true` o `"percent"`) |
-| Evolución en el tiempo | `line` | `x` fecha (`"2024-03"`, `"2024-03-15"`) o año, `y`, `series?` |
+| Comparar categorías | `bar` | `x`, `y`, `series?`, `stack?` (`true` / `"percent"`), `top?` |
+| Contar filas por categoría | `countplot` | `x` |
+| Media por categoría con intervalo | `barplot` o `point` | `x`, `y`, `hue?` |
+| Evolución en el tiempo | `line` | `x` fecha (`"2024-03"`) o año, `y`, `series?`; `ci: true` si hay varias observaciones por x |
 | Volumen en el tiempo | `area` | igual que `line`; con `series` se apila |
-| Crecimientos de medidas con escalas distintas | `line` + `index: true` | base 100; **no existe doble eje** |
-| Relación entre dos medidas | `scatter` / `bubble` | `x`, `y` numéricos, `size?`, `series?`, `label?`, `trend?` |
-| Partes de un todo con jerarquía | `treemap` | `path: [grupo, elemento]`, `value` |
-| Parte-todo con ≤ 6 partes | `donut` | `label`, `value` |
-| Magnitud en una grilla | `heatmap` | `x`, `y` categorías, `value` |
+| Medidas con escalas distintas | `line` + `index: true`, o `facet` | **no existe doble eje** |
+| Crecimiento exponencial | `line` + `yScale: "log"` | |
+| Relación entre dos medidas | `regplot` (recta + intervalo) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
+| Relación + distribuciones | `jointplot` | `x`, `y` |
+| Distribución de una medida | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
+| Distribución por categoría | `box`, `violin`, `strip`, `swarm` | `x` categoría, `y` medida, `hue?` |
+| Perfil en varias dimensiones | `radar` | `axis`, `value`, `series` (≤ 4 series) |
+| Partes de un todo con jerarquía | `treemap` o `sunburst` | `path: [nivel1, nivel2, …]`, `value` |
+| Parte-todo con ≤ 6 partes | `donut` / `pie` | `label`, `value`; `half: true` para semicírculo |
+| Magnitud en una grilla | `heatmap` | `x`, `y`, `value` |
 | Flujos entre etapas | `sankey` | `from`, `to`, `value` |
 | Uno o varios números | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
 
-Si omites `type`, se infiere de los datos.
+Se aceptan los nombres de seaborn (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `stripplot`, `swarmplot`, `pointplot`) y `hue` como alias de `series`. Si omites `type`, se infiere de los datos.
 
 ## Opciones que más sirven
 
 - `highlight: "Ñuble"`: destaca una categoría o serie y atenúa el resto.
-- `refLines: [{ y: 600, label: "Meta" }]`: metas y umbrales.
-- `annotations: [{ x: "2024-01", label: "Nueva sucursal" }]`: eventos en líneas.
+- `facet: "region"` (+ `columns`): un panel por valor, con la misma escala.
+- `time: "año"`: un periodo a la vez (el último); en el navegador, slider con play.
+- `refLines: [{ y: 600, label: "Meta" }]` y `annotations: [{ x: "2024-01", label: "Nueva sucursal" }]`.
 - `format: "percent" | "currency" | "compact" | "integer"` o `{ prefix, suffix, decimals }`.
-- `top: 10`: barras con las 10 mayores y el resto en "Otros".
-- `theme: "noche"`: tema oscuro. `locale: "en"`: formato en inglés.
+- `xScale` / `yScale: "log"`.
+- `theme: "noche"` o un objeto JSON (`{ extends, categorical, type, marks, font }`); `palette: [...]` para colores propios.
+- `locale: "en"`: formato en inglés.
 
 ## Errores comunes que la biblioteca ya resuelve
 
-- Más de 8 series → desde la 9.ª van en gris; `lint` sugiere `highlight` o agrupar.
+- Más de 8 series → desde la 9.ª van en gris; `lint` sugiere `highlight` o `facet`.
+- Etiquetas de líneas que chocan → se separan con líneas guía.
 - Dona con más de 6 partes → agrupa en "Otros".
-- Etiquetas largas en columnas → cambia a barras horizontales.
-- Más de 40 categorías → muestra 25 y agrupa el resto.
+- Etiquetas largas en columnas o categorías → cambia a horizontal.
+- Paleta propia poco distinguible → `lint` avisa con el par problemático.
 - Números en texto ("1.234,5", "12%", "$ 3.000") → se convierten solos.
 
 ## Salidas
 
 - `plot(spec)` → SVG (string). Va directo a HTML, Markdown, un archivo `.svg` o un PDF.
-- `toHTML([spec1, spec2])` → página autónoma con tooltips.
+- `toHTML([spec1, spec2])` → página autónoma con tooltips, sliders y navegación por niveles.
 - `describe(spec)` → texto alternativo del gráfico.
 - `schema` / `toolDefinition()` → JSON Schema y definición de herramienta (Anthropic u OpenAI).
 - CLI: `npx plotagents spec.json -o grafico.svg`.

@@ -2,7 +2,9 @@
 // sugerencias de diseño (de los cursos de visualización para la gestión).
 // Pensado para que un agente corrija su propio spec en un segundo intento.
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js';
-import { inferType, TYPES } from './infer.js';
+import { inferType, TYPES, normalizeType } from './infer.js';
+import { validatePalette } from './palette.js';
+import { themeFor } from './theme.js';
 
 export function lint(spec = {}) {
   const errors = [];
@@ -14,7 +16,7 @@ export function lint(spec = {}) {
 
   let data = [];
   try { data = spec.type === 'kpi' || spec.items ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
-  const type = spec.type && spec.type !== 'auto' ? spec.type : inferType(spec, data);
+  const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
   if (!TYPES.includes(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')}`);
   const fields = fieldsOf(data);
   const check = (f, role) => {
@@ -75,6 +77,37 @@ export function lint(spec = {}) {
     if (nSeries > 3) warn('scatter-colors', `${nSeries} grupos de color en dispersión: solo los 3 primeros colores son distinguibles entre todos los pares para daltonismo.`, 'Usa `highlight`, agrupa o separa en varios gráficos.');
     if (data.length > 2000) sug('overplot', `${data.length} puntos: puede haber sobreposición.`, 'Reduce `radius` o usa un mapa de calor.');
   }
+  // Campos de facetas y tiempo
+  if (data.length) { check(spec.facet ?? spec.col, 'facet'); check(spec.time, 'time'); check(spec.hue, 'hue'); }
+
+  // Paleta propia: se valida con las mismas reglas que la de fábrica.
+  const custom = spec.palette || (spec.theme && typeof spec.theme === 'object' && spec.theme.categorical);
+  if (custom) {
+    const th = themeFor(spec);
+    const n = Math.max(2, Math.min(th.categorical.length, nSeries));
+    const rep = validatePalette(th.categorical.slice(0, n), { mode: th.mode, surface: th.surface, pairs: type === 'scatter' || type === 'bubble' ? 'all' : 'adjacent' });
+    for (const c of rep.checks) if (c.status === 'fail') warn('palette-' + c.name, `Paleta: ${c.detail}`, 'Cambia el orden o los tonos, o usa la paleta de fábrica.');
+  }
+
+  const numericIn = (f) => f && fields.includes(f) && ['number', 'year'].includes(fieldKind(data, f));
+  if (['hist', 'kde', 'ecdf'].includes(type)) {
+    const f = spec.x ?? spec.y;
+    if (f && fields.includes(f) && !numericIn(f)) err('numeric', `"${f}" no es numérico: ${type} necesita una medida.`, 'Para contar categorías usa `type: "countplot"`.');
+    if (data.length < 20) sug('few-obs', `Solo ${data.length} observaciones: la forma de la distribución es poco confiable.`, 'Con pocos datos, `type: "strip"` muestra cada punto.');
+  }
+  if (['regplot', 'residplot', 'jointplot'].includes(type)) {
+    for (const f of [spec.x, spec.y]) if (f && fields.includes(f) && !numericIn(f)) err('numeric', `"${f}" no es numérico: la regresión necesita dos medidas.`, 'Usa `type: "box"` para comparar una medida entre categorías.');
+    if (data.length < 8) warn('few-obs', `Solo ${data.length} puntos: la recta y su intervalo son poco confiables.`, 'Muestra los puntos con `type: "scatter"`.');
+  }
+  if (['box', 'violin'].includes(type) && data.length && spec.x && fields.includes(spec.x)) {
+    const counts = new Map();
+    for (const r of data) counts.set(String(r[spec.x]), (counts.get(String(r[spec.x])) || 0) + 1);
+    const small = [...counts].filter(([, n]) => n < 5).map(([k]) => k);
+    if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
+  }
+  if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
+  if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
+
   if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
   return { ok: errors.length === 0, type, errors, warnings, suggestions: tips };

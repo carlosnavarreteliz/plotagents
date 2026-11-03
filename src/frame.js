@@ -16,22 +16,25 @@ export const SIZES = {
 export function createFrame(spec, theme, defaults = {}) {
   const width = Math.max(240, +spec.width || defaults.width || 720);
   let height = Math.max(160, +spec.height || defaults.height || 420);
-  const pad = spec.padding ?? (width < 420 ? 16 : 24);
+  const T = { ...SIZES, ...(theme.type || {}) };
+  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
 
-  const titleLines = spec.title ? wrap(spec.title, innerW, SIZES.title, 600, 2) : [];
-  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, SIZES.subtitle, 400, 3) : [];
+  const tw = T.titleWeight ?? 600;
+  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 2) : [];
+  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 3) : [];
   const header = [];
+  const tlh = Math.round(T.title * 1.3), slh = Math.round(T.subtitle * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + 18 + i * 26, l, { fill: theme.ink, fontSize: SIZES.title, fontWeight: 600, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
-  if (titleLines.length) y += titleLines.length * 26 + 2;
+  if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {
-    header.push(text(pad, y + 14 + i * 20, l, { fill: theme.lede, fontSize: SIZES.subtitle }));
+    header.push(text(pad, y + T.subtitle * 1.0 + i * slh, l, { fill: theme.lede, fontSize: T.subtitle }));
   });
-  if (subLines.length) y += subLines.length * 20 + 2;
+  if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 12;
 
   const sourceH = spec.source ? 22 : 0;
@@ -49,7 +52,7 @@ export function createFrame(spec, theme, defaults = {}) {
     layout(legend = [], opts = {}) {
       let ly = y;
       if (legend && legend.length) {
-        const { svg, h } = drawLegend(legend, pad, ly, innerW, theme, opts);
+        const { svg, h } = drawLegend(legend, pad, ly, innerW, theme, { ...opts, size: T.legend });
         header.push(svg);
         ly += h + 14;
       }
@@ -60,10 +63,10 @@ export function createFrame(spec, theme, defaults = {}) {
     finish(body, { desc = '', type = 'chart', defs = '' } = {}) {
       if (spec.source) {
         const src = /^fuente|^source/i.test(spec.source) ? spec.source : (String(spec.locale || 'es').startsWith('en') ? 'Source: ' : 'Fuente: ') + spec.source;
-        parts.push(text(width - pad, height - pad - 2, src, { fill: theme.muted, fontSize: SIZES.source, textAnchor: 'end' }));
+        parts.push(text(width - pad, height - pad - 2, src, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' }));
       }
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width)).toString(36);
-      const fontImport = spec.fontImport ? `@import url('${FONT_CSS}');` : '';
+      const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`;
       return el(
         'svg',
@@ -74,7 +77,7 @@ export function createFrame(spec, theme, defaults = {}) {
           height: r2(height),
           role: 'img',
           'aria-labelledby': `${id}-t ${id}-d`,
-          fontFamily: spec.fontFamily || FONT,
+          fontFamily: spec.fontFamily || theme.font?.family || FONT,
           class: 'pa-chart',
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
@@ -98,7 +101,7 @@ export function createFrame(spec, theme, defaults = {}) {
 
 function drawLegend(items, x0, y0, maxW, theme, opts) {
   const out = [];
-  const size = SIZES.legend;
+  const size = opts.size ?? SIZES.legend;
   const rowH = 20;
   let x = x0, y = y0, rows = 1;
   for (const it of items) {

@@ -90,7 +90,7 @@ export function makeFormat(fmt, locale = 'es', values = []) {
       core = (v) => formatCompact(v, l, d);
       break;
     case 'currency':
-      core = (v) => (max >= 1e6 ? formatCompact(v, l, d) : formatNumber(v, d ?? (max >= 100 ? 0 : 2), l));
+      core = (v) => (max >= 1e6 ? formatCompact(v, l, d) : formatNumber(v, d ?? (max >= 100 || nums.every(Number.isInteger) ? 0 : 2), l));
       break;
     default:
       core = (v) => formatNumber(v, d ?? smartDecimals(v), l, d === undefined);
@@ -114,7 +114,13 @@ function currencyPrefix(cur, l) {
 
 /** Formateador de marcas de eje: decimales según el paso, nunca ruido. */
 function tickFormat(step, o, type, l, pre, suf, max, dFixed) {
-  const decFor = (s) => Math.max(0, Math.min(6, -Math.floor(Math.log10(Math.abs(s) || 1) + 1e-9)));
+  // Decimales mínimos para escribir el paso exacto (2,5 → 1; 0,25 → 2).
+  const decFor = (s) => {
+    const a = Math.abs(s) || 1;
+    let d = Math.max(0, -Math.floor(Math.log10(a) + 1e-9));
+    while (d < 6 && Math.abs(Math.round(a * 10 ** d) - a * 10 ** d) > 1e-6 * 10 ** d) d++;
+    return Math.min(6, d);
+  };
   let core;
   if (type === 'year') core = (v) => String(Math.round(v));
   else if (type === 'percent') {

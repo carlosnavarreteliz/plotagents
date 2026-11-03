@@ -1,8 +1,13 @@
 // Tipos de plotagents.
 
 export type ChartType =
-  | 'auto' | 'bar' | 'column' | 'line' | 'area' | 'scatter' | 'bubble'
-  | 'treemap' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi';
+  | 'auto' | 'bar' | 'column' | 'count' | 'line' | 'area' | 'scatter' | 'bubble'
+  | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
+  | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
+  | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
+  // Alias (seaborn y otros)
+  | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
+  | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider';
 
 export type Row = Record<string, string | number | Date | null | undefined>;
 
@@ -36,7 +41,16 @@ export interface Theme {
   link: number;
   categorical: string[]; sequential: string[]; diverging: string[];
   status: { good: string; warning: string; critical: string };
+  font: { family: string; mono: string; import: string };
+  type: { title: number; subtitle: number; label: number; axis: number; legend: number; source: number; titleWeight: number };
+  marks: { barRadius: number; barMax: number; barMaxH: number; lineWidth: number; pointRadius: number; gap: number; ring: number; areaOpacity: number; bandOpacity: number; dotOpacity: number };
+  axes: { inside: boolean; grid: boolean };
+  layout: { padding: number; paddingSmall: number };
 }
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends any[] ? T[K] | string : DeepPartial<T[K]>) : T[K] };
+/** Tema JSON: se fusiona en profundidad sobre `extends` (por defecto "papel"). */
+export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (DeepPartial<Theme> & { extends?: 'papel' | 'noche' })
 
 export interface Spec {
   type?: ChartType;
@@ -79,7 +93,46 @@ export interface Spec {
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
   colors?: Record<string, string>;
-  theme?: 'papel' | 'noche' | 'light' | 'dark' | (Partial<Theme> & { extends?: string });
+  theme?: ThemeInput;
+  palette?: string | string[];
+  ramp?: string | string[];
+  hue?: string;
+  facet?: string;
+  col?: string;
+  sharey?: boolean;
+  sharex?: boolean;
+  panelHeight?: number;
+  time?: string;
+  timeValue?: string | number;
+  slider?: boolean;
+  playInterval?: number;
+  xRange?: [string | number, string | number];
+  xDomain?: [number, number];
+  yDomain?: [number, number];
+  ci?: boolean | number;
+  errorbar?: 'ci' | 'sd' | 'se' | 'pi' | 'none' | false;
+  estimator?: 'mean' | 'median' | 'sum' | 'count';
+  focus?: string[];
+  depth?: number;
+  half?: boolean;
+  bins?: number;
+  binWidth?: number;
+  stat?: 'count' | 'percent' | 'density' | 'probability';
+  kde?: boolean;
+  multiple?: 'layer' | 'stack' | 'dodge' | 'fill';
+  fill?: boolean;
+  order?: number | string[];
+  lowess?: boolean;
+  logx?: boolean;
+  annotate?: boolean;
+  kind?: 'scatter' | 'reg';
+  marginal?: 'hist' | 'kde';
+  inner?: 'box' | 'quartiles' | 'points' | 'none';
+  split?: boolean;
+  axis?: string;
+  axes?: string[];
+  normalize?: boolean;
+  legend?: boolean;
   locale?: 'es' | 'en';
   width?: number;
   height?: number;
@@ -111,7 +164,8 @@ export declare function lint(spec: Spec): LintReport;
 /** Descripción en texto del gráfico (también está en el <desc> del SVG). */
 export declare function describe(spec: Spec): string;
 /** Navegador: dibuja en un elemento con tooltips y ancho adaptable. */
-export declare function render(target: string | Element, spec: Spec): { readonly svg: SVGSVGElement | null; update(spec: Spec): void; destroy(): void };
+/** Navegador: dibuja con tooltips, ancho adaptable, slider temporal y navegación por niveles. */
+export declare function render(target: string | Element, spec: Spec, opts?: { controls?: boolean }): { readonly svg: SVGSVGElement | null; readonly spec: Spec; update(spec: Spec): unknown; destroy(): void };
 /** Página HTML autónoma con uno o varios gráficos interactivos. */
 export declare function toHTML(specs: Spec | Spec[], opts?: { title?: string; lang?: string; columns?: number }): string;
 /** Agrega tooltips a un contenedor que ya tiene un SVG de plotagents. */
@@ -119,6 +173,12 @@ export declare function attach(root: Element): void;
 export declare function resolve(spec: Spec): Spec;
 
 export declare const schema: Record<string, unknown>;
+export declare const palettes: Record<string, string[]>;
+export declare const ramps: Record<string, string[]>;
+export declare function themeFor(spec: Spec): Theme;
+export declare function timeValues(spec: Spec): (string | number)[];
+export declare function validatePalette(colors: string[], opts?: { mode?: 'light' | 'dark'; surface?: string; pairs?: 'adjacent' | 'all' }): { ok: boolean; checks: { name: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] };
+export declare function bundleSource(): string | null;
 export declare function toolDefinition(opts?: { name?: string; flavor?: 'anthropic' | 'openai' }): Record<string, unknown>;
 export declare const themes: Record<'papel' | 'noche' | 'light' | 'dark', Theme>;
 export declare function getTheme(t?: Spec['theme']): Theme;

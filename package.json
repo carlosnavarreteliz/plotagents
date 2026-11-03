@@ -1,7 +1,7 @@
 {
   "name": "plotagents",
-  "version": "0.1.0",
-  "description": "Gráficos bellos con una sola llamada, pensados para agentes de IA. Specs JSON simples → SVG accesible, sin dependencias.",
+  "version": "0.2.0",
+  "description": "Gráficos bellos con una sola llamada, pensados para agentes de IA: barras, líneas, treemaps, sunburst, sankey y los gráficos de seaborn (regplot, hist, kde, box, violin…) desde un spec JSON. SVG accesible, sin dependencias.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -11,13 +11,15 @@
       "types": "./index.d.ts",
       "default": "./src/index.js"
     },
-    "./schema.json": "./schema.json"
+    "./schema.json": "./schema.json",
+    "./browser": "./dist/plotagents.js"
   },
   "bin": {
     "plotagents": "./bin/plotagents.js"
   },
   "files": [
     "src",
+    "dist",
     "bin",
     "index.d.ts",
     "schema.json",
@@ -27,6 +29,8 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
+    "build": "node scripts/bundle.js",
+    "prepublishOnly": "node scripts/bundle.js && node --test test/*.test.js",
     "examples": "node examples/build.js",
     "schema": "node -e \"import('./src/index.js').then(m=>process.stdout.write(JSON.stringify(m.schema,null,2)))\" > schema.json"
   },
@@ -38,6 +42,11 @@
     "visualization",
     "treemap",
     "sankey",
+    "seaborn",
+    "regplot",
+    "violin",
+    "radar",
+    "sunburst",
     "ai",
     "agents",
     "llm",

@@ -3,10 +3,10 @@
 import { el, g, text, tip } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
-import { niceDomain, linear, log, logDomain } from '../scale.js';
+import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
-import { gridY, gridX, ticksWidth, refLinesY, refLinesX } from '../axes.js';
+import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels } from '../axes.js';
 import { createFrame, SIZES } from '../frame.js';
 
 export function scatter(spec, theme) {
@@ -16,7 +16,7 @@ export function scatter(spec, theme) {
   const x = spec.x || numeric[0];
   const y = spec.y || numeric.find((f) => f !== x);
   const size = spec.size;
-  const series = spec.series ?? spec.color;
+  const series = spec.series ?? spec.hue ?? spec.color;
   const labelF = spec.label ?? fields.find((f) => fieldKind(data, f) === 'category' && f !== series);
   requireField(data, x, 'x');
   requireField(data, y, 'y');
@@ -37,20 +37,23 @@ export function scatter(spec, theme) {
   const fy = makeFormat(spec.yFormat ?? spec.format, locale, pts.map((p) => p.y));
   const fs = size ? makeFormat(spec.sizeFormat, locale, pts.map((p) => p.s)) : null;
 
-  const legend = series && keys.length > 1 ? keys.map((k) => ({ label: k, color: cmap.get(k) })) : [];
+  const legend = series && keys.length > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: cmap.get(k) })) : [];
   const frame = createFrame(spec, theme, { height: 460 });
   const area = frame.layout(legend);
 
   const xLog = spec.xScale === 'log', yLog = spec.yScale === 'log';
   const ex = [Math.min(...pts.map((p) => p.x)), Math.max(...pts.map((p) => p.x))];
   const ey = [Math.min(...pts.map((p) => p.y)), Math.max(...pts.map((p) => p.y))];
-  const dx = xLog ? logDomain(...ex) : niceDomain(ex[0], ex[1], Math.max(3, Math.round(area.w / 110)));
-  const dy = yLog ? logDomain(...ey) : niceDomain(ey[0], ey[1], Math.max(3, Math.round(area.h / 70)));
+  if (spec.xDomain) ex.splice(0, 2, ...spec.xDomain);
+  if (spec.yDomain) ey.splice(0, 2, ...spec.yDomain);
+  const dx = xLog ? logDomain(...ex) : spec.xDomain ? { min: ex[0], max: ex[1], step: niceStep(ex[1] - ex[0], Math.max(3, Math.round(area.w / 110))) } : niceDomain(ex[0], ex[1], Math.max(3, Math.round(area.w / 110)));
+  const dy = yLog ? logDomain(...ey) : spec.yDomain ? { min: ey[0], max: ey[1], step: niceStep(ey[1] - ey[0], Math.max(3, Math.round(area.h / 70))) } : niceDomain(ey[0], ey[1], Math.max(3, Math.round(area.h / 70)));
+  if (spec._domains) { spec._domains.x = [dx.min, dx.max]; spec._domains.y = [dy.min, dy.max]; }
   const ytf = yLog ? fy : fy.tick(dy.step);
   const xtf = xLog ? fx : fx.tick(dx.step);
   const yTicks = (yLog ? log(dy.min, dy.max, 0, 1) : linear(dy.min, dy.max, 0, 1)).ticks(dy.step);
-  const leftM = ticksWidth(yTicks, ytf) + 10;
-  const top = area.y + 22;
+  const leftM = yAxisMargin(yTicks, ytf, theme);
+  const top = area.y + 18 + yAxisTop(theme);
   const inner = { x: area.x + leftM, y: top, w: area.w - leftM - 8, h: area.y + area.h - top - 44 };
   const maxS = Math.max(...pts.map((p) => p.s));
   const rMax = spec.maxRadius ?? Math.min(30, Math.max(12, Math.sqrt((inner.w * inner.h) / Math.max(1, pts.length)) / 3));
@@ -61,7 +64,7 @@ export function scatter(spec, theme) {
   const rOf = (p) => (size ? Math.max(2.5, Math.sqrt(Math.max(0, p.s) / (maxS || 1)) * rMax) : spec.radius ?? (pts.length > 300 ? 3 : 5));
 
   const body = [];
-  body.push(gridY(yS.ticks(dy.step), yS, inner, theme, ytf, { baseline: NaN }));
+  body.push(yGrid(yS.ticks(dy.step), yS, inner, theme, { baseline: NaN }));
   body.push(gridX(xS.ticks(dx.step), xS, inner, theme, xtf, { baseline: NaN }));
   body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
   // Títulos de ejes: horizontales, nunca rotados.
@@ -94,6 +97,8 @@ export function scatter(spec, theme) {
     if (series) lines.splice(1, 0, p.k);
     body.push(el('circle', { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : 2, 'data-tip': tip(...lines) }));
   }
+
+  body.push(yTickLabels(yS.ticks(dy.step), yS, inner, theme, ytf));
 
   // Etiquetas selectivas: las que pide el agente o las N mayores.
   if (labelF && spec.labels !== false) {

@@ -1,11 +1,14 @@
-// Treemap: partes de un todo con jerarquía (estilo Atlas de Complejidad
-// Económica). Color por grupo; cada rectángulo con nombre y participación.
-import { el, g, text, tip } from '../svg.js';
+// Treemap de varios niveles (estilo Atlas de Complejidad Económica / d3plus).
+// Color por grupo de primer nivel, variación sutil de luminosidad en niveles
+// más profundos, encabezados de grupo cuando hay espacio y etiquetas que solo
+// aparecen si caben. Drill-down: data-drill + spec.focus.
+import { el, g, text, tip, esc } from '../svg.js';
 import { measure, wrap } from '../text.js';
-import { makeFormat, formatNumber } from '../format.js';
+import { makeFormat } from '../format.js';
 import { textOn } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize } from '../data.js';
+import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
+import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
 export function squarify(items, x, y, w, h) {
@@ -21,107 +24,150 @@ export function squarify(items, x, y, w, h) {
     const mx = Math.max(...r.map((n) => n.area)), mn = Math.min(...r.map((n) => n.area));
     return Math.max((side * side * mx) / (s * s), (s * s) / (side * side * mn));
   };
-  const layoutRow = (r) => {
+  const layoutRow = (r, last) => {
     const s = r.reduce((a, b) => a + b.area, 0);
     if (rect.w >= rect.h) {
-      const cw = s / rect.h;
+      const cw = last ? rect.w : s / rect.h;
       let cy = rect.y;
-      for (const n of r) { const ch = n.area / cw; out.push({ ...n.it, x: rect.x, y: cy, w: cw, h: ch }); cy += ch; }
+      r.forEach((n, i) => { const ch = i === r.length - 1 ? rect.y + rect.h - cy : n.area / cw; out.push({ ...n.it, x: rect.x, y: cy, w: cw, h: ch }); cy += ch; });
       rect = { x: rect.x + cw, y: rect.y, w: rect.w - cw, h: rect.h };
     } else {
-      const ch = s / rect.w;
+      const ch = last ? rect.h : s / rect.w;
       let cx = rect.x;
-      for (const n of r) { const cw = n.area / ch; out.push({ ...n.it, x: cx, y: rect.y, w: cw, h: ch }); cx += cw; }
+      r.forEach((n, i) => { const cw = i === r.length - 1 ? rect.x + rect.w - cx : n.area / ch; out.push({ ...n.it, x: cx, y: rect.y, w: cw, h: ch }); cx += cw; });
       rect = { x: rect.x, y: rect.y + ch, w: rect.w, h: rect.h - ch };
     }
   };
-  for (const n of nodes) {
+  nodes.forEach((n, idx) => {
     const side = Math.min(rect.w, rect.h);
     if (!row.length || worst([...row, n], side) <= worst(row, side)) row.push(n);
-    else { layoutRow(row); row = [n]; }
-  }
-  if (row.length) layoutRow(row);
+    else { layoutRow(row, false); row = [n]; }
+    if (idx === nodes.length - 1) layoutRow(row, true);
+  });
   return out;
 }
 
+// Separación entre hermanos según la profundidad visible (1 = primer nivel).
+const GAP = (d) => (d <= 1 ? 3 : d === 2 ? 2 : 1);
+
 export function treemap(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
-  const cats = fields.filter((f) => fieldKind(data, f) === 'category');
-  let path = spec.path ? [].concat(spec.path) : null;
-  if (!path) path = spec.group ? [spec.group, spec.label ?? spec.x ?? cats.find((f) => f !== spec.group)] : [spec.label ?? spec.x ?? cats[0]];
-  path = path.filter(Boolean).slice(0, 2);
-  const valueF = spec.value ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  path.forEach((p, i) => requireField(data, p, i === 0 && path.length > 1 ? 'group' : 'label'));
-  requireField(data, valueF, 'value');
   const locale = spec.locale || 'es';
   const en = String(locale).startsWith('en');
-  const fmt = makeFormat(spec.format, locale, data.map((r) => num(r[valueF])));
-  const two = path.length === 2;
+  const { root, fields, valueField } = buildHierarchy(spec);
+  const focus = findNode(root, spec.focus);
+  const levels = height(focus);
+  const single = levels <= 1 && spec.colorBy !== 'label';
+  assignColors(focus, theme, spec, { single });
+  const allValues = [];
+  (function walk(n) { allValues.push(n.value); n.children.forEach(walk); })(root);
+  const fmt = makeFormat(spec.format, locale, allValues);
+  const share = shareFmt(locale);
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
 
-  // Jerarquía
-  const groups = new Map();
-  for (const r of data) {
-    const v = num(r[valueF]);
-    if (!(v > 0)) continue;
-    const gk = two ? String(r[path[0]]) : '';
-    const lk = String(r[path[two ? 1 : 0]]);
-    if (!groups.has(gk)) groups.set(gk, new Map());
-    const m = groups.get(gk);
-    m.set(lk, (m.get(lk) || 0) + v);
+  // Leyenda del primer nivel visible (cuando hay más de un nivel).
+  const top = focus.children;
+  let legend = [];
+  if (levels > 1 && top.length > 1 && spec.legend !== false) {
+    const shown = top.filter((c) => !c.folded);
+    legend = shown.map((c) => ({ label: c.name, color: c.color, shape: 'square' }));
+    if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
-  const total = [...groups.values()].reduce((a, m) => a + [...m.values()].reduce((x, y) => x + y, 0), 0);
-  let glist = [...groups.entries()].map(([k, m]) => ({ key: k, value: [...m.values()].reduce((a, b) => a + b, 0), leaves: [...m.entries()].map(([lk, v]) => ({ key: lk, value: v, group: k })).sort((a, b) => b.value - a.value) }));
-  glist.sort((a, b) => b.value - a.value);
 
-  // Color por grupo en orden fijo (por tamaño). Más de 8 → "Otros" en gris.
-  const colorOfGroup = new Map();
-  glist.forEach((gr, i) => colorOfGroup.set(gr.key, (spec.colors && spec.colors[gr.key]) || (two ? (i < theme.categorical.length - (glist.length > theme.categorical.length ? 1 : 0) ? theme.categorical[i] : theme.other) : theme.categorical[0])));
-  const legend = two ? glist.slice(0, 8).map((gr) => ({ label: gr.key, color: colorOfGroup.get(gr.key), shape: 'square' })) : [];
-  if (two && glist.length > 8) legend[7] = { label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' };
-
-  const frame = createFrame(spec, theme, { height: 460 });
-  const area = frame.layout(legend);
-  const share = (v) => formatNumber((v / total) * 100, (v / total) * 100 < 1 ? 1 : (v / total) * 100 < 10 ? 1 : 0, locale, true) + '%';
-
+  const frame = createFrame(spec, theme, { height: 480 });
+  let area = frame.layout(legend);
   const body = [];
-  const GAP = 2;
-  const gRects = squarify(glist, area.x, area.y, area.w, area.h);
-  for (const gr of gRects) {
-    const color = colorOfGroup.get(gr.key);
-    const leaves = squarify(gr.leaves, gr.x, gr.y, gr.w, gr.h);
-    const fg = textOn(color, theme);
-    for (const lf of leaves) {
-      const x = lf.x + GAP / 2, y = lf.y + GAP / 2, w = lf.w - GAP, h = lf.h - GAP;
-      if (w <= 0.5 || h <= 0.5) continue;
-      const parts = [el('rect', { x, y, width: w, height: h, rx: Math.min(3, w / 4, h / 4), fill: color })];
-      parts.push(...tileLabel(lf.key, share(lf.value), x, y, w, h, fg, spec.showValues ? fmt(lf.value) : null));
-      body.push(g({ class: 'pa-m', 'data-tip': tip(lf.key, two ? gr.key : '', `${fmt(lf.value)} · ${share(lf.value)}`) }, parts));
-    }
+  const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);
+  if (bc.h) { body.push(bc.svg); area = { ...area, y: area.y + bc.h, h: area.h - bc.h }; }
+
+  const total = focus.value;
+  const grand = root.value;
+  const R = theme.marks?.barRadius ?? 4;
+
+  const tipFor = (n) => {
+    const parentShare = n.parent && n.parent.value ? share(n.value, n.parent.value) : '';
+    return tip(
+      n.path.join(SEP),
+      `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`,
+      n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : ''
+    );
+  };
+  const dim = (n) => hl && !n.path.some((p) => hl.has(p));
+
+  function drawLeaf(n, x, y, w, h, relDepth) {
+    if (w < 0.6 || h < 0.6) return '';
+    const fill = dim(n) ? theme.dim : n.color;
+    const rx = Math.max(0, Math.min(R - 1, w / 6, h / 6));
+    const parts = [el('rect', { x, y, width: w, height: h, rx, fill })];
+    parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), spec.showValues ? fmt(n.value) : null, relDepth));
+    const drill = relDepth === 1 && n.children.length ? JSON.stringify(n.path) : undefined;
+    return g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts);
   }
-  const top3 = glist.flatMap((gr) => gr.leaves).sort((a, b) => b.value - a.value).slice(0, 3).map((l) => `${l.key} ${share(l.value)}`).join(', ');
-  const desc = en ? `Treemap of ${humanize(valueF)}, total ${fmt(total)}. Largest: ${top3}.` : `Treemap de ${humanize(valueF).toLowerCase()}, total ${fmt(total)}. Mayores: ${top3}.`;
+
+  function drawNode(n, x, y, w, h, relDepth) {
+    // Hoja visible (sin hijos o al fondo de la jerarquía mostrada).
+    if (!n.children.length) return drawLeaf(n, x, y, w, h, relDepth);
+    const parts = [];
+    let iy = y, ih = h;
+    // Encabezado del grupo: nombre + participación, sobre el fondo, si hay espacio.
+    const hs = relDepth === 1 ? 12 : 11;
+    const headerOk = relDepth <= 2 && w >= 84 && h >= (relDepth === 1 ? 64 : 80) && levels > relDepth;
+    if (headerOk) {
+      const sh = share(n.value, total);
+      const shW = measure(sh, hs - 0.5);
+      const nameMax = w - shW - 10;
+      if (measure(n.name, hs, 600) <= nameMax || measure(n.name.slice(0, 6), hs, 600) <= nameMax) {
+        let name = n.name;
+        while (name.length > 1 && measure(name + (name === n.name ? '' : '…'), hs, 600) > nameMax) name = name.slice(0, -1);
+        if (name !== n.name) name = name.trimEnd() + '…';
+        const hh = hs + 8;
+        parts.push(el('rect', { x, y, width: w, height: hh, fill: 'transparent' }));
+        parts.push(text(x + 1, y + hs, name, { fill: dim(n) ? theme.muted : theme.ink, fontSize: hs, fontWeight: 600 }));
+        parts.push(text(x + w - 1, y + hs, sh, { fill: theme.lede, fontSize: hs - 0.5, textAnchor: 'end' }));
+        iy += hh; ih -= hh;
+      }
+    }
+    const gap = GAP(relDepth + 1);
+    const rects = squarify(n.children, x, iy, w, ih);
+    for (const c of rects) parts.push(drawNode(c, c.x + gap / 2, c.y + gap / 2, c.w - gap, c.h - gap, relDepth + 1));
+    const drill = relDepth === 1 ? JSON.stringify(n.path) : undefined;
+    return g({ class: relDepth === 1 ? 'pa-group' : undefined, 'data-tip': relDepth === 1 ? tipFor(n) : undefined, 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts);
+  }
+
+  const g1 = GAP(1);
+  const rects = squarify(focus.children, area.x - g1 / 2, area.y - g1 / 2, area.w + g1, area.h + g1);
+  for (const r of rects) body.push(drawNode(r, r.x + g1 / 2, r.y + g1 / 2, r.w - g1, r.h - g1, 1));
+
+  const leaves = [];
+  (function walk(n) { if (!n.children.length) leaves.push(n); n.children.forEach(walk); })(focus);
+  const top3 = leaves.sort((a, b) => b.value - a.value).slice(0, 3).map((l) => `${l.name} ${share(l.value, total)}`).join(', ');
+  const what = humanize(valueField);
+  const where = focus.path.length ? ` (${focus.path.join(SEP)})` : '';
+  const desc = en
+    ? `Treemap of ${what}${where} across ${fields.length} level${fields.length > 1 ? 's' : ''}, total ${fmt(total)}. Largest: ${top3}.`
+    : `Treemap de ${what.toLowerCase()}${where} en ${fields.length} nivel${fields.length > 1 ? 'es' : ''}, total ${fmt(total)}. Mayores: ${top3}.`;
   return frame.finish(body, { desc, type: 'treemap' });
 }
 
 /** Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. */
-function tileLabel(name, pct, x, y, w, h, fill, value) {
+function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
   const out = [];
-  const pad = 8;
-  for (let size = Math.min(22, Math.max(11, Math.sqrt(w * h) / 9)); size >= 10.5; size -= 1.5) {
+  const pad = w < 60 || h < 40 ? 5 : 8;
+  const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
+  for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) {
     const lines = wrap(name, w - pad * 2, size, 600, 3);
-    const lh = size * 1.15;
-    const pctSize = Math.max(10.5, size * 0.78);
-    const need = pad + lines.length * lh + 4 + pctSize + pad * 0.6;
-    const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(pct, pctSize));
-    if (widest <= w - pad * 2 && need <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * 0.9 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      const py = y + pad + size * 0.9 + (lines.length - 1) * lh + pctSize + 5;
-      out.push(text(x + pad, py, value ? `${pct} · ${value}` : pct, { fill, fontSize: pctSize, opacity: 0.85 }));
+    const lh = size * 1.14;
+    const pctSize = Math.max(9.5, size * 0.78);
+    const sub = value ? `${pct} · ${value}` : pct;
+    const need = pad + lines.length * lh + 3 + pctSize + pad * 0.5;
+    const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(sub, pctSize));
+    const fitsW = lines.every((l) => measure(l, size, 600) <= w - pad * 2) && !/…$/.test(lines[lines.length - 1]);
+    if (fitsW && widest <= w - pad * 2 && need <= h) {
+      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+      out.push(text(x + pad, y + pad + size * 0.88 + (lines.length - 1) * lh + pctSize + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
       return out;
     }
-    if (lines.length === 1 && measure(lines[0], size, 600) <= w - pad * 2 && pad + lh <= h) {
-      out.push(text(x + pad, y + pad + size * 0.9, lines[0], { fill, fontSize: size, fontWeight: 600 }));
+    if (lines.length === 1 && fitsW && pad + lh <= h) {
+      out.push(text(x + pad, y + pad + size * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
       return out;
     }
   }

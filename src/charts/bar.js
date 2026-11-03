@@ -4,15 +4,16 @@
 import { el, g, text, barPath, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { niceDomain, linear, band } from '../scale.js';
+import { niceDomain, niceStep, linear, band } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
 import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } from '../axes.js';
+import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES } from '../frame.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
-  let series = spec.series ?? spec.color;
+  let series = spec.series ?? spec.hue ?? spec.color;
   let y = spec.y;
   if (Array.isArray(y)) {
     if (y.length > 1) {
@@ -23,12 +24,16 @@ export function prepareBar(spec) {
   }
   const inf = inferXY({ ...spec, y }, data);
   const x = inf.x;
-  y = y || inf.y;
+  const counting = (spec.aggregate ?? spec.estimator) === 'count';
+  y = y || (counting ? null : inf.y);
   requireField(data, x, 'x');
-  requireField(data, y, 'y');
+  if (!counting) requireField(data, y, 'y');
   if (series) requireField(data, series, 'series');
   const kind = fieldKind(data, x);
-  const how = spec.aggregate || 'sum';
+  // Estimador: suma por defecto; con `ci`/`errorbar` → media ± intervalo (seaborn barplot).
+  const errorbar = spec.errorbar ?? (spec.ci === true || typeof spec.ci === 'number' ? 'ci' : null);
+  const how = spec.aggregate ?? spec.estimator ?? (errorbar ? 'mean' : 'sum');
+  const level = typeof spec.ci === 'number' ? (spec.ci > 1 ? spec.ci / 100 : spec.ci) : 0.95;
   const key = (c, s) => c + '\u0000' + s;
   const buckets = new Map();
   for (const r of data) {
@@ -45,6 +50,14 @@ export function prepareBar(spec) {
     return v ? aggregate(v, how === 'count' ? 'sum' : how) : 0;
   };
   const values = new Map(cats.map((c) => [c, seriesKeys.map((s) => val(c, s) || 0)]));
+  const errs = new Map();
+  if (errorbar && errorbar !== 'none') for (const c of cats) errs.set(c, seriesKeys.map((s) => {
+    const v = (buckets.get(key(c, s)) || []).filter(Number.isFinite);
+    if (v.length < 2) return null;
+    if (errorbar === 'sd') { const mm = mean(v), d = sd(v); return [mm - d, mm + d]; }
+    if (errorbar === 'se') { const mm = mean(v), d = sd(v) / Math.sqrt(v.length); return [mm - d, mm + d]; }
+    return meanCI(v, level);
+  }));
   const total = (c) => values.get(c).reduce((a, b) => a + b, 0);
   if (kind === 'year' || kind === 'number') cats.sort((a, b) => num(a) - num(b));
   const nominal = kind === 'category';
@@ -64,7 +77,7 @@ export function prepareBar(spec) {
     values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
     cats = [...keep, otherName];
   }
-  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total };
+  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total, errs, errorbar };
 }
 
 export function bar(spec, theme) {
@@ -91,6 +104,7 @@ export function bar(spec, theme) {
   const all = stack
     ? cats.flatMap((c) => segs.get(c).map((s) => s.to))
     : cats.flatMap((c) => values.get(c));
+  if (m.errs.size) for (const e of m.errs.values()) for (const r of e) if (r) all.push(...r);
   let vmin = Math.min(0, ...all), vmax = Math.max(0, ...all);
   if (pct) { vmin = Math.min(0, vmin); vmax = Math.max(vmax, 1); }
   const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
@@ -114,11 +128,11 @@ export function bar(spec, theme) {
     if (hl) return hl.has(c) ? theme.categorical[0] : theme.dim;
     return c === 'Otros' || c === 'Other' ? theme.other : theme.categorical[0];
   };
-  const legend = multi ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
+  const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
 
   // Etiquetas de valor
   const labelMode = spec.labels ?? 'auto';
-  const showLabels = labelMode === true || (labelMode === 'auto' && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
+  const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
   const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : fmt(values.get(c)[0]));
   const valueLabelW = showLabels ? Math.max(...cats.map((c) => measure(labelOf(c), SIZES.label, 600))) : 0;
   const hideAxis = spec.axis === false || (showLabels && !multi && !(spec.refLines || []).length && spec.axis !== true);
@@ -132,8 +146,9 @@ export function bar(spec, theme) {
     // ── Columnas
     if (spec.height === undefined && frame.height < 360) frame.setHeight(360);
     const ticksCount = Math.max(3, Math.round(area.h / 64));
-    const nd = niceDomain(vmin, vmax, ticksCount);
-    const dom = hideAxis ? { min: vmin, max: vmax || 1 } : nd;
+    const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], ticksCount) } : niceDomain(vmin, vmax, ticksCount);
+    const dom = hideAxis && !spec.yDomain ? { min: vmin, max: vmax || 1 } : nd;
+    if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), fmt.tick(nd.step)) + 10;
     const top = showLabels ? 20 : 6;
     const inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: area.h - top - 26 };
@@ -178,10 +193,12 @@ export function bar(spec, theme) {
           const yv = yS(v);
           const top = Math.min(yv, y0), h = Math.abs(yv - y0);
           const d = barPath(bxI, top, w, h, v >= 0 ? 'up' : 'down');
-          const label = multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v);
+          const er0 = m.errs.get(c)?.[i];
+          const label = (multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v)) + (er0 ? ` (IC ${fmt(er0[0])}–${fmt(er0[1])})` : '');
           parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label) }, [
             el('rect', { x: bxI - 1, y: inner.y, width: w + 2, height: inner.h, fill: 'transparent' }),
             el('path', { d, fill: colorFor(c, i) }),
+            errBar(m.errs.get(c)?.[i], (e) => [bxI + w / 2, yS(e)], true, theme),
           ]));
           if (showLabels && !multi) {
             const strong = !hl || hl.has(c);
@@ -210,8 +227,9 @@ export function bar(spec, theme) {
     const hasNeg = vmin < 0;
     const inner = { x: area.x + catW, y: area.y + 4, w: area.w - catW - rightM - (hasNeg && showLabels ? valueLabelW + 10 : 0), h: area.h - (hideAxis ? 8 : 28) };
     if (hasNeg && showLabels) inner.x += valueLabelW + 10;
-    const nd = niceDomain(vmin, vmax, Math.max(3, Math.round(inner.w / 110)));
-    const dom = hideAxis ? { min: vmin, max: vmax || 1 } : nd;
+    const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], Math.max(3, Math.round(inner.w / 110))) } : niceDomain(vmin, vmax, Math.max(3, Math.round(inner.w / 110)));
+    const dom = hideAxis && !spec.yDomain ? { min: vmin, max: vmax || 1 } : nd;
+    if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const xS = linear(dom.min, dom.max, inner.x, inner.x + inner.w);
     const yb = band(cats, inner.y, inner.y + inner.h, { inner: 0.32, outer: 0.1 });
     if (!hideAxis) body.push(gridX(xS.ticks(nd.step), xS, inner, theme, fmt.tick(nd.step)));
@@ -253,7 +271,9 @@ export function bar(spec, theme) {
           const yy = y0b + i * (h + 2);
           const xv = xS(v);
           const d = barPath(Math.min(xv, x0), yy, Math.abs(xv - x0), h, v >= 0 ? 'right' : 'left');
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v)) }, [el('path', { d, fill: colorFor(c, i) })]));
+          const er = m.errs.get(c)?.[i];
+          const erTxt = er ? ` (IC ${fmt(er[0])}–${fmt(er[1])})` : '';
+          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt) }, [el('path', { d, fill: colorFor(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
           if (showLabels && !multi) {
             parts.push(text(v >= 0 ? xv + 7 : xv - 7, yy + h / 2 + 4.5, fmt(v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: v >= 0 ? 'start' : 'end' }));
           }
@@ -267,6 +287,17 @@ export function bar(spec, theme) {
 
   const desc = describeBar(m, fmt, locale);
   return frame.finish(body, { desc, type: 'bar' });
+}
+
+/** Barra de error fina con remates cortos (seaborn). */
+function errBar(e, P, vertical, theme) {
+  if (!e) return '';
+  const [ax, ay] = P(e[0]), [bx, by] = P(e[1]);
+  const c = 5;
+  const d = vertical
+    ? `M${ax},${ay}V${by}M${ax - c},${ay}H${ax + c}M${bx - c},${by}H${bx + c}`
+    : `M${ax},${ay}H${bx}M${ax},${ay - c}V${ay + c}M${bx},${by - c}V${by + c}`;
+  return el('path', { d, stroke: theme.ink, strokeWidth: 1.5, fill: 'none', strokeLinecap: 'round', opacity: 0.85 });
 }
 
 function textColor(fill, theme) {

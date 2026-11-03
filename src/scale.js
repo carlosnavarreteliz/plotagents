@@ -51,28 +51,35 @@ export function log(d0, d1, r0, r1) {
   s.invert = (p) => 10 ** inner.invert(p);
   s.domain = [d0, d1];
   s.range = [r0, r1];
-  s.ticks = () => {
-    const out = [];
-    for (let e = Math.floor(lo); e <= Math.ceil(hi); e++) {
-      const v = 10 ** e;
-      if (v >= d0 * 0.999 && v <= d1 * 1.001) out.push(v);
-    }
-    if (out.length < 3) {
-      for (let e = Math.floor(lo); e <= Math.ceil(hi); e++)
-        for (const m of [2, 5]) {
-          const v = m * 10 ** e;
-          if (v >= d0 && v <= d1) out.push(v);
+  // Marcas 1-2-5 cuando hay pocas décadas; solo potencias de 10 si hay muchas.
+  s.ticks = (max = 7) => {
+    const cap = Number.isInteger(max) && max >= 2 ? max : 7;
+    const gen = (mult) => {
+      const out = [];
+      for (let e = Math.floor(lo) - 1; e <= Math.ceil(hi); e++)
+        for (const k of mult) {
+          const v = +(k * 10 ** e).toPrecision(12);
+          if (v >= d0 * 0.999 && v <= d1 * 1.001) out.push(v);
         }
-      out.sort((a, b) => a - b);
+      return out;
+    };
+    for (const mult of [[1, 2, 5], [1, 3], [1]]) {
+      const t = gen(mult);
+      if (t.length <= cap) { const dense = gen([1, 2, 3, 5]); return t.length < 4 && dense.length <= cap ? dense : t; }
     }
-    return out;
+    const t = gen([1]);
+    const every = Math.ceil(t.length / cap);
+    return t.filter((_, i) => i % every === 0);
   };
   return s;
 }
 
+/** Dominio log ajustado a la secuencia 1-2-5 (sin décadas vacías). */
 export function logDomain(min, max) {
-  const lo = 10 ** Math.floor(Math.log10(Math.max(min, 1e-12)));
-  const hi = 10 ** Math.ceil(Math.log10(Math.max(max, 1e-12)));
+  const steps = [1, 2, 5, 10];
+  const down = (v) => { const e = Math.floor(Math.log10(v)); const m = v / 10 ** e; const k = [...steps].reverse().find((s) => s <= m + 1e-9) || 1; return k * 10 ** e; };
+  const up = (v) => { const e = Math.floor(Math.log10(v)); const m = v / 10 ** e; const k = steps.find((s) => s >= m - 1e-9) || 10; return k * 10 ** e; };
+  const lo = down(Math.max(min, 1e-12)), hi = up(Math.max(max, 1e-12));
   return { min: lo, max: hi === lo ? lo * 10 : hi };
 }
 

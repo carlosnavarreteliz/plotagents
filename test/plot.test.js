@@ -15,7 +15,7 @@ test('todos los ejemplos de la galería producen SVG válido', () => {
     assert.match(svg, /^<svg[^>]+viewBox="0 0 \d+ [\d.]+"/, ex.id);
     assert.ok(svg.endsWith('</svg>'), ex.id);
     assert.ok(!svg.includes('NaN'), `${ex.id} contiene NaN`);
-    assert.ok(!svg.includes('undefined'), `${ex.id} contiene undefined`);
+    assert.ok(!svg.includes('undefined') && !svg.includes('object Object'), `${ex.id} contiene undefined`);
     assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/, `${ex.id} sin descripción`);
   }
 });
