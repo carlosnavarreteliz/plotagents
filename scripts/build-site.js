@@ -305,7 +305,7 @@ const { ok, svg, errors, suggestions } = safePlot(call.input);
     <p class="kicker">Charts for AI agents</p>
     <h1>One JSON spec in. <em>A finished chart</em> out.</h1>
     <p class="lede">Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. plotagents makes the design decisions so an agent, or you, never has to.</p>
-    <span class="install">npm install plotagents <button class="copy" type="button" data-copy="npm install plotagents">Copy</button></span>
+    <span class="install">npm install github:carlosnavarreteliz/<wbr>plotagents <button class="copy" type="button" data-copy="npm install github:carlosnavarreteliz/plotagents">Copy</button></span>
     <div class="ctas">
       <a class="btn" href="docs/">Get started</a>
       <a class="btn ghost" href="examples/">Browse ${examples.length} examples</a>

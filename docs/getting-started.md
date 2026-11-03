@@ -5,14 +5,10 @@ plotagents turns one JSON object into a finished, accessible SVG chart. You pass
 ## Install
 
 ```bash
-npm install plotagents
-```
-
-Or straight from GitHub:
-
-```bash
 npm install github:carlosnavarreteliz/plotagents
 ```
+
+plotagents is not on the npm registry yet, so install it from GitHub for now. Once it is published, `npm install plotagents` will work too. After installing, `npx plotagents` runs the CLI from your project.
 
 Node 18 or later, Deno and Bun work out of the box. The package has no dependencies.
 
