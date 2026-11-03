@@ -1,0 +1,47 @@
+# Publica el paquete en npm.
+# Requiere una vez: un token de npm (Automation o Granular con permiso de escritura)
+# guardado como secreto NPM_TOKEN en Settings → Secrets and variables → Actions.
+# Se ejecuta al publicar un release en GitHub, o a mano desde la pestaña Actions.
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # firma de procedencia (provenance) en npm
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Check the release tag matches package.json
+        if: github.event_name == 'release'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+      - name: Skip if this version is already on npm
+        id: check
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "::notice::$name@$version is already published"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      # prepublishOnly builds dist/ and runs the tests before uploading.
+      - run: npm publish --provenance --access public
+        if: steps.check.outputs.skip != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
