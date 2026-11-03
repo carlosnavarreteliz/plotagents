@@ -41,7 +41,8 @@ function ensureAssets() {
 .pa-ticks{position:absolute;left:0;right:0;top:28px;height:12px;font-size:10.5px;color:var(--pa-muted)}
 .pa-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:13px;min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
-.pa-chart [data-drill]{cursor:pointer}
+.pa-chart [data-drill],.pa-chart [data-node]{cursor:pointer}
+.pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
 @media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
   document.head.appendChild(st);
 }
@@ -55,6 +56,11 @@ export function render(target, spec, opts = {}) {
   if (!host) throw new PlotError('No encontré el elemento destino.', 'render("#grafico", spec) o render(elemento, spec)');
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
+  // Fuente propia (configure({ font }) o spec.font): se carga una sola vez.
+  const fontUrl = themeFor(state).font?.import;
+  if (fontUrl && typeof document !== 'undefined' && !document.querySelector(`link[href="${fontUrl}"]`)) {
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = fontUrl; document.head.appendChild(l);
+  }
   host.innerHTML = '';
   const chart = document.createElement('div');
   const ctl = document.createElement('div');
@@ -63,10 +69,42 @@ export function render(target, spec, opts = {}) {
   let timer = null, ro = null, raf = 0;
 
   const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  // Posiciones anteriores de los nodos (para animar el cambio de foco).
+  const nodePos = () => {
+    const m = new Map();
+    for (const c of chart.querySelectorAll('[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
+    return m;
+  };
+  const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animateFrom = (before) => {
+    if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
+    const ease = 'cubic-bezier(.2,.7,.2,1)';
+    for (const c of chart.querySelectorAll('[data-node]')) {
+      const old = before.get(c.getAttribute('data-node'));
+      if (!old) continue;
+      const dx = old[0] - +c.getAttribute('cx'), dy = old[1] - +c.getAttribute('cy');
+      c.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0,0)' }], { duration: 650, easing: ease });
+    }
+    for (const sel of ['.pa-links', '.pa-labels']) {
+      const n = chart.querySelector(sel);
+      if (n) n.animate([{ opacity: 0 }, { opacity: 0 }, { opacity: 1 }], { duration: 750, easing: 'ease-out' });
+    }
+  };
   const draw = () => {
+    const before = nodePos();
     chart.innerHTML = plotFn({ ...state, width: width() });
+    animateFrom(before);
     chart.__pa = false;
     attach(chart);
+    // Red: clic en un nodo lo lleva al centro y destaca sus conexiones; otro clic (o Esc) vuelve.
+    for (const n of chart.querySelectorAll('[data-node]')) {
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('role', 'button');
+      const id = n.getAttribute('data-node');
+      const go = () => { state = { ...state, focus: String(state.focus) === id ? undefined : id }; draw(); };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    }
     for (const n of chart.querySelectorAll('[data-drill]')) {
       n.setAttribute('tabindex', '0');
       n.setAttribute('role', 'button');
@@ -201,6 +239,8 @@ export function render(target, spec, opts = {}) {
     });
     return box;
   }
+
+  host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
 
   draw();
   if (state.width === undefined && typeof ResizeObserver !== 'undefined') {

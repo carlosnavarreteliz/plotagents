@@ -118,7 +118,11 @@ export interface Spec {
   ci?: boolean | number;
   errorbar?: 'ci' | 'sd' | 'se' | 'pi' | 'none' | false;
   estimator?: 'mean' | 'median' | 'sum' | 'count';
-  focus?: string[];
+  focus?: string | string[];
+  font?: string | { family: string; import?: string };
+  textScale?: number;
+  fontScale?: number;
+  labelScale?: number;
   depth?: number;
   half?: boolean;
   bins?: number;
@@ -178,6 +182,9 @@ export declare function attach(root: Element): void;
 export declare function resolve(spec: Spec): Spec;
 
 export declare const schema: Record<string, unknown>;
+/** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
+export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
+export declare function registerGeo(name: string, featureCollection: object, aliases?: string[]): object;
 export declare const palettes: Record<string, string[]>;
 export declare const ramps: Record<string, string[]>;
 export declare function themeFor(spec: Spec): Theme;

@@ -1,11 +1,12 @@
-/*! plotagents 0.4.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
+/*! plotagents 0.5.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
 (function (global) {
 'use strict';
 var __defs = {}, __cache = {};
 function __def(id, fn) { __defs[id] = fn; }
 function __req(id) { if (!__cache[id]) { __cache[id] = { loading: true }; __cache[id] = __defs[id](); } return __cache[id]; }
 __def("src/index.js", function () {
-const { getTheme, themeFor, themes, palettes, ramps, colorMap, FONT_CSS } = __req("src/theme.js");
+const { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS } = __req("src/theme.js");
+const { withContext } = __req("src/context.js");
 const { validatePalette } = __req("src/palette.js");
 const { bar } = __req("src/charts/bar.js");
 const { line } = __req("src/charts/line.js");
@@ -79,7 +80,7 @@ const RENDERERS = {
 /** Normaliza el spec: tipo inferido y datos como filas. */
 function resolve(spec = {}) {
   if (!spec || typeof spec !== 'object') throw new PlotError('El spec debe ser un objeto.', 'plot({ data: [...], x: "campo", y: "campo" })');
-  const s = { ...spec };
+  const s = withDefaults(spec);
   if (s.color && !s.series && typeof s.color === 'string' && !s.color.startsWith('#')) s.series = s.color;
   let type = s.type && s.type !== 'auto' ? String(s.type).toLowerCase() : null;
   if (type) {
@@ -104,8 +105,37 @@ function plot(spec) {
   let s = resolve(spec);
   s = applyTime(s);
   const theme = themeFor(s);
-  if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
-  return RENDERERS[s.type](s, theme);
+  const textScale = Math.max(0.5, Math.min(4, +(s.textScale ?? s.fontScale ?? s.labelScale ?? 1) || 1));
+  return withContext({ textScale }, () => {
+    if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
+    return RENDERERS[s.type](s, theme);
+  });
+}
+
+const DEFAULTS = {};
+
+/**
+ * Valores por defecto para TODOS los gráficos (el spec siempre gana):
+ *   configure({ font: 'Poppins', textScale: 1.5, locale: 'en', theme: 'noche', palette: 'okabe-ito' })
+ * `font` acepta un nombre de Google Fonts, una pila CSS o { family, import }.
+ * `textScale` multiplica todos los textos (1.5, 2…) y el layout se recalcula.
+ * configure() sin argumentos devuelve la configuración actual; configure(null) la borra.
+ */
+function configure(options) {
+  if (options === null) { for (const k of Object.keys(DEFAULTS)) delete DEFAULTS[k]; return {}; }
+  if (options) Object.assign(DEFAULTS, options);
+  return { ...DEFAULTS };
+}
+
+function withDefaults(spec) {
+  const s = { ...DEFAULTS, ...spec };
+  if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
+  const f = fontSpec(s.font);
+  if (f) {
+    const base = s.theme && typeof s.theme === 'object' ? s.theme : { extends: s.theme || undefined };
+    s.theme = { ...base, font: { ...(base.font || {}), ...f } };
+  }
+  return s;
 }
 
 const TIME_AXIS = new Set(['line', 'area', 'ecdf']);
@@ -202,10 +232,10 @@ function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } = {}) {
   return `<!doctype html>
 <html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<link rel="stylesheet" href="${FONT_CSS}">
+${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.import).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
 <style>
 :root{color-scheme:${dark ? 'dark' : 'light'}}
-body{margin:0;background:${bg};font-family:'Mozilla Text',system-ui,sans-serif}
+body{margin:0;background:${bg};font-family:${esc(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
 figure.pa svg{width:100%;height:auto;display:block}
@@ -235,7 +265,7 @@ _setProbe((s) => plot(s));
 
 
 
-return { "resolve": resolve, "plot": plot, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/theme.js", function () {
 
@@ -432,7 +462,33 @@ function readable(color, theme, min = 4.5) {
   return c;
 }
 
-return { "deepMerge": deepMerge, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps };
+/**
+ * Tipografía a partir de un nombre: "Poppins" → pila con respaldo y la URL de
+ * Google Fonts para cargarla. Una pila completa ("'Inter', sans-serif") se usa
+ * tal cual. También acepta { family, import }.
+ */
+function fontSpec(font) {
+  if (!font) return null;
+  if (typeof font === 'object') return { ...font };
+  const f = String(font).trim();
+  if (/[,'"]/.test(f)) return { family: f };
+  const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400;500;600;700&display=swap`;
+  return { family: `'${f}', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`, import: url };
+}
+
+return { "deepMerge": deepMerge, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "fontSpec": fontSpec, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps };
+});
+__def("src/context.js", function () {
+const ctx = { textScale: 1 };
+
+/** Ejecuta fn con un contexto temporal y lo restaura después. */
+function withContext(values, fn) {
+  const prev = { ...ctx };
+  Object.assign(ctx, values);
+  try { return fn(); } finally { Object.assign(ctx, prev); }
+}
+
+return { "withContext": withContext, "ctx": ctx };
 });
 __def("src/palette.js", function () {
 
@@ -503,6 +559,7 @@ const { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind
 const { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } = __req("src/axes.js");
 const { mean, sd, meanCI } = __req("src/stats.js");
 const { createFrame, SIZES } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 
 function prepareBar(spec) {
   let data = ensureData(spec);
@@ -637,7 +694,7 @@ function bar(spec, theme) {
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), fmt.tick(nd.step)) + 10;
     const top = showLabels ? 20 : 6;
-    const inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: area.h - top - 26 };
+    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step)));
@@ -699,7 +756,7 @@ function bar(spec, theme) {
     body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: 12, color: theme.lede }));
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
-    const step = multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9;
+    const step = Math.max(multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9, 12.5 * ctx.textScale * 1.45);
     const needH = cats.length * step + 30;
     if (spec.height === undefined) {
       frame.setHeight(area.y + needH + frame.chrome);
@@ -808,6 +865,8 @@ return { "prepareBar": prepareBar, "bar": bar, "describeBar": describeBar };
 });
 __def("src/svg.js", function () {
 
+const { ctx } = __req("src/context.js");
+
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
@@ -822,7 +881,7 @@ function el(tag, attrs = {}, children) {
   for (const [k, v] of Object.entries(attrs)) {
     if (v === undefined || v === null || v === false) continue;
     const name = ATTR_ALIAS[k] || (KEEP_CASE.has(k) ? k : k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()));
-    const val = typeof v === 'number' ? r2(v) : v;
+    const val = typeof v === 'number' ? r2(k === 'fontSize' ? v * ctx.textScale : v) : v;
     s += ` ${name}="${esc(val)}"`;
   }
   if (children === undefined || children === null || children === '') return s + '/>';
@@ -892,6 +951,7 @@ function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
 return { "el": el, "text": text, "barPath": barPath, "dotLayer": dotLayer, "esc": esc, "r2": r2, "g": g, "tip": tip };
 });
 __def("src/text.js", function () {
+const { ctx } = __req("src/context.js");
 
 const W = {};
 const set = (chars, w) => { for (const c of chars) W[c] = w; };
@@ -918,7 +978,7 @@ function measure(str, size = 12, weight = 400) {
   let w = 0;
   for (const c of String(str ?? '')) w += W[c] ?? 0.56;
   const bold = weight >= 600 ? 1.06 : weight >= 500 ? 1.03 : 1;
-  return w * size * bold * 1.05; // margen: Mozilla Text es un poco más ancha
+  return w * size * ctx.textScale * bold * 1.05; // margen: Mozilla Text es un poco más ancha
 }
 
 /** Recorta con elipsis para caber en `max` px. */
@@ -1434,6 +1494,7 @@ __def("src/axes.js", function () {
 const { el, g, text } = __req("src/svg.js");
 const { measure } = __req("src/text.js");
 const { SIZES } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
 function gridY(ticks, y, area, theme, fmt, { labels = true, baseline = 0 } = {}) {
@@ -1460,7 +1521,7 @@ function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0, lines 
 
 /** Etiquetas bajo el eje x, raleadas si chocan (nunca rotadas). */
 function xLabels(items, area, theme, { y, size = SIZES.axis, color } = {}) {
-  const ly = y ?? area.y + area.h + 18;
+  const ly = (y ?? area.y + area.h + 18) + (ctx.textScale - 1) * 10;
   const widths = items.map((it) => measure(it.label, size));
   let every = 1;
   const fits = (k) => {
@@ -1497,7 +1558,7 @@ function yAxisMargin(ticks, fmt, theme, inside) {
   return isInside(theme, inside) ? 0 : ticksWidth(ticks, fmt, theme.type?.axis ?? SIZES.axis) + 10;
 }
 /** Espacio superior para la etiqueta de la marca más alta. */
-const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 : 6);
+const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 * ctx.textScale : 6);
 
 function yGrid(ticks, y, area, theme, { baseline = 0 } = {}) {
   return g({ class: 'pa-grid' }, ticks.map((t) => {
@@ -1513,7 +1574,7 @@ function yTickLabels(ticks, y, area, theme, fmt, { inside, unit } = {}) {
     const py = Math.round(y(t)) + 0.5;
     const label = fmt(t) + (unit && i === ticks.length - 1 ? ' ' + unit : '');
     return ins
-      ? text(area.x, py - 5, label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
+      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
       : text(area.x - 8, py + 4, label, { fill: theme.muted, fontSize: size, textAnchor: 'end' });
   }));
 }
@@ -1574,6 +1635,7 @@ __def("src/frame.js", function () {
 const { el, esc, g, text, r2 } = __req("src/svg.js");
 const { measure, wrap } = __req("src/text.js");
 const { FONT, FONT_CSS } = __req("src/theme.js");
+const { ctx } = __req("src/context.js");
 
 const SIZES = {
   title: 22,
@@ -1586,7 +1648,8 @@ const SIZES = {
 
 function createFrame(spec, theme, defaults = {}) {
   const width = Math.max(240, +spec.width || defaults.width || 720);
-  let height = Math.max(160, +spec.height || defaults.height || 420);
+  const XS = ctx.textScale;
+  let height = Math.max(160, +spec.height || Math.round((defaults.height || 420) * (1 + 0.55 * (XS - 1))));
   const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
@@ -1599,18 +1662,19 @@ function createFrame(spec, theme, defaults = {}) {
   const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
   const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
   const header = [];
-  const tlh = Math.round(T.title * 1.3), slh = Math.round(T.subtitle * 1.42);
+  const X = ctx.textScale; // alturas de línea crecen con la escala de texto
+  const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + T.title * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
   if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {
-    header.push(text(pad, y + T.subtitle * 1.0 + i * slh, l, { fill: theme.lede, fontSize: T.subtitle }));
+    header.push(text(pad, y + T.subtitle * X * 1.0 + i * slh, l, { fill: theme.lede, fontSize: T.subtitle }));
   });
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
 
-  const sourceH = spec.source ? 18 : 0;
+  const sourceH = spec.source ? Math.round(18 * Math.max(1, X * 0.95)) : 0;
 
   const frame = {
     width,
@@ -1629,7 +1693,7 @@ function createFrame(spec, theme, defaults = {}) {
         header.push(svg);
         ly += h + 10; // la leyenda pegada al gráfico que explica
       }
-      return { x: pad, y: ly, w: innerW, h: Math.max(40, frame.bottom - ly) };
+      return { x: pad, y: ly, w: innerW, h: Math.max(40, frame.bottom - ly - Math.max(0, (XS - 1) * 22)) };
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
@@ -1675,7 +1739,8 @@ function createFrame(spec, theme, defaults = {}) {
 function drawLegend(items, x0, y0, maxW, theme, opts) {
   const out = [];
   const size = opts.size ?? SIZES.legend;
-  const rowH = 20;
+  const X = ctx.textScale;
+  const rowH = Math.round(20 * X);
   let x = x0, y = y0, rows = 1;
   for (const it of items) {
     if (it.type === 'ramp') {
@@ -1693,19 +1758,20 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
       continue;
     }
     const label = String(it.label);
-    const w = 18 + measure(label, size) + 18;
+    const w = 18 * X + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
-    const cy = y + 6.5;
+    const cy = y + 6.5 * X;
     out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
-    out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: 19, rx: 4, fill: 'transparent' }));
-    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + 12, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
-    else if (it.shape === 'square') out.push(el('rect', { x, y: cy - 5, width: 10, height: 10, rx: 2.5, fill: it.color }));
-    else out.push(el('circle', { cx: x + 5, cy, r: 5, fill: it.color }));
-    out.push(text(x + 16, y + 11, label, { fill: theme.lede, fontSize: size }));
+    out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: rowH - 1, rx: 4, fill: 'transparent' }));
+    const sw = 10 * Math.min(1.6, X);
+    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
+    else if (it.shape === 'square') out.push(el('rect', { x, y: cy - sw / 2, width: sw, height: sw, rx: 2.5, fill: it.color }));
+    else out.push(el('circle', { cx: x + sw / 2, cy, r: sw / 2, fill: it.color }));
+    out.push(text(x + sw + 6, y + 11 * X, label, { fill: theme.lede, fontSize: size }));
     out.push('</g>');
     x += w;
   }
-  return { svg: g({ class: 'pa-legend' }, out), h: rows * rowH - 6 };
+  return { svg: g({ class: 'pa-legend' }, out), h: rows * rowH - 6 * X };
 }
 
 function hash(s) {
@@ -1969,6 +2035,7 @@ const { colorMap, readable } = __req("src/theme.js");
 const { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize } = __req("src/data.js");
 const { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels } = __req("src/axes.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 const { meanCI, mean, sd } = __req("src/stats.js");
 const { hash } = __req("src/frame.js");
 
@@ -2094,7 +2161,7 @@ function line(spec, theme, variant = 'line') {
   const frame = createFrame(spec, theme, { height: 400 });
   const want = labelMode !== false;
   const provisionalH = frame.bottom - frame.top - 40;
-  const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize + 3)));
+  const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize * ctx.textScale + 3)));
   const labeled = want ? m.lines.filter((l) => focus(l.key)).sort((a, b) => (lastOf(b)?.y ?? -Infinity) - (lastOf(a)?.y ?? -Infinity)).slice(0, maxLabels) : [];
   const allLabeled = labeled.length === m.lines.filter((l) => focus(l.key)).length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true) && spec.legend !== false;
@@ -2102,7 +2169,7 @@ function line(spec, theme, variant = 'line') {
   const area = frame.layout(legend);
 
   const endW = labeled.length
-    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) + 6 : 0) : 0; })) + 22
+    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) * 1.04 + 6 * ctx.textScale : 0) : 0; })) + 22
     : 10;
 
   const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)));
@@ -2111,7 +2178,7 @@ function line(spec, theme, variant = 'line') {
   const inside = stack ? false : spec.axisInside;
   const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
   const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
-  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 - (spec.xLabel ? 16 : 0) };
+  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
   const yS = (yLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
 
   let x0 = xsAll[0], x1 = xsAll[xsAll.length - 1];
@@ -2207,7 +2274,7 @@ function line(spec, theme, variant = 'line') {
   body.push(yTickLabels(yTicks, yS, inner, theme, tickF, { inside }));
 
   if (labeled.length) {
-    const lh = labelSize + 3;
+    const lh = labelSize * ctx.textScale + 3;
     const labs = labeled.map((l) => {
       const last = lastOf(l);
       const t = endText(l);
@@ -2226,7 +2293,7 @@ function line(spec, theme, variant = 'line') {
       if (lb.name) {
         const tc = readable(lb.color, theme);
         tparts.push(text(lx, lb.y + 4, lb.name, { fill: tc, fontSize: labelSize, fontWeight: 500 }));
-        tparts.push(text(lx + measure(lb.name, labelSize, 500) + 6, lb.y + 4, lb.val, { fill: tc, fontSize: labelSize, fontWeight: 700 }));
+        tparts.push(text(lx + measure(lb.name, labelSize, 500) * 1.04 + 6 * ctx.textScale, lb.y + 4, lb.val, { fill: tc, fontSize: labelSize, fontWeight: 700 }));
       } else tparts.push(text(lx, lb.y + 4.5, lb.val, { fill: readable(lb.color, theme), fontSize: labelSize + 0.5, fontWeight: 700 }));
       body.push(g({ class: 'pa-endlabel' }, tparts));
     }
@@ -2458,6 +2525,7 @@ const { textOn, ramp } = __req("src/theme.js");
 const { formatNumber } = __req("src/format.js");
 const { humanize } = __req("src/data.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 const { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } = __req("src/hierarchy.js");
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
@@ -2610,19 +2678,20 @@ function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
   const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
   for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) {
     const lines = wrap(name, w - pad * 2, size, 600, 3);
-    const lh = size * 1.14;
+    const X = ctx.textScale;
+    const lh = size * X * 1.14;
     const pctSize = Math.max(9.5, size * 0.78);
     const sub = value ? `${pct} · ${value}` : pct;
-    const need = pad + lines.length * lh + 3 + pctSize + pad * 0.5;
+    const need = pad + lines.length * lh + 3 + pctSize * X + pad * 0.5;
     const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(sub, pctSize));
     const fitsW = lines.every((l) => measure(l, size, 600) <= w - pad * 2) && !/…$/.test(lines[lines.length - 1]);
     if (fitsW && widest <= w - pad * 2 && need <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      out.push(text(x + pad, y + pad + size * 0.88 + (lines.length - 1) * lh + pctSize + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
+      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+      out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
       return out;
     }
     if (lines.length === 1 && fitsW && pad + lh <= h) {
-      out.push(text(x + pad, y + pad + size * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
+      out.push(text(x + pad, y + pad + size * X * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
       return out;
     }
   }
@@ -2777,6 +2846,7 @@ const { makeFormat, formatNumber } = __req("src/format.js");
 const { colorMap, textOn } = __req("src/theme.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, humanize } = __req("src/data.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 
 const f = (n) => n.toFixed(2);
 
@@ -2839,7 +2909,7 @@ function donut(spec, theme) {
   const inner = mode === 'auto' || mode === 'inside';
   const body = [];
 
-  const rowH = 28;
+  const rowH = Math.round(28 * Math.max(1, ctx.textScale * 0.9));
   const tableW = table ? (narrow ? area.w : Math.min(340, area.w * 0.5)) : 0;
   let cx, cy, R;
   let tx = 0, ty = 0;
@@ -2943,10 +3013,10 @@ function donut(spec, theme) {
     while (bigSize > 12 && measure(big, bigSize, 600) > r0 * 1.7) bigSize -= 1;
     if (half) {
       body.push(text(cx, cy - 6, big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
-      body.push(text(cx, cy - 6 - bigSize - 2, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
+      body.push(text(cx, cy - 6 - bigSize * ctx.textScale - 2, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
     } else {
-      body.push(text(cx, cy + bigSize * 0.32, big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
-      body.push(text(cx, cy + bigSize * 0.32 + 18, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
+      body.push(text(cx, cy + bigSize * ctx.textScale * 0.32 - 4 * (ctx.textScale - 1), big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
+      body.push(text(cx, cy + bigSize * ctx.textScale * 0.32 + 18 * ctx.textScale, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
     }
   }
 
@@ -3119,6 +3189,7 @@ const { colorMap } = __req("src/theme.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize } = __req("src/data.js");
 const { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } = __req("src/axes.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 const { histogram: binValues, kde: kdeEst, scottBandwidth, ecdf: ecdfEst, quantile, finite, median } = __req("src/stats.js");
 
 
@@ -3180,7 +3251,7 @@ const tickFmt = (fmt, ax) => (ax.isLog ? fmt : fmt.tick(ax.step));
 function axisTitles(body, theme, area, inner, { x, y }) {
   const size = theme.type?.axis ?? 11.5;
   if (y) body.push(text(area.x, area.y + 10, y, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500 }));
-  if (x) body.push(text(inner.x + inner.w, inner.y + inner.h + 38, x, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500, textAnchor: 'end' }));
+  if (x) body.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 16 * ctx.textScale, x, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500, textAnchor: 'end' }));
 }
 
 /** Escala log10 → valor, para bins en espacio logarítmico. */
@@ -3969,6 +4040,7 @@ const { colorMap, readable } = __req("src/theme.js");
 const { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } = __req("src/data.js");
 const { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } = __req("src/axes.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 const { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } = __req("src/stats.js");
 
 const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
@@ -4067,7 +4139,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       body.post.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: axisSize + 0.5, color: theme.lede }));
     }
     body.pre.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis, strokeWidth: 1 }));
-    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 40, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
+    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   } else {
     const labelW = m.cat ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
     const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
@@ -4085,7 +4157,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       const strong = !hl || hl.has(c);
       body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
     }
-    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 40, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
+    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
 
   if (spec._domains && typeof spec._domains === 'object') spec._domains.y = [nd.min, nd.max];
@@ -4622,13 +4694,14 @@ function prepareNetwork(spec) {
 }
 
 /** Disposición por fuerzas (velocity Verlet simplificado, al estilo d3-force). */
-function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}) {
+function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40, pin = null } = {}) {
   const n = nodes.length;
   const order = [...nodes].sort((a, b) => String(a.group).localeCompare(String(b.group)) || b.w - a.w);
   order.forEach((nd, i) => {
     const r = spacing * 0.6 * Math.sqrt(i + 0.5), a = i * 2.399963229728653;
     nd.x = r * Math.cos(a); nd.y = r * Math.sin(a); nd.vx = 0; nd.vy = 0;
   });
+  if (pin) { const c = { x: pin.x, y: pin.y }; for (const nd of nodes) { nd.x -= c.x; nd.y -= c.y; } }
   const links = edges.map((e) => ({ a: byId.get(e.s), b: byId.get(e.t), v: e.v }));
   const maxV = Math.max(1, ...links.map((l) => l.v));
   let alpha = 1;
@@ -4660,6 +4733,7 @@ function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}
     }
     for (const p of nodes) { p.vx -= p.x * 0.02 * alpha; p.vy -= p.y * 0.02 * alpha; }
     for (const p of nodes) { p.vx *= 0.6; p.vy *= 0.6; p.x += p.vx; p.y += p.vy; }
+    if (pin) { pin.x = 0; pin.y = 0; pin.vx = 0; pin.vy = 0; }
     for (let pass = 0; pass < 2; pass++)
       for (let i = 0; i < n; i++)
         for (let j = i + 1; j < n; j++) {
@@ -4673,6 +4747,7 @@ function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}
             p.x -= dx * s; p.y -= dy * s; q.x += dx * s; q.y += dy * s;
           }
         }
+    if (pin) { pin.x = 0; pin.y = 0; }
     alpha -= alpha * decay;
   }
 }
@@ -4722,6 +4797,12 @@ function network(spec, theme) {
     labelSet = new Set([...nodes].sort((a, b) => b.w - a.w).slice(0, k).map((n) => n.id));
   }
 
+  const focusNode = spec.focus !== undefined && spec.focus !== null ? byId.get(String([].concat(spec.focus)[0])) : null;
+  if (focusNode) {
+    labelSet.add(focusNode.id);
+    for (const e of edges) { if (e.s === focusNode.id) labelSet.add(e.t); if (e.t === focusNode.id) labelSet.add(e.s); }
+  }
+
   const body = [];
   if (layout === 'circle') {
     circleLayout(nodes, groups);
@@ -4736,8 +4817,8 @@ function network(spec, theme) {
     nodes.cx = cx; nodes.cy = cy; nodes.R = R; nodes.lw = lw;
   } else {
     const spacing = Math.max(26, Math.sqrt((area.w * area.h) / nodes.length) * 0.75);
-    forceLayout(nodes, edges, byId, { spacing, iterations: spec.iterations ?? (nodes.length > 200 ? 200 : 320) });
-    {
+    forceLayout(nodes, edges, byId, { spacing, pin: focusNode, iterations: spec.iterations ?? (nodes.length > 200 ? 200 : 320) });
+    if (!focusNode) {
       const mx = nodes.reduce((a, n) => a + n.x, 0) / nodes.length, my = nodes.reduce((a, n) => a + n.y, 0) / nodes.length;
       let sxx = 0, syy = 0, sxy = 0;
       for (const n of nodes) { const dx = n.x - mx, dy = n.y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
@@ -4754,8 +4835,16 @@ function network(spec, theme) {
     const ratio = sx / sy;
     const lim = 2.4;
     if (ratio > lim) sx = sy * lim; else if (ratio < 1 / lim) sy = sx * lim;
-    const ox = area.x + pad + (aw - (x1 - x0) * sx) / 2, oy = area.y + pad + (ah - (y1 - y0) * sy) / 2;
-    for (const n of nodes) { n.px = ox + (n.x - x0) * sx; n.py = oy + (n.y - y0) * sy; }
+    if (focusNode) {
+      const ex = Math.max(...nodes.map((n) => Math.abs(n.x) + n.r), 1e-6), ey = Math.max(...nodes.map((n) => Math.abs(n.y) + n.r), 1e-6);
+      let fx = aw / 2 / ex, fy = ah / 2 / ey;
+      if (fx / fy > lim) fx = fy * lim; else if (fy / fx > lim) fy = fx * lim;
+      const ccx = area.x + area.w / 2, ccy = area.y + area.h / 2;
+      for (const n of nodes) { n.px = ccx + n.x * fx; n.py = ccy + n.y * fy; }
+    } else {
+      const ox = area.x + pad + (aw - (x1 - x0) * sx) / 2, oy = area.y + pad + (ah - (y1 - y0) * sy) / 2;
+      for (const n of nodes) { n.px = ox + (n.x - x0) * sx; n.py = oy + (n.y - y0) * sy; }
+    }
     for (let pass = 0; pass < 6; pass++)
       for (let i = 0; i < nodes.length; i++)
         for (let j = i + 1; j < nodes.length; j++) {
@@ -4769,7 +4858,7 @@ function network(spec, theme) {
     }
   }
 
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = focusNode ? new Set([focusNode.id]) : spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const near = new Set();
   if (hl) { for (const id of hl) near.add(id); for (const e of edges) { if (hl.has(e.s)) near.add(e.t); if (hl.has(e.t)) near.add(e.s); } }
   const on = (n) => !hl || near.has(n.id);
@@ -4806,13 +4895,14 @@ function network(spec, theme) {
     if (hasGroups && n.group) lines.push(n.group);
     lines.push(`${en ? 'Connections' : 'Conexiones'}: ${n.deg}`);
     lines.push(`${n.size !== null ? (en ? 'Size' : 'Tamaño') : en ? 'Weighted degree' : 'Grado ponderado'}: ${fmt(n.w)}`);
-    nodeG.push(el('circle', { class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim, stroke: theme.surface, strokeWidth: theme.marks?.ring ? Math.min(2, theme.marks.ring) * 0.75 : 1.5, 'data-tip': tip(...lines) }));
+    const isF = focusNode && n.id === focusNode.id;
+    nodeG.push(el('circle', { class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim, stroke: isF ? theme.ink : theme.surface, strokeWidth: isF ? 2.5 : theme.marks?.ring ? Math.min(2, theme.marks.ring) * 0.75 : 1.5, 'data-tip': tip(...lines), 'data-node': n.id, style: 'cursor:pointer' }));
   }
   body.push(g({ class: 'pa-nodes' }, nodeG));
 
   const placed = nodes.map((n) => [n.px - n.r, n.py - n.r, n.px + n.r, n.py + n.r, n.id, n.r]);
   const labG = [];
-  const lbls = nodes.filter((n) => labelSet.has(n.id) && (on(n) || hl?.has(n.id))).sort((a, b) => b.w - a.w);
+  const lbls = nodes.filter((n) => labelSet.has(n.id) && (on(n) || hl?.has(n.id))).sort((a, b) => (hl ? (hl.has(b.id) - hl.has(a.id)) : 0) || b.w - a.w);
   for (const n of lbls) {
     const strong = hl ? hl.has(n.id) : true;
     const weight = strong ? 600 : 500;
@@ -4841,8 +4931,9 @@ function network(spec, theme) {
       const bx0 = anchor === 'start' ? lx : anchor === 'end' ? lx - w : lx - w / 2;
       const box = [bx0 - 1, ly - h + 2, bx0 + w + 1, ly + 3];
       if (box[0] < area.x - 2 || box[2] > area.x + area.w + 2 || box[1] < area.y - 4 || box[3] > area.y + area.h + 4) continue;
-      const hit = placed.some((b) => b[4] !== n.id && (b[4] === null || b[5] >= 7) && !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
-      if (hit && layout !== 'circle') continue;
+      const hit = placed.some((b) => b[4] !== n.id && (b[4] === null || (b[5] >= 7 && (!hl || near.has(b[4])))) && !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+      const must = hl && hl.has(n.id) && lx === cands[cands.length - 1][0] && ly === cands[cands.length - 1][1];
+      if (hit && layout !== 'circle' && !must) continue;
       placed.push([...box, null, 0]);
       labG.push(el('text', {
         x: lx, y: ly, textAnchor: anchor, fill: hasGroups ? readable(colorOf(n), theme) : theme.ink, fontSize: labelSize, fontWeight: weight,
@@ -6331,6 +6422,7 @@ const { truncate, measure } = __req("src/text.js");
 const { makeFormat, formatNumber } = __req("src/format.js");
 const { num } = __req("src/data.js");
 const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
 
 function kpi(spec, theme) {
   const items = (spec.items || spec.data || []).map((it) => ({ ...it }));
@@ -6345,7 +6437,8 @@ function kpi(spec, theme) {
   const tw = (area.w - gap * (cols - 1)) / cols;
   const hasTrend = items.some((it) => Array.isArray(it.trend) && it.trend.length > 1);
   const hasTarget = items.some((it) => it.target !== undefined);
-  const th = 118 + (hasTrend ? 40 : 0) + (hasTarget ? 30 : 0);
+  const X = ctx.textScale;
+  const th = Math.round(118 * (0.35 + 0.65 * X) + (hasTrend ? 40 : 0) + (hasTarget ? 30 * X : 0));
   const rows = Math.ceil(n / cols);
   if (spec.height === undefined) frame.setHeight(area.y + rows * th + (rows - 1) * gap + frame.chrome);
 
@@ -6360,12 +6453,12 @@ function kpi(spec, theme) {
     const fmt = makeFormat(it.format ?? spec.format, locale, [value, ...(it.trend || []).map(num)]);
     const parts = [el('rect', { x: cx, y: cy, width: tw, height: th, rx: 12, fill: theme.tint })];
     const P = 18;
-    parts.push(text(cx + P, cy + P + 12, truncate(it.label ?? '', tw - P * 2, 13), { fill: theme.lede, fontSize: 13 }));
+    parts.push(text(cx + P, cy + P + 12 * X, truncate(it.label ?? '', tw - P * 2, 13), { fill: theme.lede, fontSize: 13 }));
     const valStr = shown[i];
-    parts.push(text(cx + P, cy + P + 12 + 12 + vSize * 0.92, valStr, { fill: theme.ink, fontSize: vSize, fontWeight: 600, letterSpacing: '-0.015em' }));
+    parts.push(text(cx + P, cy + P + 12 * X + 10 + vSize * X * 0.92, valStr, { fill: theme.ink, fontSize: vSize, fontWeight: 600, letterSpacing: '-0.015em' }));
 
     let delta = it.delta !== undefined ? num(it.delta) : it.previous !== undefined && num(it.previous) ? (value - num(it.previous)) / Math.abs(num(it.previous)) : NaN;
-    let y = cy + P + 12 + 12 + vSize + 22;
+    let y = cy + P + 12 * X + 10 + vSize * X + 20 * X;
     if (Number.isFinite(delta)) {
       const isPct = (it.deltaFormat ?? 'percent') === 'percent';
       if (isPct && Math.abs(delta) > 1.5 && it.delta !== undefined) delta = delta / 100; // 12 → 12%
@@ -6381,13 +6474,13 @@ function kpi(spec, theme) {
       const period = it.period ?? it.deltaLabel;
       const dw = measure(`${arrow} ${dstr}`, 13, 600) + 8;
       if (period && dw + measure(period, 12.5) <= tw - P * 2) parts.push(text(cx + P + dw, y, period, { fill: theme.lede, fontSize: 12.5 }));
-      else if (period) { y += 17; parts.push(text(cx + P, y, truncate(period, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 })); }
+      else if (period) { y += 17 * X; parts.push(text(cx + P, y, truncate(period, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 })); }
     } else if (it.note) {
       parts.push(text(cx + P, y, truncate(it.note, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 }));
     }
 
     if (it.target !== undefined) {
-      y += 24;
+      y += 24 * X;
       const t = num(it.target);
       const f = Math.max(0, Math.min(1, value / (t || 1)));
       const w = tw - P * 2;
@@ -6770,7 +6863,7 @@ const schema = {
     colorBy: { type: 'string', enum: ['group', 'change', 'label'], description: 'treemap: "change" colors tiles by % change vs the comparison period (diverging, growth cool / decline warm); "label" colors a single-level treemap by item.' },
     shade: { type: 'boolean', description: 'treemap/sunburst: subtle lightness steps inside each category (default false: one solid color per category).' },
     xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets).' },
-    focus: { type: 'array', items: { type: 'string' }, description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. In the browser, clicking a group does it.' },
+    focus: { description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
     depth: { type: 'integer', description: 'treemap/sunburst: how many levels to show.' },
 
     xScale: { type: 'string', enum: ['linear', 'log'] },
@@ -6831,6 +6924,8 @@ const schema = {
       description: 'Theme: "papel" (light, default), "noche" (dark), or a JSON object deep-merged over `extends`. Keys: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (list or palette name), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.',
       anyOf: [{ type: 'string', enum: ['papel', 'noche', 'light', 'dark'] }, { type: 'object' }],
     },
+    font: { description: 'Typeface for the whole chart: a Google Fonts name ("Poppins"), a CSS stack ("\'Inter\', sans-serif") or { family, import }. configure({ font }) sets it for every chart.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    textScale: { type: 'number', description: 'Multiplies every text size (1.5, 2…); the layout is recomputed so nothing overlaps. Aliases: fontScale, labelScale. configure({ textScale }) sets it for every chart.' },
     width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
     height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
   },
@@ -6892,8 +6987,37 @@ function attach(root) {
     overlay.innerHTML = '';
     if (!pinned) svg.classList.remove('pa-focus');
   };
-  const linesHtml = (txt) =>
-    String(txt).split('\n').map((l, i) => (i === 0 ? `<div style="font-weight:600">${esc(l)}</div>` : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
+  const tipBg = dark ? '#F2F3FA' : '#141A3F';
+  const rgb = (h) => { h = String(h).replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const lum = (c) => { const [r, g, b] = rgb(c).map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const hex = (a) => '#' + a.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  const onTip = (c) => {
+    if (!/^#[0-9a-f]{3,6}$/i.test(c || '')) return null;
+    const to = dark ? [20, 26, 63] : [255, 255, 255];
+    const A = rgb(c);
+    for (let t = 0; t <= 1.001; t += 0.05) { const m = hex(A.map((v, i) => v + (to[i] - v) * t)); if (ratio(m, tipBg) >= 4.5) return m; }
+    return null;
+  };
+  const markColor = (node) => {
+    if (!node) return null;
+    const cands = [node, ...node.querySelectorAll('[fill],[stroke]')];
+    for (const n of cands) {
+      const f = n.getAttribute && n.getAttribute('fill');
+      if (f && /^#/.test(f)) return f;
+    }
+    for (const n of cands) {
+      const st = n.getAttribute && n.getAttribute('stroke');
+      if (st && /^#/.test(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return st;
+    }
+    return null;
+  };
+  const linesHtml = (txt, color) => {
+    const c = onTip(color);
+    return String(txt).split('\n').map((l, i) => (i === 0
+      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
+      : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
+  };
 
   const toSvg = (ev) => {
     const pt = svg.createSVGPoint();
@@ -6924,7 +7048,7 @@ function attach(root) {
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) { hide(); return; }
       overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
-      if (best[2]) show(linesHtml(best[2]), ev); else tipEl.style.opacity = '0';
+      if (best[2]) show(linesHtml(best[2], best[3]), ev); else tipEl.style.opacity = '0';
       return;
     }
     const tg = t && t.closest ? t.closest('[data-tip]') : null;
@@ -6935,7 +7059,7 @@ function attach(root) {
       on = mark;
       if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); } else svg.classList.remove('pa-focus');
     }
-    show(linesHtml(tg.getAttribute('data-tip')), ev);
+    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev);
   });
   svg.addEventListener('pointerleave', hide);
 
@@ -7018,7 +7142,8 @@ function ensureAssets() {
 .pa-ticks{position:absolute;left:0;right:0;top:28px;height:12px;font-size:10.5px;color:var(--pa-muted)}
 .pa-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:13px;min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
-.pa-chart [data-drill]{cursor:pointer}
+.pa-chart [data-drill],.pa-chart [data-node]{cursor:pointer}
+.pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
 @media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
   document.head.appendChild(st);
 }
@@ -7032,6 +7157,10 @@ function render(target, spec, opts = {}) {
   if (!host) throw new PlotError('No encontré el elemento destino.', 'render("#grafico", spec) o render(elemento, spec)');
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
+  const fontUrl = themeFor(state).font?.import;
+  if (fontUrl && typeof document !== 'undefined' && !document.querySelector(`link[href="${fontUrl}"]`)) {
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = fontUrl; document.head.appendChild(l);
+  }
   host.innerHTML = '';
   const chart = document.createElement('div');
   const ctl = document.createElement('div');
@@ -7040,10 +7169,40 @@ function render(target, spec, opts = {}) {
   let timer = null, ro = null, raf = 0;
 
   const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  const nodePos = () => {
+    const m = new Map();
+    for (const c of chart.querySelectorAll('[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
+    return m;
+  };
+  const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animateFrom = (before) => {
+    if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
+    const ease = 'cubic-bezier(.2,.7,.2,1)';
+    for (const c of chart.querySelectorAll('[data-node]')) {
+      const old = before.get(c.getAttribute('data-node'));
+      if (!old) continue;
+      const dx = old[0] - +c.getAttribute('cx'), dy = old[1] - +c.getAttribute('cy');
+      c.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0,0)' }], { duration: 650, easing: ease });
+    }
+    for (const sel of ['.pa-links', '.pa-labels']) {
+      const n = chart.querySelector(sel);
+      if (n) n.animate([{ opacity: 0 }, { opacity: 0 }, { opacity: 1 }], { duration: 750, easing: 'ease-out' });
+    }
+  };
   const draw = () => {
+    const before = nodePos();
     chart.innerHTML = plotFn({ ...state, width: width() });
+    animateFrom(before);
     chart.__pa = false;
     attach(chart);
+    for (const n of chart.querySelectorAll('[data-node]')) {
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('role', 'button');
+      const id = n.getAttribute('data-node');
+      const go = () => { state = { ...state, focus: String(state.focus) === id ? undefined : id }; draw(); };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    }
     for (const n of chart.querySelectorAll('[data-drill]')) {
       n.setAttribute('tabindex', '0');
       n.setAttribute('role', 'button');
@@ -7174,6 +7333,8 @@ function render(target, spec, opts = {}) {
     });
     return box;
   }
+
+  host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
 
   draw();
   if (state.width === undefined && typeof ResizeObserver !== 'undefined') {

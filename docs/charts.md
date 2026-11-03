@@ -24,6 +24,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `time`, `timeValue`, `slider`, `play` | One period at a time with a slider in the browser; `slider: false` removes it, `play: false` hides only the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
 | `theme`, `palette`, `ramp` | See [themes](themes.md). |
+| `font`, `textScale` | Typeface (Google Fonts name, CSS stack or `{ family, import }`) and a text-size multiplier (aliases `fontScale`, `labelScale`). Set them for every chart with `configure()`. |
 | `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
 | `legend` | `false` hides the legend. |
 
@@ -175,7 +176,7 @@ Chilean regions (`geo: "chile"`, default) and world countries (`geo: "world"`) s
 
 ### `network` (`graph`)
 
-Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `group` and `size`. Deterministic force layout fitted to the whole area, or `layout: "circle"`. `labels` (number or list), `highlight` (a node and its neighbors), `iterations`, `maxRadius`.
+Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `group` and `size`. Deterministic force layout fitted to the whole area, or `layout: "circle"`. `labels` (number or list), `highlight` (a node and its neighbors), `focus` (a node id: it is pinned at the center and highlighted with its neighbors, all of them labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`.
 
 ### `chord`
 

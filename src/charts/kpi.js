@@ -5,6 +5,7 @@ import { truncate, measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { num } from '../data.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 
 export function kpi(spec, theme) {
   const items = (spec.items || spec.data || []).map((it) => ({ ...it }));
@@ -20,7 +21,8 @@ export function kpi(spec, theme) {
   const tw = (area.w - gap * (cols - 1)) / cols;
   const hasTrend = items.some((it) => Array.isArray(it.trend) && it.trend.length > 1);
   const hasTarget = items.some((it) => it.target !== undefined);
-  const th = 118 + (hasTrend ? 40 : 0) + (hasTarget ? 30 : 0);
+  const X = ctx.textScale;
+  const th = Math.round(118 * (0.35 + 0.65 * X) + (hasTrend ? 40 : 0) + (hasTarget ? 30 * X : 0));
   const rows = Math.ceil(n / cols);
   if (spec.height === undefined) frame.setHeight(area.y + rows * th + (rows - 1) * gap + frame.chrome);
 
@@ -36,13 +38,13 @@ export function kpi(spec, theme) {
     const fmt = makeFormat(it.format ?? spec.format, locale, [value, ...(it.trend || []).map(num)]);
     const parts = [el('rect', { x: cx, y: cy, width: tw, height: th, rx: 12, fill: theme.tint })];
     const P = 18;
-    parts.push(text(cx + P, cy + P + 12, truncate(it.label ?? '', tw - P * 2, 13), { fill: theme.lede, fontSize: 13 }));
+    parts.push(text(cx + P, cy + P + 12 * X, truncate(it.label ?? '', tw - P * 2, 13), { fill: theme.lede, fontSize: 13 }));
     const valStr = shown[i];
-    parts.push(text(cx + P, cy + P + 12 + 12 + vSize * 0.92, valStr, { fill: theme.ink, fontSize: vSize, fontWeight: 600, letterSpacing: '-0.015em' }));
+    parts.push(text(cx + P, cy + P + 12 * X + 10 + vSize * X * 0.92, valStr, { fill: theme.ink, fontSize: vSize, fontWeight: 600, letterSpacing: '-0.015em' }));
 
     // Variación: signo × si subir es bueno. Flecha + texto, nunca solo color.
     let delta = it.delta !== undefined ? num(it.delta) : it.previous !== undefined && num(it.previous) ? (value - num(it.previous)) / Math.abs(num(it.previous)) : NaN;
-    let y = cy + P + 12 + 12 + vSize + 22;
+    let y = cy + P + 12 * X + 10 + vSize * X + 20 * X;
     if (Number.isFinite(delta)) {
       const isPct = (it.deltaFormat ?? 'percent') === 'percent';
       if (isPct && Math.abs(delta) > 1.5 && it.delta !== undefined) delta = delta / 100; // 12 → 12%
@@ -58,14 +60,14 @@ export function kpi(spec, theme) {
       const period = it.period ?? it.deltaLabel;
       const dw = measure(`${arrow} ${dstr}`, 13, 600) + 8;
       if (period && dw + measure(period, 12.5) <= tw - P * 2) parts.push(text(cx + P + dw, y, period, { fill: theme.lede, fontSize: 12.5 }));
-      else if (period) { y += 17; parts.push(text(cx + P, y, truncate(period, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 })); }
+      else if (period) { y += 17 * X; parts.push(text(cx + P, y, truncate(period, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 })); }
     } else if (it.note) {
       parts.push(text(cx + P, y, truncate(it.note, tw - P * 2, 12.5), { fill: theme.lede, fontSize: 12.5 }));
     }
 
     // Meta: medidor con riel del mismo tono, más claro.
     if (it.target !== undefined) {
-      y += 24;
+      y += 24 * X;
       const t = num(it.target);
       const f = Math.max(0, Math.min(1, value / (t || 1)));
       const w = tw - P * 2;

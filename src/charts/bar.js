@@ -10,6 +10,7 @@ import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKin
 import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES } from '../frame.js';
+import { ctx } from '../context.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
@@ -151,7 +152,7 @@ export function bar(spec, theme) {
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), fmt.tick(nd.step)) + 10;
     const top = showLabels ? 20 : 6;
-    const inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: area.h - top - 26 };
+    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step)));
@@ -216,7 +217,7 @@ export function bar(spec, theme) {
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
     // ── Barras horizontales
-    const step = multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9;
+    const step = Math.max(multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9, 12.5 * ctx.textScale * 1.45);
     const needH = cats.length * step + 30;
     if (spec.height === undefined) {
       frame.setHeight(area.y + needH + frame.chrome);

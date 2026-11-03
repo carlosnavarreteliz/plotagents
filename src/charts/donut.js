@@ -7,6 +7,7 @@ import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, textOn } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize } from '../data.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 
 const f = (n) => n.toFixed(2);
 
@@ -72,7 +73,7 @@ export function donut(spec, theme) {
   const body = [];
 
   // Geometría
-  const rowH = 28;
+  const rowH = Math.round(28 * Math.max(1, ctx.textScale * 0.9));
   const tableW = table ? (narrow ? area.w : Math.min(340, area.w * 0.5)) : 0;
   let cx, cy, R;
   let tx = 0, ty = 0;
@@ -181,10 +182,10 @@ export function donut(spec, theme) {
     while (bigSize > 12 && measure(big, bigSize, 600) > r0 * 1.7) bigSize -= 1;
     if (half) {
       body.push(text(cx, cy - 6, big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
-      body.push(text(cx, cy - 6 - bigSize - 2, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
+      body.push(text(cx, cy - 6 - bigSize * ctx.textScale - 2, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
     } else {
-      body.push(text(cx, cy + bigSize * 0.32, big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
-      body.push(text(cx, cy + bigSize * 0.32 + 18, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
+      body.push(text(cx, cy + bigSize * ctx.textScale * 0.32 - 4 * (ctx.textScale - 1), big, { fill: theme.ink, fontSize: bigSize, fontWeight: 600, textAnchor: 'middle' }));
+      body.push(text(cx, cy + bigSize * ctx.textScale * 0.32 + 18 * ctx.textScale, truncate(small, r0 * 1.6, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'middle' }));
     }
   }
 

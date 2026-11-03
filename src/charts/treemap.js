@@ -9,6 +9,7 @@ import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
@@ -172,19 +173,20 @@ function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
   const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
   for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) {
     const lines = wrap(name, w - pad * 2, size, 600, 3);
-    const lh = size * 1.14;
+    const X = ctx.textScale;
+    const lh = size * X * 1.14;
     const pctSize = Math.max(9.5, size * 0.78);
     const sub = value ? `${pct} · ${value}` : pct;
-    const need = pad + lines.length * lh + 3 + pctSize + pad * 0.5;
+    const need = pad + lines.length * lh + 3 + pctSize * X + pad * 0.5;
     const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(sub, pctSize));
     const fitsW = lines.every((l) => measure(l, size, 600) <= w - pad * 2) && !/…$/.test(lines[lines.length - 1]);
     if (fitsW && widest <= w - pad * 2 && need <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      out.push(text(x + pad, y + pad + size * 0.88 + (lines.length - 1) * lh + pctSize + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
+      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+      out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
       return out;
     }
     if (lines.length === 1 && fitsW && pad + lh <= h) {
-      out.push(text(x + pad, y + pad + size * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
+      out.push(text(x + pad, y + pad + size * X * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
       return out;
     }
   }

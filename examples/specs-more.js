@@ -116,6 +116,13 @@ export const moreGallery = [
     spec: { type: 'countplot', title: `Concepción concentra ${encuesta.filter((r) => r.sede === 'Concepción').length} de ${encuesta.length} respuestas`, subtitle: 'Respuestas de la encuesta por sede', source: SRC, data: encuesta, x: 'sede' },
   },
   {
+    id: 'escala-texto',
+    section: 'Configuración',
+    name: 'Fuente y escala de texto',
+    note: '`font: "Poppins"` y `textScale: 1.6` agrandan todo el texto para una presentación; el layout se recalcula. `configure({ font, textScale })` lo fija para todos los gráficos.',
+    spec: { type: 'line', title: 'Ñuble crece más rápido que el resto del sur', subtitle: 'Ventas mensuales, millones de pesos', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', font: 'Poppins', textScale: 1.6 },
+  },
+  {
     id: 'tema-json',
     section: 'Configuración',
     name: 'Tema 100% JSON',

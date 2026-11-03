@@ -10,6 +10,7 @@ import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize } from '../data.js';
 import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels } from '../axes.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 import { meanCI, mean, sd } from '../stats.js';
 import { hash } from '../frame.js';
 
@@ -142,7 +143,7 @@ export function line(spec, theme, variant = 'line') {
   const want = labelMode !== false;
   // Leyenda solo si alguna serie queda sin etiqueta final.
   const provisionalH = frame.bottom - frame.top - 40;
-  const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize + 3)));
+  const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize * ctx.textScale + 3)));
   const labeled = want ? m.lines.filter((l) => focus(l.key)).sort((a, b) => (lastOf(b)?.y ?? -Infinity) - (lastOf(a)?.y ?? -Infinity)).slice(0, maxLabels) : [];
   const allLabeled = labeled.length === m.lines.filter((l) => focus(l.key)).length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true) && spec.legend !== false;
@@ -150,7 +151,7 @@ export function line(spec, theme, variant = 'line') {
   const area = frame.layout(legend);
 
   const endW = labeled.length
-    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) + 6 : 0) : 0; })) + 22
+    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) * 1.04 + 6 * ctx.textScale : 0) : 0; })) + 22
     : 10;
 
   // Escala y
@@ -160,7 +161,7 @@ export function line(spec, theme, variant = 'line') {
   const inside = stack ? false : spec.axisInside;
   const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
   const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
-  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 - (spec.xLabel ? 16 : 0) };
+  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
   const yS = (yLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
 
   // Escala x
@@ -262,7 +263,7 @@ export function line(spec, theme, variant = 'line') {
 
   // Etiquetas finales con separación vertical y líneas guía.
   if (labeled.length) {
-    const lh = labelSize + 3;
+    const lh = labelSize * ctx.textScale + 3;
     const labs = labeled.map((l) => {
       const last = lastOf(l);
       const t = endText(l);
@@ -282,7 +283,7 @@ export function line(spec, theme, variant = 'line') {
         // La etiqueta lleva el color de su línea (versión legible), así se conecta sin leyenda.
         const tc = readable(lb.color, theme);
         tparts.push(text(lx, lb.y + 4, lb.name, { fill: tc, fontSize: labelSize, fontWeight: 500 }));
-        tparts.push(text(lx + measure(lb.name, labelSize, 500) + 6, lb.y + 4, lb.val, { fill: tc, fontSize: labelSize, fontWeight: 700 }));
+        tparts.push(text(lx + measure(lb.name, labelSize, 500) * 1.04 + 6 * ctx.textScale, lb.y + 4, lb.val, { fill: tc, fontSize: labelSize, fontWeight: 700 }));
       } else tparts.push(text(lx, lb.y + 4.5, lb.val, { fill: readable(lb.color, theme), fontSize: labelSize + 0.5, fontWeight: 700 }));
       body.push(g({ class: 'pa-endlabel' }, tparts));
     }

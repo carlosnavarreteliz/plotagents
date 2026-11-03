@@ -94,7 +94,7 @@ export const networkGallery = [
     name: 'Red de colaboración',
     nameEn: 'Collaboration network',
     note: 'Disposición por fuerzas, determinista. Tamaño = proyectos (grado ponderado), color = tipo de organización; se rotulan las mayores. `highlight` deja a la vista un nodo y sus vecinos.',
-    noteEn: 'Deterministic force layout. Size = projects (weighted degree), color = kind of organization; the largest are labeled. `highlight` keeps one node and its neighbors in view.',
+    noteEn: 'Click a node: it glides to the center with its connections highlighted (click again or press Esc to go back). Deterministic force layout. Size = projects (weighted degree), color = kind of organization; the largest are labeled. `highlight` keeps one node and its neighbors in view.',
     spec: {
       type: 'network',
       title: `${hubTop} colabora con ${hubDeg} organizaciones, más que ninguna otra`,

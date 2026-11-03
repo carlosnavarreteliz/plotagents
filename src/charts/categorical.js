@@ -10,6 +10,7 @@ import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } from '../axes.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } from '../stats.js';
 
 const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
@@ -110,7 +111,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       body.post.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: axisSize + 0.5, color: theme.lede }));
     }
     body.pre.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis, strokeWidth: 1 }));
-    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 40, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
+    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   } else {
     const labelW = m.cat ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
     const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
@@ -128,7 +129,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       const strong = !hl || hl.has(c);
       body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
     }
-    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 40, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
+    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
 
   if (spec._domains && typeof spec._domains === 'object') spec._domains.y = [nd.min, nd.max];

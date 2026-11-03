@@ -32,46 +32,46 @@
 18"/></g><g class="pa-nodes"><circle class="pa-m" cx="360" cy="167" r="22" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Planificación
 Gestión
 Conexiones: 10
-Grado ponderado: 132"/><circle class="pa-m" cx="417.96" cy="179.32" r="17.29" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Finanzas
+Grado ponderado: 132" data-node="Planificación" style="cursor:pointer"/><circle class="pa-m" cx="417.96" cy="179.32" r="17.29" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Finanzas
 Gestión
 Conexiones: 8
-Grado ponderado: 72"/><circle class="pa-m" cx="501.72" cy="324.4" r="16.44" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Salud
+Grado ponderado: 72" data-node="Finanzas" style="cursor:pointer"/><circle class="pa-m" cx="501.72" cy="324.4" r="16.44" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Salud
 Social
 Conexiones: 6
-Grado ponderado: 63"/><circle class="pa-m" cx="465.9" cy="214.15" r="16.14" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Alcaldía
+Grado ponderado: 63" data-node="Salud" style="cursor:pointer"/><circle class="pa-m" cx="465.9" cy="214.15" r="16.14" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Alcaldía
 Gestión
 Conexiones: 5
-Grado ponderado: 60"/><circle class="pa-m" cx="330.37" cy="448.89" r="16.14" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Turismo
+Grado ponderado: 60" data-node="Alcaldía" style="cursor:pointer"/><circle class="pa-m" cx="330.37" cy="448.89" r="16.14" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Turismo
 Comunidad
 Conexiones: 4
-Grado ponderado: 60"/><circle class="pa-m" cx="276.24" cy="424.78" r="15.83" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Seguridad
+Grado ponderado: 60" data-node="Turismo" style="cursor:pointer"/><circle class="pa-m" cx="276.24" cy="424.78" r="15.83" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Seguridad
 Comunidad
 Conexiones: 5
-Grado ponderado: 57"/><circle class="pa-m" cx="218.28" cy="324.4" r="15.41" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Tránsito
+Grado ponderado: 57" data-node="Seguridad" style="cursor:pointer"/><circle class="pa-m" cx="218.28" cy="324.4" r="15.41" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Tránsito
 Territorio
 Conexiones: 5
-Grado ponderado: 53"/><circle class="pa-m" cx="483.41" cy="380.75" r="15.08" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Desarrollo Social
+Grado ponderado: 53" data-node="Tránsito" style="cursor:pointer"/><circle class="pa-m" cx="483.41" cy="380.75" r="15.08" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Desarrollo Social
 Social
 Conexiones: 4
-Grado ponderado: 50"/><circle class="pa-m" cx="443.76" cy="424.78" r="13.14" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Educación
+Grado ponderado: 50" data-node="Desarrollo Social" style="cursor:pointer"/><circle class="pa-m" cx="443.76" cy="424.78" r="13.14" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Educación
 Social
 Conexiones: 3
-Grado ponderado: 34"/><circle class="pa-m" cx="224.47" cy="265.47" r="12.72" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Medio Ambiente
+Grado ponderado: 34" data-node="Educación" style="cursor:pointer"/><circle class="pa-m" cx="224.47" cy="265.47" r="12.72" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Medio Ambiente
 Territorio
 Conexiones: 2
-Grado ponderado: 31"/><circle class="pa-m" cx="254.1" cy="214.15" r="12.72" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Aseo y Ornato
+Grado ponderado: 31" data-node="Medio Ambiente" style="cursor:pointer"/><circle class="pa-m" cx="254.1" cy="214.15" r="12.72" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Aseo y Ornato
 Territorio
 Conexiones: 4
-Grado ponderado: 31"/><circle class="pa-m" cx="236.59" cy="380.75" r="11.68" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Cultura
+Grado ponderado: 31" data-node="Aseo y Ornato" style="cursor:pointer"/><circle class="pa-m" cx="236.59" cy="380.75" r="11.68" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1.5" data-tip="Cultura
 Comunidad
 Conexiones: 2
-Grado ponderado: 24"/><circle class="pa-m" cx="302.04" cy="179.32" r="10.46" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Obras
+Grado ponderado: 24" data-node="Cultura" style="cursor:pointer"/><circle class="pa-m" cx="302.04" cy="179.32" r="10.46" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1.5" data-tip="Obras
 Territorio
 Conexiones: 2
-Grado ponderado: 17"/><circle class="pa-m" cx="389.63" cy="448.89" r="9.43" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Deportes
+Grado ponderado: 17" data-node="Obras" style="cursor:pointer"/><circle class="pa-m" cx="389.63" cy="448.89" r="9.43" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1.5" data-tip="Deportes
 Social
 Conexiones: 2
-Grado ponderado: 12"/><circle class="pa-m" cx="495.53" cy="265.47" r="4" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Jurídica
+Grado ponderado: 12" data-node="Deportes" style="cursor:pointer"/><circle class="pa-m" cx="495.53" cy="265.47" r="4" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1.5" data-tip="Jurídica
 Gestión
 Conexiones: 0
-Grado ponderado: 0"/></g><g class="pa-labels"><text x="427.43" y="162.06" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Finanzas</text><text x="524.03" y="330.77" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Salud</text><text x="482.35" y="203.36" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Alcaldía</text><text x="325.77" y="474.56" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Turismo</text><text x="263.41" y="446.47" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Seguridad</text><text x="196.99" y="330.66" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Tránsito</text><text x="501.66" y="395.31" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Desarrollo Social</text><text x="455.01" y="444.29" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Educación</text><text x="206.67" y="263.7" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Medio Ambiente</text><text x="240.19" y="205.65" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Aseo y Ornato</text><text x="221.28" y="393.61" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Cultura</text><text x="295.35" y="168.31" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Obras</text><text x="392.83" y="468" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Deportes</text><text x="505.04" y="266.4" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Jurídica</text></g></g><text x="696" y="494" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>
+Grado ponderado: 0" data-node="Jurídica" style="cursor:pointer"/></g><g class="pa-labels"><text x="427.43" y="162.06" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Finanzas</text><text x="524.03" y="330.77" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Salud</text><text x="482.35" y="203.36" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Alcaldía</text><text x="325.77" y="474.56" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Turismo</text><text x="263.41" y="446.47" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Seguridad</text><text x="196.99" y="330.66" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Tránsito</text><text x="501.66" y="395.31" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Desarrollo Social</text><text x="455.01" y="444.29" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Educación</text><text x="206.67" y="263.7" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Medio Ambiente</text><text x="240.19" y="205.65" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Aseo y Ornato</text><text x="221.28" y="393.61" text-anchor="end" fill="#936C3E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Cultura</text><text x="295.35" y="168.31" text-anchor="end" fill="#1C7C77" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Obras</text><text x="392.83" y="468" text-anchor="start" fill="#D42A5E" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Deportes</text><text x="505.04" y="266.4" text-anchor="start" fill="#3A47B8" font-size="11.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Jurídica</text></g></g><text x="696" y="494" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

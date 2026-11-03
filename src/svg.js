@@ -1,5 +1,7 @@
 // Constructor mínimo de SVG como texto (funciona en Node y en el navegador).
 
+import { ctx } from './context.js';
+
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
@@ -14,7 +16,8 @@ export function el(tag, attrs = {}, children) {
   for (const [k, v] of Object.entries(attrs)) {
     if (v === undefined || v === null || v === false) continue;
     const name = ATTR_ALIAS[k] || (KEEP_CASE.has(k) ? k : k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()));
-    const val = typeof v === 'number' ? r2(v) : v;
+    // Escala de texto global: todo font-size numérico se multiplica aquí.
+    const val = typeof v === 'number' ? r2(k === 'fontSize' ? v * ctx.textScale : v) : v;
     s += ` ${name}="${esc(val)}"`;
   }
   if (children === undefined || children === null || children === '') return s + '/>';

@@ -2,6 +2,7 @@
 import { el, g, text } from './svg.js';
 import { measure } from './text.js';
 import { SIZES } from './frame.js';
+import { ctx } from './context.js';
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
 export function gridY(ticks, y, area, theme, fmt, { labels = true, baseline = 0 } = {}) {
@@ -28,7 +29,7 @@ export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0,
 
 /** Etiquetas bajo el eje x, raleadas si chocan (nunca rotadas). */
 export function xLabels(items, area, theme, { y, size = SIZES.axis, color } = {}) {
-  const ly = y ?? area.y + area.h + 18;
+  const ly = (y ?? area.y + area.h + 18) + (ctx.textScale - 1) * 10;
   const widths = items.map((it) => measure(it.label, size));
   let every = 1;
   const fits = (k) => {
@@ -70,7 +71,7 @@ export function yAxisMargin(ticks, fmt, theme, inside) {
   return isInside(theme, inside) ? 0 : ticksWidth(ticks, fmt, theme.type?.axis ?? SIZES.axis) + 10;
 }
 /** Espacio superior para la etiqueta de la marca más alta. */
-export const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 : 6);
+export const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 * ctx.textScale : 6);
 
 export function yGrid(ticks, y, area, theme, { baseline = 0 } = {}) {
   return g({ class: 'pa-grid' }, ticks.map((t) => {
@@ -86,7 +87,7 @@ export function yTickLabels(ticks, y, area, theme, fmt, { inside, unit } = {}) {
     const py = Math.round(y(t)) + 0.5;
     const label = fmt(t) + (unit && i === ticks.length - 1 ? ' ' + unit : '');
     return ins
-      ? text(area.x, py - 5, label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
+      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
       : text(area.x - 8, py + 4, label, { fill: theme.muted, fontSize: size, textAnchor: 'end' });
   }));
 }

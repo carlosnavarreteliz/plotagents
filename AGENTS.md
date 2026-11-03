@@ -54,6 +54,8 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.
 - `theme: "noche"` or a JSON object (`{ extends, categorical, type, marks, font }`); `palette: [...]` for your own colors.
+- `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
+- `network` + `focus: "node id"`: center a node and highlight its neighbors.
 
 ## Mistakes the library already handles
 

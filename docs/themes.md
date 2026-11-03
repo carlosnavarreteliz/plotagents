@@ -9,6 +9,14 @@ plot({ ...spec, palette: 'okabe-ito' });                    // shortcut for them
 plot({ ...spec, ramp: 'teal' });                            // shortcut for theme.sequential
 ```
 
+## Library-wide defaults
+
+```js
+configure({ font: 'Poppins', textScale: 1.4, theme: { extends: 'papel', marks: { lineWidth: 2.5 } } });
+```
+
+Every later `plot()`, `render()` and `toHTML()` starts from these values; the spec always wins. `configure()` returns the current defaults and `configure(null)` clears them.
+
 ## Built-in themes
 
 | Name | Mode | Surface | Use |

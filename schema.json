@@ -398,11 +398,18 @@
       "description": "line/area: visible x range [from, to] (what the range slider sets)."
     },
     "focus": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "treemap/sunburst: path to drill into, e.g. [\"Mining\"]. In the browser, clicking a group does it."
+      "description": "treemap/sunburst: path to drill into, e.g. [\"Mining\"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
     },
     "depth": {
       "type": "integer",
@@ -799,6 +806,21 @@
           "type": "object"
         }
       ]
+    },
+    "font": {
+      "description": "Typeface for the whole chart: a Google Fonts name (\"Poppins\"), a CSS stack (\"'Inter', sans-serif\") or { family, import }. configure({ font }) sets it for every chart.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "textScale": {
+      "type": "number",
+      "description": "Multiplies every text size (1.5, 2…); the layout is recomputed so nothing overlaps. Aliases: fontScale, labelScale. configure({ textScale }) sets it for every chart."
     },
     "width": {
       "type": "number",

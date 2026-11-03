@@ -208,3 +208,17 @@ export function readable(color, theme, min = 4.5) {
   }
   return c;
 }
+
+/**
+ * Tipografía a partir de un nombre: "Poppins" → pila con respaldo y la URL de
+ * Google Fonts para cargarla. Una pila completa ("'Inter', sans-serif") se usa
+ * tal cual. También acepta { family, import }.
+ */
+export function fontSpec(font) {
+  if (!font) return null;
+  if (typeof font === 'object') return { ...font };
+  const f = String(font).trim();
+  if (/[,'"]/.test(f)) return { family: f };
+  const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400;500;600;700&display=swap`;
+  return { family: `'${f}', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`, import: url };
+}

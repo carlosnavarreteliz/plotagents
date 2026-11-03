@@ -33,6 +33,7 @@ export const NOTES_EN = {
   banda: ['Line with a confidence band', '`ci: true` (seaborn lineplot): with several observations per x, it draws the mean and its 95% interval. `errorbar: "sd"` also works.'],
   barplot: ['Barplot with intervals', '`type: "barplot"` (or `ci: true`): mean per category with error bars. The tooltip shows the interval.'],
   countplot: ['Countplot', '`type: "countplot"` counts rows per category, no pre-aggregation needed.'],
+  'escala-texto': ['Font and text scale', '`font: "Poppins"` and `textScale: 1.6` enlarge every text for a presentation and the layout is recomputed. `configure({ font, textScale })` sets them for every chart.'],
   'tema-json': ['Themes are JSON', 'Colors, type, line weight, radii and axes are one JSON object. `palette` takes a name ("okabe-ito", "tableau10", "udec") or a list of colors; `validatePalette()` checks it.'],
   histograma: ['Histogram with density', 'Nice bin widths from Freedman–Diaconis and a KDE curve on the same scale.'],
   'histograma-grupos': ['Overlapping histograms', '`hue` splits groups; `multiple: "layer"` overlaps them with transparency. Also "stack", "dodge" and "fill".'],

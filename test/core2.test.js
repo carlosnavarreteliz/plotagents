@@ -121,3 +121,30 @@ test('treemap: color sólido por categoría y variación vs periodo anterior', a
   const f2 = [...shaded.matchAll(/data-tip="Minería › [^"]*"><rect[^>]*fill="(#[0-9A-F]{6})"/gi)].map((m) => m[1]);
   assert.ok(new Set(f2).size > 1);
 });
+
+test('configure(): fuente y escala de texto globales; el spec siempre gana', async () => {
+  const { configure } = await import('../src/index.js');
+  try {
+    configure({ font: 'Poppins', textScale: 2 });
+    const svg = plot({ data: [{ a: 'x', b: 1 }, { a: 'y', b: 2 }], title: 'Hola' });
+    assert.match(svg, /font-family="&#39;Poppins&#39;/);
+    assert.match(svg, /font-size="44"/); // título 22 × 2
+    const own = plot({ data: [{ a: 'x', b: 1 }, { a: 'y', b: 2 }], title: 'Hola', textScale: 1, font: "'Inter', sans-serif" });
+    assert.match(own, /font-size="22"/);
+    assert.match(own, /font-family="&#39;Inter&#39;, sans-serif"/);
+  } finally {
+    configure(null);
+  }
+  assert.deepEqual(configure(), {});
+});
+
+test('red: focus lleva el nodo al centro y lo destaca', async () => {
+  const { networkGallery } = await import('../examples/specs-network.js');
+  const spec = { ...networkGallery[0].spec, width: 720 };
+  const id = 'Agencia de Fomento';
+  const svg = plot({ ...spec, focus: id });
+  const m = new RegExp(`cx="([\\d.]+)" cy="([\\d.]+)"[^>]*stroke-width="2.5"[^>]*data-node="${id}"`).exec(svg);
+  assert.ok(m, 'nodo en foco no encontrado');
+  assert.ok(Math.abs(+m[1] - 360) < 2, `cx=${m[1]}`);
+  assert.match(svg, new RegExp(`>${id}</text>`));
+});

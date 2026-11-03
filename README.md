@@ -39,7 +39,8 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
 - **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
 - **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider. One solid color per category.
-- **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels wear their series color.
+- **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels and tooltip headers wear their series color.
+- **Networks you can explore.** Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
 - **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
 - **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
 
@@ -86,6 +87,18 @@ plot({ type: 'sunburst', data, path: ['area', 'unit', 'item'], value: 'amount', 
 // Log scales with 1-2-5 ticks and no empty decades.
 plot({ type: 'line', data, x: 'month', y: 'users', series: 'platform', yScale: 'log' });
 ```
+
+## One switch for fonts and text size
+
+```js
+import { configure } from 'plotagents';
+
+configure({ font: 'Poppins', textScale: 1.5 });   // every chart from now on
+plot({ ...spec, textScale: 2 });                  // or per chart: presentation mode
+configure(null);                                  // back to defaults
+```
+
+`font` takes a Google Fonts name (it is loaded for you in the browser and in `toHTML()`), a CSS stack or `{ family, import }`. `textScale` multiplies every text size and the layout is recomputed with the real sizes, so labels at ×2 still never overlap. `configure()` also accepts `locale`, `theme`, `palette` or any other spec option.
 
 ## Themes are JSON
 

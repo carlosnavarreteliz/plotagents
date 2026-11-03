@@ -64,7 +64,7 @@ export function prepareNetwork(spec) {
 }
 
 /** Disposición por fuerzas (velocity Verlet simplificado, al estilo d3-force). */
-function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}) {
+function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40, pin = null } = {}) {
   const n = nodes.length;
   // Posiciones iniciales en filotaxis (deterministas), agrupadas por grupo.
   const order = [...nodes].sort((a, b) => String(a.group).localeCompare(String(b.group)) || b.w - a.w);
@@ -72,6 +72,8 @@ function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}
     const r = spacing * 0.6 * Math.sqrt(i + 0.5), a = i * 2.399963229728653;
     nd.x = r * Math.cos(a); nd.y = r * Math.sin(a); nd.vx = 0; nd.vy = 0;
   });
+  // Nodo en foco: parte y se queda en el centro; el resto se acomoda a su alrededor.
+  if (pin) { const c = { x: pin.x, y: pin.y }; for (const nd of nodes) { nd.x -= c.x; nd.y -= c.y; } }
   const links = edges.map((e) => ({ a: byId.get(e.s), b: byId.get(e.t), v: e.v }));
   const maxV = Math.max(1, ...links.map((l) => l.v));
   let alpha = 1;
@@ -106,6 +108,7 @@ function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}
     // Gravedad suave hacia el centro (mantiene juntos los componentes sueltos).
     for (const p of nodes) { p.vx -= p.x * 0.02 * alpha; p.vy -= p.y * 0.02 * alpha; }
     for (const p of nodes) { p.vx *= 0.6; p.vy *= 0.6; p.x += p.vx; p.y += p.vy; }
+    if (pin) { pin.x = 0; pin.y = 0; pin.vx = 0; pin.vy = 0; }
     // Colisión por radio.
     for (let pass = 0; pass < 2; pass++)
       for (let i = 0; i < n; i++)
@@ -120,6 +123,7 @@ function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}
             p.x -= dx * s; p.y -= dy * s; q.x += dx * s; q.y += dy * s;
           }
         }
+    if (pin) { pin.x = 0; pin.y = 0; }
     alpha -= alpha * decay;
   }
 }
@@ -172,6 +176,13 @@ export function network(spec, theme) {
     labelSet = new Set([...nodes].sort((a, b) => b.w - a.w).slice(0, k).map((n) => n.id));
   }
 
+  // Foco (clic en un nodo): va al centro y se destacan sus vecinos, con nombre.
+  const focusNode = spec.focus !== undefined && spec.focus !== null ? byId.get(String([].concat(spec.focus)[0])) : null;
+  if (focusNode) {
+    labelSet.add(focusNode.id);
+    for (const e of edges) { if (e.s === focusNode.id) labelSet.add(e.t); if (e.t === focusNode.id) labelSet.add(e.s); }
+  }
+
   // Disposición + ajuste al área.
   const body = [];
   if (layout === 'circle') {
@@ -188,9 +199,9 @@ export function network(spec, theme) {
     nodes.cx = cx; nodes.cy = cy; nodes.R = R; nodes.lw = lw;
   } else {
     const spacing = Math.max(26, Math.sqrt((area.w * area.h) / nodes.length) * 0.75);
-    forceLayout(nodes, edges, byId, { spacing, iterations: spec.iterations ?? (nodes.length > 200 ? 200 : 320) });
-    // Rota la red para que su eje principal siga el lado largo del área.
-    {
+    forceLayout(nodes, edges, byId, { spacing, pin: focusNode, iterations: spec.iterations ?? (nodes.length > 200 ? 200 : 320) });
+    // Rota la red para que su eje principal siga el lado largo del área (sin foco).
+    if (!focusNode) {
       const mx = nodes.reduce((a, n) => a + n.x, 0) / nodes.length, my = nodes.reduce((a, n) => a + n.y, 0) / nodes.length;
       let sxx = 0, syy = 0, sxy = 0;
       for (const n of nodes) { const dx = n.x - mx, dy = n.y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
@@ -208,8 +219,17 @@ export function network(spec, theme) {
     const ratio = sx / sy;
     const lim = 2.4;
     if (ratio > lim) sx = sy * lim; else if (ratio < 1 / lim) sy = sx * lim;
-    const ox = area.x + pad + (aw - (x1 - x0) * sx) / 2, oy = area.y + pad + (ah - (y1 - y0) * sy) / 2;
-    for (const n of nodes) { n.px = ox + (n.x - x0) * sx; n.py = oy + (n.y - y0) * sy; }
+    if (focusNode) {
+      // Escala simétrica alrededor del nodo en foco, que queda en el centro exacto.
+      const ex = Math.max(...nodes.map((n) => Math.abs(n.x) + n.r), 1e-6), ey = Math.max(...nodes.map((n) => Math.abs(n.y) + n.r), 1e-6);
+      let fx = aw / 2 / ex, fy = ah / 2 / ey;
+      if (fx / fy > lim) fx = fy * lim; else if (fy / fx > lim) fy = fx * lim;
+      const ccx = area.x + area.w / 2, ccy = area.y + area.h / 2;
+      for (const n of nodes) { n.px = ccx + n.x * fx; n.py = ccy + n.y * fy; }
+    } else {
+      const ox = area.x + pad + (aw - (x1 - x0) * sx) / 2, oy = area.y + pad + (ah - (y1 - y0) * sy) / 2;
+      for (const n of nodes) { n.px = ox + (n.x - x0) * sx; n.py = oy + (n.y - y0) * sy; }
+    }
     // Tras escalar, separa nodos que quedaron encimados.
     for (let pass = 0; pass < 6; pass++)
       for (let i = 0; i < nodes.length; i++)
@@ -225,7 +245,7 @@ export function network(spec, theme) {
   }
 
   // Foco: nodos destacados y sus vecinos.
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = focusNode ? new Set([focusNode.id]) : spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const near = new Set();
   if (hl) { for (const id of hl) near.add(id); for (const e of edges) { if (hl.has(e.s)) near.add(e.t); if (hl.has(e.t)) near.add(e.s); } }
   const on = (n) => !hl || near.has(n.id);
@@ -264,14 +284,16 @@ export function network(spec, theme) {
     if (hasGroups && n.group) lines.push(n.group);
     lines.push(`${en ? 'Connections' : 'Conexiones'}: ${n.deg}`);
     lines.push(`${n.size !== null ? (en ? 'Size' : 'Tamaño') : en ? 'Weighted degree' : 'Grado ponderado'}: ${fmt(n.w)}`);
-    nodeG.push(el('circle', { class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim, stroke: theme.surface, strokeWidth: theme.marks?.ring ? Math.min(2, theme.marks.ring) * 0.75 : 1.5, 'data-tip': tip(...lines) }));
+    const isF = focusNode && n.id === focusNode.id;
+    nodeG.push(el('circle', { class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim, stroke: isF ? theme.ink : theme.surface, strokeWidth: isF ? 2.5 : theme.marks?.ring ? Math.min(2, theme.marks.ring) * 0.75 : 1.5, 'data-tip': tip(...lines), 'data-node': n.id, style: 'cursor:pointer' }));
   }
   body.push(g({ class: 'pa-nodes' }, nodeG));
 
   // Etiquetas con halo, sin choques: derecha → izquierda → arriba → abajo.
   const placed = nodes.map((n) => [n.px - n.r, n.py - n.r, n.px + n.r, n.py + n.r, n.id, n.r]);
   const labG = [];
-  const lbls = nodes.filter((n) => labelSet.has(n.id) && (on(n) || hl?.has(n.id))).sort((a, b) => b.w - a.w);
+  // En foco: primero el nodo central, luego sus vecinos; los nodos atenuados no bloquean etiquetas.
+  const lbls = nodes.filter((n) => labelSet.has(n.id) && (on(n) || hl?.has(n.id))).sort((a, b) => (hl ? (hl.has(b.id) - hl.has(a.id)) : 0) || b.w - a.w);
   for (const n of lbls) {
     const strong = hl ? hl.has(n.id) : true;
     const weight = strong ? 600 : 500;
@@ -301,8 +323,9 @@ export function network(spec, theme) {
       const box = [bx0 - 1, ly - h + 2, bx0 + w + 1, ly + 3];
       if (box[0] < area.x - 2 || box[2] > area.x + area.w + 2 || box[1] < area.y - 4 || box[3] > area.y + area.h + 4) continue;
       // No pisa otras etiquetas ni nodos grandes; sobre nodos chicos sí (el halo la mantiene legible).
-      const hit = placed.some((b) => b[4] !== n.id && (b[4] === null || b[5] >= 7) && !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
-      if (hit && layout !== 'circle') continue;
+      const hit = placed.some((b) => b[4] !== n.id && (b[4] === null || (b[5] >= 7 && (!hl || near.has(b[4])))) && !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+      const must = hl && hl.has(n.id) && lx === cands[cands.length - 1][0] && ly === cands[cands.length - 1][1];
+      if (hit && layout !== 'circle' && !must) continue;
       placed.push([...box, null, 0]);
       labG.push(el('text', {
         x: lx, y: ly, textAnchor: anchor, fill: hasGroups ? readable(colorOf(n), theme) : theme.ink, fontSize: labelSize, fontWeight: weight,

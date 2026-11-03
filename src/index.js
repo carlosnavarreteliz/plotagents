@@ -3,7 +3,8 @@
 //   import { plot } from 'plotagents';
 //   const svg = plot({ data, x: 'region', y: 'ventas', title: 'Biobío lidera las ventas' });
 //
-import { getTheme, themeFor, themes, palettes, ramps, colorMap, FONT_CSS } from './theme.js';
+import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS } from './theme.js';
+import { withContext } from './context.js';
 import { validatePalette } from './palette.js';
 import { bar } from './charts/bar.js';
 import { line } from './charts/line.js';
@@ -79,7 +80,7 @@ const RENDERERS = {
 /** Normaliza el spec: tipo inferido y datos como filas. */
 export function resolve(spec = {}) {
   if (!spec || typeof spec !== 'object') throw new PlotError('El spec debe ser un objeto.', 'plot({ data: [...], x: "campo", y: "campo" })');
-  const s = { ...spec };
+  const s = withDefaults(spec);
   if (s.color && !s.series && typeof s.color === 'string' && !s.color.startsWith('#')) s.series = s.color;
   let type = s.type && s.type !== 'auto' ? String(s.type).toLowerCase() : null;
   if (type) {
@@ -104,8 +105,39 @@ export function plot(spec) {
   let s = resolve(spec);
   s = applyTime(s);
   const theme = themeFor(s);
-  if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
-  return RENDERERS[s.type](s, theme);
+  const textScale = Math.max(0.5, Math.min(4, +(s.textScale ?? s.fontScale ?? s.labelScale ?? 1) || 1));
+  return withContext({ textScale }, () => {
+    if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
+    return RENDERERS[s.type](s, theme);
+  });
+}
+
+// ── Configuración global ──────────────────────────────────────────────────
+const DEFAULTS = {};
+
+/**
+ * Valores por defecto para TODOS los gráficos (el spec siempre gana):
+ *   configure({ font: 'Poppins', textScale: 1.5, locale: 'en', theme: 'noche', palette: 'okabe-ito' })
+ * `font` acepta un nombre de Google Fonts, una pila CSS o { family, import }.
+ * `textScale` multiplica todos los textos (1.5, 2…) y el layout se recalcula.
+ * configure() sin argumentos devuelve la configuración actual; configure(null) la borra.
+ */
+export function configure(options) {
+  if (options === null) { for (const k of Object.keys(DEFAULTS)) delete DEFAULTS[k]; return {}; }
+  if (options) Object.assign(DEFAULTS, options);
+  return { ...DEFAULTS };
+}
+
+function withDefaults(spec) {
+  const s = { ...DEFAULTS, ...spec };
+  if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
+  // `font`: atajo de theme.font (familia + URL para cargarla).
+  const f = fontSpec(s.font);
+  if (f) {
+    const base = s.theme && typeof s.theme === 'object' ? s.theme : { extends: s.theme || undefined };
+    s.theme = { ...base, font: { ...(base.font || {}), ...f } };
+  }
+  return s;
 }
 
 const TIME_AXIS = new Set(['line', 'area', 'ecdf']);
@@ -203,10 +235,10 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
   return `<!doctype html>
 <html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<link rel="stylesheet" href="${FONT_CSS}">
+${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.import).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
 <style>
 :root{color-scheme:${dark ? 'dark' : 'light'}}
-body{margin:0;background:${bg};font-family:'Mozilla Text',system-ui,sans-serif}
+body{margin:0;background:${bg};font-family:${esc(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
 figure.pa svg{width:100%;height:auto;display:block}

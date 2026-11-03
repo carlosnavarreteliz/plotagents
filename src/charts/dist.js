@@ -9,6 +9,7 @@ import { colorMap } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
+import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median } from '../stats.js';
 
 // ── Utilidades compartidas (también las usa regplot.js) ───────────────────
@@ -73,7 +74,7 @@ export const tickFmt = (fmt, ax) => (ax.isLog ? fmt : fmt.tick(ax.step));
 export function axisTitles(body, theme, area, inner, { x, y }) {
   const size = theme.type?.axis ?? 11.5;
   if (y) body.push(text(area.x, area.y + 10, y, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500 }));
-  if (x) body.push(text(inner.x + inner.w, inner.y + inner.h + 38, x, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500, textAnchor: 'end' }));
+  if (x) body.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 16 * ctx.textScale, x, { fill: theme.lede, fontSize: size + 0.5, fontWeight: 500, textAnchor: 'end' }));
 }
 
 /** Escala log10 → valor, para bins en espacio logarítmico. */

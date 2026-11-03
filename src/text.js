@@ -1,5 +1,8 @@
 // Medición aproximada de texto sin DOM (Node, workers, SSR).
 // Calibrada para sans humanistas (Mozilla Text, Inter, system-ui).
+// Respeta la escala de texto global (textScale): el layout se calcula con el
+// tamaño real con que se dibuja el texto.
+import { ctx } from './context.js';
 
 const W = {};
 const set = (chars, w) => { for (const c of chars) W[c] = w; };
@@ -26,7 +29,7 @@ export function measure(str, size = 12, weight = 400) {
   let w = 0;
   for (const c of String(str ?? '')) w += W[c] ?? 0.56;
   const bold = weight >= 600 ? 1.06 : weight >= 500 ? 1.03 : 1;
-  return w * size * bold * 1.05; // margen: Mozilla Text es un poco más ancha
+  return w * size * ctx.textScale * bold * 1.05; // margen: Mozilla Text es un poco más ancha
 }
 
 /** Recorta con elipsis para caber en `max` px. */

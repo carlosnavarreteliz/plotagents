@@ -44,8 +44,39 @@ export function attach(root) {
     overlay.innerHTML = '';
     if (!pinned) svg.classList.remove('pa-focus');
   };
-  const linesHtml = (txt) =>
-    String(txt).split('\n').map((l, i) => (i === 0 ? `<div style="font-weight:600">${esc(l)}</div>` : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
+  // El título del tooltip hereda el color de la categoría, aclarado u
+  // oscurecido hasta leerse bien sobre el fondo del tooltip; el resto, neutro.
+  const tipBg = dark ? '#F2F3FA' : '#141A3F';
+  const rgb = (h) => { h = String(h).replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const lum = (c) => { const [r, g, b] = rgb(c).map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const hex = (a) => '#' + a.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  const onTip = (c) => {
+    if (!/^#[0-9a-f]{3,6}$/i.test(c || '')) return null;
+    const to = dark ? [20, 26, 63] : [255, 255, 255];
+    const A = rgb(c);
+    for (let t = 0; t <= 1.001; t += 0.05) { const m = hex(A.map((v, i) => v + (to[i] - v) * t)); if (ratio(m, tipBg) >= 4.5) return m; }
+    return null;
+  };
+  const markColor = (node) => {
+    if (!node) return null;
+    const cands = [node, ...node.querySelectorAll('[fill],[stroke]')];
+    for (const n of cands) {
+      const f = n.getAttribute && n.getAttribute('fill');
+      if (f && /^#/.test(f)) return f;
+    }
+    for (const n of cands) {
+      const st = n.getAttribute && n.getAttribute('stroke');
+      if (st && /^#/.test(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return st;
+    }
+    return null;
+  };
+  const linesHtml = (txt, color) => {
+    const c = onTip(color);
+    return String(txt).split('\n').map((l, i) => (i === 0
+      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
+      : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
+  };
 
   const toSvg = (ev) => {
     const pt = svg.createSVGPoint();
@@ -77,7 +108,7 @@ export function attach(root) {
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) { hide(); return; }
       overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
-      if (best[2]) show(linesHtml(best[2]), ev); else tipEl.style.opacity = '0';
+      if (best[2]) show(linesHtml(best[2], best[3]), ev); else tipEl.style.opacity = '0';
       return;
     }
     const tg = t && t.closest ? t.closest('[data-tip]') : null;
@@ -88,7 +119,7 @@ export function attach(root) {
       on = mark;
       if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); } else svg.classList.remove('pa-focus');
     }
-    show(linesHtml(tg.getAttribute('data-tip')), ev);
+    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev);
   });
   svg.addEventListener('pointerleave', hide);
 
