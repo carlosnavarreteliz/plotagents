@@ -19,7 +19,7 @@
     "./geo/usa": "./src/geo/usa.js"
   },
   "bin": {
-    "plotagents": "./bin/plotagents.js"
+    "plotagents": "bin/plotagents.js"
   },
   "files": [
     "src",
@@ -61,6 +61,14 @@
   ],
   "author": "Carlos Navarrete <cnavarreteliz@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlosnavarreteliz/plotagents.git"
+  },
+  "homepage": "https://carlosnavarrete.cl/plotagents/",
+  "bugs": {
+    "url": "https://github.com/carlosnavarreteliz/plotagents/issues"
+  },
   "engines": {
     "node": ">=18"
   },

@@ -8,7 +8,7 @@ plotagents turns one JSON object into a finished, accessible SVG chart. You pass
 npm install plotagents
 ```
 
-Or straight from GitHub:
+Or straight from GitHub, for the latest unreleased changes:
 
 ```bash
 npm install github:carlosnavarreteliz/plotagents
