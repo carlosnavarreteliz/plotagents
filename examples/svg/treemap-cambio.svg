@@ -1,71 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 446" width="720" height="446" role="img" aria-labelledby="pat54trs-t pat54trs-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="treemap" data-pa-mode="light" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><title id="pat54trs-t">El litio y las cerezas crecen más rápido que el resto</title><desc id="pat54trs-d">Treemap de valor en 2 niveles, total 91,7. Mayores: Cobre 55%, Salmón 7,1%, Litio 6,8%.</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}</style><rect width="720" height="446" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">El litio y las cerezas crecen más rápido que el resto</text><text x="24" y="69.5" fill="#4A5070" font-size="14.5">Exportaciones por sector y producto, variación anual · 2025</text><g class="pa-legend"><defs><linearGradient id="pa-ramp-cgnmzx"><stop offset="0%" stop-color="#9E1D45"/><stop offset="16.666666666666664%" stop-color="#D9557E"/><stop offset="33.33333333333333%" stop-color="#EFA9BE"/><stop offset="50%" stop-color="#ECEBE6"/><stop offset="66.66666666666666%" stop-color="#A9B0E2"/><stop offset="83.33333333333334%" stop-color="#5A66C7"/><stop offset="100%" stop-color="#26307F"/></linearGradient></defs><text x="24" y="98" fill="#4A5070" font-size="12.5">Variación vs 2024</text><text x="139.79" y="98" fill="#7C819C" font-size="12">−25%</text><rect x="177.29" y="90" width="132" height="10" rx="5" fill="url(#pa-ramp-cgnmzx)"/><text x="315.29" y="98" fill="#7C819C" font-size="12">+25%</text></g></g><g class="pa-body"><g class="pa-group" data-tip="Minería
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500" role="img" aria-labelledby="pat54vaw-t pat54vaw-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="treemap" data-pa-mode="light" style="display:block;width:100%;height:auto;max-width:100%;max-height:100%;font-variant-numeric:lining-nums"><title id="pat54vaw-t">El litio y las cerezas crecen más rápido que el resto</title><desc id="pat54vaw-d">Treemap de valor en 2 niveles, total 91,7. Mayores: Cobre 55%, Salmón 7,1%, Litio 6,8%.</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}</style><rect width="500" height="500" fill="#FCFBF9"/><g class="pa-header"><text x="16" y="35.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">El litio y las cerezas crecen más rápido</text><text x="16" y="64.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">que el resto</text><text x="16" y="90.5" fill="#4A5070" font-size="14.5">Exportaciones por sector y producto, variación anual · 2025</text><g class="pa-legend"><defs><linearGradient id="pa-ramp-cgnmzx"><stop offset="0%" stop-color="#9E1D45"/><stop offset="16.666666666666664%" stop-color="#D9557E"/><stop offset="33.33333333333333%" stop-color="#EFA9BE"/><stop offset="50%" stop-color="#ECEBE6"/><stop offset="66.66666666666666%" stop-color="#A9B0E2"/><stop offset="83.33333333333334%" stop-color="#5A66C7"/><stop offset="100%" stop-color="#26307F"/></linearGradient></defs><text x="16" y="119" fill="#4A5070" font-size="12.5">Variación vs 2024</text><text x="131.79" y="119" fill="#7C819C" font-size="12">−25%</text><rect x="169.29" y="111" width="132" height="10" rx="5" fill="url(#pa-ramp-cgnmzx)"/><text x="307.29" y="119" fill="#7C819C" font-size="12">+25%</text></g></g><g class="pa-body"><g class="pa-group" data-tip="Minería
 63,7 · 69% del total
 ▼ 2,1% vs 2024" data-drill="[&quot;Minería&quot;]" style="cursor:pointer"><g class="pa-m" data-tip="Minería › Cobre
 50,1 · 55% del total
 79% de Minería
-▼ 4,4% vs 2024"><rect x="25" y="113" width="364.18" height="290" rx="3" fill="#EECCD2"/><text x="33" y="136.84" fill="#141A3F" font-size="18" font-weight="600">Cobre</text><text x="33" y="154.88" fill="#141A3F" font-size="14.04" opacity="0.86">55% · ▼ 4,4%</text></g><g class="pa-m" data-tip="Minería › Litio
+▼ 4,4% vs 2024"><rect x="17" y="134" width="321.88" height="259.9" rx="3" fill="#EECCD2"/><text x="25" y="157.84" fill="#141A3F" font-size="18" font-weight="600">Cobre</text><text x="25" y="175.88" fill="#141A3F" font-size="14.04" opacity="0.86">55% · ▼ 4,4%</text></g><g class="pa-m" data-tip="Minería › Litio
 6,2 · 6,8% del total
 9,7% de Minería
-▲ 24% vs 2024"><rect x="391.18" y="113" width="97.4" height="131.12" rx="3" fill="#2B3585"/><text x="399.18" y="132.7" fill="#FFFFFF" font-size="13.3" font-weight="600">Litio</text><text x="399.18" y="147.07" fill="#FFFFFF" font-size="10.37" opacity="0.86">6,8% · ▲ 24%</text></g><g class="pa-m" data-tip="Minería › Molibdeno
+▲ 24% vs 2024"><rect x="17" y="395.9" width="145.65" height="69.1" rx="3" fill="#2B3585"/><text x="25" y="414.29" fill="#FFFFFF" font-size="11.8" font-weight="600">Litio</text><text x="25" y="427.79" fill="#FFFFFF" font-size="9.5" opacity="0.86">6,8% · ▲ 24%</text></g><g class="pa-m" data-tip="Minería › Molibdeno
 3,1 · 3,4% del total
 4,9% de Minería
-▼ 1,9% vs 2024"><rect x="391.18" y="246.12" width="97.4" height="64.56" rx="3" fill="#EDDEDE"/><text x="399.18" y="262.92" fill="#141A3F" font-size="10" font-weight="600">Molibdeno</text><text x="399.18" y="276.42" fill="#141A3F" font-size="9.5" opacity="0.86">3,4% · ▼ 1,9%</text></g><g class="pa-m" data-tip="Minería › Hierro
+▼ 1,9% vs 2024"><rect x="164.65" y="395.9" width="71.83" height="69.1" rx="3" fill="#EDDEDE"/><text x="172.65" y="412.7" fill="#141A3F" font-size="10" font-weight="600">Molibdeno</text></g><g class="pa-m" data-tip="Minería › Hierro
 2,4 · 2,6% del total
 3,8% de Minería
-▼ 5,9% vs 2024"><rect x="391.18" y="312.68" width="53.48" height="90.32" rx="3" fill="#EEC0CB"/><text x="396.18" y="326.48" fill="#141A3F" font-size="10" font-weight="600">Hierro</text></g><g class="pa-m" data-tip="Minería › Oro y plata
+▼ 5,9% vs 2024"><rect x="238.48" y="395.9" width="55.15" height="69.1" rx="3" fill="#EEC0CB"/><text x="243.48" y="409.7" fill="#141A3F" font-size="10" font-weight="600">Hierro</text></g><g class="pa-m" data-tip="Minería › Oro y plata
 1,9 · 2,1% del total
 3% de Minería
-▼ 2,1% vs 2024"><rect x="446.67" y="312.68" width="41.92" height="90.32" rx="3" fill="#EDDDDD"/></g></g><g class="pa-group" data-tip="Agro
+▼ 2,1% vs 2024"><rect x="295.63" y="395.9" width="43.25" height="69.1" rx="3" fill="#EDDDDD"/></g></g><g class="pa-group" data-tip="Agro
 8,2 · 8,9% del total
 ▲ 6,4% vs 2024" data-drill="[&quot;Agro&quot;]" style="cursor:pointer"><g class="pa-m" data-tip="Agro › Cerezas
 3,5 · 3,8% del total
 43% de Agro
-▲ 15% vs 2024"><rect x="494.59" y="113" width="102.5" height="66.68" rx="3" fill="#6E78CC"/><text x="502.59" y="129.8" fill="#141A3F" font-size="10" font-weight="600">Cerezas</text><text x="502.59" y="143.3" fill="#141A3F" font-size="9.5" opacity="0.86">3,8% · ▲ 15%</text></g><g class="pa-m" data-tip="Agro › Vino
+▲ 15% vs 2024"><rect x="344.88" y="134" width="57.81" height="92.69" rx="3" fill="#6E78CC"/><text x="349.88" y="147.8" fill="#141A3F" font-size="10" font-weight="600">Cerezas</text></g><g class="pa-m" data-tip="Agro › Vino
 1,6 · 1,7% del total
 20% de Agro
-▼ 4,2% vs 2024"><rect x="494.59" y="181.68" width="60.25" height="50.7" rx="3" fill="#EECDD3"/><text x="502.59" y="198.48" fill="#141A3F" font-size="10" font-weight="600">Vino</text></g><g class="pa-m" data-tip="Agro › Uvas
+▼ 4,2% vs 2024"><rect x="404.69" y="134" width="43.89" height="54.41" rx="3" fill="#EECDD3"/><text x="409.69" y="147.8" fill="#141A3F" font-size="10" font-weight="600">Vino</text></g><g class="pa-m" data-tip="Agro › Uvas
 1,2 · 1,3% del total
 15% de Agro
-▲ 1,7% vs 2024"><rect x="494.59" y="234.39" width="60.25" height="37.53" rx="3" fill="#E0E1E5"/><text x="499.59" y="248.19" fill="#141A3F" font-size="10" font-weight="600">Uvas</text></g><g class="pa-m" data-tip="Agro › Arándanos
+▲ 1,7% vs 2024"><rect x="450.58" y="134" width="32.42" height="54.41" rx="3" fill="#E0E1E5"/></g><g class="pa-m" data-tip="Agro › Arándanos
 0,8 · 0,9% del total
 9,8% de Agro
-▲ 8,1% vs 2024"><rect x="556.84" y="181.68" width="40.24" height="36.83" rx="3" fill="#ABB2E2"/></g><g class="pa-m" data-tip="Agro › Manzanas
+▲ 8,1% vs 2024"><rect x="404.69" y="190.41" width="31.82" height="36.28" rx="3" fill="#ABB2E2"/></g><g class="pa-m" data-tip="Agro › Manzanas
 0,6 · 0,7% del total
 7,3% de Agro
-▲ 1,7% vs 2024"><rect x="556.84" y="220.52" width="40.24" height="27.13" rx="3" fill="#E0E1E5"/></g><g class="pa-m" data-tip="Agro › Nueces
+▲ 1,7% vs 2024"><rect x="438.5" y="190.41" width="23.36" height="36.28" rx="3" fill="#E0E1E5"/></g><g class="pa-m" data-tip="Agro › Nueces
 0,5 · 0,5% del total
 6,1% de Agro
-▲ 2% vs 2024"><rect x="556.84" y="249.64" width="40.24" height="22.27" rx="3" fill="#DEDEE5"/></g></g><g class="pa-group" data-tip="Pesca y acuicultura
+▲ 2% vs 2024"><rect x="463.86" y="190.41" width="19.14" height="36.28" rx="3" fill="#DEDEE5"/></g></g><g class="pa-group" data-tip="Pesca y acuicultura
 7,4 · 8,1% del total
 ▲ 5% vs 2024" data-drill="[&quot;Pesca y acuicultura&quot;]" style="cursor:pointer"><g class="pa-m" data-tip="Pesca y acuicultura › Salmón
 6,5 · 7,1% del total
 88% de Pesca y acuicultura
-▲ 6,2% vs 2024"><rect x="603.09" y="113" width="91.91" height="139.34" rx="3" fill="#BDC1E3"/><text x="611.09" y="132.72" fill="#141A3F" font-size="13.31" font-weight="600">Salmón</text><text x="611.09" y="147.1" fill="#141A3F" font-size="10.39" opacity="0.86">7,1% · ▲ 6,2%</text></g><g class="pa-m" data-tip="Pesca y acuicultura › Harina de pescado
+▲ 6,2% vs 2024"><rect x="344.88" y="232.69" width="121.08" height="83.06" rx="3" fill="#BDC1E3"/><text x="352.88" y="251.08" fill="#141A3F" font-size="11.8" font-weight="600">Salmón</text><text x="352.88" y="264.58" fill="#141A3F" font-size="9.5" opacity="0.86">7,1% · ▲ 6,2%</text></g><g class="pa-m" data-tip="Pesca y acuicultura › Harina de pescado
 0,6 · 0,7% del total
 8,1% de Pesca y acuicultura
-▼ 6,3% vs 2024"><rect x="603.09" y="254.34" width="60.61" height="17.57" rx="2.93" fill="#EEBCC9"/></g><g class="pa-m" data-tip="Pesca y acuicultura › Choritos
+▼ 6,3% vs 2024"><rect x="467.96" y="232.69" width="15.04" height="54.71" rx="2.51" fill="#EEBCC9"/></g><g class="pa-m" data-tip="Pesca y acuicultura › Choritos
 0,3 · 0,3% del total
 4,1% de Pesca y acuicultura
-▲ 3,4% vs 2024"><rect x="665.7" y="254.34" width="29.3" height="17.57" rx="2.93" fill="#D4D5E4"/></g></g><g class="pa-group" data-tip="Industria
+▲ 3,4% vs 2024"><rect x="467.96" y="289.4" width="15.04" height="26.35" rx="2.51" fill="#D4D5E4"/></g></g><g class="pa-group" data-tip="Industria
 6,7 · 7,3% del total
 ▲ 3,2% vs 2024" data-drill="[&quot;Industria&quot;]" style="cursor:pointer"><g class="pa-m" data-tip="Industria › Alimentos procesados
 3,1 · 3,4% del total
 46% de Industria
-▲ 2% vs 2024"><rect x="494.59" y="277.91" width="105.53" height="56.8" rx="3" fill="#DEDFE5"/><text x="502.59" y="294.71" fill="#141A3F" font-size="10" font-weight="600">Alimentos</text><text x="502.59" y="306.11" fill="#141A3F" font-size="10" font-weight="600">procesados</text><text x="502.59" y="319.61" fill="#141A3F" font-size="9.5" opacity="0.86">3,4% · ▲ 2%</text></g><g class="pa-m" data-tip="Industria › Químicos
+▲ 2% vs 2024"><rect x="344.88" y="321.76" width="62.83" height="74.64" rx="3" fill="#DEDFE5"/></g><g class="pa-m" data-tip="Industria › Químicos
 2,6 · 2,8% del total
 39% de Industria
-▲ 5,3% vs 2024"><rect x="494.59" y="336.72" width="75.66" height="66.28" rx="3" fill="#C5C8E3"/><text x="502.59" y="353.52" fill="#141A3F" font-size="10" font-weight="600">Químicos</text></g><g class="pa-m" data-tip="Industria › Metalmecánica
+▲ 5,3% vs 2024"><rect x="409.71" y="321.76" width="73.29" height="53.35" rx="3" fill="#C5C8E3"/><text x="417.71" y="338.56" fill="#141A3F" font-size="10" font-weight="600">Químicos</text></g><g class="pa-m" data-tip="Industria › Metalmecánica
 1 · 1,1% del total
 15% de Industria
-▲ 2% vs 2024"><rect x="572.25" y="336.72" width="27.87" height="66.28" rx="3" fill="#DEDEE5"/></g></g><g class="pa-group" data-tip="Forestal
+▲ 2% vs 2024"><rect x="409.71" y="377.11" width="73.29" height="19.29" rx="3" fill="#DEDEE5"/></g></g><g class="pa-group" data-tip="Forestal
 5,7 · 6,2% del total
 ▼ 0,5% vs 2024" data-drill="[&quot;Forestal&quot;]" style="cursor:pointer"><g class="pa-m" data-tip="Forestal › Celulosa
 3 · 3,3% del total
 53% de Forestal
-▼ 2,9% vs 2024"><rect x="606.12" y="277.91" width="88.88" height="64.89" rx="3" fill="#EDD7D9"/><text x="614.12" y="294.71" fill="#141A3F" font-size="10" font-weight="600">Celulosa</text><text x="614.12" y="308.21" fill="#141A3F" font-size="9.5" opacity="0.86">3,3% · ▼ 2,9%</text></g><g class="pa-m" data-tip="Forestal › Madera aserrada
+▼ 2,9% vs 2024"><rect x="344.88" y="402.4" width="71.75" height="62.6" rx="3" fill="#EDD7D9"/><text x="352.88" y="419.2" fill="#141A3F" font-size="10" font-weight="600">Celulosa</text></g><g class="pa-m" data-tip="Forestal › Madera aserrada
 1,8 · 2% del total
 32% de Forestal
-▲ 2,3% vs 2024"><rect x="606.12" y="344.8" width="58.59" height="58.2" rx="3" fill="#DCDDE5"/></g><g class="pa-m" data-tip="Forestal › Tableros
+▲ 2,3% vs 2024"><rect x="418.63" y="402.4" width="42.25" height="62.6" rx="3" fill="#DCDDE5"/></g><g class="pa-m" data-tip="Forestal › Tableros
 0,9 · 1% del total
 16% de Forestal
-▲ 2,3% vs 2024"><rect x="666.71" y="344.8" width="28.29" height="58.2" rx="3" fill="#DCDDE5"/></g></g></g><text x="696" y="420" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>
+▲ 2,3% vs 2024"><rect x="462.88" y="402.4" width="20.12" height="62.6" rx="3" fill="#DCDDE5"/></g></g></g><text x="484" y="482" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

@@ -39,7 +39,7 @@ export function sunburst(spec, theme) {
     ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
     : [];
 
-  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);

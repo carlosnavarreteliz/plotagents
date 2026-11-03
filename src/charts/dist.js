@@ -181,7 +181,7 @@ export function hist(spec, theme) {
   const colorOf = (gi) => (single ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[gi].key));
   const legend = !single && spec.legend !== false ? groups.map((gr) => ({ label: gr.key, color: cmap.get(gr.key), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 400 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const body = [];
   const M = theme.marks || {};
@@ -355,7 +355,7 @@ export function kde(spec, theme) {
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: spec.fill === false ? 'line' : 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat ?? spec.format, locale, all);
@@ -452,7 +452,7 @@ export function ecdf(spec, theme) {
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: 'line' })) : [];
-  const frame = createFrame(spec, theme, { height: 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat ?? spec.format, locale, all);

@@ -161,8 +161,8 @@ export const schema = {
     },
     font: { description: 'Typeface for the whole chart: a Google Fonts name ("Poppins"), a CSS stack ("\'Inter\', sans-serif") or { family, import }. configure({ font }) sets it for every chart.', anyOf: [{ type: 'string' }, { type: 'object' }] },
     textScale: { type: 'number', description: 'Multiplies every text size (1.5, 2…); the layout is recomputed so nothing overlaps. Aliases: fontScale, labelScale. configure({ textScale }) sets it for every chart.' },
-    width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
-    height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
+    width: { type: 'number', description: 'Width in px (default 500; render() uses the container width). Capped at 8000.' },
+    height: { type: 'number', description: 'Height in px (default 500; render() uses the container height when the container has one). Without it, charts with many rows (horizontal bars, heatmaps, flow charts, KPI tiles) grow past 500 to fit. Capped at 8000.' },
   },
 };
 

@@ -102,8 +102,7 @@ export function treemap(spec, theme) {
   }
 
   // En pantallas angostas el treemap crece hacia abajo: rectángulos legibles.
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(Math.min(780, W * 1.15 + 170)) : Math.round(Math.max(440, Math.min(620, W * 0.62))) });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);

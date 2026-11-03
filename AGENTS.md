@@ -47,6 +47,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 
 ## Most useful options
 
+- Size: 500 × 500 by default. `width` / `height` set it; in the browser, `render(el, spec)` uses the size of the element.
 - `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
 - `time: "year"`: one period at a time (the latest) with % change vs the previous one; in the browser, a slider with play (`slider: false` / `play: false` to turn them off). Treemaps can be colored by change with `colorBy: "change"`.

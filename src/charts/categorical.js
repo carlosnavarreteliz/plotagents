@@ -9,7 +9,7 @@ import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js'
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } from '../axes.js';
-import { createFrame } from '../frame.js';
+import { createFrame, DEFAULT_WIDTH } from '../frame.js';
 import { ctx } from '../context.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } from '../stats.js';
 
@@ -81,7 +81,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   };
   const legend = multiHue ? m.hues.map((h) => ({ label: h, color: hl && !hl.has(h) ? theme.dim : cmap.get(h), shape: type === 'point' ? 'line' : 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(spec.legend === false ? [] : legend);
   // Dominio del eje de valores: `yDomain` manda siempre (también en horizontal, para facetas).
   const dom = spec.yDomain ?? (vertical ? undefined : spec.xDomain) ?? spec.valueDomain;
@@ -116,7 +116,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     const labelW = m.cat ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
     const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
     if (spec.height === undefined) {
-      frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
+      frame.setHeight(Math.max(frame.height, area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome));
       area = { ...area, h: frame.bottom - area.y };
     }
     inner = { x: area.x + labelW, y: area.y + 4, w: area.w - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
@@ -148,7 +148,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
 function autoHorizontal(spec, m) {
   if (m.swapped) return true;
   if (!m.cat) return false;
-  const w = (spec.width || 720) - 48;
+  const w = (+spec.width || DEFAULT_WIDTH) - 48;
   const slot = w / Math.max(1, m.cats.length);
   const longest = Math.max(...m.cats.map((c) => measure(c, 12)));
   return m.cats.length > 10 || longest > slot - 10;

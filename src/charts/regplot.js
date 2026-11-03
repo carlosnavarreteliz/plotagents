@@ -75,7 +75,7 @@ export function regplot(spec, theme) {
   const focusKey = (k) => !hl || hl.has(k);
   const colorOf = (k) => (!focusKey(k) ? theme.dim : K === 1 ? (spec.colors && spec.colors[k]) || theme.categorical[0] : cmap.get(k));
   const legend = K > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: colorOf(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 440 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
 
@@ -211,7 +211,7 @@ export function residplot(spec, theme) {
   const fxv = (v) => (spec.logx ? Math.log10(v) : v);
   const fit = polyfit(P.pts.map((p) => fxv(p.x)), P.pts.map((p) => p.y), { order: spec.order ?? 1 });
   const res = P.pts.map((p) => ({ ...p, r: p.y - fit.predict(fxv(p.x)) }));
-  const frame = createFrame(spec, theme, { height: 340 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat, locale, res.map((p) => p.x));
@@ -260,7 +260,7 @@ export function jointplot(spec, theme) {
   const cmap = colorMap(keys, theme, spec.colors);
   const colorOf = (k) => (K === 1 ? (spec.colors && spec.colors[k]) || theme.categorical[0] : cmap.get(k));
   const legend = K > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: colorOf(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 520 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat, locale, pts.map((p) => p.x));

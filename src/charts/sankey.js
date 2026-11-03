@@ -46,7 +46,7 @@ export function sankey(spec, theme) {
   cols.forEach((c) => c.sort((a, b) => b.value - a.value));
 
   const fmt = makeFormat(spec.format, locale, links.map((l) => l.v));
-  const frame = createFrame(spec, theme, { height: 440 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const label = (n) => n.name;
   const leftW = Math.min(area.w * 0.22, Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(fmt(n.value), 12))))) + 10;

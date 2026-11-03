@@ -38,7 +38,7 @@ export function scatter(spec, theme) {
   const fs = size ? makeFormat(spec.sizeFormat, locale, pts.map((p) => p.s)) : null;
 
   const legend = series && keys.length > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: cmap.get(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 460 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   const xLog = spec.xScale === 'log', yLog = spec.yScale === 'log';

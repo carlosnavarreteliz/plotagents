@@ -43,13 +43,13 @@ export function heatmap(spec, theme) {
   };
 
   const legend = [{ type: 'ramp', stops: mid !== undefined ? stops : stops.slice(1), min: fmt(mid !== undefined ? -(Math.max(vmax - mid, mid - vmin)) + mid : vmin), max: fmt(mid !== undefined ? Math.max(vmax - mid, mid - vmin) + mid : vmax), title: spec.legendTitle ?? humanize(valueF) }];
-  const frame = createFrame(spec, theme, { height: Math.min(640, 140 + ys.length * 34) });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const yW = Math.min(area.w * 0.3, Math.max(...ys.map((v) => measure(v, 12)))) + 12;
   const inner = { x: area.x + yW, y: area.y, w: area.w - yW, h: area.h - 26 };
   const cw = inner.w / xs.length, ch = Math.min(inner.h / ys.length, spec.cellHeight ?? 56);
   inner.h = ch * ys.length;
-  if (spec.height === undefined) frame.setHeight(inner.y + inner.h + 26 + frame.chrome);
+  if (spec.height === undefined && ch * ys.length < area.h - 26 - 1) frame.setHeight(inner.y + inner.h + 26 + frame.chrome);
   const showLabels = spec.labels ?? (cw >= Math.max(...all.map((v) => measure(fmt(v), 11))) + 8 && ch >= 18);
 
   const body = [];

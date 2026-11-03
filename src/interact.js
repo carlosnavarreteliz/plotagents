@@ -11,7 +11,7 @@ export function attach(root) {
   const tipEl = document.createElement('div');
   tipEl.setAttribute('role', 'tooltip');
   tipEl.style.cssText = [
-    'position:absolute', 'pointer-events:none', 'z-index:10', 'opacity:0', 'transition:opacity .12s',
+    'position:absolute', 'left:0', 'top:0', 'pointer-events:none', 'z-index:10', 'opacity:0', 'transition:opacity .12s',
     'padding:8px 10px', 'border-radius:8px', 'font:12.5px/1.45 ' + (svg.getAttribute('font-family') || 'system-ui'),
     'white-space:nowrap', 'max-width:280px',
     dark ? 'background:#F2F3FA;color:#141A3F' : 'background:#141A3F;color:#FCFBF9',
@@ -25,7 +25,11 @@ export function attach(root) {
   let on = null;
   let pinned = null;
 
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  // Lo que se lee del SVG (colores, coordenadas) se valida antes de volver a
+  // marcado: el SVG pudo venir de otra parte y no debe poder inyectar HTML.
+  const col = (c) => (/^(#[0-9a-f]{3,8}|[a-z]{3,30})$/i.test(String(c || '')) ? c : '#888');
+  const num = (v) => (Number.isFinite(+v) ? +v : 0);
   const show = (html, ev) => {
     tipEl.innerHTML = html;
     tipEl.style.opacity = '1';
@@ -74,7 +78,7 @@ export function attach(root) {
   const linesHtml = (txt, color) => {
     const c = onTip(color);
     return String(txt).split('\n').map((l, i) => (i === 0
-      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
+      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${col(color)};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
       : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
   };
 
@@ -92,11 +96,11 @@ export function attach(root) {
       const p = toSvg(ev);
       let best = data[0];
       for (const d of data) if (Math.abs(d.x - p.x) < Math.abs(best.x - p.x)) best = d;
-      const y0 = +t.getAttribute('data-y0'), y1 = +t.getAttribute('data-y1');
+      const y0 = num(t.getAttribute('data-y0')), y1 = num(t.getAttribute('data-y1')), bx = num(best.x);
       overlay.innerHTML =
-        `<line x1="${best.x}" x2="${best.x}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
-        best.v.map((v) => `<circle cx="${best.x}" cy="${v[2]}" r="4.5" fill="${v[1]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
-      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${v[1]}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
+        `<line x1="${bx}" x2="${bx}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
+        best.v.map((v) => `<circle cx="${bx}" cy="${num(v[2])}" r="4.5" fill="${col(v[1])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
+      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${col(v[1])}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
       show(`<div style="font-weight:600;margin-bottom:2px">${esc(best.t)}</div>${rows}`, ev);
       return;
     }
@@ -107,7 +111,7 @@ export function attach(root) {
       let best = null, bd = 196;
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) { hide(); return; }
-      overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
+      overlay.innerHTML = `<circle cx="${num(best[0])}" cy="${num(best[1])}" r="6" fill="${col(best[3])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
       if (best[2]) show(linesHtml(best[2], best[3]), ev); else tipEl.style.opacity = '0';
       return;
     }

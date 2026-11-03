@@ -98,12 +98,87 @@ export const ramps = {
 };
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 export function deepMerge(base, over) {
   if (!isObj(over)) return base;
   const out = { ...base };
-  for (const [k, v] of Object.entries(over)) out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  for (const [k, v] of Object.entries(over)) {
+    if (UNSAFE_KEYS.has(k)) continue;
+    out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Saneamiento: el spec puede venir de un agente o de un usuario, y el SVG
+// termina incrustado en HTML. Todo color, familia tipográfica o URL que el
+// spec aporte pasa por aquí antes de llegar al marcado o al CSS.
+
+// Hex, nombres CSS y funciones de color (rgb, hsl, oklch…). Nada de comillas,
+// `<`, `;`, `url(` ni `var(`: un color nunca puede cerrar un atributo ni
+// cargar un recurso externo.
+const COLOR_RE = /^(#[0-9a-f]{3,8}|[a-z]{3,30}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([0-9a-z\s.,%/+-]{1,80}\))$/i;
+const COLOR_WORDS_BLOCKED = new Set(['url', 'var', 'expression', 'inherit', 'initial', 'unset', 'revert']);
+
+/** Devuelve `c` si es un color CSS seguro; si no, `fallback`. */
+export function safeColor(c, fallback) {
+  if (typeof c !== 'string') return fallback;
+  const v = c.trim();
+  if (!COLOR_RE.test(v) || COLOR_WORDS_BLOCKED.has(v.toLowerCase())) return fallback;
+  return v;
+}
+
+/** Familia CSS segura: solo letras, dígitos, espacios, comas, comillas simples y guiones. */
+export function safeFontFamily(f, fallback = FONT) {
+  if (typeof f !== 'string') return fallback;
+  const v = f.replace(/"/g, "'").trim();
+  return v && v.length <= 300 && /^[\p{L}\p{N}\s,'._-]+$/u.test(v) ? v : fallback;
+}
+
+/** URL de hoja de estilos segura: http(s), sin comillas, espacios ni `<>()`. */
+export function safeUrl(u) {
+  if (typeof u !== 'string') return undefined;
+  const v = u.trim();
+  return /^https?:\/\/[^\s"'<>()\\`]+$/i.test(v) && v.length <= 2000 ? v : undefined;
+}
+
+const COLOR_KEYS = ['surface', 'ink', 'lede', 'muted', 'grid', 'axis', 'tint', 'tint2', 'dim', 'other'];
+const colorList = (list, fallback) => {
+  if (!Array.isArray(list)) return fallback;
+  const out = list.map((c, i) => safeColor(c, fallback[i % fallback.length])).slice(0, 64);
+  return out.length ? out : fallback;
+};
+
+/** Tema con todos sus colores, fuentes y URLs saneados (vuelve a papel/noche si algo no sirve). */
+function sanitizeTheme(t) {
+  const ref = t.mode === 'dark' ? noche : papel;
+  const out = { ...t };
+  for (const k of COLOR_KEYS) out[k] = safeColor(t[k], ref[k]);
+  out.categorical = colorList(t.categorical, ref.categorical);
+  out.sequential = colorList(t.sequential, ref.sequential);
+  out.diverging = colorList(t.diverging, ref.diverging);
+  out.status = { ...ref.status };
+  if (isObj(t.status)) for (const k of Object.keys(ref.status)) out.status[k] = safeColor(t.status[k], ref.status[k]);
+  const f = isObj(t.font) ? t.font : {};
+  out.font = { ...f, family: safeFontFamily(f.family, FONT), mono: safeFontFamily(f.mono, MONO), import: safeUrl(f.import) };
+  out.mode = t.mode === 'dark' ? 'dark' : 'light';
+  if (typeof out.link !== 'number' || !Number.isFinite(out.link)) out.link = ref.link;
+  return out;
+}
+
+/** Mapa entidad → color con prototipo nulo: "toString" o "constructor" no heredan nada. */
+export function safeColorMap(colors) {
+  const out = Object.create(null);
+  if (!isObj(colors)) return out;
+  for (const [k, v] of Object.entries(colors)) {
+    const c = safeColor(v);
+    if (c) out[k] = c;
+  }
+  return out;
+}
+
+/** Lectura de un mapa de colores sin heredar de Object.prototype. */
+export const own = (map, k) => (map && Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined);
 
 /**
  * Tema = JSON. Acepta un nombre ("papel", "noche") o un objeto parcial que se
@@ -113,20 +188,26 @@ export function deepMerge(base, over) {
  */
 export function getTheme(t) {
   if (!t) return papel;
-  if (typeof t === 'string') return themes[t] || papel;
-  const base = themes[t.extends] || (t.mode === 'dark' ? noche : papel);
+  if (typeof t === 'string') return Object.prototype.hasOwnProperty.call(themes, t) ? themes[t] : papel;
+  return sanitizeTheme(mergeTheme(t));
+}
+
+function mergeTheme(t) {
+  const has = (lib, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(lib, k);
+  const base = has(themes, t.extends) ? themes[t.extends] : t.mode === 'dark' ? noche : papel;
   const merged = deepMerge(base, t);
-  if (typeof merged.categorical === 'string') merged.categorical = palettes[merged.categorical] || base.categorical;
-  if (typeof merged.sequential === 'string') merged.sequential = ramps[merged.sequential] || base.sequential;
-  if (typeof merged.diverging === 'string') merged.diverging = ramps[merged.diverging] || base.diverging;
+  if (typeof merged.categorical === 'string') merged.categorical = has(palettes, merged.categorical) ? palettes[merged.categorical] : base.categorical;
+  if (typeof merged.sequential === 'string') merged.sequential = has(ramps, merged.sequential) ? ramps[merged.sequential] : base.sequential;
+  if (typeof merged.diverging === 'string') merged.diverging = has(ramps, merged.diverging) ? ramps[merged.diverging] : base.diverging;
   return merged;
 }
 
 /** Tema efectivo de un spec: `theme` + atajos `palette` y `ramp`. */
 export function themeFor(spec = {}) {
   let t = getTheme(spec.theme);
-  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? spec.palette : palettes[spec.palette] || t.categorical };
-  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? spec.ramp : ramps[spec.ramp] || t.sequential };
+  const named = (lib, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(lib, k) ? lib[k] : undefined);
+  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? colorList(spec.palette, t.categorical) : named(palettes, spec.palette) || t.categorical };
+  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? colorList(spec.ramp, t.sequential) : named(ramps, spec.ramp) || t.sequential };
   return t;
 }
 
@@ -187,9 +268,10 @@ export function colorMap(keys, theme, overrides = {}) {
   const map = new Map();
   let i = 0;
   for (const k of keys) {
-    if (overrides && overrides[k]) map.set(k, overrides[k]);
+    const fixed = safeColor(own(overrides, k));
+    if (fixed) map.set(k, fixed);
     else map.set(k, i < theme.categorical.length ? theme.categorical[i] : theme.other);
-    if (!(overrides && overrides[k])) i++;
+    if (!fixed) i++;
   }
   return map;
 }

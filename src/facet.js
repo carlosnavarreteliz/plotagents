@@ -1,9 +1,9 @@
 // Small multiples (seaborn: col / col_wrap): un panel por valor de `facet`,
 // con escalas y colores compartidos y una sola leyenda. Es la alternativa
 // correcta a 8 líneas enredadas o a un doble eje.
-import { el, g } from './svg.js';
-import { createFrame } from './frame.js';
-import { colorMap } from './theme.js';
+import { el, g, r2 } from './svg.js';
+import { createFrame, DEFAULT_WIDTH } from './frame.js';
+import { colorMap, safeColorMap } from './theme.js';
 import { ensureData, requireField, uniq, fieldKind, num } from './data.js';
 import { niceDomain } from './scale.js';
 
@@ -20,7 +20,7 @@ export function facet(spec, theme, renderOne) {
 
   // Colores globales: la misma serie tiene el mismo color en todos los paneles.
   const sf = spec.series ?? spec.hue ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : null);
-  const colors = { ...(spec.colors || {}) };
+  const colors = safeColorMap(spec.colors);
   let legend = [];
   if (sf && data.length && Object.prototype.hasOwnProperty.call(data[0], sf)) {
     const sk = uniq(data.map((r) => String(r[sf])));
@@ -29,23 +29,25 @@ export function facet(spec, theme, renderOne) {
     if (sk.length > 1) legend = sk.map((k) => ({ label: k, color: cm.get(k), shape: LINE_LIKE.has(spec.type) ? 'line' : 'square' }));
   }
 
-  const frame = createFrame({ ...spec, height: 200 }, theme, { width: 720 });
+  const frame = createFrame({ ...spec, height: 200 }, theme, { width: DEFAULT_WIDTH });
   const area = frame.layout(legend);
   const gap = spec.panelGap ?? 14;
   // Columnas pedidas, pero nunca paneles de menos de ~150 px (en móvil se apilan).
-  const fit = Math.max(1, Math.floor((area.w + gap) / 150));
+  const fit = Math.max(1, Math.floor((area.w + gap) / (150 + gap)));
   const want = spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
   const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;
-  const ph = spec.panelHeight ?? Math.round(Math.min(300, Math.max(160, pw * 0.66)));
   const rows = Math.ceil(keys.length / cols);
+  // Con alto fijo (spec o envoltorio), los paneles se reparten ese alto.
+  const fixedH = +spec.height > 0 ? (+spec.height - area.y - frame.chrome - (rows - 1) * gap) / rows : NaN;
+  const ph = spec.panelHeight ?? Math.round(Number.isFinite(fixedH) ? Math.max(100, fixedH) : Math.min(300, Math.max(160, pw * 0.66)));
   frame.setHeight(area.y + rows * ph + (rows - 1) * gap + frame.chrome);
 
   const panelTheme = { ...theme, type: { ...(theme.type || {}), title: Math.min(13.5, theme.type?.title ?? 13.5), titleWeight: 600 } };
   const multiSeries = legend.length > 1;
   const base = {
     ...spec, facet: undefined, col: undefined, title: undefined, subtitle: undefined, source: undefined, refLines: spec.refLines,
-    width: Math.floor(pw), height: ph, padding: 0, colors, legend: false, theme: panelTheme, palette: undefined,
+    width: Math.floor(pw), height: ph, padding: 0, _panel: true, colors, legend: false, theme: panelTheme, palette: undefined,
     labels: spec.panelLabels ?? (multiSeries && LINE_LIKE.has(spec.type) ? false : spec.labels),
   };
   const subsets = keys.map((k) => data.filter((r) => String(r[f]) === k));
@@ -72,7 +74,7 @@ export function facet(spec, theme, renderOne) {
     try {
       svg = renderOne({ ...base, data: subsets[i], title: k, yDomain, xDomain });
     } catch (e) {
-      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${r2(pw)}" height="${r2(ph)}"></svg>`;
     }
     // Panel anidado: se quita el estilo responsivo del SVG raíz del panel.
     svg = svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/ style="[^"]*"/, '');

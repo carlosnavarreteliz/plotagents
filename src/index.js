@@ -3,7 +3,7 @@
 //   import { plot } from 'plotagents';
 //   const svg = plot({ data, x: 'region', y: 'ventas', title: 'Biobío lidera las ventas' });
 //
-import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS } from './theme.js';
+import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS, safeColorMap, safeFontFamily, safeUrl } from './theme.js';
 import { withContext } from './context.js';
 import { validatePalette } from './palette.js';
 import { bar } from './charts/bar.js';
@@ -124,12 +124,17 @@ const DEFAULTS = {};
  */
 export function configure(options) {
   if (options === null) { for (const k of Object.keys(DEFAULTS)) delete DEFAULTS[k]; return {}; }
-  if (options) Object.assign(DEFAULTS, options);
+  if (options && typeof options === 'object') {
+    for (const [k, v] of Object.entries(options)) if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') DEFAULTS[k] = v;
+  }
   return { ...DEFAULTS };
 }
 
 function withDefaults(spec) {
   const s = { ...DEFAULTS, ...spec };
+  // Colores por entidad: saneados y sin prototipo (una categoría "toString" no hereda una función).
+  if (s.colors !== undefined) s.colors = safeColorMap(s.colors);
+  if (typeof s.fontFamily === 'string') s.fontFamily = safeFontFamily(s.fontFamily, undefined);
   if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
   // `font`: atajo de theme.font (familia + URL para cargarla).
   const f = fontSpec(s.font);
@@ -188,7 +193,7 @@ function stableColors(s, all) {
   }
   const keys = [...tot.keys()].sort((a, b) => tot.get(b) - tot.get(a));
   const cmap = colorMap(keys, themeFor(s), s.colors);
-  return { ...Object.fromEntries(cmap), ...(s.colors || {}) };
+  return safeColorMap({ ...Object.fromEntries(cmap), ...(s.colors || {}) });
 }
 
 /**
@@ -235,10 +240,10 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
   return `<!doctype html>
 <html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.import).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
+${[...new Set([FONT_CSS, ...list.map((s) => safeUrl(themeFor(withDefaults(s)).font?.import)).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
 <style>
 :root{color-scheme:${dark ? 'dark' : 'light'}}
-body{margin:0;background:${bg};font-family:${esc(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
+body{margin:0;background:${bg};font-family:${safeFontFamily(themeFor(withDefaults(list[0])).font?.family)}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
 figure.pa svg{width:100%;height:auto;display:block}

@@ -5,7 +5,7 @@ var __defs = {}, __cache = {};
 function __def(id, fn) { __defs[id] = fn; }
 function __req(id) { if (!__cache[id]) { __cache[id] = { loading: true }; __cache[id] = __defs[id](); } return __cache[id]; }
 __def("src/index.js", function () {
-const { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS } = __req("src/theme.js");
+const { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS, safeColorMap, safeFontFamily, safeUrl } = __req("src/theme.js");
 const { withContext } = __req("src/context.js");
 const { validatePalette } = __req("src/palette.js");
 const { bar } = __req("src/charts/bar.js");
@@ -123,12 +123,16 @@ const DEFAULTS = {};
  */
 function configure(options) {
   if (options === null) { for (const k of Object.keys(DEFAULTS)) delete DEFAULTS[k]; return {}; }
-  if (options) Object.assign(DEFAULTS, options);
+  if (options && typeof options === 'object') {
+    for (const [k, v] of Object.entries(options)) if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') DEFAULTS[k] = v;
+  }
   return { ...DEFAULTS };
 }
 
 function withDefaults(spec) {
   const s = { ...DEFAULTS, ...spec };
+  if (s.colors !== undefined) s.colors = safeColorMap(s.colors);
+  if (typeof s.fontFamily === 'string') s.fontFamily = safeFontFamily(s.fontFamily, undefined);
   if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
   const f = fontSpec(s.font);
   if (f) {
@@ -185,7 +189,7 @@ function stableColors(s, all) {
   }
   const keys = [...tot.keys()].sort((a, b) => tot.get(b) - tot.get(a));
   const cmap = colorMap(keys, themeFor(s), s.colors);
-  return { ...Object.fromEntries(cmap), ...(s.colors || {}) };
+  return safeColorMap({ ...Object.fromEntries(cmap), ...(s.colors || {}) });
 }
 
 /**
@@ -232,10 +236,10 @@ function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } = {}) {
   return `<!doctype html>
 <html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.import).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
+${[...new Set([FONT_CSS, ...list.map((s) => safeUrl(themeFor(withDefaults(s)).font?.import)).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
 <style>
 :root{color-scheme:${dark ? 'dark' : 'light'}}
-body{margin:0;background:${bg};font-family:${esc(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
+body{margin:0;background:${bg};font-family:${safeFontFamily(themeFor(withDefaults(list[0])).font?.family)}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
 figure.pa svg{width:100%;height:auto;display:block}
@@ -353,12 +357,80 @@ const ramps = {
 };
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 function deepMerge(base, over) {
   if (!isObj(over)) return base;
   const out = { ...base };
-  for (const [k, v] of Object.entries(over)) out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  for (const [k, v] of Object.entries(over)) {
+    if (UNSAFE_KEYS.has(k)) continue;
+    out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  }
   return out;
 }
+
+
+const COLOR_RE = /^(#[0-9a-f]{3,8}|[a-z]{3,30}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([0-9a-z\s.,%/+-]{1,80}\))$/i;
+const COLOR_WORDS_BLOCKED = new Set(['url', 'var', 'expression', 'inherit', 'initial', 'unset', 'revert']);
+
+/** Devuelve `c` si es un color CSS seguro; si no, `fallback`. */
+function safeColor(c, fallback) {
+  if (typeof c !== 'string') return fallback;
+  const v = c.trim();
+  if (!COLOR_RE.test(v) || COLOR_WORDS_BLOCKED.has(v.toLowerCase())) return fallback;
+  return v;
+}
+
+/** Familia CSS segura: solo letras, dígitos, espacios, comas, comillas simples y guiones. */
+function safeFontFamily(f, fallback = FONT) {
+  if (typeof f !== 'string') return fallback;
+  const v = f.replace(/"/g, "'").trim();
+  return v && v.length <= 300 && /^[\p{L}\p{N}\s,'._-]+$/u.test(v) ? v : fallback;
+}
+
+/** URL de hoja de estilos segura: http(s), sin comillas, espacios ni `<>()`. */
+function safeUrl(u) {
+  if (typeof u !== 'string') return undefined;
+  const v = u.trim();
+  return /^https?:\/\/[^\s"'<>()\\`]+$/i.test(v) && v.length <= 2000 ? v : undefined;
+}
+
+const COLOR_KEYS = ['surface', 'ink', 'lede', 'muted', 'grid', 'axis', 'tint', 'tint2', 'dim', 'other'];
+const colorList = (list, fallback) => {
+  if (!Array.isArray(list)) return fallback;
+  const out = list.map((c, i) => safeColor(c, fallback[i % fallback.length])).slice(0, 64);
+  return out.length ? out : fallback;
+};
+
+/** Tema con todos sus colores, fuentes y URLs saneados (vuelve a papel/noche si algo no sirve). */
+function sanitizeTheme(t) {
+  const ref = t.mode === 'dark' ? noche : papel;
+  const out = { ...t };
+  for (const k of COLOR_KEYS) out[k] = safeColor(t[k], ref[k]);
+  out.categorical = colorList(t.categorical, ref.categorical);
+  out.sequential = colorList(t.sequential, ref.sequential);
+  out.diverging = colorList(t.diverging, ref.diverging);
+  out.status = { ...ref.status };
+  if (isObj(t.status)) for (const k of Object.keys(ref.status)) out.status[k] = safeColor(t.status[k], ref.status[k]);
+  const f = isObj(t.font) ? t.font : {};
+  out.font = { ...f, family: safeFontFamily(f.family, FONT), mono: safeFontFamily(f.mono, MONO), import: safeUrl(f.import) };
+  out.mode = t.mode === 'dark' ? 'dark' : 'light';
+  if (typeof out.link !== 'number' || !Number.isFinite(out.link)) out.link = ref.link;
+  return out;
+}
+
+/** Mapa entidad → color con prototipo nulo: "toString" o "constructor" no heredan nada. */
+function safeColorMap(colors) {
+  const out = Object.create(null);
+  if (!isObj(colors)) return out;
+  for (const [k, v] of Object.entries(colors)) {
+    const c = safeColor(v);
+    if (c) out[k] = c;
+  }
+  return out;
+}
+
+/** Lectura de un mapa de colores sin heredar de Object.prototype. */
+const own = (map, k) => (map && Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined);
 
 /**
  * Tema = JSON. Acepta un nombre ("papel", "noche") o un objeto parcial que se
@@ -368,20 +440,26 @@ function deepMerge(base, over) {
  */
 function getTheme(t) {
   if (!t) return papel;
-  if (typeof t === 'string') return themes[t] || papel;
-  const base = themes[t.extends] || (t.mode === 'dark' ? noche : papel);
+  if (typeof t === 'string') return Object.prototype.hasOwnProperty.call(themes, t) ? themes[t] : papel;
+  return sanitizeTheme(mergeTheme(t));
+}
+
+function mergeTheme(t) {
+  const has = (lib, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(lib, k);
+  const base = has(themes, t.extends) ? themes[t.extends] : t.mode === 'dark' ? noche : papel;
   const merged = deepMerge(base, t);
-  if (typeof merged.categorical === 'string') merged.categorical = palettes[merged.categorical] || base.categorical;
-  if (typeof merged.sequential === 'string') merged.sequential = ramps[merged.sequential] || base.sequential;
-  if (typeof merged.diverging === 'string') merged.diverging = ramps[merged.diverging] || base.diverging;
+  if (typeof merged.categorical === 'string') merged.categorical = has(palettes, merged.categorical) ? palettes[merged.categorical] : base.categorical;
+  if (typeof merged.sequential === 'string') merged.sequential = has(ramps, merged.sequential) ? ramps[merged.sequential] : base.sequential;
+  if (typeof merged.diverging === 'string') merged.diverging = has(ramps, merged.diverging) ? ramps[merged.diverging] : base.diverging;
   return merged;
 }
 
 /** Tema efectivo de un spec: `theme` + atajos `palette` y `ramp`. */
 function themeFor(spec = {}) {
   let t = getTheme(spec.theme);
-  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? spec.palette : palettes[spec.palette] || t.categorical };
-  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? spec.ramp : ramps[spec.ramp] || t.sequential };
+  const named = (lib, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(lib, k) ? lib[k] : undefined);
+  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? colorList(spec.palette, t.categorical) : named(palettes, spec.palette) || t.categorical };
+  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? colorList(spec.ramp, t.sequential) : named(ramps, spec.ramp) || t.sequential };
   return t;
 }
 
@@ -440,9 +518,10 @@ function colorMap(keys, theme, overrides = {}) {
   const map = new Map();
   let i = 0;
   for (const k of keys) {
-    if (overrides && overrides[k]) map.set(k, overrides[k]);
+    const fixed = safeColor(own(overrides, k));
+    if (fixed) map.set(k, fixed);
     else map.set(k, i < theme.categorical.length ? theme.categorical[i] : theme.other);
-    if (!(overrides && overrides[k])) i++;
+    if (!fixed) i++;
   }
   return map;
 }
@@ -476,7 +555,7 @@ function fontSpec(font) {
   return { family: `'${f}', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`, import: url };
 }
 
-return { "deepMerge": deepMerge, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "fontSpec": fontSpec, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps };
+return { "deepMerge": deepMerge, "safeColor": safeColor, "safeFontFamily": safeFontFamily, "safeUrl": safeUrl, "safeColorMap": safeColorMap, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "fontSpec": fontSpec, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps, "own": own };
 });
 __def("src/context.js", function () {
 const ctx = { textScale: 1 };
@@ -656,7 +735,7 @@ function bar(spec, theme) {
   if (pct) { vmin = Math.min(0, vmin); vmax = Math.max(vmax, 1); }
   const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
 
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   const labelSize = 12.5;
   const maxCatW = Math.max(...cats.map((c) => measure(c, labelSize)));
   let horizontal = spec.horizontal ?? spec.orientation === 'horizontal';
@@ -759,7 +838,7 @@ function bar(spec, theme) {
     const step = Math.max(multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9, 12.5 * ctx.textScale * 1.45);
     const needH = cats.length * step + 30;
     if (spec.height === undefined) {
-      frame.setHeight(area.y + needH + frame.chrome);
+      frame.setHeight(Math.max(frame.height, area.y + needH + frame.chrome));
       area = { ...area, h: frame.bottom - area.y };
     }
     const catW = Math.min(maxCatW, area.w * 0.38) + 12;
@@ -772,6 +851,7 @@ function bar(spec, theme) {
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const xS = linear(dom.min, dom.max, inner.x, inner.x + inner.w);
     const yb = band(cats, inner.y, inner.y + inner.h, { inner: 0.32, outer: 0.1 });
+    const thick = spec.barWidth || Math.max(maxBar, Math.min(theme.marks?.barMax ?? 36, yb.bandwidth));
     if (!hideAxis) body.push(gridX(xS.ticks(nd.step), xS, inner, theme, fmt.tick(nd.step)));
     const x0 = xS(0);
     cats.forEach((c) => {
@@ -783,7 +863,7 @@ function bar(spec, theme) {
       parts.push(el('rect', { x: area.x, y: by - yb.step * 0.16, width: area.w, height: yb.step, fill: 'transparent' }));
       parts.push(text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, catW - 12, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' }));
       if (stack) {
-        const h = Math.min(maxBar, bh);
+        const h = Math.min(thick, bh);
         const y0b = by + (bh - h) / 2;
         const sg = segs.get(c);
         const lastPos = sg.map((s, i) => (s.vv > 0 ? i : -1)).filter((i) => i >= 0).pop();
@@ -804,7 +884,7 @@ function bar(spec, theme) {
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
         body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`)) }, parts));
       } else {
-        const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
+        const h = Math.min(multi ? Math.max(16, Math.min(thick * 0.75, 24)) : thick, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
         const y0b = by + (bh - groupH) / 2;
         vs.forEach((v, i) => {
@@ -1634,7 +1714,7 @@ return { "gridY": gridY, "gridX": gridX, "xLabels": xLabels, "yAxisMargin": yAxi
 __def("src/frame.js", function () {
 const { el, esc, g, text, r2 } = __req("src/svg.js");
 const { measure, wrap } = __req("src/text.js");
-const { FONT, FONT_CSS } = __req("src/theme.js");
+const { FONT, FONT_CSS, safeUrl } = __req("src/theme.js");
 const { ctx } = __req("src/context.js");
 
 const SIZES = {
@@ -1646,14 +1726,23 @@ const SIZES = {
   source: 11,
 };
 
+/** Tamaño por defecto de todo gráfico: 500 × 500. En el navegador, render() usa el del envoltorio. */
+const DEFAULT_WIDTH = 500;
+const DEFAULT_HEIGHT = 500;
+/** Límite duro: un spec no puede pedir un lienzo descomunal (memoria, tiempo). */
+const MAX_SIZE = 8000;
+
+const clampSize = (v, lo) => Math.min(MAX_SIZE, Math.max(lo, v));
+
 function createFrame(spec, theme, defaults = {}) {
-  const width = Math.max(240, +spec.width || defaults.width || 720);
+  const width = clampSize(+spec.width || defaults.width || DEFAULT_WIDTH, spec._panel ? 100 : 240);
   const XS = ctx.textScale;
-  let height = Math.max(160, +spec.height || Math.round((defaults.height || 420) * (1 + 0.55 * (XS - 1))));
-  const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
+  let height = clampSize(+spec.height || Math.round((defaults.height || DEFAULT_HEIGHT) * (1 + 0.55 * (XS - 1))), 160);
+  const k = width < 420 ? 0.86 : width < 480 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
+  const padIn = spec.padding === null || spec.padding === '' ? NaN : +spec.padding;
+  const pad = Number.isFinite(padIn) ? Math.max(0, Math.min(200, padIn)) : (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
@@ -1696,14 +1785,15 @@ function createFrame(spec, theme, defaults = {}) {
       return { x: pad, y: ly, w: innerW, h: Math.max(40, frame.bottom - ly - Math.max(0, (XS - 1) * 22)) };
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
-    setHeight(h) { height = h; },
+    setHeight(h) { height = clampSize(h, 160); },
     finish(body, { desc = '', type = 'chart', defs = '' } = {}) {
       if (spec.source) {
         const src = /^fuente|^source/i.test(spec.source) ? spec.source : (String(spec.locale || 'es').startsWith('en') ? 'Source: ' : 'Fuente: ') + spec.source;
         parts.push(text(width - pad, height - pad - 2, src, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' }));
       }
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width)).toString(36);
-      const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
+      const importUrl = safeUrl(theme.font?.import) || FONT_CSS;
+      const fontImport = spec.fontImport ? `@import url('${importUrl}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`;
       return el(
         'svg',
@@ -1718,7 +1808,7 @@ function createFrame(spec, theme, defaults = {}) {
           class: 'pa-chart',
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
-          style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
+          style: 'display:block;width:100%;height:auto;max-width:100%;max-height:100%;font-variant-numeric:lining-nums',
         },
         [
           el('title', { id: `${id}-t` }, esc(spec.title || type)),
@@ -1761,7 +1851,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     const w = 18 * X + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
     const cy = y + 6.5 * X;
-    out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
+    out.push(`<g class="pa-key" data-color="${esc(it.color)}" style="cursor:pointer">`);
     out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: rowH - 1, rx: 4, fill: 'transparent' }));
     const sw = 10 * Math.min(1.6, X);
     if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
@@ -1780,7 +1870,7 @@ function hash(s) {
   return h;
 }
 
-return { "createFrame": createFrame, "hash": hash, "SIZES": SIZES };
+return { "createFrame": createFrame, "hash": hash, "SIZES": SIZES, "DEFAULT_WIDTH": DEFAULT_WIDTH, "DEFAULT_HEIGHT": DEFAULT_HEIGHT, "MAX_SIZE": MAX_SIZE };
 });
 __def("src/stats.js", function () {
 
@@ -2158,7 +2248,7 @@ function line(spec, theme, variant = 'line') {
     return multi ? { name: truncate(l.key, 132, labelSize), val } : { name: '', val };
   };
 
-  const frame = createFrame(spec, theme, { height: 400 });
+  const frame = createFrame(spec, theme);
   const want = labelMode !== false;
   const provisionalH = frame.bottom - frame.top - 40;
   const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize * ctx.textScale + 3)));
@@ -2423,7 +2513,7 @@ function scatter(spec, theme) {
   const fs = size ? makeFormat(spec.sizeFormat, locale, pts.map((p) => p.s)) : null;
 
   const legend = series && keys.length > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: cmap.get(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 460 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   const xLog = spec.xScale === 'log', yLog = spec.yScale === 'log';
@@ -2610,8 +2700,7 @@ function treemap(spec, theme) {
     if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
 
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(Math.min(780, W * 1.15 + 170)) : Math.round(Math.max(440, Math.min(620, W * 0.62))) });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);
@@ -2897,7 +2986,7 @@ function donut(spec, theme) {
   let mode = spec.labels === false ? 'none' : spec.labels ?? 'auto';
   if (mode === true) mode = 'auto';
 
-  const frame = createFrame(spec, theme, { height: half ? 320 : 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const narrow = area.w < 470;
   if (mode === 'outside') {
@@ -2922,11 +3011,12 @@ function donut(spec, theme) {
     cy = half ? area.y + Math.min(area.h - 40, R + 14) : area.y + area.h / 2;
   } else if (table && narrow) {
     R = half ? Math.min(area.w / 2 - 4, 170) : Math.min(area.w / 2 - 4, 150);
+    if (!half) R = Math.max(90, Math.min(R, (area.h - 22 - slices.length * rowH - 4) / 2));
     cx = area.x + area.w / 2;
     cy = half ? area.y + R + 4 : area.y + R + 4;
     tx = area.x;
     ty = (half ? cy + 50 : cy + R + 22);
-    if (spec.height === undefined) frame.setHeight(ty + slices.length * rowH + frame.chrome);
+    if (spec.height === undefined) frame.setHeight(Math.max(half ? 0 : frame.height, ty + slices.length * rowH + frame.chrome));
   } else if (table) {
     const chartW = area.w - tableW - 32;
     R = half ? Math.min(chartW / 2, area.h - 48) : Math.min(chartW / 2, area.h / 2);
@@ -3089,7 +3179,7 @@ function sunburst(spec, theme) {
     ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
     : [];
 
-  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const body = [];
   const bc = breadcrumb(focus, area.x, area.y, area.w, theme, locale);
@@ -3353,7 +3443,7 @@ function hist(spec, theme) {
   const colorOf = (gi) => (single ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[gi].key));
   const legend = !single && spec.legend !== false ? groups.map((gr) => ({ label: gr.key, color: cmap.get(gr.key), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 400 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const body = [];
   const M = theme.marks || {};
@@ -3523,7 +3613,7 @@ function kde(spec, theme) {
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: spec.fill === false ? 'line' : 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat ?? spec.format, locale, all);
@@ -3616,7 +3706,7 @@ function ecdf(spec, theme) {
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: 'line' })) : [];
-  const frame = createFrame(spec, theme, { height: 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat ?? spec.format, locale, all);
@@ -3752,7 +3842,7 @@ function regplot(spec, theme) {
   const focusKey = (k) => !hl || hl.has(k);
   const colorOf = (k) => (!focusKey(k) ? theme.dim : K === 1 ? (spec.colors && spec.colors[k]) || theme.categorical[0] : cmap.get(k));
   const legend = K > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: colorOf(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 440 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
 
@@ -3881,7 +3971,7 @@ function residplot(spec, theme) {
   const fxv = (v) => (spec.logx ? Math.log10(v) : v);
   const fit = polyfit(P.pts.map((p) => fxv(p.x)), P.pts.map((p) => p.y), { order: spec.order ?? 1 });
   const res = P.pts.map((p) => ({ ...p, r: p.y - fit.predict(fxv(p.x)) }));
-  const frame = createFrame(spec, theme, { height: 340 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat, locale, res.map((p) => p.x));
@@ -3929,7 +4019,7 @@ function jointplot(spec, theme) {
   const cmap = colorMap(keys, theme, spec.colors);
   const colorOf = (k) => (K === 1 ? (spec.colors && spec.colors[k]) || theme.categorical[0] : cmap.get(k));
   const legend = K > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: colorOf(k) })) : [];
-  const frame = createFrame(spec, theme, { height: 520 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const M = theme.marks || {};
   const fx = makeFormat(spec.xFormat, locale, pts.map((p) => p.x));
@@ -4039,7 +4129,7 @@ const { niceDomain, niceStep, linear, log, logDomain, band } = __req("src/scale.
 const { colorMap, readable } = __req("src/theme.js");
 const { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } = __req("src/data.js");
 const { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } = __req("src/axes.js");
-const { createFrame } = __req("src/frame.js");
+const { createFrame, DEFAULT_WIDTH } = __req("src/frame.js");
 const { ctx } = __req("src/context.js");
 const { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } = __req("src/stats.js");
 
@@ -4110,7 +4200,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   };
   const legend = multiHue ? m.hues.map((h) => ({ label: h, color: hl && !hl.has(h) ? theme.dim : cmap.get(h), shape: type === 'point' ? 'line' : 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(spec.legend === false ? [] : legend);
   const dom = spec.yDomain ?? (vertical ? undefined : spec.xDomain) ?? spec.valueDomain;
   let lo = extent[0], hi = extent[1];
@@ -4144,7 +4234,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     const labelW = m.cat ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
     const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
     if (spec.height === undefined) {
-      frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
+      frame.setHeight(Math.max(frame.height, area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome));
       area = { ...area, h: frame.bottom - area.y };
     }
     inner = { x: area.x + labelW, y: area.y + 4, w: area.w - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
@@ -4174,7 +4264,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
 function autoHorizontal(spec, m) {
   if (m.swapped) return true;
   if (!m.cat) return false;
-  const w = (spec.width || 720) - 48;
+  const w = (+spec.width || DEFAULT_WIDTH) - 48;
   const slot = w / Math.max(1, m.cats.length);
   const longest = Math.max(...m.cats.map((c) => measure(c, 12)));
   return m.cats.length > 10 || longest > slot - 10;
@@ -4553,7 +4643,7 @@ function radar(spec, theme) {
   const colorOf = (s) => (focus(s) ? (seriesKeys.length === 1 ? cmap.get(s) || theme.categorical[0] : cmap.get(s)) : theme.dim);
   const legend = seriesKeys.length > 1 ? seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) * 0.95 + 170) : 460 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(spec.legend === false ? [] : legend);
 
   const ls = (theme.type?.label ?? 12) + 0.5;
@@ -4779,8 +4869,7 @@ function network(spec, theme) {
   const fmtE = makeFormat(spec.format, locale, edges.map((e) => e.v));
 
   const legend = hasGroups && spec.legend !== false ? groups.map((k) => ({ label: k || (en ? 'No group' : 'Sin grupo'), color: cmap.get(k) })) : [];
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.05 + 150) : 520 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   const maxW = Math.max(...nodes.map((n) => n.w), 1e-9);
@@ -5029,8 +5118,7 @@ function chord(spec, theme) {
   const pct = (a, b) => (b > 0 ? formatNumber((a / b) * 100, a / b < 0.1 ? 1 : 0, locale, true) + '%' : '');
 
   const legend = spec.legend === true ? sizeOrder.map((i) => ({ label: names[i], color: colorOf(i) })) : [];
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.02 + 150) : 600 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   const pad = Math.min(0.04, (TAU * 0.18) / order.length);
@@ -5225,13 +5313,13 @@ function pyramid(spec, theme) {
   const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T('Comparison', 'Comparación', locale));
   const legend = cmp && spec.legend !== false ? [{ label: cmpLabel, color: theme.ink, shape: 'line' }] : [];
 
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const n = ages.length;
   const headerH = 24, axisH = 24;
   const step = spec.barHeight ? spec.barHeight + 2 : Math.max(14, Math.min(26, frame.width < 480 ? 17 : 21));
   if (spec.height === undefined) {
-    frame.setHeight(area.y + headerH + n * step + axisH + frame.chrome);
+    frame.setHeight(Math.max(frame.height, area.y + headerH + n * step + axisH + frame.chrome));
     area = { ...area, h: frame.bottom - area.y };
   }
   const ageSize = theme.type?.axis ?? 11.5;
@@ -5327,7 +5415,7 @@ function pyramid(spec, theme) {
 return { "pyramid": pyramid };
 });
 __def("src/charts/flowchart.js", function () {
-const { el, g, text, tip } = __req("src/svg.js");
+const { el, g, text, tip, esc } = __req("src/svg.js");
 const { measure, wrap } = __req("src/text.js");
 const { colorMap, readable, textOn, hexToRgb, rgbToHex } = __req("src/theme.js");
 const { ensureData, uniq, PlotError } = __req("src/data.js");
@@ -5410,7 +5498,7 @@ function flowchart(spec, theme) {
   const colorOf = (n) => (cmap && n.group != null ? cmap.get(String(n.group)) : null);
   const legend = cmap && spec.legend !== false && groupKeys.length > 1 ? groupKeys.map((k) => ({ label: k, color: cmap.get(k), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 520 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const backs = edges.filter((e) => e.back || e.s === e.t);
   const relPos = (n) => { const ls = layers[layer.get(n.id)]; return hasLanes ? (laneOf(n) + 0.5) / laneKeys.length : (ls.indexOf(n) + 0.5) / ls.length; };
@@ -5585,7 +5673,7 @@ function flowchart(spec, theme) {
   const body = [];
   const mid = 'pa-arrow-' + Math.abs(hash(String(spec.title) + N.length + area.w)).toString(36);
   const edgeColor = theme.muted;
-  const defs = `<marker id="${mid}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${edgeColor}"/></marker>`;
+  const defs = `<marker id="${esc(mid)}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${esc(edgeColor)}"/></marker>`;
 
   if (hasLanes) {
     const parts = [];
@@ -5702,12 +5790,12 @@ function roundPath(pts, r) {
 return { "flowchart": flowchart };
 });
 __def("src/charts/choropleth.js", function () {
-const { el, g, text } = __req("src/svg.js");
+const { el, g, text, esc } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
 const { makeFormat } = __req("src/format.js");
 const { ramp } = __req("src/theme.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } = __req("src/data.js");
-const { createFrame, hash } = __req("src/frame.js");
+const { createFrame, hash, DEFAULT_WIDTH, MAX_SIZE } = __req("src/frame.js");
 const { niceStep } = __req("src/scale.js");
 const { getGeo } = __req("src/geo/registry.js");
 const { mercator, equalEarth, fit, aspectOf, pathD, centroid, rings } = __req("src/geo/projection.js");
@@ -5837,7 +5925,7 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
 
 /** Patrón rayado para regiones sin dato. */
 const noDataPattern = (id, theme) =>
-  `<pattern id="${id}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="${theme.tint}"/><line x1="0" y1="0" x2="0" y2="5" stroke="${theme.muted}" stroke-width="1" stroke-opacity="0.35"/></pattern>`;
+  `<pattern id="${esc(id)}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="${esc(theme.tint)}"/><line x1="0" y1="0" x2="0" y2="5" stroke="${esc(theme.muted)}" stroke-width="1" stroke-opacity="0.35"/></pattern>`;
 
 /** Datos + geometría emparejados. */
 function prepare(spec, locale) {
@@ -5947,10 +6035,10 @@ function baseChart(spec, theme, kind) {
   const m = prepare(spec, locale);
   const vals = [...m.values.values()];
   const fmt = makeFormat(spec.format, locale, vals);
-  const W = spec.width || 720;
+  const W = Math.min(MAX_SIZE, Math.max(240, +spec.width || DEFAULT_WIDTH));
   const aspect = aspectOf(m.features, m.raw);
   const tall = aspect > 1.6 && m.features.length <= 40;
-  const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
+  const defH = tall ? undefined : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
   let area = frame.layout([]);
   const gid = 'pa-map-' + Math.abs(hash(String(spec.title) + kind + W)).toString(36);
@@ -6253,13 +6341,13 @@ function heatmap(spec, theme) {
   };
 
   const legend = [{ type: 'ramp', stops: mid !== undefined ? stops : stops.slice(1), min: fmt(mid !== undefined ? -(Math.max(vmax - mid, mid - vmin)) + mid : vmin), max: fmt(mid !== undefined ? Math.max(vmax - mid, mid - vmin) + mid : vmax), title: spec.legendTitle ?? humanize(valueF) }];
-  const frame = createFrame(spec, theme, { height: Math.min(640, 140 + ys.length * 34) });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
   const yW = Math.min(area.w * 0.3, Math.max(...ys.map((v) => measure(v, 12)))) + 12;
   const inner = { x: area.x + yW, y: area.y, w: area.w - yW, h: area.h - 26 };
   const cw = inner.w / xs.length, ch = Math.min(inner.h / ys.length, spec.cellHeight ?? 56);
   inner.h = ch * ys.length;
-  if (spec.height === undefined) frame.setHeight(inner.y + inner.h + 26 + frame.chrome);
+  if (spec.height === undefined && ch * ys.length < area.h - 26 - 1) frame.setHeight(inner.y + inner.h + 26 + frame.chrome);
   const showLabels = spec.labels ?? (cw >= Math.max(...all.map((v) => measure(fmt(v), 11))) + 8 && ch >= 18);
 
   const body = [];
@@ -6332,7 +6420,7 @@ function sankey(spec, theme) {
   cols.forEach((c) => c.sort((a, b) => b.value - a.value));
 
   const fmt = makeFormat(spec.format, locale, links.map((l) => l.v));
-  const frame = createFrame(spec, theme, { height: 440 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const label = (n) => n.name;
   const leftW = Math.min(area.w * 0.22, Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(fmt(n.value), 12))))) + 10;
@@ -6511,9 +6599,9 @@ function kpi(spec, theme) {
 return { "kpi": kpi };
 });
 __def("src/facet.js", function () {
-const { el, g } = __req("src/svg.js");
-const { createFrame } = __req("src/frame.js");
-const { colorMap } = __req("src/theme.js");
+const { el, g, r2 } = __req("src/svg.js");
+const { createFrame, DEFAULT_WIDTH } = __req("src/frame.js");
+const { colorMap, safeColorMap } = __req("src/theme.js");
 const { ensureData, requireField, uniq, fieldKind, num } = __req("src/data.js");
 const { niceDomain } = __req("src/scale.js");
 
@@ -6529,7 +6617,7 @@ function facet(spec, theme, renderOne) {
   if (spec.facetOrder) keys = [...spec.facetOrder.map(String).filter((k) => keys.includes(k)), ...keys.filter((k) => !spec.facetOrder.map(String).includes(k))];
 
   const sf = spec.series ?? spec.hue ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : null);
-  const colors = { ...(spec.colors || {}) };
+  const colors = safeColorMap(spec.colors);
   let legend = [];
   if (sf && data.length && Object.prototype.hasOwnProperty.call(data[0], sf)) {
     const sk = uniq(data.map((r) => String(r[sf])));
@@ -6538,22 +6626,23 @@ function facet(spec, theme, renderOne) {
     if (sk.length > 1) legend = sk.map((k) => ({ label: k, color: cm.get(k), shape: LINE_LIKE.has(spec.type) ? 'line' : 'square' }));
   }
 
-  const frame = createFrame({ ...spec, height: 200 }, theme, { width: 720 });
+  const frame = createFrame({ ...spec, height: 200 }, theme, { width: DEFAULT_WIDTH });
   const area = frame.layout(legend);
   const gap = spec.panelGap ?? 14;
-  const fit = Math.max(1, Math.floor((area.w + gap) / 150));
+  const fit = Math.max(1, Math.floor((area.w + gap) / (150 + gap)));
   const want = spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
   const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;
-  const ph = spec.panelHeight ?? Math.round(Math.min(300, Math.max(160, pw * 0.66)));
   const rows = Math.ceil(keys.length / cols);
+  const fixedH = +spec.height > 0 ? (+spec.height - area.y - frame.chrome - (rows - 1) * gap) / rows : NaN;
+  const ph = spec.panelHeight ?? Math.round(Number.isFinite(fixedH) ? Math.max(100, fixedH) : Math.min(300, Math.max(160, pw * 0.66)));
   frame.setHeight(area.y + rows * ph + (rows - 1) * gap + frame.chrome);
 
   const panelTheme = { ...theme, type: { ...(theme.type || {}), title: Math.min(13.5, theme.type?.title ?? 13.5), titleWeight: 600 } };
   const multiSeries = legend.length > 1;
   const base = {
     ...spec, facet: undefined, col: undefined, title: undefined, subtitle: undefined, source: undefined, refLines: spec.refLines,
-    width: Math.floor(pw), height: ph, padding: 0, colors, legend: false, theme: panelTheme, palette: undefined,
+    width: Math.floor(pw), height: ph, padding: 0, _panel: true, colors, legend: false, theme: panelTheme, palette: undefined,
     labels: spec.panelLabels ?? (multiSeries && LINE_LIKE.has(spec.type) ? false : spec.labels),
   };
   const subsets = keys.map((k) => data.filter((r) => String(r[f]) === k));
@@ -6579,7 +6668,7 @@ function facet(spec, theme, renderOne) {
     try {
       svg = renderOne({ ...base, data: subsets[i], title: k, yDomain, xDomain });
     } catch (e) {
-      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${r2(pw)}" height="${r2(ph)}"></svg>`;
     }
     svg = svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/ style="[^"]*"/, '');
     body.push(svg);
@@ -6926,8 +7015,8 @@ const schema = {
     },
     font: { description: 'Typeface for the whole chart: a Google Fonts name ("Poppins"), a CSS stack ("\'Inter\', sans-serif") or { family, import }. configure({ font }) sets it for every chart.', anyOf: [{ type: 'string' }, { type: 'object' }] },
     textScale: { type: 'number', description: 'Multiplies every text size (1.5, 2…); the layout is recomputed so nothing overlaps. Aliases: fontScale, labelScale. configure({ textScale }) sets it for every chart.' },
-    width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
-    height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
+    width: { type: 'number', description: 'Width in px (default 500; render() uses the container width). Capped at 8000.' },
+    height: { type: 'number', description: 'Height in px (default 500; render() uses the container height when the container has one). Without it, charts with many rows (horizontal bars, heatmaps, flow charts, KPI tiles) grow past 500 to fit. Capped at 8000.' },
   },
 };
 
@@ -6954,7 +7043,7 @@ function attach(root) {
   const tipEl = document.createElement('div');
   tipEl.setAttribute('role', 'tooltip');
   tipEl.style.cssText = [
-    'position:absolute', 'pointer-events:none', 'z-index:10', 'opacity:0', 'transition:opacity .12s',
+    'position:absolute', 'left:0', 'top:0', 'pointer-events:none', 'z-index:10', 'opacity:0', 'transition:opacity .12s',
     'padding:8px 10px', 'border-radius:8px', 'font:12.5px/1.45 ' + (svg.getAttribute('font-family') || 'system-ui'),
     'white-space:nowrap', 'max-width:280px',
     dark ? 'background:#F2F3FA;color:#141A3F' : 'background:#141A3F;color:#FCFBF9',
@@ -6968,7 +7057,9 @@ function attach(root) {
   let on = null;
   let pinned = null;
 
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const col = (c) => (/^(#[0-9a-f]{3,8}|[a-z]{3,30})$/i.test(String(c || '')) ? c : '#888');
+  const num = (v) => (Number.isFinite(+v) ? +v : 0);
   const show = (html, ev) => {
     tipEl.innerHTML = html;
     tipEl.style.opacity = '1';
@@ -7015,7 +7106,7 @@ function attach(root) {
   const linesHtml = (txt, color) => {
     const c = onTip(color);
     return String(txt).split('\n').map((l, i) => (i === 0
-      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
+      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${col(color)};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
       : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
   };
 
@@ -7033,11 +7124,11 @@ function attach(root) {
       const p = toSvg(ev);
       let best = data[0];
       for (const d of data) if (Math.abs(d.x - p.x) < Math.abs(best.x - p.x)) best = d;
-      const y0 = +t.getAttribute('data-y0'), y1 = +t.getAttribute('data-y1');
+      const y0 = num(t.getAttribute('data-y0')), y1 = num(t.getAttribute('data-y1')), bx = num(best.x);
       overlay.innerHTML =
-        `<line x1="${best.x}" x2="${best.x}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
-        best.v.map((v) => `<circle cx="${best.x}" cy="${v[2]}" r="4.5" fill="${v[1]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
-      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${v[1]}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
+        `<line x1="${bx}" x2="${bx}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
+        best.v.map((v) => `<circle cx="${bx}" cy="${num(v[2])}" r="4.5" fill="${col(v[1])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
+      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${col(v[1])}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
       show(`<div style="font-weight:600;margin-bottom:2px">${esc(best.t)}</div>${rows}`, ev);
       return;
     }
@@ -7047,7 +7138,7 @@ function attach(root) {
       let best = null, bd = 196;
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) { hide(); return; }
-      overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
+      overlay.innerHTML = `<circle cx="${num(best[0])}" cy="${num(best[1])}" r="6" fill="${col(best[3])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
       if (best[2]) show(linesHtml(best[2], best[3]), ev); else tipEl.style.opacity = '0';
       return;
     }
@@ -7103,6 +7194,7 @@ return { "attach": attach, "attachSource": attachSource };
 });
 __def("src/runtime.js", function () {
 const { attach } = __req("src/interact.js");
+const { DEFAULT_WIDTH } = __req("src/frame.js");
 const { themeFor, FONT_CSS } = __req("src/theme.js");
 const { ensureData, fieldKind, uniq, num, PlotError } = __req("src/data.js");
 const { parseDate, formatDate } = __req("src/format.js");
@@ -7128,6 +7220,7 @@ function ensureAssets() {
   st.id = 'pa-runtime-css';
   st.textContent = `
 .pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:4px 0 2px;font-size:12px;color:var(--pa-muted);user-select:none}
+.pa-ctl[hidden]{display:none}
 .pa-play{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:var(--pa-accent);color:var(--pa-surface);cursor:pointer;display:grid;place-items:center;padding:0}
 .pa-play:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
 .pa-play svg{display:block}
@@ -7157,8 +7250,8 @@ function render(target, spec, opts = {}) {
   if (!host) throw new PlotError('No encontré el elemento destino.', 'render("#grafico", spec) o render(elemento, spec)');
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
-  const fontUrl = themeFor(state).font?.import;
-  if (fontUrl && typeof document !== 'undefined' && !document.querySelector(`link[href="${fontUrl}"]`)) {
+  const fontUrl = themeFor(state).font?.import; // ya saneada: http(s) sin comillas
+  if (fontUrl && typeof document !== 'undefined' && ![...document.querySelectorAll('link[rel="stylesheet"]')].some((l) => l.getAttribute('href') === fontUrl)) {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = fontUrl; document.head.appendChild(l);
   }
   host.innerHTML = '';
@@ -7168,7 +7261,23 @@ function render(target, spec, opts = {}) {
   host.appendChild(ctl);
   let timer = null, ro = null, raf = 0;
 
-  const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  const box = () => {
+    const dc = chart.style.display, dk = ctl.style.display;
+    chart.style.display = 'none'; ctl.style.display = 'none';
+    const cs = typeof getComputedStyle !== 'undefined' ? getComputedStyle(host) : null;
+    const px = (k) => (cs ? parseFloat(cs[k]) || 0 : 0);
+    const w = host.clientWidth - px('paddingLeft') - px('paddingRight');
+    const h = host.clientHeight - px('paddingTop') - px('paddingBottom');
+    chart.style.display = dc; ctl.style.display = dk;
+    return { w: Math.floor(w), h: Math.floor(h) };
+  };
+  let size = { w: 0, h: 0 };
+  const width = () => state.width ?? Math.max(240, size.w || DEFAULT_WIDTH);
+  const height = () => {
+    if (state.height !== undefined) return state.height;
+    if (size.h < 120) return undefined;
+    return Math.max(160, size.h - (ctl.hidden ? 0 : ctl.offsetHeight));
+  };
   const nodePos = () => {
     const m = new Map();
     for (const c of chart.querySelectorAll('[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
@@ -7191,7 +7300,9 @@ function render(target, spec, opts = {}) {
   };
   const draw = () => {
     const before = nodePos();
-    chart.innerHTML = plotFn({ ...state, width: width() });
+    size = box();
+    const h = height();
+    chart.innerHTML = plotFn(h === undefined ? { ...state, width: width() } : { ...state, width: width(), height: h });
     animateFrom(before);
     chart.__pa = false;
     attach(chart);
@@ -7215,7 +7326,8 @@ function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  const ctlPad = Number.isFinite(+state.padding) && state.padding !== null ? Math.max(0, Math.min(200, +state.padding)) : 24;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${ctlPad}px;padding-right:${ctlPad}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
   if (opts.controls !== false && state.slider !== false) {
@@ -7337,9 +7449,11 @@ function render(target, spec, opts = {}) {
   host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
 
   draw();
-  if (state.width === undefined && typeof ResizeObserver !== 'undefined') {
-    let last = host.clientWidth;
-    ro = new ResizeObserver(() => { if (Math.abs(host.clientWidth - last) > 8) { last = host.clientWidth; schedule(); } });
+  if ((state.width === undefined || state.height === undefined) && typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(() => {
+      const b = box();
+      if (Math.abs(b.w - size.w) > 8 || (state.height === undefined && Math.abs(b.h - size.h) > 8 && (b.h >= 120 || size.h >= 120))) schedule();
+    });
     ro.observe(host);
   }
   return {

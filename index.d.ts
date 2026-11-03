@@ -144,7 +144,9 @@ export interface Spec {
   normalize?: boolean;
   legend?: boolean;
   locale?: 'es' | 'en';
+  /** Width in px. Default 500; render() uses the container width. */
   width?: number;
+  /** Height in px. Default 500; render() uses the container height when it has one. */
   height?: number;
   padding?: number;
   fontFamily?: string;
@@ -173,7 +175,7 @@ export declare function safePlot(spec: Spec): SafeResult;
 export declare function lint(spec: Spec): LintReport;
 /** Text description of the chart (also in the SVG <desc>). */
 export declare function describe(spec: Spec): string;
-/** Browser: draws into an element with tooltips, responsive width, time sliders and drill-down. */
+/** Browser: draws into an element with tooltips, the container's width and height (default 500 × 500), time sliders and drill-down. */
 export declare function render(target: string | Element, spec: Spec, opts?: { controls?: boolean }): { readonly svg: SVGSVGElement | null; readonly spec: Spec; update(spec: Spec): unknown; destroy(): void };
 /** Self-contained HTML page with one or more interactive charts. */
 export declare function toHTML(specs: Spec | Spec[], opts?: { title?: string; lang?: string; columns?: number }): string;

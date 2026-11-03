@@ -156,8 +156,7 @@ export function network(spec, theme) {
   const fmtE = makeFormat(spec.format, locale, edges.map((e) => e.v));
 
   const legend = hasGroups && spec.legend !== false ? groups.map((k) => ({ label: k || (en ? 'No group' : 'Sin grupo'), color: cmap.get(k) })) : [];
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.05 + 150) : 520 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   // Radios: área ∝ peso, entre 4 y 22 px (más chicos si hay muchos nodos).

@@ -1,7 +1,7 @@
 // Diagrama de flujo: nodos y conexiones con capas automáticas (Sugiyama
 // simplificado), carriles opcionales por unidad, formas por tipo y
 // conectores ortogonales con esquinas suaves que no atraviesan nodos.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, esc } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { colorMap, readable, textOn, hexToRgb, rgbToHex } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
@@ -90,7 +90,7 @@ export function flowchart(spec, theme) {
   const colorOf = (n) => (cmap && n.group != null ? cmap.get(String(n.group)) : null);
   const legend = cmap && spec.legend !== false && groupKeys.length > 1 ? groupKeys.map((k) => ({ label: k, color: cmap.get(k), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: 520 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const backs = edges.filter((e) => e.back || e.s === e.t);
   // Los retornos rodean por el margen más cercano (izquierda/arriba o derecha/abajo).
@@ -287,7 +287,7 @@ export function flowchart(spec, theme) {
   const mid = 'pa-arrow-' + Math.abs(hash(String(spec.title) + N.length + area.w)).toString(36);
   const edgeColor = theme.muted;
   // Marcador escrito a mano: refX/markerWidth deben conservar mayúsculas.
-  const defs = `<marker id="${mid}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${edgeColor}"/></marker>`;
+  const defs = `<marker id="${esc(mid)}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${esc(edgeColor)}"/></marker>`;
 
   // Carriles: bandas tintadas con título.
   if (hasLanes) {

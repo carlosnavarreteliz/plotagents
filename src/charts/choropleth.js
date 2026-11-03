@@ -3,12 +3,12 @@
 // Países alargados como Chile se dibujan a la izquierda con una columna de
 // etiquetas (nombre, barra y valor) ordenada de norte a sur; mapas anchos
 // usan todo el ancho con etiquetas solo donde importan.
-import { el, g, text } from '../svg.js';
+import { el, g, text, esc } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ramp } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } from '../data.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, hash, DEFAULT_WIDTH, MAX_SIZE } from '../frame.js';
 import { niceStep } from '../scale.js';
 import { getGeo } from '../geo/registry.js';
 import { mercator, equalEarth, fit, aspectOf, pathD, centroid, rings } from '../geo/projection.js';
@@ -141,7 +141,7 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
 
 /** Patrón rayado para regiones sin dato. */
 const noDataPattern = (id, theme) =>
-  `<pattern id="${id}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="${theme.tint}"/><line x1="0" y1="0" x2="0" y2="5" stroke="${theme.muted}" stroke-width="1" stroke-opacity="0.35"/></pattern>`;
+  `<pattern id="${esc(id)}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="${esc(theme.tint)}"/><line x1="0" y1="0" x2="0" y2="5" stroke="${esc(theme.muted)}" stroke-width="1" stroke-opacity="0.35"/></pattern>`;
 
 /** Datos + geometría emparejados. */
 function prepare(spec, locale) {
@@ -254,11 +254,11 @@ function baseChart(spec, theme, kind) {
   const m = prepare(spec, locale);
   const vals = [...m.values.values()];
   const fmt = makeFormat(spec.format, locale, vals);
-  const W = spec.width || 720;
+  const W = Math.min(MAX_SIZE, Math.max(240, +spec.width || DEFAULT_WIDTH));
   const aspect = aspectOf(m.features, m.raw);
   const tall = aspect > 1.6 && m.features.length <= 40;
   // Alto por defecto según la forma del territorio.
-  const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
+  const defH = tall ? undefined : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
   let area = frame.layout([]);
   const gid = 'pa-map-' + Math.abs(hash(String(spec.title) + kind + W)).toString(36);

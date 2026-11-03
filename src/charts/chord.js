@@ -79,8 +79,7 @@ export function chord(spec, theme) {
   const pct = (a, b) => (b > 0 ? formatNumber((a / b) * 100, a / b < 0.1 ? 1 : 0, locale, true) + '%' : '');
 
   const legend = spec.legend === true ? sizeOrder.map((i) => ({ label: names[i], color: colorOf(i) })) : [];
-  const W = spec.width || 720;
-  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.02 + 150) : 600 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout(legend);
 
   // Ángulos: arcos proporcionales al total, con separación.

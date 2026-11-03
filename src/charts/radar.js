@@ -68,7 +68,7 @@ export function radar(spec, theme) {
   const colorOf = (s) => (focus(s) ? (seriesKeys.length === 1 ? cmap.get(s) || theme.categorical[0] : cmap.get(s)) : theme.dim);
   const legend = seriesKeys.length > 1 ? seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: 'square' })) : [];
 
-  const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) * 0.95 + 170) : 460 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(spec.legend === false ? [] : legend);
 
   // Etiquetas de eje: ancho máximo y alto (hasta 2 líneas).

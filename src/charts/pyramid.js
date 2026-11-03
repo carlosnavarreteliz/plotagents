@@ -70,13 +70,13 @@ export function pyramid(spec, theme) {
   const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T('Comparison', 'Comparación', locale));
   const legend = cmp && spec.legend !== false ? [{ label: cmpLabel, color: theme.ink, shape: 'line' }] : [];
 
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   let area = frame.layout(legend);
   const n = ages.length;
   const headerH = 24, axisH = 24;
   const step = spec.barHeight ? spec.barHeight + 2 : Math.max(14, Math.min(26, frame.width < 480 ? 17 : 21));
   if (spec.height === undefined) {
-    frame.setHeight(area.y + headerH + n * step + axisH + frame.chrome);
+    frame.setHeight(Math.max(frame.height, area.y + headerH + n * step + axisH + frame.chrome));
     area = { ...area, h: frame.bottom - area.y };
   }
   const ageSize = theme.type?.axis ?? 11.5;

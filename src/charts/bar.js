@@ -111,7 +111,7 @@ export function bar(spec, theme) {
   const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
 
   // Orientación
-  const frame = createFrame(spec, theme, { height: 420 });
+  const frame = createFrame(spec, theme);
   const labelSize = 12.5;
   const maxCatW = Math.max(...cats.map((c) => measure(c, labelSize)));
   let horizontal = spec.horizontal ?? spec.orientation === 'horizontal';
@@ -220,7 +220,8 @@ export function bar(spec, theme) {
     const step = Math.max(multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9, 12.5 * ctx.textScale * 1.45);
     const needH = cats.length * step + 30;
     if (spec.height === undefined) {
-      frame.setHeight(area.y + needH + frame.chrome);
+      // Alto por defecto (500) como piso: con pocas categorías, las barras usan el espacio.
+      frame.setHeight(Math.max(frame.height, area.y + needH + frame.chrome));
       area = { ...area, h: frame.bottom - area.y };
     }
     const catW = Math.min(maxCatW, area.w * 0.38) + 12;
@@ -233,6 +234,8 @@ export function bar(spec, theme) {
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const xS = linear(dom.min, dom.max, inner.x, inner.x + inner.w);
     const yb = band(cats, inner.y, inner.y + inner.h, { inner: 0.32, outer: 0.1 });
+    // Con espacio de sobra (pocas categorías en 500 px), la barra engrosa hasta el máximo de columnas.
+    const thick = spec.barWidth || Math.max(maxBar, Math.min(theme.marks?.barMax ?? 36, yb.bandwidth));
     if (!hideAxis) body.push(gridX(xS.ticks(nd.step), xS, inner, theme, fmt.tick(nd.step)));
     const x0 = xS(0);
     cats.forEach((c) => {
@@ -244,7 +247,7 @@ export function bar(spec, theme) {
       parts.push(el('rect', { x: area.x, y: by - yb.step * 0.16, width: area.w, height: yb.step, fill: 'transparent' }));
       parts.push(text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, catW - 12, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' }));
       if (stack) {
-        const h = Math.min(maxBar, bh);
+        const h = Math.min(thick, bh);
         const y0b = by + (bh - h) / 2;
         const sg = segs.get(c);
         const lastPos = sg.map((s, i) => (s.vv > 0 ? i : -1)).filter((i) => i >= 0).pop();
@@ -265,7 +268,7 @@ export function bar(spec, theme) {
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
         body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`)) }, parts));
       } else {
-        const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
+        const h = Math.min(multi ? Math.max(16, Math.min(thick * 0.75, 24)) : thick, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
         const y0b = by + (bh - groupH) / 2;
         vs.forEach((v, i) => {

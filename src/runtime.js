@@ -2,6 +2,7 @@
 // (periodo con "play" o rango con vista general) y navegación por niveles
 // en treemap/sunburst. Todo se vuelve a dibujar con plot(): sin estado oculto.
 import { attach } from './interact.js';
+import { DEFAULT_WIDTH } from './frame.js';
 import { themeFor, FONT_CSS } from './theme.js';
 import { ensureData, fieldKind, uniq, num, PlotError } from './data.js';
 import { parseDate, formatDate } from './format.js';
@@ -27,6 +28,7 @@ function ensureAssets() {
   st.id = 'pa-runtime-css';
   st.textContent = `
 .pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:4px 0 2px;font-size:12px;color:var(--pa-muted);user-select:none}
+.pa-ctl[hidden]{display:none}
 .pa-play{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:var(--pa-accent);color:var(--pa-surface);cursor:pointer;display:grid;place-items:center;padding:0}
 .pa-play:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
 .pa-play svg{display:block}
@@ -57,8 +59,8 @@ export function render(target, spec, opts = {}) {
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
   // Fuente propia (configure({ font }) o spec.font): se carga una sola vez.
-  const fontUrl = themeFor(state).font?.import;
-  if (fontUrl && typeof document !== 'undefined' && !document.querySelector(`link[href="${fontUrl}"]`)) {
+  const fontUrl = themeFor(state).font?.import; // ya saneada: http(s) sin comillas
+  if (fontUrl && typeof document !== 'undefined' && ![...document.querySelectorAll('link[rel="stylesheet"]')].some((l) => l.getAttribute('href') === fontUrl)) {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = fontUrl; document.head.appendChild(l);
   }
   host.innerHTML = '';
@@ -68,7 +70,27 @@ export function render(target, spec, opts = {}) {
   host.appendChild(ctl);
   let timer = null, ro = null, raf = 0;
 
-  const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  // Tamaño del envoltorio. Se mide con el contenido oculto: así un envoltorio
+  // de alto automático mide 0 (y se usa el alto por defecto, 500) y uno con
+  // alto propio —CSS, flex, grid— entrega ese alto. Sin bucles de crecimiento.
+  const box = () => {
+    const dc = chart.style.display, dk = ctl.style.display;
+    chart.style.display = 'none'; ctl.style.display = 'none';
+    const cs = typeof getComputedStyle !== 'undefined' ? getComputedStyle(host) : null;
+    const px = (k) => (cs ? parseFloat(cs[k]) || 0 : 0);
+    const w = host.clientWidth - px('paddingLeft') - px('paddingRight');
+    const h = host.clientHeight - px('paddingTop') - px('paddingBottom');
+    chart.style.display = dc; ctl.style.display = dk;
+    return { w: Math.floor(w), h: Math.floor(h) };
+  };
+  let size = { w: 0, h: 0 };
+  const width = () => state.width ?? Math.max(240, size.w || DEFAULT_WIDTH);
+  // Alto: el del spec; si no, el del envoltorio (menos los controles); si no, 500.
+  const height = () => {
+    if (state.height !== undefined) return state.height;
+    if (size.h < 120) return undefined;
+    return Math.max(160, size.h - (ctl.hidden ? 0 : ctl.offsetHeight));
+  };
   // Posiciones anteriores de los nodos (para animar el cambio de foco).
   const nodePos = () => {
     const m = new Map();
@@ -92,7 +114,9 @@ export function render(target, spec, opts = {}) {
   };
   const draw = () => {
     const before = nodePos();
-    chart.innerHTML = plotFn({ ...state, width: width() });
+    size = box();
+    const h = height();
+    chart.innerHTML = plotFn(h === undefined ? { ...state, width: width() } : { ...state, width: width(), height: h });
     animateFrom(before);
     chart.__pa = false;
     attach(chart);
@@ -117,7 +141,8 @@ export function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  const ctlPad = Number.isFinite(+state.padding) && state.padding !== null ? Math.max(0, Math.min(200, +state.padding)) : 24;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${ctlPad}px;padding-right:${ctlPad}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
   if (opts.controls !== false && state.slider !== false) {
@@ -243,9 +268,12 @@ export function render(target, spec, opts = {}) {
   host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
 
   draw();
-  if (state.width === undefined && typeof ResizeObserver !== 'undefined') {
-    let last = host.clientWidth;
-    ro = new ResizeObserver(() => { if (Math.abs(host.clientWidth - last) > 8) { last = host.clientWidth; schedule(); } });
+  if ((state.width === undefined || state.height === undefined) && typeof ResizeObserver !== 'undefined') {
+    // Redibuja solo si cambió el tamaño propio del envoltorio (no el que le da el gráfico).
+    ro = new ResizeObserver(() => {
+      const b = box();
+      if (Math.abs(b.w - size.w) > 8 || (state.height === undefined && Math.abs(b.h - size.h) > 8 && (b.h >= 120 || size.h >= 120))) schedule();
+    });
     ro.observe(host);
   }
   return {

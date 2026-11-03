@@ -37,7 +37,9 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **The title states the finding.** `lint` nudges toward it and `describe` writes the alt text.
 - **One axis.** There is no dual axis; `index: true` rebases series to 100 and `facet` draws panels on a shared scale.
 - **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
-- **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
+- **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; every chart defaults to 500 × 500 and fills it; charts with many rows (horizontal bars, heatmaps, flow charts, KPI tiles) grow taller only when they need to.
+- **Fits its container.** The SVG scales to the width of whatever holds it and never overflows a container with a fixed height. In the browser, `render(el, spec)` lays the chart out again at the container's real width, and at its height when the container has one (CSS, flex or grid), and redraws on resize.
+- **Safe to embed.** Text is escaped, and colors, font names and font URLs from the spec are validated before they reach the SVG or CSS, so a spec written by an agent or a user cannot inject markup.
 - **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider. One solid color per category.
 - **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels and tooltip headers wear their series color.
 - **Networks you can explore.** Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
@@ -143,7 +145,7 @@ import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition,
 | `safePlot(spec)` | `{ ok, svg, description, errors, warnings, suggestions }`. Never throws. |
 | `lint(spec)` | Review of the spec without drawing: errors and design suggestions. |
 | `describe(spec)` | Alt text ("Highest: Biobío with 1,240 (30%)…"). |
-| `render(el, spec)` | Browser: tooltips, responsive width, time sliders and drill-down. |
+| `render(el, spec)` | Browser: tooltips, adapts to the container's width and height, time sliders and drill-down. |
 | `toHTML(specs)` | A self-contained, interactive HTML page in one file. |
 | `schema` / `toolDefinition({ flavor })` | JSON Schema of the spec and a tool definition for Claude (`anthropic`) or OpenAI (`openai`). |
 | `validatePalette(colors, opts)` | `{ ok, checks }`. |

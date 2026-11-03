@@ -139,7 +139,7 @@ export function line(spec, theme, variant = 'line') {
     return multi ? { name: truncate(l.key, 132, labelSize), val } : { name: '', val };
   };
 
-  const frame = createFrame(spec, theme, { height: 400 });
+  const frame = createFrame(spec, theme);
   const want = labelMode !== false;
   // Leyenda solo si alguna serie queda sin etiqueta final.
   const provisionalH = frame.bottom - frame.top - 40;

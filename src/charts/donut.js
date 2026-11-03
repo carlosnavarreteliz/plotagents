@@ -59,7 +59,7 @@ export function donut(spec, theme) {
   let mode = spec.labels === false ? 'none' : spec.labels ?? 'auto';
   if (mode === true) mode = 'auto';
 
-  const frame = createFrame(spec, theme, { height: half ? 320 : 380 });
+  const frame = createFrame(spec, theme);
   const area = frame.layout([]);
   const narrow = area.w < 470;
   // Etiquetas exteriores solo si dejan un radio digno; si no, tabla-leyenda.
@@ -86,11 +86,13 @@ export function donut(spec, theme) {
     cy = half ? area.y + Math.min(area.h - 40, R + 14) : area.y + area.h / 2;
   } else if (table && narrow) {
     R = half ? Math.min(area.w / 2 - 4, 170) : Math.min(area.w / 2 - 4, 150);
+    // Dona + tabla debajo: el radio cede lo necesario para caber en el alto (500 por defecto).
+    if (!half) R = Math.max(90, Math.min(R, (area.h - 22 - slices.length * rowH - 4) / 2));
     cx = area.x + area.w / 2;
     cy = half ? area.y + R + 4 : area.y + R + 4;
     tx = area.x;
     ty = (half ? cy + 50 : cy + R + 22);
-    if (spec.height === undefined) frame.setHeight(ty + slices.length * rowH + frame.chrome);
+    if (spec.height === undefined) frame.setHeight(Math.max(half ? 0 : frame.height, ty + slices.length * rowH + frame.chrome));
   } else if (table) {
     const chartW = area.w - tableW - 32;
     R = half ? Math.min(chartW / 2, area.h - 48) : Math.min(chartW / 2, area.h / 2);

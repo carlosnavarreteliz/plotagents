@@ -2,7 +2,7 @@
 // trazado y línea de fuente chica a la derecha. Nada de cajas ni filetes.
 import { el, esc, g, text, r2 } from './svg.js';
 import { measure, wrap } from './text.js';
-import { FONT, FONT_CSS } from './theme.js';
+import { FONT, FONT_CSS, safeUrl } from './theme.js';
 import { ctx } from './context.js';
 
 export const SIZES = {
@@ -14,17 +14,27 @@ export const SIZES = {
   source: 11,
 };
 
+/** Tamaño por defecto de todo gráfico: 500 × 500. En el navegador, render() usa el del envoltorio. */
+export const DEFAULT_WIDTH = 500;
+export const DEFAULT_HEIGHT = 500;
+/** Límite duro: un spec no puede pedir un lienzo descomunal (memoria, tiempo). */
+export const MAX_SIZE = 8000;
+
+const clampSize = (v, lo) => Math.min(MAX_SIZE, Math.max(lo, v));
+
 export function createFrame(spec, theme, defaults = {}) {
-  const width = Math.max(240, +spec.width || defaults.width || 720);
+  // Paneles de facet pueden ser más angostos que un gráfico suelto.
+  const width = clampSize(+spec.width || defaults.width || DEFAULT_WIDTH, spec._panel ? 100 : 240);
   // Con textos más grandes (textScale), el alto por defecto crece para no aplastar los datos.
   const XS = ctx.textScale;
-  let height = Math.max(160, +spec.height || Math.round((defaults.height || 420) * (1 + 0.55 * (XS - 1))));
+  let height = clampSize(+spec.height || Math.round((defaults.height || DEFAULT_HEIGHT) * (1 + 0.55 * (XS - 1))), 160);
   // Responsivo: en pantallas angostas, menos margen y títulos algo menores
   // (nunca bajo 11 px en ejes). El ancho útil es lo que más importa en móvil.
-  const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
+  const k = width < 420 ? 0.86 : width < 480 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
+  const padIn = spec.padding === null || spec.padding === '' ? NaN : +spec.padding;
+  const pad = Number.isFinite(padIn) ? Math.max(0, Math.min(200, padIn)) : (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
@@ -68,14 +78,16 @@ export function createFrame(spec, theme, defaults = {}) {
       return { x: pad, y: ly, w: innerW, h: Math.max(40, frame.bottom - ly - Math.max(0, (XS - 1) * 22)) };
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
-    setHeight(h) { height = h; },
+    setHeight(h) { height = clampSize(h, 160); },
     finish(body, { desc = '', type = 'chart', defs = '' } = {}) {
       if (spec.source) {
         const src = /^fuente|^source/i.test(spec.source) ? spec.source : (String(spec.locale || 'es').startsWith('en') ? 'Source: ' : 'Fuente: ') + spec.source;
         parts.push(text(width - pad, height - pad - 2, src, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' }));
       }
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width)).toString(36);
-      const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
+      // La URL ya viene saneada por themeFor (http/https, sin comillas ni paréntesis).
+      const importUrl = safeUrl(theme.font?.import) || FONT_CSS;
+      const fontImport = spec.fontImport ? `@import url('${importUrl}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`;
       return el(
         'svg',
@@ -90,7 +102,7 @@ export function createFrame(spec, theme, defaults = {}) {
           class: 'pa-chart',
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
-          style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
+          style: 'display:block;width:100%;height:auto;max-width:100%;max-height:100%;font-variant-numeric:lining-nums',
         },
         [
           el('title', { id: `${id}-t` }, esc(spec.title || type)),
@@ -133,7 +145,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     const w = 18 * X + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
     const cy = y + 6.5 * X;
-    out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
+    out.push(`<g class="pa-key" data-color="${esc(it.color)}" style="cursor:pointer">`);
     out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: rowH - 1, rx: 4, fill: 'transparent' }));
     const sw = 10 * Math.min(1.6, X);
     if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
