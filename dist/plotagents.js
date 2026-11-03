@@ -563,6 +563,7 @@ const { createFrame, SIZES, hash } = __req("src/frame.js");
 const { parseDate } = __req("src/format.js");
 const { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } = __req("src/dashed.js");
 const { ctx } = __req("src/context.js");
+const { otherLabel, thresholdOf, splitOther } = __req("src/other.js");
 
 function prepareBar(spec) {
   let data = ensureData(spec);
@@ -619,16 +620,33 @@ function prepareBar(spec) {
   else if (sort === 'alpha') cats.sort((a, b) => a.localeCompare(b, 'es'));
 
   const top = spec.top ?? (cats.length > 40 ? 25 : null);
-  let folded = 0;
-  if (top && cats.length > top) {
-    const keep = cats.slice(0, top);
-    const rest = cats.slice(top);
-    folded = rest.length;
-    const otherName = String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros';
-    values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
-    cats = [...keep, otherName];
+  const additive = (how === 'sum' || how === 'count') && !errorbar;
+  const totals = cats.map(total);
+  const canShare = nominal && additive && totals.every((v) => v >= 0);
+  const grand = totals.reduce((a, b) => a + b, 0);
+  const otherName = otherLabel(spec);
+  const hlSet = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  let folded = 0, otherMembers = [], binName = null;
+  if (nominal) {
+    const sp = splitOther(cats, {
+      value: total, name: (c) => c, total: grand, label: otherName,
+      threshold: canShare ? thresholdOf(spec) : 0,
+      top: top && cats.length > top ? top : null,
+      protect: (c) => (hlSet && hlSet.has(c)) || !!(spec.colors && spec.colors[c]),
+    });
+    if (sp.fold.length || sp.others.length) {
+      const name = sp.others.length === 1 ? String(sp.others[0]) : otherName;
+      const merge = [...sp.others, ...sp.fold];
+      folded = sp.fold.length;
+      otherMembers = sp.fold;
+      const sum = seriesKeys.map((_, i) => merge.reduce((a, c) => a + values.get(c)[i], 0));
+      if (errs.size && merge.length > 1) errs.set(name, seriesKeys.map(() => null));
+      values.set(name, sum);
+      cats = [...sp.keep, name];
+      binName = name;
+    }
   }
-  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total, errs, errorbar };
+  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, otherName: binName, otherMembers, total, errs, errorbar };
 }
 
 function bar(spec, theme) {
@@ -673,8 +691,9 @@ function bar(spec, theme) {
   const colorFor = (c, si) => {
     if (multi) return cmap.get(seriesKeys[si]);
     if (spec.colors && spec.colors[c]) return spec.colors[c];
+    if (c === m.otherName) return theme.other;
     if (hl) return hl.has(c) ? theme.categorical[0] : theme.dim;
-    return c === 'Otros' || c === 'Other' ? theme.other : theme.categorical[0];
+    return theme.categorical[0];
   };
   const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
 
@@ -685,7 +704,13 @@ function bar(spec, theme) {
   const isDashed = (c, si) => !!((dm && dm(c, multi ? seriesKeys[si] : m.series ? seriesKeys[0] : undefined)) || (from && from(xNum(c))));
   const anyDashed = (dm || from) && cats.some((c) => seriesKeys.some((_, i) => isDashed(c, i)));
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
-  const dl = (c, si) => (isDashed(c, si) ? dashedLabel : '');
+  const otherNote = (c) => {
+    if (c !== m.otherName || !m.otherMembers.length) return '';
+    const L = m.otherMembers, en = String(locale).startsWith('en');
+    const names = L.slice(0, 6).join(', ') + (L.length > 6 ? (en ? ` and ${L.length - 6} more` : ` y ${L.length - 6} más`) : '');
+    return `${L.length} ${en ? 'categories' : 'categorías'}: ${names}`;
+  };
+  const dl = (c, si) => tip(isDashed(c, si) ? dashedLabel : '', otherNote(c));
   const paint = (c, si) => (isDashed(c, si) ? dashedAttrs(H, colorFor(c, si)) : { fill: colorFor(c, si) });
   if (anyDashed && spec.legend !== false) legend.push({ label: dashedLabel, key: 'dashed', color: theme.muted, shape: 'square', dashed: true, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) });
 
@@ -740,7 +765,7 @@ function bar(spec, theme) {
           const ty = t >= 0 ? yS(Math.max(0, ...sg.map((s) => s.to))) - 7 : yS(Math.min(0, ...sg.map((s) => s.to))) + 15;
           parts.push(text(bx + bw / 2, ty, fmt(t), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600, textAnchor: 'middle' }));
         }
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '', otherNote(c)) }, [hit, ...parts]));
       } else {
         const w = Math.min(maxBar, (bw - 2 * (k - 1)) / k);
         const groupW = w * k + 2 * (k - 1);
@@ -817,7 +842,7 @@ function bar(spec, theme) {
           ]));
         });
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : '')), otherNote(c)) }, parts));
       } else {
         const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
@@ -2125,6 +2150,50 @@ const dashedDefaultLabel = (locale) => T(locale, 'Estimado', 'Estimate');
 
 return { "dashedMatcher": dashedMatcher, "fromTest": fromTest, "hatcher": hatcher, "dashedAttrs": dashedAttrs, "DASH": DASH, "dashedDefaultLabel": dashedDefaultLabel };
 });
+__def("src/other.js", function () {
+
+/** Umbral por defecto: menos del 1% del total se agrupa en "Otros". */
+const DEFAULT_THRESHOLD = 0.01;
+
+const OTHER_NAMES = new Set(['otros', 'otras', 'otro', 'otra', 'other', 'others', 'resto', 'rest', 'demás', 'los demás', 'las demás']);
+
+/** ¿El nombre ya es un cajón "Otros" (venga de los datos o del agrupamiento)? */
+const isOtherName = (name, label) => (label !== undefined && String(name) === String(label)) || OTHER_NAMES.has(String(name).trim().toLowerCase());
+
+/** Nombre del cajón: `otherLabel` del spec, o "Otros" / "Other" según el idioma. */
+const otherLabel = (spec) => (typeof spec.otherLabel === 'string' && spec.otherLabel ? spec.otherLabel : String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros');
+
+/**
+ * Umbral como fracción del total (0–1). Acepta 0.02, "2%" o 2 (= 2%).
+ * `threshold: false` o 0 lo apaga.
+ */
+function thresholdOf(spec) {
+  const t = spec.threshold;
+  if (t === false || t === null || t === 0) return 0;
+  if (t === undefined || t === true) return DEFAULT_THRESHOLD;
+  const n = typeof t === 'string' ? parseFloat(t.replace(',', '.')) / (t.includes('%') ? 100 : 1) : Number(t);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return n >= 1 ? n / 100 : n;
+}
+
+/**
+ * Decide qué elementos se agrupan. `items` va en el orden de dibujo;
+ * `value(it)` es su tamaño. Devuelve { keep, fold, others } donde `others`
+ * son los que ya se llamaban "Otros" en los datos (se fusionan con `fold`).
+ * Solo agrupa si hay al menos dos bajo el umbral: un "Otros" de uno no aporta.
+ */
+function splitOther(items, { value, name, threshold, total, protect, label, top }) {
+  const others = items.filter((it) => isOtherName(name(it), label));
+  const rest = items.filter((it) => !others.includes(it));
+  const small = (it, i) => !(protect && protect(it)) && ((top && i >= top) || (threshold > 0 && total > 0 && value(it) / total < threshold));
+  let fold = rest.filter(small);
+  if (fold.length < 2 && !others.length && !(top && rest.length > top)) fold = [];
+  const keep = rest.filter((it) => !fold.includes(it));
+  return { keep, fold, others };
+}
+
+return { "thresholdOf": thresholdOf, "splitOther": splitOther, "DEFAULT_THRESHOLD": DEFAULT_THRESHOLD, "isOtherName": isOtherName, "otherLabel": otherLabel };
+});
 __def("src/charts/line.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
@@ -2664,7 +2733,7 @@ const { formatNumber } = __req("src/format.js");
 const { humanize } = __req("src/data.js");
 const { createFrame } = __req("src/frame.js");
 const { ctx } = __req("src/context.js");
-const { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } = __req("src/hierarchy.js");
+const { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, otherNote, SEP } = __req("src/hierarchy.js");
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
 function squarify(items, x, y, w, h) {
@@ -2723,10 +2792,11 @@ function treemap(spec, theme) {
   const prevLabel = spec.compareLabel ?? spec._prev?.label;
   const prevMap = new Map();
   if (prevRows && prevRows.length) {
-    const pr = buildHierarchy({ ...spec, data: prevRows, time: undefined }).root;
+    const pr = buildHierarchy({ ...spec, data: prevRows, time: undefined, threshold: false }).root;
     (function walk(n) { prevMap.set(n.path.join('\u0000'), n.value); n.children.forEach(walk); })(pr);
   }
-  const changeOf = (n) => { const pv = prevMap.get(n.path.join('\u0000')); return pv > 0 ? n.value / pv - 1 : null; };
+  const prevOf = (n) => (n.other && n.members ? n.members.reduce((a, m) => a + (prevMap.get(m.path.join('\u0000')) || 0), 0) : prevMap.get(n.path.join('\u0000')));
+  const changeOf = (n) => { const pv = prevOf(n); return pv > 0 ? n.value / pv - 1 : null; };
   const showChange = prevMap.size > 0 && spec.change !== false;
   const byChange = showChange && spec.colorBy === 'change';
   const pctTxt = (c) => (c === null ? '' : `${c > 0 ? '▲' : c < 0 ? '▼' : '■'} ${formatNumber(Math.abs(c) * 100, Math.abs(c) < 0.1 ? 1 : 0, locale, true)}%`);
@@ -2745,7 +2815,11 @@ function treemap(spec, theme) {
     const shown = top.filter((c) => !c.folded);
     const sh0 = shareFmt(locale);
     legend = shown.map((c) => ({ label: `${c.name} ${sh0(c.value, focus.value)}`, color: c.color, shape: 'square' }));
-    if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
+    const rest = top.filter((c) => c.folded);
+    if (rest.length) {
+      const bin = rest.find((c) => c.other);
+      legend.push({ label: `${bin ? bin.name : en ? 'Other' : 'Otros'} ${sh0(rest.reduce((a, c) => a + c.value, 0), focus.value)}`, color: theme.other, shape: 'square' });
+    }
   }
 
   const W = spec.width || 720;
@@ -2766,7 +2840,8 @@ function treemap(spec, theme) {
       n.path.join(SEP),
       `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`,
       n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : '',
-      ch !== null ? `${pctTxt(ch)} ${prevLabel ? 'vs ' + prevLabel : ''}`.trim() : ''
+      ch !== null ? `${pctTxt(ch)} ${prevLabel ? 'vs ' + prevLabel : ''}`.trim() : '',
+      otherNote(n, locale)
     );
   };
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
@@ -2844,6 +2919,7 @@ const { hexToRgb, rgbToHex } = __req("src/theme.js");
 const { formatNumber } = __req("src/format.js");
 const { el, g, text } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
+const { otherLabel, thresholdOf, splitOther } = __req("src/other.js");
 
 /** Resuelve los campos de ruta y valor desde el spec (path | group+label | label | x). */
 function hierarchyFields(spec, data) {
@@ -2890,7 +2966,52 @@ function buildHierarchy(spec) {
   }
   const sortRec = (n) => { n.children.sort((a, b) => b.value - a.value); n.children.forEach(sortRec); delete n.map; };
   sortRec(root);
+  foldOther(root, spec);
   return { root, fields: path.slice(0, levels), valueField: value, data };
+}
+
+/**
+ * En cada nivel, los hermanos bajo el umbral (fracción del padre) se agrupan
+ * en una hoja "Otros" que va siempre al final. Un "Otros" que ya venga en los
+ * datos también baja al final (y recibe a los agrupados). No se agrupan los
+ * nodos destacados, con color fijo o en la ruta de `focus`.
+ */
+function foldOther(root, spec) {
+  const threshold = thresholdOf(spec);
+  const label = otherLabel(spec);
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const focus = (spec.focus || []).map(String);
+  const rec = (n) => {
+    if (!n.children.length) return;
+    const sp = splitOther(n.children, {
+      value: (c) => c.value, name: (c) => c.name, total: n.value, threshold, label,
+      protect: (c) => (hl && hl.has(c.name)) || !!(spec.colors && spec.colors[c.name]) || focus[c.depth - 1] === c.name,
+    });
+    sp.keep.forEach(rec);
+    if (!sp.fold.length) {
+      sp.others.forEach(rec);
+      n.children = [...sp.keep, ...sp.others];
+      return;
+    }
+    const merge = [...sp.others, ...sp.fold];
+    const name = sp.others.length === 1 ? sp.others[0].name : label;
+    const other = {
+      name, path: [...n.path, name], depth: n.depth + 1, parent: n, children: [], other: true,
+      value: merge.reduce((a, c) => a + c.value, 0),
+      members: merge.map((c) => ({ name: c.name, path: c.path, value: c.value })),
+    };
+    n.children = [...sp.keep, other];
+  };
+  rec(root);
+}
+
+/** Línea de tooltip para un "Otros": cuántos agrupa y cuáles. */
+function otherNote(n, locale = 'es') {
+  if (!n.other || !n.members) return '';
+  const en = String(locale).startsWith('en');
+  const L = n.members.map((m) => m.name);
+  const names = L.slice(0, 6).join(', ') + (L.length > 6 ? (en ? ` and ${L.length - 6} more` : ` y ${L.length - 6} más`) : '');
+  return `${L.length} ${en ? (L.length === 1 ? 'item' : 'items') : L.length === 1 ? 'elemento' : 'elementos'}: ${names}`;
 }
 
 /** Busca un nodo por ruta; si no existe, devuelve el más profundo que coincida. */
@@ -2919,7 +3040,7 @@ function mix(a, b, t) {
  * el color con una variación de luminosidad sutil por hermano.
  */
 function assignColors(displayRoot, theme, spec, { single = false } = {}) {
-  const top = displayRoot.children;
+  const top = displayRoot.children.filter((c) => !c.other);
   const n = theme.categorical.length;
   const fold = top.length > n;
   top.forEach((c, i) => {
@@ -2927,10 +3048,11 @@ function assignColors(displayRoot, theme, spec, { single = false } = {}) {
     c.color = fixed || (single ? theme.categorical[0] : fold && i >= n - 1 ? theme.other : theme.categorical[i] || theme.other);
     c.folded = !fixed && !single && fold && i >= n - 1;
   });
+  for (const c of displayRoot.children) if (c.other) { c.color = (spec.colors && spec.colors[c.name]) || theme.other; c.folded = !single; }
   const steps = [0, 0.14, 0.07, 0.2, 0.1];
   const toward = theme.surface;
   const rec = (node) => node.children.forEach((c, i) => {
-    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || (spec.shade ? mix(node.color, toward, steps[i % steps.length]) : node.color);
+    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || (c.other ? mix(node.color, toward, 0.4) : spec.shade ? mix(node.color, toward, steps[i % steps.length]) : node.color);
     rec(c);
   });
   rec(displayRoot);
@@ -2975,7 +3097,7 @@ function breadcrumb(focusNode, x, y, w, theme, locale = 'es') {
   return { svg: g({ class: 'pa-breadcrumb' }, out), h: 26 };
 }
 
-return { "hierarchyFields": hierarchyFields, "buildHierarchy": buildHierarchy, "findNode": findNode, "mix": mix, "assignColors": assignColors, "shareFmt": shareFmt, "breadcrumb": breadcrumb, "height": height, "descendants": descendants, "SEP": SEP };
+return { "hierarchyFields": hierarchyFields, "buildHierarchy": buildHierarchy, "otherNote": otherNote, "findNode": findNode, "mix": mix, "assignColors": assignColors, "shareFmt": shareFmt, "breadcrumb": breadcrumb, "height": height, "descendants": descendants, "SEP": SEP };
 });
 __def("src/charts/donut.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
@@ -3206,7 +3328,7 @@ const { makeFormat } = __req("src/format.js");
 const { textOn } = __req("src/theme.js");
 const { humanize } = __req("src/data.js");
 const { createFrame } = __req("src/frame.js");
-const { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } = __req("src/hierarchy.js");
+const { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, otherNote, SEP } = __req("src/hierarchy.js");
 
 const TAU = Math.PI * 2;
 const f = (n) => n.toFixed(2);
@@ -3235,7 +3357,7 @@ function sunburst(spec, theme) {
 
   const top = focus.children;
   const legend = top.length > 1 && spec.legend !== false && !focus.path.length
-    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
+    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: (top.find((c) => c.other) || {}).name || (en ? 'Other' : 'Otros'), color: theme.other, shape: 'square' }] : [])]
     : [];
 
   const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
@@ -3272,7 +3394,7 @@ function sunburst(spec, theme) {
     const n = a.n;
     const fill = dim(n) ? theme.dim : n.color;
     const parent = n.parent && n.parent.depth > 0 ? n.parent : null;
-    const t = tip(n.path.join(SEP), `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`, parent ? `${share(n.value, parent.value)} ${en ? 'of' : 'de'} ${parent.name}` : '');
+    const t = tip(n.path.join(SEP), `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`, parent ? `${share(n.value, parent.value)} ${en ? 'of' : 'de'} ${parent.name}` : '', otherNote(n, locale));
     const drill = n.children.length ? JSON.stringify(n.path) : undefined;
     body.push(el('path', {
       class: 'pa-m', d: arcPath(cx, cy, a.r0, a.r1, a.a0, a.a1), fill,
@@ -7258,6 +7380,8 @@ const schema = {
     horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
     sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: category order (desc by default unless the categories are time).' },
     top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    threshold: { description: 'bar, treemap, sunburst: categories under this share of the total (of their parent in a hierarchy) are grouped into one "Other" placed last. 0.01 (1%) by default; accepts 0.05, "5%" or 5; false turns it off. Only groups when at least two fall under it; highlighted categories are never grouped.', anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'boolean' }] },
+    otherLabel: { type: 'string', description: 'Name of the grouped bucket. Default "Otros" ("Other" with locale "en"). A category already called "Otros"/"Other"/"Resto" in the data is also moved to the end.' },
     index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
     curve: { type: 'string', enum: ['linear', 'smooth', 'step'] },
     aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'How to combine repeated rows. Default sum.' },

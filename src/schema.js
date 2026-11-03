@@ -127,6 +127,8 @@ export const schema = {
     horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
     sort: { type: 'string', enum: ['desc', 'asc', 'none', 'alpha'], description: 'bar: category order (desc by default unless the categories are time).' },
     top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    threshold: { description: 'bar, treemap, sunburst: categories under this share of the total (of their parent in a hierarchy) are grouped into one "Other" placed last. 0.01 (1%) by default; accepts 0.05, "5%" or 5; false turns it off. Only groups when at least two fall under it; highlighted categories are never grouped.', anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'boolean' }] },
+    otherLabel: { type: 'string', description: 'Name of the grouped bucket. Default "Otros" ("Other" with locale "en"). A category already called "Otros"/"Other"/"Resto" in the data is also moved to the end.' },
     index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
     curve: { type: 'string', enum: ['linear', 'smooth', 'step'] },
     aggregate: { type: 'string', enum: ['sum', 'mean', 'max', 'min', 'count', 'last', 'first'], description: 'How to combine repeated rows. Default sum.' },

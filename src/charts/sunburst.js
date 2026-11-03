@@ -7,7 +7,7 @@ import { makeFormat } from '../format.js';
 import { textOn } from '../theme.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
-import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, otherNote, SEP } from '../hierarchy.js';
 
 const TAU = Math.PI * 2;
 const f = (n) => n.toFixed(2);
@@ -36,7 +36,7 @@ export function sunburst(spec, theme) {
 
   const top = focus.children;
   const legend = top.length > 1 && spec.legend !== false && !focus.path.length
-    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
+    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: (top.find((c) => c.other) || {}).name || (en ? 'Other' : 'Otros'), color: theme.other, shape: 'square' }] : [])]
     : [];
 
   const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
@@ -74,7 +74,7 @@ export function sunburst(spec, theme) {
     const n = a.n;
     const fill = dim(n) ? theme.dim : n.color;
     const parent = n.parent && n.parent.depth > 0 ? n.parent : null;
-    const t = tip(n.path.join(SEP), `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`, parent ? `${share(n.value, parent.value)} ${en ? 'of' : 'de'} ${parent.name}` : '');
+    const t = tip(n.path.join(SEP), `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`, parent ? `${share(n.value, parent.value)} ${en ? 'of' : 'de'} ${parent.name}` : '', otherNote(n, locale));
     const drill = n.children.length ? JSON.stringify(n.path) : undefined;
     body.push(el('path', {
       class: 'pa-m', d: arcPath(cx, cy, a.r0, a.r1, a.a0, a.a1), fill,

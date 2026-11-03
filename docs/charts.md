@@ -40,6 +40,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `horizontal` | Force orientation. |
 | `sort` | `"desc"` (default for categories), `"asc"`, `"none"`, `"alpha"`. Years and dates keep their order. |
 | `top` | Keep the N largest, fold the rest into "Other" (automatic past 40 categories). |
+| `threshold` | Group categories under this share of the total into one "Other" bar, always last. Default `0.01` (1%); `"5%"` or `0.05` raise it, `false` turns it off. |
+| `otherLabel` | Name of that bucket (default "Otros" / "Other"). |
 | `ci`, `errorbar`, `estimator` | `barplot`: mean ± 95% CI (`"ci"`), `"sd"` or `"se"` error bars. |
 | `aggregate` | `"sum"` (default), `"mean"`, `"max"`, `"min"`, `"count"`, `"first"`, `"last"`. `countplot` counts rows. |
 | `labels` | `true`, `false` or `"auto"`. |
@@ -131,6 +133,8 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group does it and breadcrumbs go back. |
 | `showValues` | Append values to the labels. |
 | `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
+| `threshold` | Siblings under this share of their parent group into one "Other" tile, always placed last (gray at level 1, a lighter tint of the group deeper). Default `0.01`; `false` turns it off. The tooltip lists what it holds. |
+| `otherLabel` | Name of that tile (default "Otros" / "Other"). |
 | `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
 | `compareData` | Rows of an earlier period to compute changes without `time`. |
 | `hole`, `centerValue`, `centerLabel` | Sunburst center. |

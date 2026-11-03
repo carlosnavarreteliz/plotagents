@@ -6,6 +6,7 @@ import { hexToRgb, rgbToHex } from './theme.js';
 import { formatNumber } from './format.js';
 import { el, g, text } from './svg.js';
 import { measure, truncate } from './text.js';
+import { otherLabel, thresholdOf, splitOther } from './other.js';
 
 /** Resuelve los campos de ruta y valor desde el spec (path | group+label | label | x). */
 export function hierarchyFields(spec, data) {
@@ -52,7 +53,52 @@ export function buildHierarchy(spec) {
   }
   const sortRec = (n) => { n.children.sort((a, b) => b.value - a.value); n.children.forEach(sortRec); delete n.map; };
   sortRec(root);
+  foldOther(root, spec);
   return { root, fields: path.slice(0, levels), valueField: value, data };
+}
+
+/**
+ * En cada nivel, los hermanos bajo el umbral (fracción del padre) se agrupan
+ * en una hoja "Otros" que va siempre al final. Un "Otros" que ya venga en los
+ * datos también baja al final (y recibe a los agrupados). No se agrupan los
+ * nodos destacados, con color fijo o en la ruta de `focus`.
+ */
+function foldOther(root, spec) {
+  const threshold = thresholdOf(spec);
+  const label = otherLabel(spec);
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const focus = (spec.focus || []).map(String);
+  const rec = (n) => {
+    if (!n.children.length) return;
+    const sp = splitOther(n.children, {
+      value: (c) => c.value, name: (c) => c.name, total: n.value, threshold, label,
+      protect: (c) => (hl && hl.has(c.name)) || !!(spec.colors && spec.colors[c.name]) || focus[c.depth - 1] === c.name,
+    });
+    sp.keep.forEach(rec);
+    if (!sp.fold.length) {
+      sp.others.forEach(rec);
+      n.children = [...sp.keep, ...sp.others];
+      return;
+    }
+    const merge = [...sp.others, ...sp.fold];
+    const name = sp.others.length === 1 ? sp.others[0].name : label;
+    const other = {
+      name, path: [...n.path, name], depth: n.depth + 1, parent: n, children: [], other: true,
+      value: merge.reduce((a, c) => a + c.value, 0),
+      members: merge.map((c) => ({ name: c.name, path: c.path, value: c.value })),
+    };
+    n.children = [...sp.keep, other];
+  };
+  rec(root);
+}
+
+/** Línea de tooltip para un "Otros": cuántos agrupa y cuáles. */
+export function otherNote(n, locale = 'es') {
+  if (!n.other || !n.members) return '';
+  const en = String(locale).startsWith('en');
+  const L = n.members.map((m) => m.name);
+  const names = L.slice(0, 6).join(', ') + (L.length > 6 ? (en ? ` and ${L.length - 6} more` : ` y ${L.length - 6} más`) : '');
+  return `${L.length} ${en ? (L.length === 1 ? 'item' : 'items') : L.length === 1 ? 'elemento' : 'elementos'}: ${names}`;
 }
 
 /** Busca un nodo por ruta; si no existe, devuelve el más profundo que coincida. */
@@ -81,7 +127,8 @@ export function mix(a, b, t) {
  * el color con una variación de luminosidad sutil por hermano.
  */
 export function assignColors(displayRoot, theme, spec, { single = false } = {}) {
-  const top = displayRoot.children;
+  // El "Otros" agrupado va en gris y no gasta un color de la paleta.
+  const top = displayRoot.children.filter((c) => !c.other);
   const n = theme.categorical.length;
   const fold = top.length > n;
   top.forEach((c, i) => {
@@ -89,11 +136,12 @@ export function assignColors(displayRoot, theme, spec, { single = false } = {}) 
     c.color = fixed || (single ? theme.categorical[0] : fold && i >= n - 1 ? theme.other : theme.categorical[i] || theme.other);
     c.folded = !fixed && !single && fold && i >= n - 1;
   });
+  for (const c of displayRoot.children) if (c.other) { c.color = (spec.colors && spec.colors[c.name]) || theme.other; c.folded = !single; }
   const steps = [0, 0.14, 0.07, 0.2, 0.1];
   const toward = theme.surface;
   const rec = (node) => node.children.forEach((c, i) => {
     // Color sólido por categoría completa (por defecto); `shade: true` vuelve a los tonos por hermano.
-    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || (spec.shade ? mix(node.color, toward, steps[i % steps.length]) : node.color);
+    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || (c.other ? mix(node.color, toward, 0.4) : spec.shade ? mix(node.color, toward, steps[i % steps.length]) : node.color);
     rec(c);
   });
   rec(displayRoot);

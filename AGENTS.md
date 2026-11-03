@@ -64,6 +64,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - More than 8 series → the 9th onward turn gray; `lint` suggests `highlight` or `facet`.
 - Colliding line labels → spread apart with leader lines.
 - Donut with more than 6 parts → folds into "Other".
+- Tiny categories in bars, treemaps and sunbursts → under 1% of the total (of the parent, in a hierarchy) they group into one "Other", always last. `threshold: 0.05` (or `"5%"`) changes the cut, `threshold: false` turns it off, `otherLabel` renames it. An "Otros"/"Other" category in your data also goes last.
 - Long category labels → switches to horizontal.
 - Hard-to-tell custom palette → `lint` names the offending pair.
 - Numbers as text ("1.234,5", "12%", "$ 3.000") → parsed automatically.

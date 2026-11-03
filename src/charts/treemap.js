@@ -10,7 +10,7 @@ import { formatNumber } from '../format.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, otherNote, SEP } from '../hierarchy.js';
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
 export function squarify(items, x, y, w, h) {
@@ -74,10 +74,11 @@ export function treemap(spec, theme) {
   const prevLabel = spec.compareLabel ?? spec._prev?.label;
   const prevMap = new Map();
   if (prevRows && prevRows.length) {
-    const pr = buildHierarchy({ ...spec, data: prevRows, time: undefined }).root;
+    const pr = buildHierarchy({ ...spec, data: prevRows, time: undefined, threshold: false }).root;
     (function walk(n) { prevMap.set(n.path.join('\u0000'), n.value); n.children.forEach(walk); })(pr);
   }
-  const changeOf = (n) => { const pv = prevMap.get(n.path.join('\u0000')); return pv > 0 ? n.value / pv - 1 : null; };
+  const prevOf = (n) => (n.other && n.members ? n.members.reduce((a, m) => a + (prevMap.get(m.path.join('\u0000')) || 0), 0) : prevMap.get(n.path.join('\u0000')));
+  const changeOf = (n) => { const pv = prevOf(n); return pv > 0 ? n.value / pv - 1 : null; };
   const showChange = prevMap.size > 0 && spec.change !== false;
   const byChange = showChange && spec.colorBy === 'change';
   const pctTxt = (c) => (c === null ? '' : `${c > 0 ? '▲' : c < 0 ? '▼' : '■'} ${formatNumber(Math.abs(c) * 100, Math.abs(c) < 0.1 ? 1 : 0, locale, true)}%`);
@@ -98,7 +99,12 @@ export function treemap(spec, theme) {
     const shown = top.filter((c) => !c.folded);
     const sh0 = shareFmt(locale);
     legend = shown.map((c) => ({ label: `${c.name} ${sh0(c.value, focus.value)}`, color: c.color, shape: 'square' }));
-    if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
+    // Un solo "Otros" al final: el agrupado por umbral más los grupos sin color propio.
+    const rest = top.filter((c) => c.folded);
+    if (rest.length) {
+      const bin = rest.find((c) => c.other);
+      legend.push({ label: `${bin ? bin.name : en ? 'Other' : 'Otros'} ${sh0(rest.reduce((a, c) => a + c.value, 0), focus.value)}`, color: theme.other, shape: 'square' });
+    }
   }
 
   // En pantallas angostas el treemap crece hacia abajo: rectángulos legibles.
@@ -120,7 +126,8 @@ export function treemap(spec, theme) {
       n.path.join(SEP),
       `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`,
       n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : '',
-      ch !== null ? `${pctTxt(ch)} ${prevLabel ? 'vs ' + prevLabel : ''}`.trim() : ''
+      ch !== null ? `${pctTxt(ch)} ${prevLabel ? 'vs ' + prevLabel : ''}`.trim() : '',
+      otherNote(n, locale)
     );
   };
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));

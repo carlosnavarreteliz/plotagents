@@ -77,6 +77,10 @@ export interface Spec {
   horizontal?: boolean;
   sort?: 'desc' | 'asc' | 'none' | 'alpha';
   top?: number;
+  /** bar/treemap/sunburst: group categories under this share (default 0.01) into "Other", placed last. false turns it off. */
+  threshold?: number | string | boolean;
+  /** Name of the grouped bucket (default "Otros" / "Other"). */
+  otherLabel?: string;
   highlight?: string | string[];
   /** Dashed shapes (hatched fill + dashed outline): names, a data field, { field, equals } or true. */
   dashed?: string | string[] | boolean | { field: string; equals?: unknown };

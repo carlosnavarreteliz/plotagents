@@ -13,6 +13,7 @@ import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
+import { otherLabel, thresholdOf, splitOther } from '../other.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
@@ -69,18 +70,36 @@ export function prepareBar(spec) {
   else if (sort === 'asc') cats.sort((a, b) => total(a) - total(b));
   else if (sort === 'alpha') cats.sort((a, b) => a.localeCompare(b, 'es'));
 
-  // Cola larga → "Otros" (nunca 40 barras ilegibles).
+  // Cola larga y categorías bajo el umbral → "Otros", siempre al final.
   const top = spec.top ?? (cats.length > 40 ? 25 : null);
-  let folded = 0;
-  if (top && cats.length > top) {
-    const keep = cats.slice(0, top);
-    const rest = cats.slice(top);
-    folded = rest.length;
-    const otherName = String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros';
-    values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
-    cats = [...keep, otherName];
+  const additive = (how === 'sum' || how === 'count') && !errorbar;
+  const totals = cats.map(total);
+  const canShare = nominal && additive && totals.every((v) => v >= 0);
+  const grand = totals.reduce((a, b) => a + b, 0);
+  const otherName = otherLabel(spec);
+  const hlSet = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  let folded = 0, otherMembers = [], binName = null;
+  if (nominal) {
+    const sp = splitOther(cats, {
+      value: total, name: (c) => c, total: grand, label: otherName,
+      threshold: canShare ? thresholdOf(spec) : 0,
+      top: top && cats.length > top ? top : null,
+      protect: (c) => (hlSet && hlSet.has(c)) || !!(spec.colors && spec.colors[c]),
+    });
+    if (sp.fold.length || sp.others.length) {
+      // Sin nada que agrupar, el "Otros" de los datos conserva su nombre y solo baja al final.
+      const name = sp.others.length === 1 ? String(sp.others[0]) : otherName;
+      const merge = [...sp.others, ...sp.fold];
+      folded = sp.fold.length;
+      otherMembers = sp.fold;
+      const sum = seriesKeys.map((_, i) => merge.reduce((a, c) => a + values.get(c)[i], 0));
+      if (errs.size && merge.length > 1) errs.set(name, seriesKeys.map(() => null));
+      values.set(name, sum);
+      cats = [...sp.keep, name];
+      binName = name;
+    }
   }
-  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total, errs, errorbar };
+  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, otherName: binName, otherMembers, total, errs, errorbar };
 }
 
 export function bar(spec, theme) {
@@ -128,8 +147,9 @@ export function bar(spec, theme) {
   const colorFor = (c, si) => {
     if (multi) return cmap.get(seriesKeys[si]);
     if (spec.colors && spec.colors[c]) return spec.colors[c];
+    if (c === m.otherName) return theme.other;
     if (hl) return hl.has(c) ? theme.categorical[0] : theme.dim;
-    return c === 'Otros' || c === 'Other' ? theme.other : theme.categorical[0];
+    return theme.categorical[0];
   };
   const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
 
@@ -141,7 +161,14 @@ export function bar(spec, theme) {
   const isDashed = (c, si) => !!((dm && dm(c, multi ? seriesKeys[si] : m.series ? seriesKeys[0] : undefined)) || (from && from(xNum(c))));
   const anyDashed = (dm || from) && cats.some((c) => seriesKeys.some((_, i) => isDashed(c, i)));
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
-  const dl = (c, si) => (isDashed(c, si) ? dashedLabel : '');
+  // "Otros": el tooltip dice qué agrupa.
+  const otherNote = (c) => {
+    if (c !== m.otherName || !m.otherMembers.length) return '';
+    const L = m.otherMembers, en = String(locale).startsWith('en');
+    const names = L.slice(0, 6).join(', ') + (L.length > 6 ? (en ? ` and ${L.length - 6} more` : ` y ${L.length - 6} más`) : '');
+    return `${L.length} ${en ? 'categories' : 'categorías'}: ${names}`;
+  };
+  const dl = (c, si) => tip(isDashed(c, si) ? dashedLabel : '', otherNote(c));
   const paint = (c, si) => (isDashed(c, si) ? dashedAttrs(H, colorFor(c, si)) : { fill: colorFor(c, si) });
   if (anyDashed && spec.legend !== false) legend.push({ label: dashedLabel, key: 'dashed', color: theme.muted, shape: 'square', dashed: true, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) });
 
@@ -198,7 +225,7 @@ export function bar(spec, theme) {
           const ty = t >= 0 ? yS(Math.max(0, ...sg.map((s) => s.to))) - 7 : yS(Math.min(0, ...sg.map((s) => s.to))) + 15;
           parts.push(text(bx + bw / 2, ty, fmt(t), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600, textAnchor: 'middle' }));
         }
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '', otherNote(c)) }, [hit, ...parts]));
       } else {
         const w = Math.min(maxBar, (bw - 2 * (k - 1)) / k);
         const groupW = w * k + 2 * (k - 1);
@@ -278,7 +305,7 @@ export function bar(spec, theme) {
           ]));
         });
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
+        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : '')), otherNote(c)) }, parts));
       } else {
         const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
