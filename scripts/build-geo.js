@@ -3,6 +3,9 @@
 // - Mundo: world-atlas 2.0.2 (Natural Earth 1:110m, dominio público), TopoJSON.
 // - Chile: regiones de la Biblioteca del Congreso Nacional (BCN, mapas
 //   vectoriales), vía github.com/fcortes/Chile-GeoJSON.
+// - Estados Unidos: us-atlas 3.0.1 (ISC), límites cartográficos del U.S.
+//   Census Bureau 1:10m (dominio público), TopoJSON states-10m.json.
+//     node scripts/build-geo.js --usa states-10m.json
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -133,6 +136,49 @@ function buildChile(path) {
   return { type: 'FeatureCollection', features: feats };
 }
 
+// ── Estados Unidos ────────────────────────────────────────────────────────
+// FIPS → [postal, nombre en español (si difiere del inglés)]
+const US = {
+  1: ['AL'], 2: ['AK'], 4: ['AZ'], 5: ['AR'], 6: ['CA'], 8: ['CO'], 9: ['CT'], 10: ['DE'], 11: ['DC', 'Distrito de Columbia'], 12: ['FL', 'Florida'],
+  13: ['GA'], 15: ['HI', 'Hawái'], 16: ['ID'], 17: ['IL'], 18: ['IN'], 19: ['IA'], 20: ['KS'], 21: ['KY'], 22: ['LA', 'Luisiana'], 23: ['ME'],
+  24: ['MD'], 25: ['MA'], 26: ['MI', 'Míchigan'], 27: ['MN'], 28: ['MS', 'Misisipi'], 29: ['MO', 'Misuri'], 30: ['MT'], 31: ['NE'], 32: ['NV'],
+  33: ['NH', 'Nuevo Hampshire'], 34: ['NJ', 'Nueva Jersey'], 35: ['NM', 'Nuevo México'], 36: ['NY', 'Nueva York'], 37: ['NC', 'Carolina del Norte'],
+  38: ['ND', 'Dakota del Norte'], 39: ['OH'], 40: ['OK'], 41: ['OR', 'Oregón'], 42: ['PA', 'Pensilvania'], 44: ['RI'], 45: ['SC', 'Carolina del Sur'],
+  46: ['SD', 'Dakota del Sur'], 47: ['TN'], 48: ['TX', 'Texas'], 49: ['UT'], 50: ['VT'], 51: ['VA'], 53: ['WA'], 54: ['WV', 'Virginia Occidental'],
+  55: ['WI'], 56: ['WY'], 72: ['PR', 'Puerto Rico'],
+};
+// Estados chicos del noreste: su etiqueta va afuera, con línea guía.
+const US_CALLOUT = new Set(['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC']);
+// Punto de anclaje de la etiqueta cuando el centroide queda mal (forma rara o recuadro).
+const US_LABEL_AT = { FL: [-81.6, 28.3], LA: [-92.4, 31.0], MI: [-84.7, 43.5], CA: [-119.7, 37.1], KY: [-85.1, 37.6], VA: [-78.7, 37.6], NY: [-75.3, 42.9], ID: [-114.6, 43.9], AK: [-152, 64.3], HI: [-155.5, 19.65], TN: [-86.4, 35.85], WV: [-80.7, 38.65], OK: [-97.4, 35.5], TX: [-99.2, 31.3], MN: [-94.4, 46.1], NC: [-79.3, 35.6], MD: [-76.8, 39.3], PR: [-66.5, 18.2] };
+const US_ALIAS = { DC: ['Washington DC', 'Washington, D.C.', 'D.C.'], NY: ['New York State'], PR: ['Puerto Rico, Commonwealth of'], GA: ['Georgia (US)'] };
+function buildUsa(path) {
+  const topo = JSON.parse(readFileSync(path, 'utf8'));
+  const feats = [];
+  for (const f of topoToGeo(topo, 'states')) {
+    const fips = +f.id;
+    if (!US[fips]) continue; // sin territorios del Pacífico ni Islas Vírgenes
+    const [code, es] = US[fips];
+    const nameEn = f.properties.name;
+    // Alaska: fuera las Aleutianas que cruzan el antimeridiano (lon > 0) y los islotes.
+    let polys = polygons(f.geometry)
+      .filter((p) => centroidLon(p[0]) < 0)
+      .map((p) => [p[0]])
+      .map((p) => ({ p, a: ringArea(p[0]) }))
+      .sort((a, b) => b.a - a.a);
+    const maxA = polys[0].a;
+    const minA = code === 'AK' ? maxA * 0.004 : code === 'HI' ? maxA * 0.02 : Math.max(0.004, maxA * 0.004);
+    polys = polys.filter((o, i) => i === 0 || o.a > minA).map((o) => o.p);
+    const tol = code === 'AK' ? 0.06 : code === 'HI' || code === 'PR' ? 0.008 : US_CALLOUT.has(code) ? 0.006 : 0.016;
+    const clean = polys.map((p) => p.map((r) => cleanRing(r, tol)).filter(Boolean)).filter((p) => p.length);
+    const fipsS = String(fips).padStart(2, '0');
+    const name = es || nameEn;
+    feats.push({ type: 'Feature', properties: { code, fips: fipsS, num: fips, name, nameEn, abbr: code, ...(US_CALLOUT.has(code) ? { callout: true } : {}), ...(US_LABEL_AT[code] ? { labelAt: US_LABEL_AT[code] } : {}), ...(code === 'PR' ? { optional: true } : {}), aliases: [...new Set([nameEn, fipsS, `US-${code}`, `State of ${nameEn}`, `Estado de ${name}`, ...(US_ALIAS[code] || [])])].filter((a) => a !== name) }, geometry: toGeom(clean) });
+  }
+  feats.sort((a, b) => a.properties.nameEn.localeCompare(b.properties.nameEn));
+  return { type: 'FeatureCollection', projection: 'albersUsa', features: feats };
+}
+
 // Codificación compacta: cada anillo es un arreglo plano de enteros (×100)
 // con deltas; se decodifica al cargar el módulo (~3× más liviano que JSON).
 function encodeRing(r) {
@@ -152,11 +198,12 @@ const DECODE = `function decode(fc) {
 `;
 const out = (file, fc, attribution) => {
   mkdirSync(join(root, 'src/geo/data'), { recursive: true });
-  const enc = { type: 'FeatureCollection', features: fc.features.map((f) => ({ type: 'Feature', properties: f.properties, geometry: { type: f.geometry.type, coordinates: f.geometry.type === 'Polygon' ? f.geometry.coordinates.map(encodeRing) : f.geometry.coordinates.map((p) => p.map(encodeRing)) } })) };
+  const enc = { type: 'FeatureCollection', ...(fc.projection ? { projection: fc.projection } : {}), features: fc.features.map((f) => ({ type: 'Feature', properties: f.properties, geometry: { type: f.geometry.type, coordinates: f.geometry.type === 'Polygon' ? f.geometry.coordinates.map(encodeRing) : f.geometry.coordinates.map((p) => p.map(encodeRing)) } })) };
   const body = `// Generado por scripts/build-geo.js — no editar a mano.\n// ${attribution}\nexport const attribution = ${JSON.stringify(attribution)};\n${DECODE}export default decode(${JSON.stringify(enc)});\n`;
   writeFileSync(join(root, 'src/geo/data', file), body);
   console.log(`${file}: ${fc.features.length} entidades · ${(body.length / 1024).toFixed(0)} kB`);
 };
-const w = arg('--world'), c = arg('--chile');
+const w = arg('--world'), c = arg('--chile'), u = arg('--usa');
 if (w) out('world.js', buildWorld(w), 'Natural Earth 1:110m (dominio público), vía world-atlas 2.0.2 (ISC).');
 if (c) out('chile-regiones.js', buildChile(c), 'Regiones de Chile: Biblioteca del Congreso Nacional (BCN), mapas vectoriales, vía github.com/fcortes/Chile-GeoJSON. Simplificado; sin territorios insulares oceánicos.');
+if (u) out('usa-estados.js', buildUsa(u), 'Estados de EE. UU.: U.S. Census Bureau, límites cartográficos 1:10m (dominio público), vía us-atlas 3.0.1 (ISC). Simplificado; Alaska, Hawái y Puerto Rico en recuadros.');

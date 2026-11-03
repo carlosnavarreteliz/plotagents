@@ -1,17 +1,20 @@
 // Mapas: coroplético (color por valor) y de símbolos (círculos proporcionales).
-// Geometrías por nombre registrado ('chile', 'world') o GeoJSON propio.
+// Geometrías por nombre registrado ('chile', 'usa', 'world') o GeoJSON propio.
 // Países alargados como Chile se dibujan a la izquierda con una columna de
 // etiquetas (nombre, barra y valor) ordenada de norte a sur; mapas anchos
-// usan todo el ancho con etiquetas solo donde importan.
+// usan todo el ancho con etiquetas solo donde importan. Los estados de EE. UU.
+// llevan su sigla (y el valor, si cabe); los chicos del noreste, afuera con
+// línea guía. En el navegador: zoom con clic, rueda (+ Ctrl/⌘) o pellizco.
 import { el, g, text } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ramp } from '../theme.js';
+import { ramp, textOn } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { niceStep } from '../scale.js';
 import { getGeo } from '../geo/registry.js';
-import { mercator, equalEarth, fit, aspectOf, pathD, centroid, rings } from '../geo/projection.js';
+import { mercator, equalEarth, projections, fit, aspectOf, pathD, centroid, rings } from '../geo/projection.js';
+import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } from '../dashed.js';
 
 const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
@@ -72,7 +75,8 @@ export function colorScale(values, spec, theme) {
     const breaks = Array.from({ length: 2 * k - 1 }, (_, j) => +(mid + step * (j + 1 - k)).toPrecision(12));
     const n = 2 * k;
     const colors = Array.from({ length: n }, (_, i) => ramp(stops, 0.5 + ((i + 0.5 - k) / k) * 0.5));
-    return { ...classed(breaks, colors, min, max), mid };
+    // Extremos simétricos (mid ± k·paso): la leyenda se lee igual hacia ambos lados.
+    return { ...classed(breaks, colors, Math.min(min, +(mid - k * step).toPrecision(12)), Math.max(max, +(mid + k * step).toPrecision(12))), mid };
   }
   const stops = theme.sequential;
   if (mode === 'continuous') return { mode, min, max, color: (x) => ramp(stops.slice(1), (x - min) / (range || 1)), stops: stops.slice(1) };
@@ -96,7 +100,7 @@ function classed(breaks, colors, min, max) {
 }
 
 /** Leyenda escalonada (o degradado), pegada al mapa. Devuelve { svg, h }. */
-function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) {
+function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid, dashed }) {
   const out = [];
   let lx = x;
   const size = theme.type?.axis ?? 11.5;
@@ -105,15 +109,29 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
     out.push(text(lx, y + 13, truncate(title, tw, 12, 500), { fill: theme.lede, fontSize: 12, fontWeight: 500 }));
     lx += tw + 12;
   }
-  const missW = missing ? measure(T(locale, 'Sin dato', 'No data'), size) + 24 : 0;
-  const barW = Math.max(120, Math.min(360, x + maxW - lx - missW));
+  // Anchos con su separación: cuadro + texto (+ espacio hasta la siguiente clave).
+  const missW = missing ? measure(T(locale, 'Sin dato', 'No data'), size) + 14 + (dashed ? 14 : 0) : 0;
+  const dashW = dashed ? measure(dashed.label, size) + 16 : 0;
+  // Si "Sin dato" y la clave punteada no caben junto a la escala, bajan a una segunda fila.
+  const extra = missW + dashW ? 14 + missW + dashW : 0;
+  const wrapX = 140 + extra > x + maxW - lx;
+  const barW = Math.max(120, Math.min(360, x + maxW - lx - (wrapX ? 0 : extra)));
   const by = y + 4;
   if (sc.mode === 'classes') {
     const n = sc.colors.length, gap = 2;
     const sw = (barW - gap * (n - 1)) / n;
-    sc.colors.forEach((c, i) => out.push(el('rect', { x: lx + i * (sw + gap), y: by, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c })));
+    // Cada clase es una clave conectada: al pasar encima se destacan sus regiones.
+    sc.colors.forEach((c, i) => out.push(g({ class: 'pa-key', 'data-color': c, style: 'cursor:pointer' }, [
+      el('rect', { x: lx + i * (sw + gap), y: by - 4, width: sw + gap, height: 18, fill: 'transparent' }),
+      el('rect', { x: lx + i * (sw + gap), y: by, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c }),
+    ])));
     // Etiquetas en los cortes; los extremos (mín. y máx.) en las puntas.
-    const labels = [{ x: lx, v: sc.min, anchor: 'start' }, ...sc.breaks.map((b, i) => ({ x: lx + (i + 1) * (sw + gap) - gap / 2, v: b, anchor: 'middle' })), { x: lx + barW, v: sc.max, anchor: 'end' }];
+    // Los extremos solo se rotulan si caen fuera de los cortes (con cortes fijos, un año puede no llegar a la última clase).
+    const labels = [
+      ...(sc.min < sc.breaks[0] || !sc.breaks.length ? [{ x: lx, v: sc.min, anchor: 'start' }] : []),
+      ...sc.breaks.map((b, i) => ({ x: lx + (i + 1) * (sw + gap) - gap / 2, v: b, anchor: 'middle' })),
+      ...(sc.max >= sc.breaks[sc.breaks.length - 1] || !sc.breaks.length ? [{ x: lx + barW, v: sc.max, anchor: 'end' }] : []),
+    ];
     let last = -Infinity;
     for (const L of labels) {
       const s = fmt(L.v), w = measure(s, size);
@@ -131,12 +149,22 @@ function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) 
     if (sc.mid !== undefined) out.push(text(lx + barW / 2, by + 24, fmt(sc.mid), { fill: theme.muted, fontSize: size, textAnchor: 'middle' }));
     out.push(text(lx + barW, by + 24, fmt(sc.max), { fill: theme.muted, fontSize: size, textAnchor: 'end' }));
   }
+  let mx = wrapX ? x : lx + barW + 14;
+  const ey = wrapX ? by + 32 : by;
   if (missing) {
-    const mx = lx + barW + 14;
-    out.push(el('rect', { x: mx, y: by, width: 10, height: 10, rx: 2, fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }));
-    out.push(text(mx + 14, by + 9, T(locale, 'Sin dato', 'No data'), { fill: theme.muted, fontSize: size }));
+    out.push(g({ class: 'pa-key', 'data-color': `url(#${gid}-nd)`, style: 'cursor:pointer' }, [
+      el('rect', { x: mx, y: ey, width: 10, height: 10, rx: 2, fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }),
+      text(mx + 14, ey + 9, T(locale, 'Sin dato', 'No data'), { fill: theme.muted, fontSize: size }),
+    ]));
+    mx += missW;
   }
-  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: 34 };
+  if (dashed) {
+    out.push(g({ class: 'pa-key', 'data-color': 'dashed', style: 'cursor:pointer' }, [
+      el('rect', { x: mx + 0.6, y: ey + 0.6, width: 9.8, height: 9.8, rx: 2, fill: dashed.fill, stroke: dashed.stroke, strokeWidth: 1.1, strokeDasharray: DASH.legend }),
+      text(mx + 15, ey + 9, dashed.label, { fill: theme.lede, fontSize: size }),
+    ]));
+  }
+  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: wrapX && (missing || dashed) ? 50 : 34 };
 }
 
 /** Patrón rayado para regiones sin dato. */
@@ -154,7 +182,13 @@ function prepare(spec, locale) {
   requireField(data, valueF, 'value');
   let features = fc.features.filter((f) => f.geometry && rings(f.geometry).length);
   if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
-  const idx = featureIndex(features, spec.featureKey);
+  let idx = featureIndex(features, spec.featureKey);
+  // Territorios opcionales (Puerto Rico en 'usa'): solo se dibujan si hay datos para ellos.
+  if (features.some((f) => f.properties?.optional)) {
+    const used = new Set(data.map((r) => idx.get(normKey(r[key]))).filter(Boolean));
+    features = features.filter((f) => !f.properties?.optional || used.has(f) || spec.territories === true);
+    idx = featureIndex(features, spec.featureKey);
+  }
   const buckets = new Map();
   const unmatched = [];
   for (const r of data) {
@@ -168,10 +202,13 @@ function prepare(spec, locale) {
   if (Array.isArray(spec._unmatched)) spec._unmatched.push(...new Set(unmatched));
   const ranked = [...values.entries()].sort((a, b) => b[1] - a[1]);
   const rank = new Map(ranked.map(([f], i) => [f, i + 1]));
-  const projName = spec.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
+  const projName = spec.projection ?? fc.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
   const lonSpan = (() => { let a = Infinity, b = -Infinity; for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < a) a = p[0]; if (p[0] > b) b = p[0]; } return b - a; })();
-  const raw = (projName === 'mercator' ? mercator : projName === 'equalEarth' || projName === 'equal-earth' || lonSpan > 100 ? equalEarth : mercator)();
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data };
+  const raw = (projName && projections[projName] ? projections[projName] : lonSpan > 100 ? equalEarth : mercator)();
+  // `dashed`: por nombre de región (con los mismos alias) o por un campo de los datos.
+  const dm = dashedMatcher(spec, data, key, null, normKey);
+  const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed };
 }
 
 /**
@@ -243,10 +280,81 @@ function chooseLabeled(m, spec, locale, defaultN) {
   const top = m.ranked.slice(0, n).map(([f]) => f);
   return [...new Set([...m.features.filter(isHl), ...top])];
 }
-function featureIndexHas(f, keys) {
+function featureKeys(f) {
   const p = f.properties || {};
-  const own = [p.code, p.num, p.id, p.iso3, p.name, p.nameEn, ...(p.aliases || [])].map(normKey);
+  return [p.code, p.num, p.id, p.iso3, p.fips, p.name, p.nameEn, ...(p.aliases || [])].filter((v) => v !== undefined && v !== null).map(normKey);
+}
+function featureIndexHas(f, keys) {
+  const own = featureKeys(f);
   return keys.some((k) => own.includes(k));
+}
+
+/**
+ * Siglas sobre el mapa (estados de EE. UU. u otra geometría con `abbr`): la
+ * sigla va dentro si cabe, con el valor debajo cuando hay espacio. Las
+ * marcadas `callout` (estados chicos) van en una columna a la derecha con
+ * línea guía, ordenadas por altura.
+ */
+function abbrLabels(items, proj, theme, { calloutX, showValues, top, bottom }) {
+  const inside = [], callouts = [];
+  const fs = Math.max(8.5, Math.min(11, proj.bounds.w / 62));
+  for (const it of items) {
+    const p = it.f.properties || {};
+    if (!p.abbr) continue;
+    const at = p.labelAt ? proj(p.labelAt) : [it.cx, it.cy];
+    if (p.callout && calloutX) { callouts.push({ ...it, ax: it.cx, ay: it.cy }); continue; }
+    const s = Math.sqrt(it.area);
+    const aw = measure(p.abbr, fs, 600);
+    if (aw + 3 > s * 0.95) {
+      // Islas chicas (Hawái, Puerto Rico): la sigla al lado, fuera de la forma.
+      if (!proj.inset || !proj.inset(p.labelAt || it.f.geometry && rings(it.f.geometry)[0][0])) continue;
+      let x1 = -Infinity;
+      for (const r of rings(it.f.geometry)) for (const pt of r) x1 = Math.max(x1, proj(pt)[0]);
+      inside.push(text(x1 + 5, at[1] + fs * 0.36, p.abbr, { fill: theme.lede, fontSize: fs, fontWeight: 600 }));
+      continue;
+    }
+    const ink = it.dashedShape ? theme.ink : textOn(it.color, theme);
+    const val = showValues && !it.missing && s > fs * 3.4 && measure(it.label, fs - 1) + 4 < s * 0.92;
+    const y0 = at[1] + (val ? -1 : fs * 0.36);
+    const halo = it.dashedShape ? { stroke: theme.surface, strokeWidth: 2.5, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
+    inside.push(text(at[0], y0, p.abbr, { fill: ink, fontSize: fs, fontWeight: 600, textAnchor: 'middle', ...halo }));
+    if (val) inside.push(text(at[0], y0 + fs + 0.5, it.label, { fill: ink, fontSize: fs - 1, textAnchor: 'middle', opacity: 0.88, ...halo }));
+  }
+  const out = [g({ class: 'pa-map-label pa-zoom-hide', 'pointer-events': 'none' }, inside)];
+  if (callouts.length) {
+    const rowH = fs + 5.5;
+    const rows = callouts.sort((a, b) => a.ay - b.ay).map((c) => ({ ...c, y: c.ay }));
+    for (let i = 0; i < rows.length; i++) rows[i].y = Math.max(rows[i].y, i ? rows[i - 1].y + rowH : top + rowH / 2);
+    for (let i = rows.length - 1; i >= 0; i--) { const lim = i === rows.length - 1 ? bottom - rowH / 2 : rows[i + 1].y - rowH; if (rows[i].y > lim) rows[i].y = lim; }
+    const parts = rows.map((r) => {
+      const p = r.f.properties;
+      const ax = r.ax.toFixed(1), ay = r.ay.toFixed(1);
+      return g({ class: 'pa-m', 'data-tip': r.tip, 'data-color': r.color }, [
+        el('path', { d: `M${ax},${ay}L${(calloutX - 12).toFixed(1)},${r.y.toFixed(1)}L${(calloutX - 3).toFixed(1)},${r.y.toFixed(1)}`, fill: 'none', stroke: theme.muted, strokeWidth: 0.6, opacity: 0.7 }),
+        el('circle', { cx: ax, cy: ay, r: 1.6, fill: theme.ink, opacity: 0.75 }),
+        el('rect', { x: calloutX, y: r.y - 4.5, width: 9, height: 9, rx: 2, ...(r.dashedShape ? { fill: r.fill, stroke: r.stroke, strokeWidth: 1, strokeDasharray: DASH.legend } : { fill: r.missing ? r.fill : r.color }) }),
+        text(calloutX + 13, r.y + fs * 0.36, p.abbr, { fill: theme.ink, fontSize: fs, fontWeight: 600 }),
+        showValues ? text(calloutX + 18 + measure(p.abbr, fs, 600), r.y + fs * 0.36, r.label, { fill: theme.lede, fontSize: fs }) : '',
+      ]);
+    });
+    out.push(g({ class: 'pa-callouts pa-zoom-hide' }, parts));
+  }
+  return out;
+}
+
+/** Recuadros (Alaska, Hawái, Puerto Rico): un marco fino y discontinuo. */
+function insetFrames(features, proj, theme) {
+  if (!proj.inset) return '';
+  const boxes = new Map();
+  for (const f of features) for (const r of rings(f.geometry)) {
+    const k = proj.inset(r[0]);
+    if (!k) continue;
+    const b = boxes.get(k) || [Infinity, Infinity, -Infinity, -Infinity];
+    for (const pt of r) { const [x, y] = proj(pt); b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); }
+    boxes.set(k, b);
+  }
+  const pad = 7;
+  return g({ class: 'pa-insets', 'pointer-events': 'none' }, [...boxes.values()].map((b) => el('rect', { x: b[0] - pad, y: b[1] - pad, width: b[2] - b[0] + 2 * pad, height: b[3] - b[1] + 2 * pad, rx: 6, fill: 'none', stroke: theme.axis, strokeWidth: 0.8, strokeDasharray: '2 3' })));
 }
 
 function baseChart(spec, theme, kind) {
@@ -265,15 +373,58 @@ function baseChart(spec, theme, kind) {
   const missingAny = spec.missing !== 'plain' && m.features.some((f) => !m.values.has(f));
   const body = [];
   let sc = null;
+  const H = hatcher(theme, gid);
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const dashedKey = m.dashed.size && spec.legend !== false ? { label: dashedLabel, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) } : null;
   if (kind === 'choropleth' && vals.length) {
     sc = colorScale(vals, spec, theme);
-    const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid });
+    const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid, dashed: dashedKey });
     body.push(lg.svg);
     area = { ...area, y: area.y + lg.h + 8, h: area.h - lg.h - 8 };
   }
+  // Mapa de símbolos ancho: la leyenda de tamaños va arriba, en fila (abajo chocaría con Alaska o la Antártida).
+  let rMax = null;
+  if (kind === 'symbol') {
+    const N = m.values.size;
+    const wEst = area.w, hEst = wEst * Math.min(1.1, aspect);
+    rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt(tall ? (area.h / aspect) * area.h : wEst * hEst) / (tall ? 9 : N > 30 ? 22 : 16)));
+  }
+  let lx = area.x;
+  const rowItems = [];
+  if (kind === 'symbol' && !tall && vals.length) {
+    const maxV = Math.max(...vals.map(Math.abs), 0) || 1;
+    const size = theme.type?.axis ?? 11.5;
+    const base = area.y + 2 * rMax + 2;
+    for (const v of [maxV / 16, maxV / 4, maxV]) {
+      const r = Math.sqrt(v / maxV) * rMax;
+      rowItems.push(el('circle', { cx: lx + r, cy: base - r, r, fill: 'none', stroke: theme.muted, strokeWidth: 0.8 }));
+      rowItems.push(text(lx + 2 * r + 5, base - 1, fmt(v), { fill: theme.muted, fontSize: size }));
+      lx += 2 * r + 12 + measure(fmt(v), size);
+    }
+    lx += 10;
+  }
+  if (dashedKey && !(kind === 'choropleth' && vals.length)) {
+    const size = theme.type?.axis ?? 11.5;
+    const ky = rowItems.length ? area.y + 2 * rMax - 9 : area.y + 4.6;
+    rowItems.push(g({ class: 'pa-key', 'data-color': 'dashed', style: 'cursor:pointer' }, [
+      el('rect', { x: lx + 0.6, y: ky, width: 9.8, height: 9.8, rx: 2, fill: dashedKey.fill, stroke: dashedKey.stroke, strokeWidth: 1.1, strokeDasharray: DASH.legend }),
+      text(lx + 15, ky + 8.4, dashedLabel, { fill: theme.lede, fontSize: size }),
+    ]));
+  }
+  if (rowItems.length) {
+    const h = kind === 'symbol' && !tall ? 2 * rMax + 12 : 26;
+    body.push(g({ class: 'pa-legend pa-size-legend' }, rowItems));
+    area = { ...area, y: area.y + h, h: area.h - h };
+  }
+  // Columna de siglas para estados chicos (EE. UU.): se reserva a la derecha.
+  const callouts = kind === 'choropleth' && !tall && spec.labels !== false ? m.features.filter((f) => f.properties?.callout && f.properties?.abbr) : [];
+  const fsC = Math.max(8.5, Math.min(11, (area.w * 0.9) / 62));
+  const calloutW = callouts.length
+    ? 18 + Math.max(...callouts.map((f) => measure(f.properties.abbr, fsC, 600) + (kind === 'choropleth' && m.values.has(f) ? measure(fmt(m.values.get(f)), fsC) + 4 : 0)))
+    : 0;
   // Mapa ancho: el alto se ajusta al ancho si el agente no fijó `height`.
   if (!tall && spec.height === undefined) {
-    const mapH = area.w * Math.min(1.1, aspect);
+    const mapH = (area.w - calloutW) * Math.min(1.1, aspect);
     frame.setHeight(area.y + mapH + frame.chrome);
     area = { ...area, h: frame.bottom - area.y };
   }
@@ -282,65 +433,98 @@ function baseChart(spec, theme, kind) {
     const colMin = W < 480 ? 0.56 : 0.5;
     let mapW = Math.min(area.w * (1 - colMin), area.h / aspect);
     box = [area.x, area.y, area.x + mapW, area.y + area.h];
-  } else box = [area.x, area.y, area.x + area.w, area.y + area.h];
+  } else box = [area.x, area.y, area.x + area.w - calloutW, area.y + area.h];
   const proj = fit(m.features, m.raw, box, { align: tall ? 'left' : 'center' });
-  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall };
+  const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
+  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax };
 }
 
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
+/** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
+function zoomLayer(B, children) {
+  const { area, gid } = B;
+  const box = [area.x, area.y, area.w, area.h].map((v) => Math.round(v * 10) / 10);
+  return [
+    el('clipPath', { id: `${gid}-clip` }, el('rect', { x: box[0], y: box[1] - 2, width: box[2], height: box[3] + 4 })),
+    // Fondo transparente: la rueda, el arrastre y el pellizco funcionan también sobre el mar.
+    g({ class: 'pa-zoom-clip', 'clip-path': `url(#${gid}-clip)` }, [el('rect', { x: box[0], y: box[1], width: box[2], height: box[3], fill: 'transparent' }), g({ class: 'pa-zoom', 'data-zoom': box.join(',') }, children)]),
+  ];
+}
+
 export function choropleth(spec, theme) {
   const B = baseChart(spec, theme, 'choropleth');
-  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall } = B;
+  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX } = B;
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl && featureIndexHas(f, hl);
   const N = m.values.size;
-  const regions = [], outlines = [];
+  const regions = [], dashedRegions = [], outlines = [];
   const items = [];
   for (const f of m.features) {
     const v = m.values.get(f);
     const has = v !== undefined;
-    const fill = has ? sc.color(v) : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
+    const base = has ? sc.color(v) : null;
+    const isDashed = m.dashed.has(f);
     const name = nameOf(f, locale);
-    const tipTxt = has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`;
-    regions.push(el('path', { class: 'pa-m', d: pathD(f.geometry, proj), fill, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt }));
-    if (isHl(f)) outlines.push(el('path', { d: pathD(f.geometry, proj), fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
+    const tipTxt = (has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
+    const d = pathD(f.geometry, proj);
+    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt, 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name) };
+    let fill = has ? base : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
+    let stroke = null;
+    if (isDashed && has) {
+      // Rayado del color de su clase + borde discontinuo: se lee igual en la escala.
+      const a = dashedAttrs(H, base, { width: 1.2 });
+      fill = a.fill; stroke = a.stroke;
+      dashedRegions.push(el('path', { ...common, ...a }));
+    } else if (isDashed) {
+      stroke = theme.muted;
+      dashedRegions.push(el('path', { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill }));
+    } else regions.push(el('path', { ...common, fill, stroke: theme.surface, strokeWidth: 0.75, 'data-color': fill }));
+    if (isHl(f)) outlines.push(el('path', { d, fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
     const c = centroid(f.geometry, proj);
-    items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? sc.color(v) : theme.tint, missing: !has, tip: tipTxt });
+    items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
-  body.push(g({ class: 'pa-regions' }, regions), g({ class: 'pa-outlines' }, outlines));
+  const layer = [g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme)];
+  const after = [];
   if (tall && spec.labels !== false) {
     const x = proj.bounds.x + proj.bounds.w + 26;
     const maxV = Math.max(...[...m.values.values()].map(Math.abs));
-    body.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+    after.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+  } else if (spec.labels !== false && m.features.some((f) => f.properties?.abbr) && !Array.isArray(spec.labels) && typeof spec.labels !== 'number') {
+    const [lab, ...rest] = abbrLabels(items, proj, theme, { calloutX, showValues: spec.values !== false, top: area.y, bottom: area.y + area.h });
+    layer.push(lab);
+    after.push(...rest);
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, m.features.length <= 30 ? m.features.length : 0));
     const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area);
-    body.push(...mapLabels(ordered, theme));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme)));
   }
+  body.push(...(tall ? layer : zoomLayer(B, layer)), ...after);
   const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map'));
-  return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) });
+  return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs() });
 }
 
 /** Mapa de símbolos: círculos de área proporcional en el centroide. */
 export function symbolMap(spec, theme) {
   const B = baseChart(spec, theme, 'symbol');
-  const { locale, m, fmt, frame, area, body, proj, tall, gid } = B;
+  const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax } = B;
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
-  const rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt(proj.bounds.w * proj.bounds.h) / (tall ? 9 : 16)));
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  body.push(g({ class: 'pa-regions' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round' }))));
+  const layer = [g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)) }))), insetFrames(m.features, proj, theme)];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);
     const v = m.values.get(f);
     const name = nameOf(f, locale);
-    return { f, name, v, cx: c.x, cy: c.y, area: c.area, r: v === undefined ? 0 : Math.sqrt(Math.abs(v) / maxV) * rMax, label: v === undefined ? '—' : fmt(v), color, missing: v === undefined,
-      tip: v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` };
+    const isDashed = m.dashed.has(f);
+    const at = f.properties?.labelAt ? proj(f.properties.labelAt) : [c.x, c.y];
+    return { f, name, v, cx: at[0], cy: at[1], area: c.area, r: v === undefined ? 0 : Math.sqrt(Math.abs(v) / maxV) * rMax, label: v === undefined ? '—' : fmt(v), color, missing: v === undefined, dashedShape: isDashed,
+      tip: (v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}`) + (isDashed ? `\n${dashedLabel}` : '') };
   });
   const circles = items.filter((it) => !it.missing).sort((a, b) => b.r - a.r)
-    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': it.tip }));
-  body.push(g({ class: 'pa-symbols' }, circles));
+    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': it.tip, 'data-color': color,
+      ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
+  layer.push(g({ class: 'pa-symbols' }, circles));
   // Leyenda de tamaños (tres círculos anidados) en la esquina libre.
   const sizes = [maxV, maxV / 4, maxV / 16].map((v) => ({ v, r: Math.sqrt(v / maxV) * rMax }));
   const lx = tall ? proj.bounds.x + proj.bounds.w + 26 : area.x + 4, ly = tall ? area.y + area.h - 4 : area.y + area.h - 4;
@@ -352,14 +536,15 @@ export function symbolMap(spec, theme) {
   if (tall && spec.labels !== false) {
     const x = proj.bounds.x + proj.bounds.w + 26;
     const legH = rMax * 2 + 12;
-    body.push(...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+    body.push(...layer, ...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, Math.min(5, m.values.size)));
-    body.push(...mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme)));
+    body.push(...zoomLayer(B, layer));
   }
-  body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
+  if (tall) body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
   const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map'));
-  return frame.finish(body, { desc, type: 'symbolmap' });
+  return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs() });
 }
 
 function describeMap(m, fmt, locale, what) {

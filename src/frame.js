@@ -76,7 +76,8 @@ export function createFrame(spec, theme, defaults = {}) {
       }
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width)).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
-      const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`;
+      const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}`
+        + (/^(choropleth|symbolmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '');
       return el(
         'svg',
         {
@@ -90,6 +91,7 @@ export function createFrame(spec, theme, defaults = {}) {
           class: 'pa-chart',
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
+          'data-pa-lang': String(spec.locale || 'es').slice(0, 2),
           style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
         },
         [
@@ -133,10 +135,12 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     const w = 18 * X + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
     const cy = y + 6.5 * X;
-    out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
+    out.push(`<g class="pa-key" data-color="${esc(it.key ?? it.color)}" style="cursor:pointer">`);
     out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: rowH - 1, rx: 4, fill: 'transparent' }));
     const sw = 10 * Math.min(1.6, X);
-    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
+    // Entradas punteadas: línea discontinua o cuadro rayado con borde discontinuo.
+    if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: it.dashed ? 'butt' : 'round', strokeDasharray: it.dashed ? '4 2.5' : null }));
+    else if (it.shape === 'square' && it.dashed) out.push(el('rect', { x: x + 0.6, y: cy - sw / 2 + 0.6, width: sw - 1.2, height: sw - 1.2, rx: 2, fill: it.fill || it.color, stroke: it.stroke || it.color, strokeWidth: 1.2, strokeDasharray: '3 2' }));
     else if (it.shape === 'square') out.push(el('rect', { x, y: cy - sw / 2, width: sw, height: sw, rx: 2.5, fill: it.color }));
     else out.push(el('circle', { cx: x + sw / 2, cy, r: sw / 2, fill: it.color }));
     out.push(text(x + sw + 6, y + 11 * X, label, { fill: theme.lede, fontSize: size }));

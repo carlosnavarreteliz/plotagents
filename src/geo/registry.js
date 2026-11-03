@@ -1,5 +1,5 @@
 // Registro de geometrías. El núcleo no trae mapas pesados: se registran al
-// importar 'plotagents/geo/chile' o 'plotagents/geo/world', o se pasa un
+// importar 'plotagents/geo/chile', 'plotagents/geo/usa' o 'plotagents/geo/world', o se pasa un
 // GeoJSON propio en spec.geo.
 import { PlotError } from '../data.js';
 
@@ -22,7 +22,7 @@ export function getGeo(geo) {
     const known = [...new Set(REG.keys())];
     throw new PlotError(
       `No hay una geometría registrada con el nombre "${geo}".`,
-      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
+      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile', 'plotagents/geo/usa' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
     );
   }
   return fc;

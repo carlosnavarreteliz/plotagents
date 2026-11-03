@@ -13,6 +13,7 @@ import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd } from '../stats.js';
 import { hash } from '../frame.js';
+import { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 
 export function prepareLine(spec) {
   let data = ensureData(spec);
@@ -127,6 +128,12 @@ export function line(spec, theme, variant = 'line') {
   const focus = (k) => !hl || hl.has(k);
   const colorOf = (k) => (focus(k) ? (!multi ? (spec.colors?.[k] || theme.categorical[0]) : cmap.get(k)) : theme.dim);
 
+  // Trazo discontinuo: series enteras (`dashed`) o el tramo desde `dashedFrom` (proyección).
+  const dm = dashedMatcher(spec, [], null, null);
+  const dashedSeries = (k) => !!(dm && dm(k));
+  const fromT = fromTest(spec, (v) => (m.kind === 'category' ? m.cats.indexOf(String(v)) : typeof v === 'number' && m.kind === 'date' ? v : xValue(v, m.kind)));
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+
   // Etiquetas al final: siempre, salvo `labels: false`. Si hay demasiadas para
   // el alto disponible, se rotulan las de mayor valor final y la leyenda cubre el resto.
   const labelMode = spec.labels ?? 'auto';
@@ -147,7 +154,7 @@ export function line(spec, theme, variant = 'line') {
   const labeled = want ? m.lines.filter((l) => focus(l.key)).sort((a, b) => (lastOf(b)?.y ?? -Infinity) - (lastOf(a)?.y ?? -Infinity)).slice(0, maxLabels) : [];
   const allLabeled = labeled.length === m.lines.filter((l) => focus(l.key)).length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true) && spec.legend !== false;
-  const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line' })) : [];
+  const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line', dashed: dashedSeries(s) })) : [];
   const area = frame.layout(legend);
 
   const endW = labeled.length
@@ -213,6 +220,23 @@ export function line(spec, theme, variant = 'line') {
     }
   }
 
+  // Tramo proyectado: banda suave de fondo con su rótulo, desde el último dato firme.
+  let cutX = null;
+  if (fromT) {
+    const firm = xsAll.filter((xv) => !fromT(xv));
+    const startX = firm.length ? firm[firm.length - 1] : xsAll.find((xv) => fromT(xv));
+    if (startX !== undefined && xsAll.some((xv) => fromT(xv)) && startX <= x1) {
+      cutX = Math.max(inner.x, xS(Math.max(startX, x0)));
+      body.push(el('rect', { x: cutX, y: inner.y, width: Math.max(0, inner.x + inner.w - cutX), height: inner.h, fill: theme.tint, opacity: 0.55, 'pointer-events': 'none' }));
+      body.push(el('line', { x1: cutX, x2: cutX, y1: inner.y, y2: inner.y + inner.h, stroke: theme.muted, strokeWidth: 1, strokeDasharray: '2 3', opacity: 0.8 }));
+      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+    }
+  }
+  const gidD = 'pa-dash-' + Math.abs(hash(String(spec.title) + m.y + inner.w + theme.mode)).toString(36);
+  const H = hatcher(theme, gidD);
+  // Recortes para pintar áreas: firme a la izquierda de cutX, rayado a la derecha.
+  const clipL = `${gidD}-l`, clipR = `${gidD}-r`;
+
   // Trazos
   const ordered = [...m.lines].sort((a, b) => (focus(a.key) ? 1 : 0) - (focus(b.key) ? 1 : 0));
   const showDots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
@@ -245,17 +269,37 @@ export function line(spec, theme, variant = 'line') {
         const base0 = yS(Math.max(nd.min, 0));
         const bottom = stack ? sgm.map(([a, , p]) => [a, yS(p.y0)]).reverse() : [[sgm[sgm.length - 1][0], base0], [sgm[0][0], base0]];
         const d = top + 'L' + bottom.map(([a, b]) => `${a.toFixed(2)},${b.toFixed(2)}`).join('L') + 'Z';
-        parts.push(el('path', { d, fill: washSingle ? `url(#${gid})` : c, fillOpacity: washSingle ? 1 : stack ? 0.9 : M.areaOpacity ?? 0.12, stroke: stack ? theme.surface : 'none', strokeWidth: stack ? 1.5 : 0 }));
+        const areaAttrs = { d, fill: washSingle ? `url(#${gid})` : c, fillOpacity: washSingle ? 1 : stack ? 0.9 : M.areaOpacity ?? 0.12, stroke: stack ? theme.surface : 'none', strokeWidth: stack ? 1.5 : 0 };
+        const hatchedArea = stack || dashedSeries(l.key);
+        if (cutX !== null && hatchedArea) {
+          // Área apilada o serie punteada: el tramo proyectado va rayado en su color.
+          parts.push(el('path', { ...areaAttrs, 'clip-path': `url(#${clipL})` }));
+          parts.push(el('path', { ...areaAttrs, fill: H.fill(c), fillOpacity: stack ? 0.95 : 0.5, 'clip-path': `url(#${clipR})` }));
+        } else if (dashedSeries(l.key) && !washSingle) parts.push(el('path', { ...areaAttrs, fill: H.fill(c), fillOpacity: stack ? 0.95 : 0.5 }));
+        else parts.push(el('path', areaAttrs));
       }
     }
-    if (!stack) for (const sgm of segs) parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), fill: 'none', stroke: c, strokeWidth: focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5, strokeLinejoin: 'round', strokeLinecap: 'round' }));
-    const pts = segs.flat();
-    if (showDots && focus(l.key) && !stack) for (const [a, b] of pts) parts.push(el('circle', { cx: a, cy: b, r: (M.pointRadius ?? 4) - 0.5, fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }));
-    if (focus(l.key) && !stack) {
-      const [a, b] = pts[pts.length - 1];
-      parts.push(el('circle', { cx: a, cy: b, r: (M.pointRadius ?? 4) + 0.5, fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }));
+    const sw = focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5;
+    const lineAttrs = { fill: 'none', stroke: c, strokeWidth: sw, strokeLinejoin: 'round', strokeLinecap: 'round' };
+    const dashAttrs = { ...lineAttrs, strokeDasharray: DASH.line };
+    if (!stack) for (const sgm of segs) {
+      if (dashedSeries(l.key)) { parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), ...dashAttrs })); continue; }
+      // Tramo firme sólido y tramo proyectado discontinuo, unidos en el último dato firme.
+      const k = fromT ? sgm.findIndex(([, , p]) => fromT(p.x)) : -1;
+      if (k < 0) parts.push(el('path', { d: curve(sgm.map(([a, b]) => [a, b])), ...lineAttrs }));
+      else {
+        if (k > 0) parts.push(el('path', { d: curve(sgm.slice(0, k).map(([a, b]) => [a, b])), ...lineAttrs }));
+        const rest = sgm.slice(Math.max(0, k - 1));
+        if (rest.length > 1) parts.push(el('path', { d: curve(rest.map(([a, b]) => [a, b])), ...dashAttrs }));
+      }
     }
-    body.push(g({ class: 'pa-m', 'data-series': l.key }, parts));
+    const pts = segs.flat();
+    // Puntos proyectados huecos: se ven como "todavía no medidos".
+    const hollow = (p) => dashedSeries(l.key) || (fromT && fromT(p.x));
+    const dot = ([a, b, p], r) => el('circle', { cx: a, cy: b, r, ...(hollow(p) ? { fill: theme.surface, stroke: c, strokeWidth: 1.75 } : { fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }) });
+    if (showDots && focus(l.key) && !stack) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+    if (focus(l.key) && !stack) parts.push(dot(pts[pts.length - 1], (M.pointRadius ?? 4) + 0.5));
+    body.push(g({ class: 'pa-m', 'data-series': l.key, ...(dashedSeries(l.key) ? { 'data-dashed': '1' } : {}) }, parts));
   }
 
   body.push(refLinesY(refs, yS, inner, theme, fmt));
@@ -292,7 +336,7 @@ export function line(spec, theme, variant = 'line') {
   // Capa de interacción: crosshair con todos los valores en ese x.
   const cross = xsAll.map((xv) => ({
     x: +xS(xv).toFixed(1),
-    t: xFmt(xv),
+    t: xFmt(xv) + (fromT && fromT(xv) ? ` · ${dashedLabel}` : ''),
     v: m.lines.filter((l) => focus(l.key)).map((l) => {
       const p = l.points.find((q) => q.x === xv);
       if (!p || !Number.isFinite(p.y)) return null;
@@ -303,7 +347,8 @@ export function line(spec, theme, variant = 'line') {
   body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
 
   const desc = describeLine(m, fmt, xFmt, locale);
-  return frame.finish(body, { desc, type: isArea ? 'area' : 'line', defs });
+  if (cutX !== null) defs += el('clipPath', { id: clipL }, el('rect', { x: 0, y: 0, width: cutX, height: frame.height })) + el('clipPath', { id: clipR }, el('rect', { x: cutX, y: 0, width: frame.width, height: frame.height }));
+  return frame.finish(body, { desc, type: isArea ? 'area' : 'line', defs: defs + H.defs() });
 }
 
 /** Separa etiquetas en 1D: empuja hacia abajo y, si se pasan, hacia arriba. */
