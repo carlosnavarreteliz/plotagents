@@ -118,3 +118,26 @@ export function refLinesX(refs = [], x, area, theme, fmt) {
   }
   return g({ class: 'pa-refs' }, out);
 }
+
+/**
+ * Esquina más despejada para una nota (R², n…): cuenta los puntos (y la recta
+ * de ajuste, si se pasa muestreada) que caen bajo cada esquina candidata.
+ * Devuelve { x, y, anchor } listo para un <text>.
+ */
+export function quietCorner(points, inner, w, h = 14, pad = 8) {
+  const m = 10;
+  const cands = [
+    { k: 'tr', x0: inner.x + inner.w - pad - w, y0: inner.y + 2, tx: inner.x + inner.w - pad, ty: inner.y + 2 + h - 3, anchor: 'end' },
+    { k: 'br', x0: inner.x + inner.w - pad - w, y0: inner.y + inner.h - h - 4, tx: inner.x + inner.w - pad, ty: inner.y + inner.h - 7, anchor: 'end' },
+    // A la izquierda se deja libre la columna de etiquetas interiores del eje y.
+    { k: 'tl', x0: inner.x + pad + 34, y0: inner.y + 2, tx: inner.x + pad + 34, ty: inner.y + 2 + h - 3, anchor: 'start' },
+    { k: 'bl', x0: inner.x + pad + 34, y0: inner.y + inner.h - h - 4, tx: inner.x + pad + 34, ty: inner.y + inner.h - 7, anchor: 'start' },
+  ];
+  let best = cands[0], bestN = Infinity;
+  for (const c of cands) {
+    let n = 0;
+    for (const [px, py] of points) if (px >= c.x0 - m && px <= c.x0 + w + m && py >= c.y0 - m && py <= c.y0 + h + m) n++;
+    if (n < bestN) { bestN = n; best = c; }
+  }
+  return { x: best.tx, y: best.ty, anchor: best.anchor };
+}

@@ -17,8 +17,8 @@ export const FONT_CSS =
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
 const STRUCT = {
   font: { family: FONT, mono: MONO, import: FONT_CSS },
-  type: { title: 20, subtitle: 14, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
-  marks: { barRadius: 4, barMax: 30, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
+  type: { title: 22, subtitle: 14.5, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
+  marks: { barRadius: 4, barMax: 36, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
   axes: { inside: true, grid: true },
   layout: { padding: 24, paddingSmall: 12 },
 };
@@ -192,4 +192,19 @@ export function colorMap(keys, theme, overrides = {}) {
     if (!(overrides && overrides[k])) i++;
   }
   return map;
+}
+
+/**
+ * Versión legible de un color de serie para usarlo en TEXTO: lo oscurece
+ * (o aclara, en tema oscuro) hasta ≥ 4,5:1 contra el fondo. Así una etiqueta
+ * puede llevar el color de su línea sin perder legibilidad.
+ */
+export function readable(color, theme, min = 4.5) {
+  const target = theme.mode === 'dark' ? '#FFFFFF' : theme.ink;
+  let c = color;
+  for (let t = 0; t <= 1.0001 && contrast(c, theme.surface) < min; t += 0.05) {
+    const A = hexToRgb(color), B = hexToRgb(target);
+    c = rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
+  }
+  return c;
 }

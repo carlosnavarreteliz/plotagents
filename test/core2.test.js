@@ -107,3 +107,17 @@ test('títulos largos nunca se cortan y el margen se achica en móvil', () => {
   assert.ok(!svg.includes('…'));
   for (const w of title.split(' ')) assert.ok(svg.includes(w));
 });
+
+test('treemap: color sólido por categoría y variación vs periodo anterior', async () => {
+  const { exportacionesAnuales: d } = await import('../examples/specs-more.js');
+  const svg = plot({ type: 'treemap', data: d, path: ['sector', 'producto'], value: 'valor', time: 'año' });
+  const fills = [...svg.matchAll(/data-tip="Minería › [^"]*"><rect[^>]*fill="(#[0-9A-F]{6})"/gi)].map((m) => m[1].toUpperCase());
+  assert.ok(fills.length >= 4 && new Set(fills).size === 1, `Minería con varios tonos: ${[...new Set(fills)]}`);
+  assert.match(svg, /▲ \d|▼ \d/); // variación en las etiquetas
+  assert.match(svg, /vs 2024/); // en el tooltip
+  const ch = plot({ type: 'treemap', data: d, path: ['sector', 'producto'], value: 'valor', time: 'año', colorBy: 'change' });
+  assert.match(ch, /Variación vs 2024/);
+  const shaded = plot({ type: 'treemap', data: d.filter((r) => r.año === 2025), path: ['sector', 'producto'], value: 'valor', shade: true });
+  const f2 = [...shaded.matchAll(/data-tip="Minería › [^"]*"><rect[^>]*fill="(#[0-9A-F]{6})"/gi)].map((m) => m[1]);
+  assert.ok(new Set(f2).size > 1);
+});

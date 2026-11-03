@@ -23,6 +23,7 @@ export function attach(root) {
   overlay.setAttribute('pointer-events', 'none');
   svg.appendChild(overlay);
   let on = null;
+  let pinned = null;
 
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   const show = (html, ev) => {
@@ -38,10 +39,10 @@ export function attach(root) {
   };
   const hide = () => {
     tipEl.style.opacity = '0';
-    svg.classList.remove('pa-focus');
     if (on) on.classList.remove('pa-on');
     on = null;
     overlay.innerHTML = '';
+    if (!pinned) svg.classList.remove('pa-focus');
   };
   const linesHtml = (txt) =>
     String(txt).split('\n').map((l, i) => (i === 0 ? `<div style="font-weight:600">${esc(l)}</div>` : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
@@ -54,6 +55,7 @@ export function attach(root) {
 
   svg.addEventListener('pointermove', (ev) => {
     const t = ev.target;
+    if (t && t.closest && t.closest('.pa-key')) return; // la leyenda maneja su propio foco
     if (t && t.classList && t.classList.contains('pa-cross')) {
       const data = JSON.parse(t.getAttribute('data-cross'));
       const p = toSvg(ev);
@@ -89,6 +91,42 @@ export function attach(root) {
     show(linesHtml(tg.getAttribute('data-tip')), ev);
   });
   svg.addEventListener('pointerleave', hide);
+
+  // Leyenda conectada: pasar sobre una clave destaca sus marcas (mismo color);
+  // un clic la deja fija, otro clic la suelta.
+  const norm = (c) => String(c || '').trim().toLowerCase();
+  const body = svg.querySelector('.pa-body');
+  const marksOf = (color) => {
+    const c = norm(color);
+    const out = new Set();
+    if (!body) return out;
+    for (const n of body.querySelectorAll('[fill],[stroke]')) {
+      if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c) {
+        const m = n.closest('.pa-m') || n;
+        out.add(m);
+      }
+    }
+    return out;
+  };
+  const focusColor = (color) => {
+    svg.querySelectorAll('.pa-m.pa-on').forEach((n) => n.classList.remove('pa-on'));
+    svg.querySelectorAll('.pa-key').forEach((k) => (k.style.opacity = color && norm(k.getAttribute('data-color')) !== norm(color) ? '0.4' : ''));
+    if (!color) { svg.classList.remove('pa-focus'); return; }
+    const ms = marksOf(color);
+    // Marcas sin clase pa-m (p. ej. etiquetas) no se atenúan: solo las que tienen datos.
+    for (const n of body ? body.querySelectorAll('[fill],[stroke]') : []) if (ms.has(n) && !n.classList.contains('pa-m')) n.classList.add('pa-m');
+    ms.forEach((m) => m.classList.add('pa-on'));
+    svg.classList.add('pa-focus');
+  };
+  for (const k of svg.querySelectorAll('.pa-key')) {
+    k.setAttribute('tabindex', '0');
+    k.setAttribute('role', 'button');
+    k.addEventListener('pointerenter', () => { if (!pinned) focusColor(k.getAttribute('data-color')); });
+    k.addEventListener('pointerleave', () => { if (!pinned) focusColor(null); });
+    const toggle = () => { pinned = pinned === k ? null : k; focusColor(pinned ? k.getAttribute('data-color') : null); };
+    k.addEventListener('click', toggle);
+    k.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  }
 }
 
 export const attachSource = attach.toString();

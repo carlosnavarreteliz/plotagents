@@ -79,7 +79,7 @@ export function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:10px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
   if (opts.controls !== false && state.slider !== false) {
@@ -104,7 +104,7 @@ export function render(target, spec, opts = {}) {
     const input = range(0, vals.length - 1, i, 'Periodo');
     track.appendChild(input);
     const now = document.createElement('span'); now.className = 'pa-now';
-    ctl.append(play, track, now);
+    if (state.play === false) ctl.append(track, now); else ctl.append(play, track, now);
     track.appendChild(ticks(vals.map(String), (k) => k / (vals.length - 1), null, track));
     const set = (k) => {
       i = k; input.value = k;

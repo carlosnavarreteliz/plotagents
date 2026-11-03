@@ -136,7 +136,7 @@ export function bar(spec, theme) {
   const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : fmt(values.get(c)[0]));
   const valueLabelW = showLabels ? Math.max(...cats.map((c) => measure(labelOf(c), SIZES.label, 600))) : 0;
   const hideAxis = spec.axis === false || (showLabels && !multi && !(spec.refLines || []).length && spec.axis !== true);
-  const maxBar = spec.barWidth || (horizontal ? 22 : 30);
+  const maxBar = spec.barWidth || (horizontal ? theme.marks?.barMaxH ?? 22 : theme.marks?.barMax ?? 36);
 
   let area = frame.layout(legend);
   const body = [];
@@ -153,7 +153,7 @@ export function bar(spec, theme) {
     const top = showLabels ? 20 : 6;
     const inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: area.h - top - 26 };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
-    const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.25 : 0.38, outer: 0.15 });
+    const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step)));
     const y0 = yS(0);
     cats.forEach((c) => {
@@ -216,7 +216,7 @@ export function bar(spec, theme) {
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
     // ── Barras horizontales
-    const step = multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 14 : maxBar + 12;
+    const step = multi && !stack ? Math.min(maxBar, 16) * k + 2 * (k - 1) + 10 : maxBar + 9;
     const needH = cats.length * step + 30;
     if (spec.height === undefined) {
       frame.setHeight(area.y + needH + frame.chrome);

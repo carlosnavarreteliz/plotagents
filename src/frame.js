@@ -5,8 +5,8 @@ import { measure, wrap } from './text.js';
 import { FONT, FONT_CSS } from './theme.js';
 
 export const SIZES = {
-  title: 20,
-  subtitle: 14,
+  title: 22,
+  subtitle: 14.5,
   label: 12,
   axis: 12,
   legend: 12.5,
@@ -39,9 +39,9 @@ export function createFrame(spec, theme, defaults = {}) {
     header.push(text(pad, y + T.subtitle * 1.0 + i * slh, l, { fill: theme.lede, fontSize: T.subtitle }));
   });
   if (subLines.length) y += subLines.length * slh + 2;
-  if (titleLines.length || subLines.length) y += 12;
+  if (titleLines.length || subLines.length) y += 10;
 
-  const sourceH = spec.source ? 22 : 0;
+  const sourceH = spec.source ? 18 : 0;
 
   const frame = {
     width,
@@ -58,7 +58,7 @@ export function createFrame(spec, theme, defaults = {}) {
       if (legend && legend.length) {
         const { svg, h } = drawLegend(legend, pad, ly, innerW, theme, { ...opts, size: T.legend });
         header.push(svg);
-        ly += h + 14;
+        ly += h + 10; // la leyenda pegada al gráfico que explica
       }
       return { x: pad, y: ly, w: innerW, h: Math.max(40, frame.bottom - ly) };
     },
@@ -127,10 +127,13 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     const w = 18 + measure(label, size) + 18;
     if (x + w > x0 + maxW && x > x0) { x = x0; y += rowH; rows++; }
     const cy = y + 6.5;
+    out.push(`<g class="pa-key" data-color="${it.color}" style="cursor:pointer">`);
+    out.push(el('rect', { x: x - 3, y: y - 3, width: w - 10, height: 19, rx: 4, fill: 'transparent' }));
     if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + 12, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: 'round' }));
     else if (it.shape === 'square') out.push(el('rect', { x, y: cy - 5, width: 10, height: 10, rx: 2.5, fill: it.color }));
     else out.push(el('circle', { cx: x + 5, cy, r: 5, fill: it.color }));
     out.push(text(x + 16, y + 11, label, { fill: theme.lede, fontSize: size }));
+    out.push('</g>');
     x += w;
   }
   return { svg: g({ class: 'pa-legend' }, out), h: rows * rowH - 6 };

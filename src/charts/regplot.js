@@ -3,9 +3,9 @@
 import { el, g, text, tip, esc, barPath, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap } from '../theme.js';
+import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize } from '../data.js';
-import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX } from '../axes.js';
+import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
@@ -141,15 +141,19 @@ export function regplot(spec, theme) {
   for (let it = 0; it < 30; it++) for (let i = 1; i < ends.length; i++) { const d = ends[i].y - ends[i - 1].y; if (d < 14) { const s = (14 - d) / 2; ends[i].y += s; ends[i - 1].y -= s; } }
   for (const e of ends) {
     const lx = inner.x + inner.w + 6;
-    if (Math.abs(e.y - e.y0) > 2 || e.x < lx - 10) body.push(el('path', { d: `M${(e.x - 6).toFixed(1)},${e.y0.toFixed(1)}L${(lx - 2).toFixed(1)},${e.y.toFixed(1)}`, stroke: theme.muted, strokeWidth: 0.75, fill: 'none' }));
-    body.push(text(lx, e.y + 4, e.t, { fill: theme.ink, fontSize: 12, fontWeight: 600 }));
+    if (Math.abs(e.y - e.y0) > 2 || e.x < lx - 10) body.push(el('path', { d: `M${(e.x - 6).toFixed(1)},${e.y0.toFixed(1)}L${(lx - 2).toFixed(1)},${e.y.toFixed(1)}`, stroke: colorOf(e.k), strokeOpacity: 0.7, strokeWidth: 1, fill: 'none' }));
+    body.push(text(lx, e.y + 4, e.t, { fill: readable(colorOf(e.k), theme), fontSize: 12, fontWeight: 600 }));
   }
   // Rótulos de puntos seleccionados.
   body.push(pointLabels(pts, spec, xS, yS, r, inner, theme, P));
   // Resumen discreto (un solo grupo).
   if (spec.annotate && K === 1 && fits[0].r2 !== null) {
     const s = `R² = ${dec(fits[0].r2, locale)} · n = ${formatNumber(fits[0].n, 0, locale)}`;
-    body.push(text(inner.x + inner.w - 4, inner.y + 12, s, { fill: theme.lede, fontSize: 12, textAnchor: 'end', ...halo(theme) }));
+    // Va a la esquina con menos puntos y lejos de la recta.
+    const occ = pts.map((p) => [xS(p.x), yS(p.y)]);
+    if (fits[0].band) for (const b of fits[0].band) occ.push([b[0], (b[1] + b[2]) / 2], [b[0], b[1]], [b[0], b[2]]);
+    const qc = quietCorner(occ, inner, measure(s, 12) + 4, 16);
+    body.push(text(qc.x, qc.y, s, { fill: theme.lede, fontSize: 12, textAnchor: qc.anchor, ...halo(theme) }));
   }
   body.push(gridX(xAx0.ticks, xS, inner, theme, tickFmt(fx, xAx0), { lines: false }));
   body.push(yTickLabels(yAx.ticks, yS, inner, theme, yt));

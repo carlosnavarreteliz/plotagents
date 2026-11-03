@@ -92,7 +92,8 @@ export function assignColors(displayRoot, theme, spec, { single = false } = {}) 
   const steps = [0, 0.14, 0.07, 0.2, 0.1];
   const toward = theme.surface;
   const rec = (node) => node.children.forEach((c, i) => {
-    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || mix(node.color, toward, steps[i % steps.length]);
+    // Color sólido por categoría completa (por defecto); `shade: true` vuelve a los tonos por hermano.
+    if (node !== displayRoot) c.color = (spec.colors && spec.colors[c.name]) || (spec.shade ? mix(node.color, toward, steps[i % steps.length]) : node.color);
     rec(c);
   });
   rec(displayRoot);

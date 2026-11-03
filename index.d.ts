@@ -105,6 +105,12 @@ export interface Spec {
   time?: string;
   timeValue?: string | number;
   slider?: boolean;
+  play?: boolean;
+  compare?: 'previous' | 'first' | string | number | false;
+  compareData?: Row[];
+  colorBy?: 'group' | 'change' | 'label';
+  shade?: boolean;
+  change?: boolean;
   playInterval?: number;
   xRange?: [string | number, string | number];
   xDomain?: [number, number];

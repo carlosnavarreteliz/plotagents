@@ -246,7 +246,38 @@
     },
     "slider": {
       "type": "boolean",
-      "description": "Browser: false removes the time slider."
+      "description": "Browser: false removes the time slider (the chart shows `timeValue` or the latest period)."
+    },
+    "play": {
+      "type": "boolean",
+      "description": "Browser: false keeps the time slider but hides the play button."
+    },
+    "compare": {
+      "description": "With `time`: period to compute changes against: \"previous\" (default), \"first\", a specific period, or false.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "colorBy": {
+      "type": "string",
+      "enum": [
+        "group",
+        "change",
+        "label"
+      ],
+      "description": "treemap: \"change\" colors tiles by % change vs the comparison period (diverging, growth cool / decline warm); \"label\" colors a single-level treemap by item."
+    },
+    "shade": {
+      "type": "boolean",
+      "description": "treemap/sunburst: subtle lightness steps inside each category (default false: one solid color per category)."
     },
     "xRange": {
       "type": "array",

@@ -5,7 +5,8 @@
 import { el, g, text, tip, esc } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
-import { textOn } from '../theme.js';
+import { textOn, ramp } from '../theme.js';
+import { formatNumber } from '../format.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
 import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
@@ -48,7 +49,8 @@ export function squarify(items, x, y, w, h) {
 }
 
 // Separación entre hermanos según la profundidad visible (1 = primer nivel).
-const GAP = (d) => (d <= 1 ? 3 : d === 2 ? 2 : 1);
+// Separación por nivel: más aire entre categorías, menos dentro de ellas.
+const GAP = (d) => (d <= 1 ? 4 : d === 2 ? 2 : 1);
 
 export function treemap(spec, theme) {
   const locale = spec.locale || 'es';
@@ -66,12 +68,35 @@ export function treemap(spec, theme) {
   const share = shareFmt(locale);
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
 
-  // Leyenda del primer nivel visible (cuando hay más de un nivel).
+  // Variación vs. el periodo anterior (con `time`) o vs. `compareData`.
+  const prevRows = spec.compareData ?? spec._prev?.data;
+  const prevLabel = spec.compareLabel ?? spec._prev?.label;
+  const prevMap = new Map();
+  if (prevRows && prevRows.length) {
+    const pr = buildHierarchy({ ...spec, data: prevRows, time: undefined }).root;
+    (function walk(n) { prevMap.set(n.path.join('\u0000'), n.value); n.children.forEach(walk); })(pr);
+  }
+  const changeOf = (n) => { const pv = prevMap.get(n.path.join('\u0000')); return pv > 0 ? n.value / pv - 1 : null; };
+  const showChange = prevMap.size > 0 && spec.change !== false;
+  const byChange = showChange && spec.colorBy === 'change';
+  const pctTxt = (c) => (c === null ? '' : `${c > 0 ? '▲' : c < 0 ? '▼' : '■'} ${formatNumber(Math.abs(c) * 100, Math.abs(c) < 0.1 ? 1 : 0, locale, true)}%`);
+  let cMax = 0;
+  if (byChange) (function walk(n) { if (!n.children.length) { const c = changeOf(n); if (c !== null) cMax = Math.max(cMax, Math.abs(c)); } n.children.forEach(walk); })(focus);
+  cMax = spec.changeDomain ?? (Math.ceil(Math.min(1, cMax || 0.1) * 20) / 20);
+  // Crecimiento en el tono frío, caída en el cálido; gris neutro sin cambio.
+  const divRamp = [...theme.diverging].reverse();
+  const changeColor = (c) => (c === null ? theme.tint : ramp(divRamp, 0.5 + Math.max(-1, Math.min(1, c / cMax)) / 2));
+
+  // Leyenda del primer nivel visible, con su participación: la leyenda también informa.
   const top = focus.children;
   let legend = [];
-  if (levels > 1 && top.length > 1 && spec.legend !== false && !focus.path.length) {
+  if (byChange && spec.legend !== false) {
+    const lab = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatNumber(Math.abs(v) * 100, 0, locale)}%`;
+    legend = [{ type: 'ramp', stops: [...theme.diverging].reverse(), min: lab(-cMax), max: lab(cMax), title: (en ? 'Change' : 'Variación') + (prevLabel ? (en ? ' vs ' : ' vs ') + prevLabel : '') }];
+  } else if (levels > 1 && top.length > 1 && spec.legend !== false && !focus.path.length) {
     const shown = top.filter((c) => !c.folded);
-    legend = shown.map((c) => ({ label: c.name, color: c.color, shape: 'square' }));
+    const sh0 = shareFmt(locale);
+    legend = shown.map((c) => ({ label: `${c.name} ${sh0(c.value, focus.value)}`, color: c.color, shape: 'square' }));
     if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
 
@@ -89,20 +114,24 @@ export function treemap(spec, theme) {
 
   const tipFor = (n) => {
     const parentShare = n.parent && n.parent.value ? share(n.value, n.parent.value) : '';
+    const ch = showChange ? changeOf(n) : null;
     return tip(
       n.path.join(SEP),
       `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`,
-      n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : ''
+      n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : '',
+      ch !== null ? `${pctTxt(ch)} ${prevLabel ? 'vs ' + prevLabel : ''}`.trim() : ''
     );
   };
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
 
   function drawLeaf(n, x, y, w, h, relDepth) {
     if (w < 0.6 || h < 0.6) return '';
-    const fill = dim(n) ? theme.dim : n.color;
+    const ch = showChange ? changeOf(n) : null;
+    const fill = dim(n) ? theme.dim : byChange ? changeColor(ch) : n.color;
     const rx = Math.max(0, Math.min(R - 1, w / 6, h / 6));
     const parts = [el('rect', { x, y, width: w, height: h, rx, fill })];
-    parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), spec.showValues ? fmt(n.value) : null, relDepth));
+    const extra = [spec.showValues ? fmt(n.value) : null, ch !== null ? pctTxt(ch) : null].filter(Boolean).join(' · ');
+    parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), extra || null, relDepth));
     const drill = relDepth === 1 && n.children.length ? JSON.stringify(n.path) : undefined;
     return g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts);
   }
@@ -110,26 +139,10 @@ export function treemap(spec, theme) {
   function drawNode(n, x, y, w, h, relDepth) {
     // Hoja visible (sin hijos o al fondo de la jerarquía mostrada).
     if (!n.children.length) return drawLeaf(n, x, y, w, h, relDepth);
+    // Sin bandas de encabezado: el área de cada grupo es exactamente su valor.
+    // La categoría se reconoce por su color sólido, el espacio entre grupos y la leyenda.
     const parts = [];
-    let iy = y, ih = h;
-    // Encabezado del grupo: nombre + participación, sobre el fondo, si hay espacio.
-    const hs = relDepth === 1 ? 12 : 11;
-    const headerOk = relDepth <= 2 && w >= 84 && h >= (relDepth === 1 ? 64 : 80) && levels > relDepth;
-    if (headerOk) {
-      const sh = share(n.value, total);
-      const shW = measure(sh, hs - 0.5);
-      const nameMax = w - shW - 10;
-      if (measure(n.name, hs, 600) <= nameMax || measure(n.name.slice(0, 6), hs, 600) <= nameMax) {
-        let name = n.name;
-        while (name.length > 1 && measure(name + (name === n.name ? '' : '…'), hs, 600) > nameMax) name = name.slice(0, -1);
-        if (name !== n.name) name = name.trimEnd() + '…';
-        const hh = hs + 8;
-        parts.push(el('rect', { x, y, width: w, height: hh, fill: 'transparent' }));
-        parts.push(text(x + 1, y + hs, name, { fill: dim(n) ? theme.muted : theme.ink, fontSize: hs, fontWeight: 600 }));
-        parts.push(text(x + w - 1, y + hs, sh, { fill: theme.lede, fontSize: hs - 0.5, textAnchor: 'end' }));
-        iy += hh; ih -= hh;
-      }
-    }
+    const iy = y, ih = h;
     const gap = GAP(relDepth + 1);
     const rects = squarify(n.children, x, iy, w, ih);
     for (const c of rects) parts.push(drawNode(c, c.x + gap / 2, c.y + gap / 2, c.w - gap, c.h - gap, relDepth + 1));

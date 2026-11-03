@@ -6,7 +6,7 @@ import { el, g, text, tip, dotLayer } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } from '../axes.js';
 import { createFrame } from '../frame.js';
@@ -435,7 +435,7 @@ export function point(spec, theme) {
     if (showEnd && vertical && pts.length) {
       const [c, r] = pts[pts.length - 1];
       const [x, y] = s.P(cposOf(c, hi2), r.e);
-      ends.push({ x: s.catS.center(c) + dodgeW / 2 + 12, y, y0: y, xd: x, label: h });
+      ends.push({ x: s.catS.center(c) + dodgeW / 2 + 12, y, y0: y, xd: x, label: h, color: s.colorOf(c, h) });
     }
     s.body.marks.push(g({ 'data-series': h }, parts));
   });
@@ -444,7 +444,7 @@ export function point(spec, theme) {
     for (let it = 0; it < 30; it++) for (let i = 1; i < ends.length; i++) { const d = ends[i].y - ends[i - 1].y; if (d < 15) { const sh = (15 - d) / 2; ends[i].y += sh; ends[i - 1].y -= sh; } }
     for (const e of ends) {
       if (Math.abs(e.y - e.y0) > 3 || e.x - e.xd > 14) s.body.post.push(el('path', { d: `M${(e.xd + 7).toFixed(1)},${e.y0.toFixed(1)}L${(e.x - 8).toFixed(1)},${e.y0.toFixed(1)}L${(e.x - 3).toFixed(1)},${e.y.toFixed(1)}`, fill: 'none', stroke: theme.muted, strokeWidth: 1, strokeOpacity: 0.7 }));
-      s.body.post.push(text(e.x, e.y + 4, truncate(e.label, endW - 12, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500 }));
+      s.body.post.push(text(e.x, e.y + 4, truncate(e.label, endW - 12, 12, 500), { fill: readable(e.color, theme), fontSize: 12, fontWeight: 600 }));
     }
   }
   const estW = est === 'median' ? T('median', 'mediana', s.locale) : est === 'sum' ? T('sum', 'suma', s.locale) : T('mean', 'promedio', s.locale);

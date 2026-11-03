@@ -6,7 +6,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
-import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels } from '../axes.js';
+import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner } from '../axes.js';
 import { createFrame, SIZES } from '../frame.js';
 
 export function scatter(spec, theme) {
@@ -84,7 +84,11 @@ export function scatter(spec, theme) {
     const [ax, ay] = P(lx0), [bx, by] = P(lx1);
     body.push(el('clipPath', { id: 'pa-clip-trend' }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
     body.push(el('line', { x1: ax, y1: ay, x2: bx, y2: by, stroke: theme.ink, strokeWidth: 1.5, opacity: 0.55, clipPath: 'url(#pa-clip-trend)' }));
-    body.push(text(inner.x + inner.w - 4, inner.y + 12, `R² = ${r2v.toFixed(2).replace('.', String(locale).startsWith('en') ? '.' : ',')}`, { fill: theme.lede, fontSize: 11.5, textAnchor: 'end', stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke' }));
+    const r2s = `R² = ${r2v.toFixed(2).replace('.', String(locale).startsWith('en') ? '.' : ',')}`;
+    const occ = pts.map((p) => [xS(p.x), yS(p.y)]);
+    for (let i = 0; i <= 24; i++) occ.push([ax + ((bx - ax) * i) / 24, ay + ((by - ay) * i) / 24]);
+    const qc = quietCorner(occ, inner, measure(r2s, 11.5) + 4, 16);
+    body.push(text(qc.x, qc.y, r2s, { fill: theme.lede, fontSize: 11.5, textAnchor: qc.anchor, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke' }));
   }
   body.push(refLinesY(spec.refLines || [], yS, inner, theme, fy));
   body.push(refLinesX(spec.refLines || [], xS, inner, theme, fx));

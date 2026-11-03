@@ -117,7 +117,11 @@ function applyTime(s) {
   const all = ensureData(s);
   const data = all.filter((r) => String(r[s.time]) === String(cur));
   const label = String(cur);
-  return { ...s, data, colors: stableColors(s, all), subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals } };
+  // Periodo de comparación para variaciones (treemap y otros): el anterior, o el primero con compare: "first".
+  const idx = vals.findIndex((v) => String(v) === String(cur));
+  const pv = s.compare === 'first' ? vals[0] : s.compare !== undefined && s.compare !== 'previous' && s.compare !== false ? s.compare : vals[idx - 1];
+  const _prev = s.compare !== false && pv !== undefined && String(pv) !== String(cur) ? { data: all.filter((r) => String(r[s.time]) === String(pv)), label: String(pv) } : undefined;
+  return { ...s, data, colors: stableColors(s, all), subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals }, _prev };
 }
 
 /**

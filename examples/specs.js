@@ -140,7 +140,7 @@ export const gallery = [
     id: 'area-apilada',
     name: 'Áreas apiladas',
     note: 'Con `series`, el área se apila. `curve: "smooth"` usa una curva monótona que no inventa picos.',
-    spec: { type: 'area', title: 'Las ventas del sur crecieron 28% entre 2022 y 2025', subtitle: 'Ventas mensuales por región, millones de pesos', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', curve: 'smooth' },
+    spec: { type: 'area', title: 'Ñuble pasó de 19% a 27% de las ventas del sur entre 2022 y 2025', subtitle: 'Participación mensual de cada región en las ventas, %', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', stack: 'percent', curve: 'smooth' },
   },
   {
     id: 'burbujas',

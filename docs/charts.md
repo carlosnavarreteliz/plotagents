@@ -21,7 +21,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
 | `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. |
-| `time`, `timeValue`, `slider` | One period at a time with a slider in the browser. |
+| `time`, `timeValue`, `slider`, `play` | One period at a time with a slider in the browser; `slider: false` removes it, `play: false` hides only the play button. |
+| `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
 | `theme`, `palette`, `ramp` | See [themes](themes.md). |
 | `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
 | `legend` | `false` hides the legend. |
@@ -128,10 +129,12 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `depth` | Show only the first N levels. |
 | `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group does it and breadcrumbs go back. |
 | `showValues` | Append values to the labels. |
-| `colorBy` | `"label"` to color a single-level treemap by item. |
+| `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
+| `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
+| `compareData` | Rows of an earlier period to compute changes without `time`. |
 | `hole`, `centerValue`, `centerLabel` | Sunburst center. |
 
-Colors belong to the level-1 group and are computed over the full tree (and across all periods with `time`), so they never change when drilling or sliding.
+Areas are exact: there are no header bands taking space from a group. Categories are told apart by one solid color, a 4 px gap between level-1 groups (2 px and 1 px deeper) and the legend, which lists each group's share. With `time`, every tile also shows its change vs the previous period (▲ 12%). Colors belong to the level-1 group and are computed over the full tree and across all periods, so they never change when drilling or sliding.
 
 ### `donut` · `pie`
 

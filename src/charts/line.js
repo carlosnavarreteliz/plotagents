@@ -6,7 +6,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize } from '../data.js';
 import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels } from '../axes.js';
 import { createFrame } from '../frame.js';
@@ -150,7 +150,7 @@ export function line(spec, theme, variant = 'line') {
   const area = frame.layout(legend);
 
   const endW = labeled.length
-    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize) + 6 : 0) : 0; })) + 22
+    ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) + 6 : 0) : 0; })) + 22
     : 10;
 
   // Escala y
@@ -279,9 +279,11 @@ export function line(spec, theme, variant = 'line') {
         tparts.push(el('path', { d: `M${sx.toFixed(1)},${lb.y0.toFixed(1)}L${(lx - 9).toFixed(1)},${lb.y0.toFixed(1)}L${(lx - 4).toFixed(1)},${lb.y.toFixed(1)}`, fill: 'none', stroke: stack ? theme.muted : lb.color, strokeWidth: 1, opacity: 0.7 }));
       }
       if (lb.name) {
-        tparts.push(text(lx, lb.y + 4, lb.name, { fill: theme.lede, fontSize: labelSize }));
-        tparts.push(text(lx + measure(lb.name, labelSize) + 6, lb.y + 4, lb.val, { fill: theme.ink, fontSize: labelSize, fontWeight: 600 }));
-      } else tparts.push(text(lx, lb.y + 4.5, lb.val, { fill: theme.ink, fontSize: labelSize + 0.5, fontWeight: 600 }));
+        // La etiqueta lleva el color de su línea (versión legible), así se conecta sin leyenda.
+        const tc = readable(lb.color, theme);
+        tparts.push(text(lx, lb.y + 4, lb.name, { fill: tc, fontSize: labelSize, fontWeight: 500 }));
+        tparts.push(text(lx + measure(lb.name, labelSize, 500) + 6, lb.y + 4, lb.val, { fill: tc, fontSize: labelSize, fontWeight: 700 }));
+      } else tparts.push(text(lx, lb.y + 4.5, lb.val, { fill: readable(lb.color, theme), fontSize: labelSize + 0.5, fontWeight: 700 }));
       body.push(g({ class: 'pa-endlabel' }, tparts));
     }
   }

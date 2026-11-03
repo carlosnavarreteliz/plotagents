@@ -16,7 +16,8 @@ export const exportacionesAnuales = [];
 for (let y = 2018; y <= 2025; y++) {
   for (const r of exportaciones) {
     const k = y - 2025;
-    const trend = r.sector === 'Minería' ? -0.035 : r.producto === 'Cerezas' ? 0.12 : r.producto === 'Litio' ? 0.22 : 0.03;
+    const T = { Litio: 0.22, Cerezas: 0.14, Arándanos: 0.08, Salmón: 0.06, Cobre: -0.045, Celulosa: -0.03, Hierro: -0.06, Vino: -0.04, 'Harina de pescado': -0.07, Químicos: 0.05 };
+    const trend = T[r.producto] ?? (r.sector === 'Minería' ? -0.02 : 0.02);
     exportacionesAnuales.push({ año: y, sector: r.sector, producto: r.producto, valor: +(r.valor * Math.exp(trend * k)).toFixed(2) });
   }
 }
@@ -71,6 +72,13 @@ export const moreGallery = [
     name: 'Periodo con play (estilo d3plus)',
     note: '`time: "año"` muestra un año a la vez con un slider y botón de reproducir. Funciona con treemap, barras, dona, dispersión, radar y más.',
     spec: { type: 'treemap', title: `El cobre bajó de ${shareCobre(2018)}% a ${shareCobre(2025)}% de las exportaciones`, subtitle: 'Exportaciones por sector y producto, miles de millones de US$', source: SRC, data: exportacionesAnuales, path: ['sector', 'producto'], value: 'valor', time: 'año' },
+  },
+  {
+    id: 'treemap-cambio',
+    section: 'Tiempo',
+    name: 'Treemap por variación',
+    note: 'Con `time`, cada rectángulo muestra su participación y su variación frente al año anterior; `colorBy: "change"` pinta el crecimiento en tono frío y la caída en tono cálido.',
+    spec: { type: 'treemap', title: 'El litio y las cerezas crecen más rápido que el resto', subtitle: 'Exportaciones por sector y producto, variación anual', source: SRC, data: exportacionesAnuales, path: ['sector', 'producto'], value: 'valor', time: 'año', colorBy: 'change' },
   },
   {
     id: 'facetas',
