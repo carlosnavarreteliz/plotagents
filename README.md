@@ -2,7 +2,7 @@
 
 **Beautiful charts from a single JSON spec, built for AI agents.**
 
-**[Documentation, live examples and playground →](https://carlosnavarreteliz.github.io/plotagents/)**
+**[Documentation, live examples and playground →](https://carlosnavarrete.cl/plotagents/)**
 
 Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 32 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids and flow charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
@@ -30,7 +30,7 @@ const svg = plot({
 
 ![Columns](examples/svg/barras.svg)
 
-The [interactive gallery](https://carlosnavarreteliz.github.io/plotagents/examples/), 61 charts with the code for each one, is also in [`examples/index.html`](examples/index.html). Try any spec live in the [playground](https://carlosnavarreteliz.github.io/plotagents/playground/).
+The [interactive gallery](https://carlosnavarrete.cl/plotagents/examples/), 61 charts with the code for each one, is also in [`examples/index.html`](examples/index.html). Try any spec live in the [playground](https://carlosnavarrete.cl/plotagents/playground/).
 
 ## Why
 
