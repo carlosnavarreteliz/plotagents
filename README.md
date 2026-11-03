@@ -104,6 +104,20 @@ configure(null);                                  // back to defaults
 
 `font` takes a Google Fonts name (it is loaded for you in the browser and in `toHTML()`), a CSS stack or `{ family, import }`. `textScale` multiplies every text size and the layout is recomputed with the real sizes, so labels at ×2 still never overlap. `configure()` also accepts `locale`, `theme`, `palette` or any other spec option.
 
+### House style: fixed palette and fixed colors per entity
+
+Set your brand once and every chart follows it:
+
+```js
+configure({
+  theme: { extends: 'papel', surface: '#FFFFFF', ink: '#1A1A1A' }, // any theme token
+  palette: ['#0B3C5D', '#D9534F', '#F0AD4E', '#5CB85C'],          // order for unnamed series
+  colors: { 'Biobío': '#0B3C5D', 'Ñuble': '#D9534F' },            // same entity, same color, always
+});
+```
+
+`colors` is merged with a chart's own `colors` (the chart wins key by key), so a single chart can add or override one entity without losing the rest. Check a custom palette with `validatePalette(colors)`.
+
 ## Themes are JSON
 
 Everything visual is a JSON object merged over a base theme, so an agent can apply a brand without touching code. See [`docs/themes.md`](docs/themes.md).

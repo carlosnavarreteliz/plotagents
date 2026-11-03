@@ -55,6 +55,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.
 - `theme: "noche"` or a JSON object (`{ extends, categorical, type, marks, font }`); `palette: [...]` for your own colors.
+- `colors: { "Biobío": "#3A47B8" }` pins a color to an entity. Put `palette`, `colors` and `theme` in `configure()` for a house style; a chart's own `colors` add to the global ones.
 - `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
 - `network` + `focus: "node id"`: center a node and highlight its neighbors.
 - `geo: "usa"`: states match by postal code ("TX"), English or Spanish name, or FIPS ("48"). Alaska and Hawaii are insets; Puerto Rico appears only when your data has it. In the browser, maps zoom on click, Ctrl/⌘ + scroll or pinch.

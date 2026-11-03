@@ -118,6 +118,8 @@ const DEFAULTS = {};
 /**
  * Valores por defecto para TODOS los gráficos (el spec siempre gana):
  *   configure({ font: 'Poppins', textScale: 1.5, locale: 'en', theme: 'noche', palette: 'okabe-ito' })
+ *   configure({ palette: ['#...'], colors: { 'Biobío': '#3A47B8' } })  // marca de la casa
+ * `colors` se fusiona con el del spec (el spec gana en cada clave).
  * `font` acepta un nombre de Google Fonts, una pila CSS o { family, import }.
  * `textScale` multiplica todos los textos (1.5, 2…) y el layout se recalcula.
  * configure() sin argumentos devuelve la configuración actual; configure(null) la borra.
@@ -131,6 +133,7 @@ function configure(options) {
 function withDefaults(spec) {
   const s = { ...DEFAULTS, ...spec };
   if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
+  if (DEFAULTS.colors && spec.colors) s.colors = { ...DEFAULTS.colors, ...spec.colors };
   const f = fontSpec(s.font);
   if (f) {
     const base = s.theme && typeof s.theme === 'object' ? s.theme : { extends: s.theme || undefined };

@@ -138,6 +138,21 @@ test('configure(): fuente y escala de texto globales; el spec siempre gana', asy
   assert.deepEqual(configure(), {});
 });
 
+test('configure(): colores globales por entidad se suman a los del spec', async () => {
+  const { configure } = await import('../src/index.js');
+  const data = [{ p: 'A', v: 3 }, { p: 'B', v: 5 }, { p: 'C', v: 2 }];
+  try {
+    configure({ colors: { A: '#E30613', B: '#0033A0' } });
+    const svg = plot({ type: 'bar', data, x: 'p', y: 'v', series: 'p', colors: { C: '#AA0000', B: '#00AA00' } });
+    assert.match(svg, /#E30613/i); // global se mantiene
+    assert.match(svg, /#AA0000/i); // del spec
+    assert.match(svg, /#00AA00/i); // el spec gana
+    assert.doesNotMatch(svg, /#0033A0/i);
+  } finally {
+    configure(null);
+  }
+});
+
 test('red: focus lleva el nodo al centro y lo destaca', async () => {
   const { networkGallery } = await import('../examples/specs-network.js');
   const spec = { ...networkGallery[0].spec, width: 720 };
