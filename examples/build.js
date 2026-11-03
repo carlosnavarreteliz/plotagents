@@ -12,14 +12,17 @@ import { catGallery } from './specs-cat.js';
 import { partsGallery } from './specs-parts.js';
 import { moreGallery } from './specs-more.js';
 import { NOTES_EN, SECTIONS_EN } from './notes-en.js';
+import { geoGallery } from './specs-geo.js';
+import { networkGallery } from './specs-network.js';
+import { flowGallery } from './specs-flow.js';
 
 // Galería por secciones. Orden pensado para leer de lo simple a lo avanzado.
 const SECTION = {
   barras: 'Comparar', 'barras-horizontales': 'Comparar', 'barras-agrupadas': 'Comparar', 'barras-100': 'Comparar',
   lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración',
-  burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Flujos y números', kpi: 'Flujos y números',
+  burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Redes y flujos', kpi: 'Flujos y números',
 };
-const ORDER = ['Comparar', 'Tiempo', 'Partes de un todo', 'Distribuciones', 'Relaciones', 'Flujos y números', 'Configuración'];
+const ORDER = ['Comparar', 'Tiempo', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Configuración'];
 const drop = new Set(['treemap', 'dona', 'slider-rango']); // reemplazados por versiones nuevas
 const tag = (list, sec) => list.map((e) => ({ ...e, section: e.section || sec }));
 const all = [
@@ -28,6 +31,9 @@ const all = [
   ...tag(partsGallery, 'Partes de un todo'),
   ...statsGallery.map((e) => ({ ...e, section: ['regplot', 'residplot', 'jointplot'].includes(e.spec.type) ? 'Relaciones' : 'Distribuciones' })),
   ...catGallery.map((e) => ({ ...e, section: e.spec.type === 'radar' ? 'Relaciones' : 'Distribuciones' })),
+  ...tag(geoGallery, 'Mapas'),
+  ...tag(networkGallery, 'Redes y flujos'),
+  ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
 ];
 // El ejemplo de líneas original pasa a ser el del slider.
 const lineas = all.find((e) => e.id === 'lineas');
@@ -72,7 +78,7 @@ for (const ex of gallery) {
   if (issues.length) console.warn(`[${ex.id}]`, issues.map((i) => i.message).join(' | '));
   specsJSON.push({ id: ex.id, spec: ex.spec, fixed: fixedDark || (ex.spec.theme && typeof ex.spec.theme === 'object') });
   cards.push({ section: ex.section, html: `<article class="card${fixedDark ? ' always-dark' : ''}" id="${ex.id}">
-  <header><h2>${esc((NOTES_EN[ex.id] || [ex.name])[0])}</h2><p>${esc((NOTES_EN[ex.id] || [, ex.note])[1]).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></header>
+  <header><h2>${esc((NOTES_EN[ex.id] || [ex.nameEn || ex.name])[0])}</h2><p>${esc((NOTES_EN[ex.id] || [, ex.noteEn || ex.note])[1]).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></header>
   <figure class="pa" data-id="${ex.id}">${svg}</figure>
   <details><summary>Show code</summary><pre><code>${esc(snippet(ex.spec))}</code></pre></details>
 </article>` });
@@ -142,7 +148,7 @@ ${cards.filter((c) => c.section === sec).map((c) => c.html).join('\n')}
 </main></section>`).join('\n')}
 <footer>All data in this gallery is illustrative. Chart text uses the default Spanish (Chile) locale; set <code>locale: "en"</code> for English formats. Hover for values, drag the time sliders, and click a treemap or sunburst group to drill down. The page follows your system's light or dark mode.</footer>
 </div>
-<script>${bundleSource().replace(/<\/(script)/gi, '<\\/$1')}</script>
+<script>${(bundleSource() + '\n' + bundleSource('plotagents-geo.js')).replace(/<\/(script)/gi, '<\\/$1')}</script>
 <script type="application/json" id="pa-specs">${JSON.stringify(specsJSON).replace(/</g, '\\u003c')}</script>
 <script>
 (function () {

@@ -2,7 +2,7 @@
 
 **Beautiful charts from a single JSON spec, built for AI agents.**
 
-Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 26 chart types, including the ones people reach for in seaborn, multi-level treemaps and sunbursts, time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
+Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 32 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile and the world, networks, chord diagrams, population pyramids and flow charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
 npm install plotagents
@@ -28,7 +28,7 @@ const svg = plot({
 
 ![Columns](examples/svg/barras.svg)
 
-The interactive gallery, 41 charts with the code for each one, lives in [`examples/index.html`](examples/index.html).
+The interactive gallery, 52 charts with the code for each one, lives in [`examples/index.html`](examples/index.html).
 
 ## Why
 
@@ -38,7 +38,8 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **One axis.** There is no dual axis; `index: true` rebases series to 100 and `facet` draws panels on a shared scale.
 - **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
 - **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
-- **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider.
+- **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider. One solid color per category.
+- **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels wear their series color.
 - **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
 - **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
 
@@ -51,8 +52,11 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot` |
 | Profiles | `radar` (`spider`) |
 | Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
-| Part-to-whole | `treemap` (any depth), `sunburst`, `donut`, `pie` |
-| Grids and flows | `heatmap`, `sankey` |
+| Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie` |
+| Maps | `choropleth` (Chile by region, world by country, any GeoJSON), `symbolmap` |
+| Networks and flows | `network`, `chord`, `sankey`, `flowchart` (with swimlanes) |
+| Populations | `pyramid` |
+| Grids | `heatmap` |
 | Numbers | `kpi` |
 
 Leave `type` out and it is inferred: dates → `line`, two measures → `scatter`, `source`/`target` → `sankey`, `path` → `treemap`, categories → `bar`. Every option is documented in [`docs/charts.md`](docs/charts.md).
@@ -62,6 +66,7 @@ Leave `type` out and it is inferred: dates → `line`, two measures → `scatter
 | ![](examples/svg/lineas.svg) | ![](examples/svg/treemap-niveles.svg) | ![](examples/svg/regresion.svg) |
 | ![](examples/svg/violin.svg) | ![](examples/svg/sunburst.svg) | ![](examples/svg/histograma.svg) |
 | ![](examples/svg/radar.svg) | ![](examples/svg/sankey.svg) | ![](examples/svg/conjunto.svg) |
+| ![](examples/svg/mapa-chile.svg) | ![](examples/svg/cuerdas.svg) | ![](examples/svg/piramide.svg) |
 
 ## Time, panels and drill-down
 

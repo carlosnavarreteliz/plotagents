@@ -1,6 +1,6 @@
 {
   "name": "plotagents",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Beautiful charts from one JSON spec, built for AI agents: bars, lines, multi-level treemaps, sunbursts, sankeys and seaborn-style plots (regplot, hist, kde, box, violin…). Accessible SVG, time sliders, JSON themes, zero dependencies.",
   "type": "module",
   "main": "./src/index.js",
@@ -12,7 +12,10 @@
       "default": "./src/index.js"
     },
     "./schema.json": "./schema.json",
-    "./browser": "./dist/plotagents.js"
+    "./browser": "./dist/plotagents.js",
+    "./browser/geo": "./dist/plotagents-geo.js",
+    "./geo/chile": "./src/geo/chile.js",
+    "./geo/world": "./src/geo/world.js"
   },
   "bin": {
     "plotagents": "./bin/plotagents.js"

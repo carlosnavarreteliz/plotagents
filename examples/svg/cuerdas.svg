@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 600" width="720" height="600" role="img" aria-labelledby="pa86zv8z-t pa86zv8z-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="chord" data-pa-mode="light" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><title id="pa86zv8z-t">Metropolitana y Centro intercambian más personas que cualquier otro par: 135.000</title><desc id="pa86zv8z-d">Diagrama de cuerdas con 6 grupos y 15 flujos. Mayores: Centro ↔ Metropolitana (135 mil); Metropolitana ↔ Sur (99 mil); Norte Grande ↔ Metropolitana (59 mil).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}</style><rect width="720" height="600" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">Metropolitana y Centro intercambian más personas que</text><text x="24" y="72.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">cualquier otro par: 135.000</text><text x="24" y="98.5" fill="#4A5070" font-size="14.5">Cambios de residencia entre macrozonas en cinco años</text></g><g class="pa-body"><g class="pa-ribbons"><path class="pa-m" d="M491.38,435.27A163.77,163.77 0 0 1 379.62,500.09Q360.00,337.50 520.13,303.17A163.77,163.77 0 0 1 495.19,429.94Q360.00,337.50 491.38,435.27Z" fill="#D42A5E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Centro ↔ Metropolitana
+Centro → Metropolitana: 64 mil
+Metropolitana → Centro: 71 mil
+Total: 135 mil · 63% de Centro"/><path class="pa-m" d="M473.40,219.35A163.77,163.77 0 0 1 520.13,303.17Q360.00,337.50 262.88,469.37A163.77,163.77 0 0 1 205.68,392.32Q360.00,337.50 473.40,219.35Z" fill="#E8A33D" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Metropolitana ↔ Sur
+Metropolitana → Sur: 52 mil
+Sur → Metropolitana: 47 mil
+Total: 99 mil · 28% de Metropolitana"/><path class="pa-m" d="M251.92,214.46A163.77,163.77 0 0 1 301.33,184.60Q360.00,337.50 379.95,174.95A163.77,163.77 0 0 1 435.12,191.98Q360.00,337.50 251.92,214.46Z" fill="#7B5CD6" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Grande ↔ Metropolitana
+Norte Grande → Metropolitana: 28 mil
+Metropolitana → Norte Grande: 31 mil
+Total: 59 mil · 60% de Norte Grande"/><path class="pa-m" d="M199.03,307.33A163.77,163.77 0 0 1 214.26,262.80Q360.00,337.50 435.12,191.98A163.77,163.77 0 0 1 473.40,219.35Q360.00,337.50 199.03,307.33Z" fill="#1E9C89" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Chico ↔ Metropolitana
+Norte Chico → Metropolitana: 22 mil
+Metropolitana → Norte Chico: 26 mil
+Total: 48 mil · 46% de Norte Chico"/><path class="pa-m" d="M339.38,499.97A163.77,163.77 0 0 1 302.23,490.74Q360.00,337.50 296.15,488.31A163.77,163.77 0 0 1 262.88,469.37Q360.00,337.50 339.38,499.97Z" fill="#E8A33D" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Centro ↔ Sur
+Centro → Sur: 18 mil
+Sur → Centro: 21 mil
+Total: 39 mil · 18% de Centro"/><path class="pa-m" d="M196.30,332.74A163.77,163.77 0 0 1 199.03,307.33Q360.00,337.50 364.91,501.20A163.77,163.77 0 0 1 339.38,499.97Q360.00,337.50 196.30,332.74Z" fill="#1E9C89" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Chico ↔ Centro
+Norte Chico → Centro: 14 mil
+Centro → Norte Chico: 12 mil
+Total: 26 mil · 25% de Norte Chico"/><path class="pa-m" d="M205.68,392.32A163.77,163.77 0 0 1 199.40,369.58Q360.00,337.50 313.12,180.58A163.77,163.77 0 0 1 336.15,175.48Q360.00,337.50 205.68,392.32Z" fill="#B5562E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Sur ↔ Austral
+Sur → Austral: 11 mil
+Austral → Sur: 13 mil
+Total: 24 mil · 13% de Sur"/><path class="pa-m" d="M227.45,241.31A163.77,163.77 0 0 1 237.95,228.30Q360.00,337.50 215.16,261.06A163.77,163.77 0 0 1 223.71,246.69Q360.00,337.50 227.45,241.31Z" fill="#7B5CD6" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Grande ↔ Norte Chico
+Norte Grande → Norte Chico: 9 mil
+Norte Chico → Norte Grande: 8 mil
+Total: 17 mil · 17% de Norte Grande"/><path class="pa-m" d="M363.28,173.76A163.77,163.77 0 0 1 379.95,174.95Q360.00,337.50 340.05,174.95A163.77,163.77 0 0 1 356.72,173.76Q360.00,337.50 363.28,173.76Z" fill="#B5562E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Metropolitana ↔ Austral
+Metropolitana → Austral: 9 mil
+Austral → Metropolitana: 8 mil
+Total: 17 mil · 4,7% de Metropolitana"/><path class="pa-m" d="M244.03,221.87A163.77,163.77 0 0 1 251.92,214.46Q360.00,337.50 375.70,500.52A163.77,163.77 0 0 1 364.91,501.20Q360.00,337.50 244.03,221.87Z" fill="#7B5CD6" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Grande ↔ Centro
+Norte Grande → Centro: 6 mil
+Centro → Norte Grande: 5 mil
+Total: 11 mil · 11% de Norte Grande"/><path class="pa-m" d="M196.34,343.56A163.77,163.77 0 0 1 196.30,332.74Q360.00,337.50 197.90,360.85A163.77,163.77 0 0 1 196.72,350.10Q360.00,337.50 196.34,343.56Z" fill="#1E9C89" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Chico ↔ Sur
+Norte Chico → Sur: 6 mil
+Sur → Norte Chico: 5 mil
+Total: 11 mil · 11% de Norte Chico"/><path class="pa-m" d="M237.95,228.30A163.77,163.77 0 0 1 244.03,221.87Q360.00,337.50 199.40,369.58A163.77,163.77 0 0 1 197.90,360.85Q360.00,337.50 237.95,228.30Z" fill="#7B5CD6" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Grande ↔ Sur
+Norte Grande → Sur: 5 mil
+Sur → Norte Grande: 4 mil
+Total: 9 mil · 9,2% de Norte Grande"/><path class="pa-m" d="M379.62,500.09A163.77,163.77 0 0 1 375.70,500.52Q360.00,337.50 336.15,175.48A163.77,163.77 0 0 1 340.05,174.95Q360.00,337.50 379.62,500.09Z" fill="#B5562E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Centro ↔ Austral
+Centro → Austral: 2 mil
+Austral → Centro: 2 mil
+Total: 4 mil · 1,9% de Centro"/><path class="pa-m" d="M301.33,184.60A163.77,163.77 0 0 1 303.17,183.90Q360.00,337.50 309.36,181.76A163.77,163.77 0 0 1 311.24,181.16Q360.00,337.50 301.33,184.60Z" fill="#B5562E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Grande ↔ Austral
+Norte Grande → Austral: 1 mil
+Austral → Norte Grande: 1 mil
+Total: 2 mil · 2% de Norte Grande"/><path class="pa-m" d="M214.26,262.80A163.77,163.77 0 0 1 215.16,261.06Q360.00,337.50 311.24,181.16A163.77,163.77 0 0 1 313.12,180.58Q360.00,337.50 214.26,262.80Z" fill="#B5562E" fill-opacity="0.62" stroke="#FCFBF9" stroke-width="0.75" stroke-opacity="0.9" data-tip="Norte Chico ↔ Austral
+Norte Chico → Austral: 1 mil
+Austral → Norte Chico: 1 mil
+Total: 2 mil · 1,9% de Norte Chico"/></g><g class="pa-arcs"><path class="pa-m" d="M363.33,171.26A166.27,166.27 0 0 1 497.25,431.35L506.93,437.97A178.00,178.00 0 0 0 363.56,159.54Z" fill="#3A47B8" stroke="#FCFBF9" stroke-width="1" data-tip="Metropolitana
+Flujos totales: 358 mil
+36% del total"/><path class="pa-m" d="M493.39,436.76A166.27,166.27 0 0 1 301.35,493.08L297.21,504.06A178.00,178.00 0 0 0 502.80,443.77Z" fill="#D42A5E" stroke="#FCFBF9" stroke-width="1" data-tip="Centro
+Flujos totales: 215 mil
+21% del total"/><path class="pa-m" d="M295.17,490.61A166.27,166.27 0 0 1 194.22,350.29L182.53,351.19A178.00,178.00 0 0 0 290.60,501.41Z" fill="#E8A33D" stroke="#FCFBF9" stroke-width="1" data-tip="Sur
+Flujos totales: 182 mil
+18% del total"/><path class="pa-m" d="M193.84,343.65A166.27,166.27 0 0 1 221.63,245.31L211.87,238.80A178.00,178.00 0 0 0 182.12,344.08Z" fill="#1E9C89" stroke="#FCFBF9" stroke-width="1" data-tip="Norte Chico
+Flujos totales: 104 mil
+10% del total"/><path class="pa-m" d="M225.43,239.85A166.27,166.27 0 0 1 302.31,181.56L298.24,170.56A178.00,178.00 0 0 0 215.94,232.96Z" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="1" data-tip="Norte Grande
+Flujos totales: 98 mil
+9,7% del total"/><path class="pa-m" d="M308.59,179.38A166.27,166.27 0 0 1 356.67,171.26L356.44,159.54A178.00,178.00 0 0 0 304.96,168.22Z" fill="#B5562E" stroke="#FCFBF9" stroke-width="1" data-tip="Austral
+Flujos totales: 49 mil
+4,9% del total"/></g><g class="pa-labels"><text x="527.14" y="251.43" text-anchor="start" fill="#3A47B8" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Metropolitana</text><text x="527.14" y="265.81" text-anchor="start" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">358 mil</text><text x="412.91" y="517.9" text-anchor="start" fill="#D42A5E" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Centro</text><text x="412.91" y="532.28" text-anchor="start" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">215 mil</text><text x="207.39" y="447.29" text-anchor="end" fill="#936C3E" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Sur</text><text x="207.39" y="461.67" text-anchor="end" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">182 mil</text><text x="179.08" y="286.38" text-anchor="end" fill="#1C7C77" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Norte Chico</text><text x="179.08" y="300.76" text-anchor="end" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">104 mil</text><text x="246.42" y="187.69" text-anchor="end" fill="#7B5CD6" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Norte Grande</text><text x="246.42" y="202.06" text-anchor="end" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">98 mil</text><text x="328.72" y="137.12" text-anchor="middle" fill="#B5562E" font-size="12.5" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Austral</text><text x="328.72" y="151.5" text-anchor="middle" fill="#4A5070" font-size="11" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">49 mil</text></g></g><text x="696" y="574" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

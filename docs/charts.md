@@ -136,6 +136,10 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 
 Areas are exact: there are no header bands taking space from a group. Categories are told apart by one solid color, a 4 px gap between level-1 groups (2 px and 1 px deeper) and the legend, which lists each group's share. With `time`, every tile also shows its change vs the previous period (▲ 12%). Colors belong to the level-1 group and are computed over the full tree and across all periods, so they never change when drilling or sliding.
 
+### `pyramid` (`populationpyramid`)
+
+Age groups (`age` or `y`), two sides (`sex`, `series` or `hue`) and a value. Back-to-back bars with the ages in the center column; `percent: true` for shares of the population; `compareData`, or `time` + `compare`, draws an earlier year as a stepped outline.
+
 ### `donut` · `pie`
 
 `label`, `value`. More than `maxSlices` (6) folds into "Other".
@@ -147,6 +151,39 @@ Areas are exact: there are no header bands taking space from a group. Categories
 | `thickness` | Ring thickness (pie is `1`). |
 | `sort` | `"desc"` or `"none"`. |
 | `centerValue`, `centerLabel` | Donut center. |
+
+## Maps
+
+### `choropleth` (`map`) · `symbolmap` (`bubblemap`)
+
+Chilean regions (`geo: "chile"`, default) and world countries (`geo: "world"`) ship with the library; any GeoJSON FeatureCollection works too. `key` is the data field to match and `value` the measure. Matching is forgiving: names, codes and aliases, ignoring accents, case and "Región de" ("RM", "Biobio", "XIII", "Aisén", "ARG", "EE.UU.").
+
+| Option | Meaning |
+|---|---|
+| `geo` | `"chile"`, `"world"`, a name registered with `registerGeo()`, or a GeoJSON object. |
+| `featureKey` | Feature property to match (default: tries code, id, ISO-3, name and aliases). |
+| `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
+| `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
+| `missing` | `"plain"` drops the hatch and the "No data" legend entry. |
+| `labels`, `bars` | Chile gets a north-to-south column with name, bar and value; `bars: false` hides the bars. World maps label the top N. |
+| `projection` | `"mercator"` or `"equalEarth"` (picked automatically). |
+| `maxRadius` | `symbolmap`: largest circle radius. |
+
+`lint` warns about rows that match no region or country. Sources: Natural Earth 1:110m (public domain) for the world; Biblioteca del Congreso Nacional for Chilean regions (attribution in `src/geo/data/chile-regiones.js`). In the browser, `dist/plotagents-geo.js` adds the geometries; `toHTML()` includes it only when a page has a map.
+
+## Networks and flows
+
+### `network` (`graph`)
+
+Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `group` and `size`. Deterministic force layout fitted to the whole area, or `layout: "circle"`. `labels` (number or list), `highlight` (a node and its neighbors), `iterations`, `maxRadius`.
+
+### `chord`
+
+`from`, `to`, `value` rows, or `matrix` + `names`. `directed` (default false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
+
+### `flowchart` (`flow`, `diagram`)
+
+`nodes` with `id`, `label`, `type` (`start`, `end`, `process`, `decision`, `data`, `note`), optional `lane` (swimlanes) and `group`; `edges` (or `data`) with `from`, `to` and an optional `label` ("Yes"/"No"). Layered layout with automatic direction (`direction: "TB" | "LR"`), orthogonal connectors with arrows, loops routed around the side. `nodeWidth`, `swimlanes: false`.
 
 ## Grids, flows and numbers
 

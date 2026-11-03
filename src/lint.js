@@ -6,6 +6,10 @@ import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
 import { themeFor } from './theme.js';
 
+/** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
+let RENDER_PROBE = null;
+export const _setProbe = (fn) => { RENDER_PROBE = fn; };
+
 export function lint(spec = {}) {
   const errors = [];
   const warnings = [];
@@ -24,7 +28,7 @@ export function lint(spec = {}) {
   };
   if (data.length) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
-    check(spec.value, 'value'); check(spec.label, 'label'); check(spec.group, 'group'); check(spec.path, 'path');
+    check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to');
   } else if (type !== 'kpi' && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
@@ -107,6 +111,18 @@ export function lint(spec = {}) {
   }
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
+
+  if (type === 'choropleth' || type === 'symbolmap') {
+    const _unmatched = [];
+    try { RENDER_PROBE?.({ ...spec, _unmatched }); } catch { /* el error ya se reporta al dibujar */ }
+    if (_unmatched.length) warn('geo-unmatched', `${_unmatched.length} fila(s) no coinciden con el mapa: ${_unmatched.slice(0, 5).join(', ')}.`, 'Revisa los nombres o usa códigos (p. ej. "XIII", "ARG"), o indica `featureKey`.');
+  }
+  if (type === 'pyramid') {
+    const sf = spec.sex ?? spec.series ?? spec.hue;
+    if (sf && fields.includes(sf)) { const n = uniq(data.map((r) => String(r[sf]))).length; if (n !== 2) err('pyramid-sides', `La pirámide necesita exactamente 2 grupos en "${sf}" (hay ${n}).`, 'Usa `type: "bar"` con `series` para más grupos.'); }
+  }
+  if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
+  if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
 
   if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 

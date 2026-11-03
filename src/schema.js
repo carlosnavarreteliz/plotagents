@@ -63,6 +63,23 @@ export const schema = {
       },
     },
 
+    // Maps, networks, flows
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    key: field('choropleth/symbolmap: data field with the region or country name/code to match.'),
+    featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
+    midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
+    classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
+    nodes: { type: 'array', items: { type: 'object' }, description: 'network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane).' },
+    edges: { type: 'array', items: { type: 'object' }, description: 'flowchart: connections (from, to, label). Same as `data`.' },
+    layout: { type: 'string', enum: ['force', 'circle'], description: 'network layout.' },
+    matrix: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'chord: square flow matrix (with `names`).' },
+    names: { type: 'array', items: { type: 'string' }, description: 'chord: group names for `matrix`.' },
+    directed: { type: 'boolean', description: 'chord: treat flows as directed (default false).' },
+    direction: { type: 'string', enum: ['TB', 'LR'], description: 'flowchart: top-to-bottom or left-to-right (automatic by default).' },
+    age: field('pyramid: age-group field.'),
+    sex: field('pyramid: field with exactly two sides (e.g. sex).'),
+    percent: { type: 'boolean', description: 'pyramid: show shares of the total population.' },
+
     // Layout and interaction
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
@@ -150,7 +167,7 @@ export const schema = {
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
 export function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions / world countries built in), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

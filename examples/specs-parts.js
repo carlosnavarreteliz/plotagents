@@ -44,7 +44,7 @@ export const partsGallery = [
   {
     id: 'treemap-niveles',
     name: 'Treemap de tres niveles',
-    note: 'Sector › subsector › producto con `path`. Encabezados de grupo cuando hay espacio, variación sutil de tono dentro de cada sector y etiquetas solo donde caben.',
+    note: 'Sector › subsector › producto con `path`. Áreas exactas (sin bandas de encabezado), un color sólido por sector, más espacio entre sectores que dentro de ellos y la participación de cada uno en la leyenda.',
     spec: { type: 'treemap', title: 'El cobre por sí solo explica el 54% de las exportaciones', subtitle: 'Exportaciones por sector, subsector y producto, miles de millones de US$', source: SRC, data: exportaciones3, path: ['sector', 'subsector', 'producto'], value: 'valor' },
   },
   {

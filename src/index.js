@@ -15,6 +15,16 @@ import { hist, kde, ecdf } from './charts/dist.js';
 import { regplot, residplot, jointplot } from './charts/regplot.js';
 import { box, violin, strip, swarm, point } from './charts/categorical.js';
 import { radar } from './charts/radar.js';
+import { network } from './charts/network.js';
+import { chord } from './charts/chord.js';
+import { pyramid } from './charts/pyramid.js';
+import { flowchart } from './charts/flowchart.js';
+import { choropleth, symbolMap } from './charts/choropleth.js';
+import { registerGeo, getGeo, registeredGeo } from './geo/registry.js';
+// Mapas incluidos (Chile por regiones y países del mundo): listos sin importar nada más.
+// El bundle del navegador los separa en dist/plotagents-geo.js.
+import './geo/chile.js';
+import './geo/world.js';
 import { heatmap } from './charts/heatmap.js';
 import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';
@@ -22,7 +32,7 @@ import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, ALIASES, normalizeType } from './infer.js';
-import { lint } from './lint.js';
+import { lint, _setProbe } from './lint.js';
 import { schema, toolDefinition } from './schema.js';
 import { attach, attachSource } from './interact.js';
 import { render, _bind } from './runtime.js';
@@ -56,6 +66,12 @@ const RENDERERS = {
   swarm: (s, t) => swarm(s, t),
   point: (s, t) => point(s, t),
   radar: (s, t) => radar(s, t),
+  network: (s, t) => network(s, t),
+  chord: (s, t) => chord(s, t),
+  pyramid: (s, t) => pyramid(s, t),
+  flowchart: (s, t) => flowchart(s, t),
+  choropleth: (s, t) => choropleth(s, t),
+  symbolmap: (s, t) => symbolMap(s, t),
 };
 
 
@@ -177,7 +193,8 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
   const list = Array.isArray(specs) ? specs : [specs];
   const dark = list.every((s) => themeFor(s).mode === 'dark');
   const bg = dark ? '#0B0F2B' : '#FCFBF9';
-  const bundle = bundleSource();
+  const needsGeo = list.some((s) => { try { return ['choropleth', 'symbolmap'].includes(resolve(s).type); } catch { return false; } });
+  const bundle = bundleSource() && (needsGeo ? bundleSource() + '\n' + (bundleSource('plotagents-geo.js') || '') : bundleSource());
   const safeJSON = (o) => JSON.stringify(o).replace(/</g, '\\u003c');
   const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(s)}</script>` : '')).join('\n');
   const boot = bundle
@@ -202,19 +219,20 @@ ${boot}
 }
 
 /** Código de la biblioteca en un archivo (para incrustar en HTML). */
-export function bundleSource() {
+export function bundleSource(file = 'plotagents.js') {
   try {
     const fs = globalThis.process?.getBuiltinModule?.('node:fs');
     if (!fs) return null;
-    return fs.readFileSync(new URL('../dist/plotagents.js', import.meta.url), 'utf8');
+    return fs.readFileSync(new URL('../dist/' + file, import.meta.url), 'utf8');
   } catch {
     return null;
   }
 }
 
 _bind(plot, resolve);
+_setProbe((s) => plot(s));
 export { render };
 
-export { RENDERERS, ALIASES };
+export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo };
 export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

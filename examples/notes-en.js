@@ -8,6 +8,8 @@ export const SECTIONS_EN = {
   Relaciones: 'Relationships',
   'Flujos y números': 'Flows and numbers',
   Configuración: 'Configuration',
+  Mapas: 'Maps',
+  'Redes y flujos': 'Networks and flows',
 };
 
 export const NOTES_EN = {
@@ -25,7 +27,7 @@ export const NOTES_EN = {
   sankey: ['Sankey', 'Flows between stages. Color starts at the source and is inherited downstream.'],
   kpi: ['Indicators (KPI)', 'When the story is a number, the number is the chart. Change with arrow and text, a sparkline and a target meter.'],
   noche: ['Dark theme + highlight', '`theme: "noche"` uses the same hues, re-stepped and validated for a dark surface. `highlight` mutes the rest.'],
-  'slider-periodo': ['Period with play (d3plus-style)', '`time: "año"` shows one year at a time with a slider and a play button. Colors follow each sector across years. Works with treemaps, bars, donuts, scatter plots, radars and more.'],
+  'slider-periodo': ['Period with play (d3plus-style)', '`time: "año"` shows one year at a time with a slider and a play button; every tile shows its change vs the previous year. Colors follow each sector across years. `slider: false` removes the slider, `play: false` only the button.'],
   facetas: ['Small multiples (facet)', '`facet: "region"` draws one panel per region on the same scale with the same colors (seaborn col / col_wrap). Better than tangled lines.'],
   log: ['Log scale', '`yScale: "log"`: exponential growth looks straight, so rates can be compared instead of levels. 1-2-5 ticks, no empty decades.'],
   banda: ['Line with a confidence band', '`ci: true` (seaborn lineplot): with several observations per x, it draws the mean and its 95% interval. `errorbar: "sd"` also works.'],
@@ -47,7 +49,7 @@ export const NOTES_EN = {
   point: ['Point estimate with intervals', 'Mean with a 95% confidence interval (Student t), joined across categories. Labels at the end of each series.'],
   'caja-log': ['Box plot on a log scale', 'Amounts spanning several orders of magnitude: `xScale: "log"` on the value axis, with the points over each box.'],
   radar: ['Radar', 'Profiles on comparable axes (same 1–5 scale). Thin polygons with a soft fill; labels anchor by angle.'],
-  'treemap-niveles': ['Three-level treemap', 'Sector › subsector › product with `path`. Group headers when there is room, subtle tone steps inside each sector, labels only where they fit.'],
+  'treemap-niveles': ['Three-level treemap', 'Sector › subsector › product with `path`. Areas are exact (no header bands), one solid color per sector, wider gaps between sectors than inside them, and a legend with each sector\'s share. Hover the legend to light up a sector.'],
   'treemap-foco': ['Treemap with focus (drill-down)', '`focus: ["Agro"]` shows only that branch, keeping its colors, with breadcrumbs to go back. In the browser, a click on a group does the same.'],
   sunburst: ['Sunburst', 'The same hierarchy as rings: the inner ring is level 1 and outer rings inherit its color. Total in the center. Click to drill in.'],
   torta: ['Pie', 'Percentages inside each slice and a legend table beside it. Six parts at most.'],

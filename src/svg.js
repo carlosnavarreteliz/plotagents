@@ -7,7 +7,7 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 export const r2 = (n) => Math.round(n * 100) / 100;
 
 const ATTR_ALIAS = { className: 'class' };
-const KEEP_CASE = new Set(['viewBox', 'preserveAspectRatio', 'gradientUnits', 'gradientTransform', 'patternUnits', 'clipPathUnits']);
+const KEEP_CASE = new Set(['viewBox', 'preserveAspectRatio', 'gradientUnits', 'gradientTransform', 'patternUnits', 'patternTransform', 'patternContentUnits', 'clipPathUnits', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'textLength', 'lengthAdjust', 'startOffset']);
 
 export function el(tag, attrs = {}, children) {
   let s = '<' + tag;

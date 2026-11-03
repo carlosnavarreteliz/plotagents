@@ -1,7 +1,7 @@
 // Elige el tipo de gráfico cuando el agente no lo indica (type: "auto").
 import { fieldsOf, fieldKind } from './data.js';
 
-export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar'];
+export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'choropleth', 'symbolmap'];
 
 // Nombres de seaborn, d3plus y otros: el agente puede usar el que conozca.
 export const ALIASES = {
@@ -9,6 +9,10 @@ export const ALIASES = {
   scatterplot: 'scatter', histplot: 'hist', histogram: 'hist', kdeplot: 'kde', density: 'kde', ecdfplot: 'ecdf',
   lmplot: 'regplot', reg: 'regplot', regression: 'regplot', joint: 'jointplot', boxplot: 'box', violinplot: 'violin',
   stripplot: 'strip', swarmplot: 'swarm', beeswarm: 'swarm', pointplot: 'point', spider: 'radar', doughnut: 'donut',
+  graph: 'network', force: 'network', red: 'network', 'chord-diagram': 'chord', cuerdas: 'chord',
+  populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
+  flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
+  map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -22,6 +26,10 @@ export function normalizeType(t) {
 
 export function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
+  if (spec.geo) return 'choropleth';
+  if (spec.nodes && spec.nodes.some?.((n) => n && n.type)) return 'flowchart';
+  if (spec.nodes) return 'network';
+  if (spec.matrix) return 'chord';
   if (spec.from || spec.to) return 'sankey';
   if (spec.path || spec.group) return 'treemap';
   if (spec.size) return 'bubble';

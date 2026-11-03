@@ -35,6 +35,11 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Hierarchical part-to-whole | `treemap` or `sunburst` | `path: [level1, level2, …]`, `value` |
 | Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
 | Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
+| A value per region or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "world"`, `key`, `value` |
+| Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group` |
+| Exchanges between a few groups | `chord` | `from`, `to`, `value` |
+| Age structure | `pyramid` | `age`, `sex`, `value` |
+| A process with decisions | `flowchart` | `nodes` (`type`, `lane`), `edges` (`label`) |
 | Flows between stages | `sankey` | `from`, `to`, `value` |
 | One or more numbers | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
 
@@ -44,7 +49,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 
 - `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
-- `time: "year"`: one period at a time (the latest); in the browser, a slider with play.
+- `time: "year"`: one period at a time (the latest) with % change vs the previous one; in the browser, a slider with play (`slider: false` / `play: false` to turn them off). Treemaps can be colored by change with `colorBy: "change"`.
 - `refLines: [{ y: 600, label: "Target" }]` and `annotations: [{ x: "2024-01", label: "New branch" }]`.
 - `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.

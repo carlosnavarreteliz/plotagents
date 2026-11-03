@@ -1,4 +1,4 @@
-/*! plotagents 0.3.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
+/*! plotagents 0.4.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
 (function (global) {
 'use strict';
 var __defs = {}, __cache = {};
@@ -17,6 +17,14 @@ const { hist, kde, ecdf } = __req("src/charts/dist.js");
 const { regplot, residplot, jointplot } = __req("src/charts/regplot.js");
 const { box, violin, strip, swarm, point } = __req("src/charts/categorical.js");
 const { radar } = __req("src/charts/radar.js");
+const { network } = __req("src/charts/network.js");
+const { chord } = __req("src/charts/chord.js");
+const { pyramid } = __req("src/charts/pyramid.js");
+const { flowchart } = __req("src/charts/flowchart.js");
+const { choropleth, symbolMap } = __req("src/charts/choropleth.js");
+const { registerGeo, getGeo, registeredGeo } = __req("src/geo/registry.js");
+
+
 const { heatmap } = __req("src/charts/heatmap.js");
 const { sankey } = __req("src/charts/sankey.js");
 const { kpi } = __req("src/charts/kpi.js");
@@ -24,7 +32,7 @@ const { ensureData, PlotError, fieldKind, uniq, num } = __req("src/data.js");
 const { facet } = __req("src/facet.js");
 const { parseDate } = __req("src/format.js");
 const { inferType, TYPES, ALIASES, normalizeType } = __req("src/infer.js");
-const { lint } = __req("src/lint.js");
+const { lint, _setProbe } = __req("src/lint.js");
 const { schema, toolDefinition } = __req("src/schema.js");
 const { attach, attachSource } = __req("src/interact.js");
 const { render, _bind } = __req("src/runtime.js");
@@ -58,6 +66,12 @@ const RENDERERS = {
   swarm: (s, t) => swarm(s, t),
   point: (s, t) => point(s, t),
   radar: (s, t) => radar(s, t),
+  network: (s, t) => network(s, t),
+  chord: (s, t) => chord(s, t),
+  pyramid: (s, t) => pyramid(s, t),
+  flowchart: (s, t) => flowchart(s, t),
+  choropleth: (s, t) => choropleth(s, t),
+  symbolmap: (s, t) => symbolMap(s, t),
 };
 
 
@@ -178,7 +192,8 @@ function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } = {}) {
   const list = Array.isArray(specs) ? specs : [specs];
   const dark = list.every((s) => themeFor(s).mode === 'dark');
   const bg = dark ? '#0B0F2B' : '#FCFBF9';
-  const bundle = bundleSource();
+  const needsGeo = list.some((s) => { try { return ['choropleth', 'symbolmap'].includes(resolve(s).type); } catch { return false; } });
+  const bundle = bundleSource() && (needsGeo ? bundleSource() + '\n' + (bundleSource('plotagents-geo.js') || '') : bundleSource());
   const safeJSON = (o) => JSON.stringify(o).replace(/</g, '\\u003c');
   const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(s)}</script>` : '')).join('\n');
   const boot = bundle
@@ -203,24 +218,24 @@ ${boot}
 }
 
 /** Código de la biblioteca en un archivo (para incrustar en HTML). */
-function bundleSource() {
+function bundleSource(file = 'plotagents.js') {
   try {
     const fs = globalThis.process?.getBuiltinModule?.('node:fs');
     if (!fs) return null;
-    return fs.readFileSync(new URL('../dist/plotagents.js', "about:blank"), 'utf8');
+    return fs.readFileSync(new URL('../dist/' + file, "about:blank"), 'utf8');
   } catch {
     return null;
   }
 }
 
 _bind(plot, resolve);
+_setProbe((s) => plot(s));
 
 
 
 
 
-
-return { "resolve": resolve, "plot": plot, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+return { "resolve": resolve, "plot": plot, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/theme.js", function () {
 
@@ -800,7 +815,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const r2 = (n) => Math.round(n * 100) / 100;
 
 const ATTR_ALIAS = { className: 'class' };
-const KEEP_CASE = new Set(['viewBox', 'preserveAspectRatio', 'gradientUnits', 'gradientTransform', 'patternUnits', 'clipPathUnits']);
+const KEEP_CASE = new Set(['viewBox', 'preserveAspectRatio', 'gradientUnits', 'gradientTransform', 'patternUnits', 'patternTransform', 'patternContentUnits', 'clipPathUnits', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'textLength', 'lengthAdjust', 'startOffset']);
 
 function el(tag, attrs = {}, children) {
   let s = '<' + tag;
@@ -4545,6 +4560,1564 @@ function radar(spec, theme) {
 
 return { "radar": radar };
 });
+__def("src/charts/network.js", function () {
+const { el, g, text, tip } = __req("src/svg.js");
+const { measure, truncate } = __req("src/text.js");
+const { makeFormat } = __req("src/format.js");
+const { colorMap, readable } = __req("src/theme.js");
+const { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+
+const pick = (fields, cands) => cands.find((c) => fields.includes(c));
+
+/** Prepara nodos y aristas a partir del spec. */
+function prepareNetwork(spec) {
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const from = spec.from ?? pick(fields, ['from', 'source', 'origen', 'desde']) ?? fields[0];
+  const to = spec.to ?? pick(fields, ['to', 'target', 'destino', 'hasta']) ?? fields[1];
+  requireField(data, from, 'from');
+  requireField(data, to, 'to');
+  const vf = spec.value ?? pick(fields, ['value', 'weight', 'peso', 'valor']) ?? fields.find((f) => f !== from && f !== to && fieldKind(data, f) === 'number');
+  if (spec.value) requireField(data, vf, 'value');
+
+  const emap = new Map();
+  for (const r of data) {
+    const a = r[from], b = r[to];
+    if (a === null || a === undefined || b === null || b === undefined) continue;
+    const s = String(a), t = String(b);
+    if (s === t) continue;
+    const w = vf ? num(r[vf]) : 1;
+    if (!(w > 0)) continue;
+    const key = s < t ? s + '\u0000' + t : t + '\u0000' + s;
+    if (!emap.has(key)) emap.set(key, { s: s < t ? s : t, t: s < t ? t : s, v: 0 });
+    emap.get(key).v += w;
+  }
+  const edges = [...emap.values()];
+
+  const nodes = new Map();
+  const add = (id) => { if (!nodes.has(id)) nodes.set(id, { id, label: id, group: null, size: null, deg: 0, wdeg: 0 }); return nodes.get(id); };
+  if (Array.isArray(spec.nodes) && spec.nodes.length) {
+    const nf = fieldsOf(spec.nodes);
+    const idF = spec.nodeId ?? pick(nf, ['id', 'name', 'nombre', 'node', 'nodo']) ?? nf[0];
+    const labF = spec.nodeLabel ?? pick(nf, ['label', 'etiqueta']) ?? idF;
+    const grF = spec.group ?? pick(nf, ['group', 'grupo', 'type', 'tipo', 'category', 'categoria']);
+    const szF = spec.size ?? pick(nf, ['size', 'value', 'valor', 'tamaño', 'weight']);
+    if (!nf.includes(idF)) throw new PlotError(`El campo "${idF}" (nodeId) no existe en nodes.`, `Campos disponibles: ${nf.join(', ')}`);
+    for (const r of spec.nodes) {
+      if (r[idF] === null || r[idF] === undefined) continue;
+      const n = add(String(r[idF]));
+      if (labF && r[labF] !== undefined) n.label = String(r[labF]);
+      if (grF && r[grF] !== undefined && r[grF] !== null) n.group = String(r[grF]);
+      if (szF && Number.isFinite(num(r[szF]))) n.size = num(r[szF]);
+    }
+  }
+  for (const e of edges) {
+    const a = add(e.s), b = add(e.t);
+    a.deg++; b.deg++; a.wdeg += e.v; b.wdeg += e.v;
+  }
+  const list = [...nodes.values()];
+  for (const n of list) n.w = n.size ?? n.wdeg;
+  return { edges, nodes: list, byId: nodes, valueField: vf };
+}
+
+/** Disposición por fuerzas (velocity Verlet simplificado, al estilo d3-force). */
+function forceLayout(nodes, edges, byId, { iterations = 320, spacing = 40 } = {}) {
+  const n = nodes.length;
+  const order = [...nodes].sort((a, b) => String(a.group).localeCompare(String(b.group)) || b.w - a.w);
+  order.forEach((nd, i) => {
+    const r = spacing * 0.6 * Math.sqrt(i + 0.5), a = i * 2.399963229728653;
+    nd.x = r * Math.cos(a); nd.y = r * Math.sin(a); nd.vx = 0; nd.vy = 0;
+  });
+  const links = edges.map((e) => ({ a: byId.get(e.s), b: byId.get(e.t), v: e.v }));
+  const maxV = Math.max(1, ...links.map((l) => l.v));
+  let alpha = 1;
+  const decay = 1 - Math.pow(0.001, 1 / iterations);
+  const charge = -spacing * spacing * 0.9;
+  for (let it = 0; it < iterations; it++) {
+    for (let i = 0; i < n; i++) {
+      const p = nodes[i];
+      for (let j = i + 1; j < n; j++) {
+        const q = nodes[j];
+        let dx = q.x - p.x, dy = q.y - p.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1e-6) { dx = ((i * 7 + j * 13) % 11) / 11 - 0.5; dy = ((i * 5 + j * 3) % 7) / 7 - 0.5; d2 = dx * dx + dy * dy; }
+        const f = (charge * alpha) / Math.max(d2, spacing * 0.25);
+        const d = Math.sqrt(d2);
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        p.vx += fx; p.vy += fy; q.vx -= fx; q.vy -= fy;
+      }
+    }
+    for (const l of links) {
+      const dx = l.b.x + l.b.vx - l.a.x - l.a.vx, dy = l.b.y + l.b.vy - l.a.y - l.a.vy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+      const target = spacing * (1.05 - 0.35 * Math.sqrt(l.v / maxV)) + (l.a.r + l.b.r) * 0.8;
+      const k = (alpha * (0.35 + 0.65 * Math.sqrt(l.v / maxV))) / Math.max(1, Math.min(l.a.deg, l.b.deg));
+      const f = ((d - target) / d) * k;
+      const bias = l.a.deg / (l.a.deg + l.b.deg);
+      l.b.vx -= dx * f * bias; l.b.vy -= dy * f * bias;
+      l.a.vx += dx * f * (1 - bias); l.a.vy += dy * f * (1 - bias);
+    }
+    for (const p of nodes) { p.vx -= p.x * 0.02 * alpha; p.vy -= p.y * 0.02 * alpha; }
+    for (const p of nodes) { p.vx *= 0.6; p.vy *= 0.6; p.x += p.vx; p.y += p.vy; }
+    for (let pass = 0; pass < 2; pass++)
+      for (let i = 0; i < n; i++)
+        for (let j = i + 1; j < n; j++) {
+          const p = nodes[i], q = nodes[j];
+          const dx = q.x - p.x, dy = q.y - p.y;
+          const min = p.r + q.r + 3;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < min * min) {
+            const d = Math.sqrt(d2) || 1e-6;
+            const s = ((min - d) / d) * 0.5;
+            p.x -= dx * s; p.y -= dy * s; q.x += dx * s; q.y += dy * s;
+          }
+        }
+    alpha -= alpha * decay;
+  }
+}
+
+/** Círculo ordenado por grupo y tamaño. */
+function circleLayout(nodes, groups) {
+  const order = [...nodes].sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group) || b.w - a.w);
+  const n = order.length;
+  order.forEach((nd, i) => {
+    const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+    nd.x = Math.cos(a); nd.y = Math.sin(a); nd.angle = a;
+  });
+}
+
+function network(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
+  const { edges, nodes, byId } = prepareNetwork(spec);
+  if (!nodes.length) throw new PlotError('La red no tiene conexiones válidas.', 'Entrega filas con { from, to, value }.');
+  const layout = spec.layout === 'circle' ? 'circle' : 'force';
+
+  const gtot = new Map();
+  for (const n of nodes) { const k = n.group ?? ''; gtot.set(k, (gtot.get(k) || 0) + n.w); }
+  const groups = [...gtot.keys()].sort((a, b) => gtot.get(b) - gtot.get(a));
+  const hasGroups = groups.length > 1 || (groups.length === 1 && groups[0] !== '');
+  const cmap = colorMap(groups, theme, spec.colors);
+  const colorOf = (n) => (spec.colors && spec.colors[n.id]) || (hasGroups ? cmap.get(n.group ?? '') : theme.categorical[0]);
+  const fmt = makeFormat(spec.format, locale, nodes.map((n) => n.w));
+  const fmtE = makeFormat(spec.format, locale, edges.map((e) => e.v));
+
+  const legend = hasGroups && spec.legend !== false ? groups.map((k) => ({ label: k || (en ? 'No group' : 'Sin grupo'), color: cmap.get(k) })) : [];
+  const W = spec.width || 720;
+  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.05 + 150) : 520 });
+  const area = frame.layout(legend);
+
+  const maxW = Math.max(...nodes.map((n) => n.w), 1e-9);
+  const rMax = spec.maxRadius ?? Math.max(9, Math.min(22, Math.sqrt((area.w * area.h) / nodes.length) * 0.32));
+  const rMin = Math.min(4, rMax / 2);
+  for (const n of nodes) n.r = rMin + (rMax - rMin) * Math.sqrt(Math.max(0, n.w) / maxW);
+
+  const labelSize = (theme.type?.label ?? 12) - 0.5;
+  let labelSet;
+  if (Array.isArray(spec.labels)) labelSet = new Set(spec.labels.map(String));
+  else if (spec.labels === false) labelSet = new Set();
+  else {
+    const k = typeof spec.labels === 'number' ? spec.labels : nodes.length <= 14 ? nodes.length : layout === 'circle' ? nodes.length : 10;
+    labelSet = new Set([...nodes].sort((a, b) => b.w - a.w).slice(0, k).map((n) => n.id));
+  }
+
+  const body = [];
+  if (layout === 'circle') {
+    circleLayout(nodes, groups);
+    const lwFull = Math.max(0, ...nodes.filter((n) => labelSet.has(n.id)).map((n) => measure(n.label, labelSize, 600)));
+    const lw = Math.min(area.w * (area.w < 480 ? 0.2 : 0.28), lwFull) + 10;
+    const rGuess = Math.min(rMax, 10);
+    const R = Math.max(40, Math.min(area.w / 2 - lw - rGuess, area.h / 2 - rGuess - 16));
+    const rCap = Math.max(3.5, ((Math.PI * 2 * R) / nodes.length) * 0.4);
+    if (rCap < rMax) for (const n of nodes) n.r = Math.max(3, n.r * (rCap / rMax));
+    const cx = area.x + area.w / 2, cy = area.y + area.h / 2;
+    for (const n of nodes) { n.px = cx + n.x * R; n.py = cy + n.y * R; }
+    nodes.cx = cx; nodes.cy = cy; nodes.R = R; nodes.lw = lw;
+  } else {
+    const spacing = Math.max(26, Math.sqrt((area.w * area.h) / nodes.length) * 0.75);
+    forceLayout(nodes, edges, byId, { spacing, iterations: spec.iterations ?? (nodes.length > 200 ? 200 : 320) });
+    {
+      const mx = nodes.reduce((a, n) => a + n.x, 0) / nodes.length, my = nodes.reduce((a, n) => a + n.y, 0) / nodes.length;
+      let sxx = 0, syy = 0, sxy = 0;
+      for (const n of nodes) { const dx = n.x - mx, dy = n.y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+      let th = 0.5 * Math.atan2(2 * sxy, sxx - syy); // ángulo del eje principal
+      if (area.h > area.w) th -= Math.PI / 2;
+      const c = Math.cos(-th), si = Math.sin(-th);
+      for (const n of nodes) { const dx = n.x - mx, dy = n.y - my; n.x = dx * c - dy * si; n.y = dx * si + dy * c; }
+    }
+    const x0 = Math.min(...nodes.map((n) => n.x - n.r)), x1 = Math.max(...nodes.map((n) => n.x + n.r));
+    const y0 = Math.min(...nodes.map((n) => n.y - n.r)), y1 = Math.max(...nodes.map((n) => n.y + n.r));
+    const pad = rMax + 4;
+    const aw = Math.max(10, area.w - pad * 2), ah = Math.max(10, area.h - pad * 2);
+    let sx = aw / Math.max(1e-6, x1 - x0), sy = ah / Math.max(1e-6, y1 - y0);
+    const ratio = sx / sy;
+    const lim = 2.4;
+    if (ratio > lim) sx = sy * lim; else if (ratio < 1 / lim) sy = sx * lim;
+    const ox = area.x + pad + (aw - (x1 - x0) * sx) / 2, oy = area.y + pad + (ah - (y1 - y0) * sy) / 2;
+    for (const n of nodes) { n.px = ox + (n.x - x0) * sx; n.py = oy + (n.y - y0) * sy; }
+    for (let pass = 0; pass < 6; pass++)
+      for (let i = 0; i < nodes.length; i++)
+        for (let j = i + 1; j < nodes.length; j++) {
+          const p = nodes[i], q = nodes[j];
+          const dx = q.px - p.px, dy = q.py - p.py, min = p.r + q.r + 2, d2 = dx * dx + dy * dy;
+          if (d2 < min * min) { const d = Math.sqrt(d2) || 1e-6, s = ((min - d) / d) * 0.5; p.px -= dx * s; p.py -= dy * s; q.px += dx * s; q.py += dy * s; }
+        }
+    for (const n of nodes) {
+      n.px = Math.max(area.x + n.r + 1, Math.min(area.x + area.w - n.r - 1, n.px));
+      n.py = Math.max(area.y + n.r + 1, Math.min(area.y + area.h - n.r - 1, n.py));
+    }
+  }
+
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const near = new Set();
+  if (hl) { for (const id of hl) near.add(id); for (const e of edges) { if (hl.has(e.s)) near.add(e.t); if (hl.has(e.t)) near.add(e.s); } }
+  const on = (n) => !hl || near.has(n.id);
+
+  const maxE = Math.max(...edges.map((e) => e.v), 1e-9);
+  const manyLinks = edges.length > 150;
+  const linkG = [];
+  for (const e of [...edges].sort((a, b) => a.v - b.v)) {
+    const a = byId.get(e.s), b = byId.get(e.t);
+    const w = 0.75 + 3.25 * Math.sqrt(e.v / maxE);
+    let d;
+    if (layout === 'circle') {
+      const mx = (a.px + b.px) / 2, my = (a.py + b.py) / 2;
+      const qx = mx + (nodes.cx - mx) * 0.55, qy = my + (nodes.cy - my) * 0.55;
+      d = `M${a.px.toFixed(1)},${a.py.toFixed(1)}Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.px.toFixed(1)},${b.py.toFixed(1)}`;
+    } else {
+      const dx = b.px - a.px, dy = b.py - a.py, len = Math.hypot(dx, dy) || 1;
+      const bend = Math.min(18, len * 0.08);
+      const qx = (a.px + b.px) / 2 - (dy / len) * bend, qy = (a.py + b.py) / 2 + (dx / len) * bend;
+      d = `M${a.px.toFixed(1)},${a.py.toFixed(1)}Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.px.toFixed(1)},${b.py.toFixed(1)}`;
+    }
+    const active = hl ? hl.has(e.s) || hl.has(e.t) : true;
+    linkG.push(el('path', {
+      class: 'pa-m', d, fill: 'none', stroke: active && hl ? theme.ink : theme.muted,
+      strokeOpacity: hl ? (active ? 0.55 : 0.08) : manyLinks ? 0.22 : 0.38, strokeWidth: w, strokeLinecap: 'round',
+      'data-tip': tip(`${a.label} — ${b.label}`, fmtE(e.v)),
+    }));
+  }
+  body.push(g({ class: 'pa-links' }, linkG));
+
+  const nodeG = [];
+  for (const n of [...nodes].sort((a, b) => (on(a) - on(b)) || b.r - a.r)) {
+    const lines = [n.label];
+    if (hasGroups && n.group) lines.push(n.group);
+    lines.push(`${en ? 'Connections' : 'Conexiones'}: ${n.deg}`);
+    lines.push(`${n.size !== null ? (en ? 'Size' : 'Tamaño') : en ? 'Weighted degree' : 'Grado ponderado'}: ${fmt(n.w)}`);
+    nodeG.push(el('circle', { class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim, stroke: theme.surface, strokeWidth: theme.marks?.ring ? Math.min(2, theme.marks.ring) * 0.75 : 1.5, 'data-tip': tip(...lines) }));
+  }
+  body.push(g({ class: 'pa-nodes' }, nodeG));
+
+  const placed = nodes.map((n) => [n.px - n.r, n.py - n.r, n.px + n.r, n.py + n.r, n.id, n.r]);
+  const labG = [];
+  const lbls = nodes.filter((n) => labelSet.has(n.id) && (on(n) || hl?.has(n.id))).sort((a, b) => b.w - a.w);
+  for (const n of lbls) {
+    const strong = hl ? hl.has(n.id) : true;
+    const weight = strong ? 600 : 500;
+    const label = truncate(n.label, layout === 'circle' ? nodes.lw - 8 : 150, labelSize, weight);
+    const w = measure(label, labelSize, weight), h = labelSize + 2;
+    let cands;
+    if (layout === 'circle') {
+      const ca = Math.cos(n.angle), sa = Math.sin(n.angle);
+      const lx = n.px + ca * (n.r + 6), ly = n.py + sa * (n.r + 6) + labelSize * 0.35;
+      const anchor = Math.abs(ca) < 0.2 ? 'middle' : ca > 0 ? 'start' : 'end';
+      const yy = Math.abs(ca) < 0.2 ? (sa < 0 ? n.py - n.r - 6 : n.py + n.r + labelSize + 2) : ly;
+      cands = [[lx, yy, anchor]];
+    } else {
+      cands = [
+        [n.px + n.r + 4, n.py + labelSize * 0.35, 'start'],
+        [n.px - n.r - 4, n.py + labelSize * 0.35, 'end'],
+        [n.px, n.py - n.r - 4, 'middle'],
+        [n.px, n.py + n.r + labelSize + 1, 'middle'],
+        [n.px + n.r * 0.75 + 3, n.py - n.r * 0.75 - 2, 'start'],
+        [n.px - n.r * 0.75 - 3, n.py - n.r * 0.75 - 2, 'end'],
+        [n.px + n.r * 0.75 + 3, n.py + n.r * 0.75 + labelSize, 'start'],
+        [n.px - n.r * 0.75 - 3, n.py + n.r * 0.75 + labelSize, 'end'],
+      ];
+    }
+    for (const [lx, ly, anchor] of cands) {
+      const bx0 = anchor === 'start' ? lx : anchor === 'end' ? lx - w : lx - w / 2;
+      const box = [bx0 - 1, ly - h + 2, bx0 + w + 1, ly + 3];
+      if (box[0] < area.x - 2 || box[2] > area.x + area.w + 2 || box[1] < area.y - 4 || box[3] > area.y + area.h + 4) continue;
+      const hit = placed.some((b) => b[4] !== n.id && (b[4] === null || b[5] >= 7) && !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+      if (hit && layout !== 'circle') continue;
+      placed.push([...box, null, 0]);
+      labG.push(el('text', {
+        x: lx, y: ly, textAnchor: anchor, fill: hasGroups ? readable(colorOf(n), theme) : theme.ink, fontSize: labelSize, fontWeight: weight,
+        stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round',
+      }, label.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
+      break;
+    }
+  }
+  body.push(g({ class: 'pa-labels' }, labG));
+
+  const top = [...nodes].sort((a, b) => b.deg - a.deg || b.w - a.w).slice(0, 3);
+  const desc = en
+    ? `Network of ${nodes.length} nodes and ${edges.length} connections. Most connected: ${top.map((n) => `${n.label} (${n.deg})`).join(', ')}.`
+    : `Red de ${nodes.length} nodos y ${edges.length} conexiones. Más conectados: ${top.map((n) => `${n.label} (${n.deg})`).join(', ')}.`;
+  return frame.finish(body, { desc, type: 'network' });
+}
+
+return { "prepareNetwork": prepareNetwork, "network": network };
+});
+__def("src/charts/chord.js", function () {
+const { el, g, text, tip } = __req("src/svg.js");
+const { measure, truncate, wrap } = __req("src/text.js");
+const { makeFormat, formatNumber } = __req("src/format.js");
+const { colorMap, readable } = __req("src/theme.js");
+const { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+
+const pick = (fields, cands) => cands.find((c) => fields.includes(c));
+const TAU = Math.PI * 2;
+
+/** Matriz de flujos m[i][j] (de i hacia j) y nombres. */
+function prepareChord(spec) {
+  if (Array.isArray(spec.matrix)) {
+    const names = (spec.names || spec.matrix.map((_, i) => String(i + 1))).map(String);
+    if (spec.matrix.length !== names.length) throw new PlotError('`matrix` y `names` deben tener el mismo largo.', 'matrix: [[0, 5], [3, 0]], names: ["A", "B"]');
+    return { names, m: spec.matrix.map((row) => names.map((_, j) => Math.max(0, num(row[j]) || 0))) };
+  }
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const from = spec.from ?? pick(fields, ['from', 'source', 'origen', 'desde']) ?? fields[0];
+  const to = spec.to ?? pick(fields, ['to', 'target', 'destino', 'hasta']) ?? fields[1];
+  requireField(data, from, 'from');
+  requireField(data, to, 'to');
+  const vf = spec.value ?? pick(fields, ['value', 'valor', 'weight', 'flujo']) ?? fields.find((f) => f !== from && f !== to && fieldKind(data, f) === 'number');
+  if (vf) requireField(data, vf, 'value');
+  const names = [];
+  const idx = new Map();
+  const at = (k) => { if (!idx.has(k)) { idx.set(k, names.length); names.push(k); } return idx.get(k); };
+  const flows = [];
+  for (const r of data) {
+    if (r[from] === null || r[from] === undefined || r[to] === null || r[to] === undefined) continue;
+    const v = vf ? num(r[vf]) : 1;
+    if (!(v > 0)) continue;
+    flows.push([at(String(r[from])), at(String(r[to])), v]);
+  }
+  const m = names.map(() => names.map(() => 0));
+  for (const [i, j, v] of flows) m[i][j] += v;
+  return { names, m };
+}
+
+function chord(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
+  const { names, m } = prepareChord(spec);
+  const n = names.length;
+  if (n < 2) throw new PlotError('El diagrama de cuerdas necesita al menos dos grupos.', 'Entrega filas { from, to, value } entre grupos distintos.');
+  const directed = spec.directed === true;
+
+  const seg = names.map(() => []);
+  const ribbons = [];
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      if (directed) {
+        if (m[i][j] > 0) { const rb = { i, j, v: m[i][j] }; ribbons.push(rb); seg[i].push({ rb, end: 's', partner: j, v: m[i][j] }); seg[j].push({ rb, end: 't', partner: i, v: m[i][j] }); }
+      } else if (i < j) {
+        const v = m[i][j] + m[j][i];
+        if (v > 0) { const rb = { i, j, v, ij: m[i][j], ji: m[j][i] }; ribbons.push(rb); seg[i].push({ rb, end: 's', partner: j, v }); seg[j].push({ rb, end: 't', partner: i, v }); }
+      }
+    }
+  const totals = seg.map((s) => s.reduce((a, b) => a + b.v, 0));
+  const out = m.map((row, i) => row.reduce((a, v, j) => a + (j === i ? 0 : v), 0));
+  const inn = names.map((_, j) => m.reduce((a, row, i) => a + (i === j ? 0 : row[j]), 0));
+  let order = names.map((_, i) => i).filter((i) => totals[i] > 0);
+  if (spec.sort !== 'none') order.sort((a, b) => totals[b] - totals[a]);
+  const T = order.reduce((a, i) => a + totals[i], 0);
+  if (!(T > 0)) throw new PlotError('No hay flujos positivos entre grupos distintos.', 'Revisa el campo de valor.');
+
+  const sizeOrder = [...order].sort((a, b) => totals[b] - totals[a]);
+  const cmap = colorMap(sizeOrder.map((i) => names[i]), theme, spec.colors);
+  const colorOf = (i) => cmap.get(names[i]);
+  const fmt = makeFormat(spec.format, locale, ribbons.map((r) => r.v).concat(totals));
+  const pct = (a, b) => (b > 0 ? formatNumber((a / b) * 100, a / b < 0.1 ? 1 : 0, locale, true) + '%' : '');
+
+  const legend = spec.legend === true ? sizeOrder.map((i) => ({ label: names[i], color: colorOf(i) })) : [];
+  const W = spec.width || 720;
+  const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.02 + 150) : 600 });
+  const area = frame.layout(legend);
+
+  const pad = Math.min(0.04, (TAU * 0.18) / order.length);
+  const k = (TAU - pad * order.length) / T;
+  let a = -Math.PI / 2 + pad / 2;
+  const arc = new Map();
+  for (const i of order) {
+    const a0 = a, a1 = a + totals[i] * k;
+    arc.set(i, { a0, a1, mid: (a0 + a1) / 2 });
+    a = a1 + pad;
+  }
+  const pos = new Map(order.map((i, p) => [i, p]));
+  for (const i of order) {
+    const { a0 } = arc.get(i);
+    const p = pos.get(i);
+    const list = seg[i].filter((s) => pos.has(s.partner)).sort((x, y) => {
+      const dx = (pos.get(x.partner) - p + order.length) % order.length;
+      const dy = (pos.get(y.partner) - p + order.length) % order.length;
+      return dy - dx || (x.end === 's' ? -1 : 1);
+    });
+    let c = a0;
+    for (const s of list) { s.a0 = c; s.a1 = c + s.v * k; c = s.a1; s.rb[s.end] = s; }
+  }
+
+  const narrow = area.w < 480;
+  const labelSize = (theme.type?.label ?? 12) + (narrow ? -1 : 0.5);
+  const radial = spec.labelOrientation ? spec.labelOrientation === 'radial' : order.length > 10;
+  const valueOf = (i) => fmt(totals[i]);
+  const thick = Math.max(8, Math.min(14, Math.min(area.w, area.h) * 0.03));
+  const gapL = 10;
+  const radiusFor = (lw) => radial
+    ? Math.min(area.w, area.h) / 2 - thick - gapL - lw - 4
+    : Math.min(area.w / 2 - (lw + thick + gapL + 6), area.h / 2 - thick - gapL - labelSize * 2.6);
+  const full = Math.max(...order.map((i) => Math.max(measure(names[i], labelSize, 600), radial ? 0 : measure(valueOf(i), labelSize - 1.5))));
+  const minR = Math.min(area.w, area.h) * (narrow ? 0.22 : 0.3);
+  let maxLabel = full;
+  if (radiusFor(full) < minR) {
+    maxLabel = Math.max(48, radial ? Math.min(area.w, area.h) / 2 - thick - gapL - 4 - minR : area.w / 2 - thick - gapL - 6 - minR);
+  }
+  const linesOf = (i) => (radial ? [truncate(names[i], maxLabel, labelSize, 600)] : wrap(names[i], maxLabel, labelSize, 600, 2));
+  const labelOf = (i) => linesOf(i).join(' ');
+  const lw = Math.max(...order.map((i) => Math.max(...linesOf(i).map((l) => measure(l, labelSize, 600)), radial ? 0 : measure(valueOf(i), labelSize - 1.5))));
+  let R = Math.max(60, radiusFor(lw));
+  const cx = area.x + area.w / 2, cy = area.y + area.h / 2;
+  const r0 = R, r1 = R + thick;
+  const P = (ang, r) => [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r];
+  const f = (v) => v.toFixed(2);
+
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const isOn = (rb) => !hl || hl.has(names[rb.i]) || hl.has(names[rb.j]);
+
+  const ribbonG = [];
+  const rr = r0 - 1;
+  for (const rb of [...ribbons].sort((x, y) => (isOn(x) - isOn(y)) || y.v - x.v)) {
+    const s = rb.s, t = rb.t;
+    if (!s || !t) continue;
+    const [sx0, sy0] = P(s.a0, rr), [sx1, sy1] = P(s.a1, rr), [tx0, ty0] = P(t.a0, rr), [tx1, ty1] = P(t.a1, rr);
+    const lg = (x, y) => (y - x > Math.PI ? 1 : 0);
+    const d = `M${f(sx0)},${f(sy0)}A${f(rr)},${f(rr)} 0 ${lg(s.a0, s.a1)} 1 ${f(sx1)},${f(sy1)}Q${f(cx)},${f(cy)} ${f(tx0)},${f(ty0)}A${f(rr)},${f(rr)} 0 ${lg(t.a0, t.a1)} 1 ${f(tx1)},${f(ty1)}Q${f(cx)},${f(cy)} ${f(sx0)},${f(sy0)}Z`;
+    const mode = spec.ribbonColor ?? (directed ? 'source' : 'smaller');
+    const src = mode === 'source' ? rb.i
+      : mode === 'larger' ? (rb.ij >= rb.ji ? rb.i : rb.j)
+      : totals[rb.i] <= totals[rb.j] ? rb.i : rb.j;
+    const A = names[rb.i], B = names[rb.j];
+    const lines = directed
+      ? [`${A} → ${B}`, `${fmt(rb.v)} · ${pct(rb.v, out[rb.i])} ${en ? 'of what' : 'de lo que'} ${A} ${en ? 'sends' : 'envía'}`]
+      : [`${A} ↔ ${B}`, `${A} → ${B}: ${fmt(rb.ij)}`, `${B} → ${A}: ${fmt(rb.ji)}`, `${en ? 'Total' : 'Total'}: ${fmt(rb.v)} · ${pct(rb.v, totals[rb.i])} ${en ? 'of' : 'de'} ${A}`];
+    ribbonG.push(el('path', {
+      class: 'pa-m', d, fill: colorOf(src), fillOpacity: isOn(rb) ? (hl ? 0.75 : 0.62) : 0.1,
+      stroke: theme.surface, strokeWidth: 0.75, strokeOpacity: 0.9, 'data-tip': tip(...lines),
+    }));
+  }
+
+  const arcG = [];
+  for (const i of order) {
+    const { a0, a1 } = arc.get(i);
+    const [x0, y0] = P(a0, r0 + 1.5), [x1, y1] = P(a1, r0 + 1.5), [x2, y2] = P(a1, r1), [x3, y3] = P(a0, r1);
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const d = `M${f(x0)},${f(y0)}A${f(r0 + 1.5)},${f(r0 + 1.5)} 0 ${large} 1 ${f(x1)},${f(y1)}L${f(x2)},${f(y2)}A${f(r1)},${f(r1)} 0 ${large} 0 ${f(x3)},${f(y3)}Z`;
+    const dim = hl && !hl.has(names[i]);
+    const lines = directed
+      ? [names[i], `${en ? 'Out' : 'Sale'}: ${fmt(out[i])}`, `${en ? 'In' : 'Entra'}: ${fmt(inn[i])}`]
+      : [names[i], `${en ? 'Total flows' : 'Flujos totales'}: ${fmt(totals[i])}`, `${pct(totals[i], T)} ${en ? 'of all' : 'del total'}`];
+    arcG.push(el('path', { class: 'pa-m', d, fill: dim ? theme.dim : colorOf(i), stroke: theme.surface, strokeWidth: 1, 'data-tip': tip(...lines) }));
+  }
+
+  const labG = [];
+  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  for (const i of order) {
+    const { mid, a0, a1 } = arc.get(i);
+    if ((a1 - a0) * r1 < 6 && order.length > 6) continue; // arco demasiado chico
+    const dim = hl && !hl.has(names[i]);
+    const fill = dim ? theme.muted : readable(colorOf(i), theme);
+    const ca = Math.cos(mid), sa = Math.sin(mid);
+    if (radial) {
+      const [lx, ly] = P(mid, r1 + gapL);
+      let deg = (mid * 180) / Math.PI;
+      const flip = ca < 0;
+      if (flip) deg += 180;
+      labG.push(el('text', { x: f(lx), y: f(ly), transform: `rotate(${deg.toFixed(1)} ${f(lx)} ${f(ly)})`, textAnchor: flip ? 'end' : 'start', dominantBaseline: 'middle', fill, fontSize: labelSize, fontWeight: 600, ...halo }, esc(labelOf(i))));
+    } else {
+      const [lx, ly] = P(mid, r1 + gapL);
+      const anchor = Math.abs(ca) < 0.25 ? 'middle' : ca > 0 ? 'start' : 'end';
+      const dy = Math.abs(ca) < 0.25 ? (sa < 0 ? -labelSize * 1.2 : labelSize * 0.9) : 0;
+      const ls = linesOf(i);
+      const lh = labelSize * 1.15;
+      const y0 = Math.abs(ca) < 0.25 && sa < 0 ? ly + dy - (ls.length - 1) * lh : ly + dy - (Math.abs(ca) >= 0.25 ? ((ls.length - 1) * lh) / 2 : 0);
+      ls.forEach((l, k) => labG.push(text(lx, y0 + k * lh, l, { textAnchor: anchor, fill, fontSize: labelSize, fontWeight: 600, ...halo })));
+      labG.push(text(lx, y0 + ls.length * lh, valueOf(i), { textAnchor: anchor, fill: theme.lede, fontSize: labelSize - 1.5, ...halo }));
+    }
+  }
+
+  const body = [g({ class: 'pa-ribbons' }, ribbonG), g({ class: 'pa-arcs' }, arcG), g({ class: 'pa-labels' }, labG)];
+  const big = [...ribbons].sort((x, y) => y.v - x.v).slice(0, 3);
+  const desc = en
+    ? `Chord diagram of ${order.length} groups and ${ribbons.length} flows. Largest: ${big.map((r) => `${names[r.i]} ${directed ? '→' : '↔'} ${names[r.j]} (${fmt(r.v)})`).join('; ')}.`
+    : `Diagrama de cuerdas con ${order.length} grupos y ${ribbons.length} flujos. Mayores: ${big.map((r) => `${names[r.i]} ${directed ? '→' : '↔'} ${names[r.j]} (${fmt(r.v)})`).join('; ')}.`;
+  return frame.finish(body, { desc, type: 'chord' });
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+}
+
+return { "prepareChord": prepareChord, "chord": chord };
+});
+__def("src/charts/pyramid.js", function () {
+const { el, g, text, tip, barPath } = __req("src/svg.js");
+const { measure } = __req("src/text.js");
+const { makeFormat, formatNumber } = __req("src/format.js");
+const { niceStep, linear } = __req("src/scale.js");
+const { colorMap, readable } = __req("src/theme.js");
+const { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+
+const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
+const lead = (s) => { const m = /^\s*(\d+)/.exec(String(s)); return m ? +m[1] : NaN; };
+
+function pyramid(spec, theme) {
+  const locale = spec.locale || 'es';
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const cats = fields.filter((f) => fieldKind(data, f) !== 'number' || /edad|age|grupo|tramo/i.test(f));
+  const nums = fields.filter((f) => fieldKind(data, f) === 'number');
+  const ageF = spec.age ?? spec.y ?? cats.find((f) => /edad|age|tramo|grupo/i.test(f)) ?? cats[0];
+  const sideF = spec.sex ?? spec.series ?? spec.hue ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : null) ?? cats.find((f) => f !== ageF && /sexo|sex|gender|género|genero/i.test(f)) ?? cats.find((f) => f !== ageF);
+  const valF = spec.value ?? spec.x ?? nums.find((f) => f !== ageF && f !== sideF);
+  requireField(data, ageF, 'age');
+  requireField(data, sideF, 'series');
+  requireField(data, valF, 'value');
+
+  let rows = data, cmpRows = spec.compareData ? ensureData({ data: spec.compareData }) : spec._prev && spec.compare !== undefined && spec.compare !== false ? spec._prev.data : null;
+  const cmpField = spec.compareField ?? spec.time;
+  if (!cmpRows && spec.compare !== undefined && cmpField && fields.includes(cmpField)) {
+    cmpRows = data.filter((r) => String(r[cmpField]) === String(spec.compare));
+    rows = data.filter((r) => String(r[cmpField]) !== String(spec.compare));
+    const periods = uniq(rows.map((r) => String(r[cmpField])));
+    if (periods.length > 1) { const last = spec.current ?? periods.sort().at(-1); rows = rows.filter((r) => String(r[cmpField]) === String(last)); }
+  }
+
+  const sides = spec.sides ?? uniq(rows.map((r) => String(r[sideF])));
+  if (sides.length !== 2) throw new PlotError(T(`A population pyramid needs exactly 2 groups in "${sideF}" (found ${sides.length}).`, `La pirámide necesita exactamente 2 grupos en "${sideF}" (hay ${sides.length}).`, locale), T('Filter the data to two groups, e.g. men and women.', 'Filtra los datos a dos grupos, por ejemplo hombres y mujeres.', locale));
+  let ages = uniq([...rows, ...(cmpRows || [])].map((r) => String(r[ageF])));
+  if (ages.every((a) => Number.isFinite(lead(a)))) ages.sort((a, b) => lead(a) - lead(b));
+  if (spec.ageOrder) ages = spec.ageOrder.map(String);
+  const top = [...ages].reverse(); // los mayores arriba
+
+  const sumBy = (rs) => {
+    const m = new Map();
+    for (const r of rs) {
+      const k = String(r[ageF]) + '\u0000' + String(r[sideF]);
+      const v = num(r[valF]);
+      if (Number.isFinite(v)) m.set(k, (m.get(k) || 0) + Math.abs(v));
+    }
+    return m;
+  };
+  const cur = sumBy(rows), cmp = cmpRows ? sumBy(cmpRows) : null;
+  const total = [...cur.values()].reduce((a, b) => a + b, 0) || 1;
+  const cmpTotal = cmp ? [...cmp.values()].reduce((a, b) => a + b, 0) || 1 : 1;
+  const pct = spec.percent === true || spec.format === 'percent' || spec.format?.type === 'percent';
+  const val = (m, a, s, tot) => { const v = m.get(a + '\u0000' + s) || 0; return pct ? v / tot : v; };
+  const V = (a, s) => val(cur, a, s, total);
+  const C = (a, s) => (cmp ? val(cmp, a, s, cmpTotal) : NaN);
+
+  const allV = ages.flatMap((a) => sides.flatMap((s) => [V(a, s), C(a, s)])).filter(Number.isFinite);
+  const vmax = Math.max(...allV, 1e-9);
+  const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, allV);
+  const share = (v) => formatNumber((v / total) * 100, (v / total) * 100 < 10 ? 1 : 0, locale, true) + '%';
+
+  const cmap = colorMap(sides, theme, spec.colors);
+  const colorOf = (s) => cmap.get(s);
+  const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T('Comparison', 'Comparación', locale));
+  const legend = cmp && spec.legend !== false ? [{ label: cmpLabel, color: theme.ink, shape: 'line' }] : [];
+
+  const frame = createFrame(spec, theme, { height: 420 });
+  let area = frame.layout(legend);
+  const n = ages.length;
+  const headerH = 24, axisH = 24;
+  const step = spec.barHeight ? spec.barHeight + 2 : Math.max(14, Math.min(26, frame.width < 480 ? 17 : 21));
+  if (spec.height === undefined) {
+    frame.setHeight(area.y + headerH + n * step + axisH + frame.chrome);
+    area = { ...area, h: frame.bottom - area.y };
+  }
+  const ageSize = theme.type?.axis ?? 11.5;
+  const centerW = Math.max(...ages.map((a) => measure(a, ageSize, 500))) + 18;
+  const labelsOn = spec.labels === true;
+  const sample = fmt(vmax);
+  const endPad = labelsOn ? measure(sample, 11, 600) + 8 : 4;
+  const halfW = (area.w - centerW) / 2;
+  const cx0 = area.x + halfW, cx1 = cx0 + centerW; // bordes de la columna central
+  const plotTop = area.y + headerH;
+  const plotH = area.h - headerH - axisH;
+  const st = plotH / n;
+  const bh = Math.max(4, Math.min(spec.barHeight ?? 24, st - 2));
+  const nd = { step: niceStep(vmax, Math.max(2, Math.round((halfW - endPad) / 85))) };
+  const dmax = spec.xDomain ? spec.xDomain[1] : vmax * 1.02;
+  const len = linear(0, dmax, 0, halfW - endPad);
+  const yOf = (i) => plotTop + i * st + (st - bh) / 2;
+
+  const body = [];
+  const tf = fmt.tick(nd.step);
+  const tsize = theme.type?.axis ?? 11.5;
+  const ticks = len.ticks(nd.step).filter((t) => t <= dmax + 1e-9 && len(t) + measure(tf(t), tsize) / 2 <= halfW + 2);
+  const gridParts = [];
+  for (const t of ticks) {
+    for (const [x, anchor] of [[cx0 - len(t), 'middle'], [cx1 + len(t), 'middle']]) {
+      const px = Math.round(x) + 0.5;
+      gridParts.push(el('line', { x1: px, x2: px, y1: plotTop - 4, y2: plotTop + plotH, stroke: t === 0 ? theme.axis : theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+      if (t === 0 && anchor) continue;
+      gridParts.push(text(px, plotTop + plotH + 16, tf(t), { fill: theme.muted, fontSize: theme.type?.axis ?? 11.5, textAnchor: anchor }));
+    }
+  }
+  body.push(g({ class: 'pa-grid' }, gridParts));
+
+  const sideTot = (s) => ages.reduce((a, ag) => a + (cur.get(ag + '\u0000' + s) || 0), 0);
+  sides.forEach((s, k) => {
+    const lab = s;
+    const sh = share(sideTot(s)) ;
+    const hx = k === 0 ? cx0 - 2 : cx1 + 2;
+    const anchor = k === 0 ? 'end' : 'start';
+    const tw = measure(lab, 13, 600);
+    body.push(text(hx, area.y + 14, lab, { fill: readable(colorOf(s), theme), fontSize: 13, fontWeight: 600, textAnchor: anchor }));
+    body.push(text(k === 0 ? hx - tw - 6 : hx + tw + 6, area.y + 14, sh, { fill: theme.muted, fontSize: 12, textAnchor: anchor }));
+  });
+
+  top.forEach((a, i) => {
+    const y = yOf(i);
+    body.push(text((cx0 + cx1) / 2, y + bh / 2 + ageSize * 0.36, a, { fill: theme.lede, fontSize: ageSize, fontWeight: 500, textAnchor: 'middle' }));
+    sides.forEach((s, k) => {
+      const v = V(a, s);
+      const w = len(Math.min(v, dmax));
+      const c = colorOf(s);
+      const x = k === 0 ? cx0 - w : cx1;
+      const d = barPath(x, y, w, bh, k === 0 ? 'left' : 'right', Math.min(3.5, bh / 2));
+      const cv = C(a, s);
+      const lines = [`${a} · ${s}`, fmt(v) + (pct ? '' : ` · ${share(v)}`)];
+      if (Number.isFinite(cv)) lines.push(`${cmpLabel}: ${fmt(cv)}`);
+      const parts = [el('rect', { x: k === 0 ? area.x : cx1, y: plotTop + i * st, width: halfW, height: st, fill: 'transparent' })];
+      if (d) parts.push(el('path', { d, fill: c }));
+      if (labelsOn && v > 0) {
+        const lab = fmt(v);
+        parts.push(text(k === 0 ? x - 5 : x + w + 5, y + bh / 2 + 4, lab, { fill: theme.lede, fontSize: 11, fontWeight: 500, textAnchor: k === 0 ? 'end' : 'start' }));
+      }
+      body.push(g({ class: 'pa-m', 'data-tip': tip(...lines) }, parts));
+    });
+  });
+
+  if (cmp) {
+    sides.forEach((s, k) => {
+      let d = '';
+      top.forEach((a, i) => {
+        const cv = C(a, s);
+        if (!Number.isFinite(cv)) return;
+        const x = k === 0 ? cx0 - len(Math.min(cv, dmax)) : cx1 + len(Math.min(cv, dmax));
+        const y0 = plotTop + i * st, y1 = y0 + st;
+        d += (d ? `L${x.toFixed(1)},${y0.toFixed(1)}` : `M${(k === 0 ? cx0 : cx1).toFixed(1)},${y0.toFixed(1)}L${x.toFixed(1)},${y0.toFixed(1)}`) + `L${x.toFixed(1)},${y1.toFixed(1)}`;
+      });
+      if (d) {
+        d += `L${(k === 0 ? cx0 : cx1).toFixed(1)},${(plotTop + n * st).toFixed(1)}`;
+        body.push(el('path', { d, fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', opacity: 0.85, class: 'pa-compare' }));
+      }
+    });
+  }
+
+  const en = String(locale).startsWith('en');
+  let big = null;
+  for (const a of ages) for (const s of sides) { const v = cur.get(a + '\u0000' + s) || 0; if (!big || v > big[2]) big = [a, s, v]; }
+  const desc = (en ? 'Population pyramid. ' : 'Pirámide de población. ')
+    + sides.map((s) => `${s} ${share(sideTot(s))}`).join(', ') + '. '
+    + (big ? (en ? `Largest group: ${big[0]} (${big[1]}), ${fmt(pct ? big[2] / total : big[2])}.` : `Grupo más numeroso: ${big[0]} (${big[1]}), ${fmt(pct ? big[2] / total : big[2])}.`) : '');
+  return frame.finish(body, { desc, type: 'pyramid' });
+}
+
+return { "pyramid": pyramid };
+});
+__def("src/charts/flowchart.js", function () {
+const { el, g, text, tip } = __req("src/svg.js");
+const { measure, wrap } = __req("src/text.js");
+const { colorMap, readable, textOn, hexToRgb, rgbToHex } = __req("src/theme.js");
+const { ensureData, uniq, PlotError } = __req("src/data.js");
+const { createFrame, hash } = __req("src/frame.js");
+
+const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
+const FS = 12.5, LH = 16, EDGE_FS = 11;
+const mix = (a, b, t) => { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A.map((v, i) => v + (B[i] - v) * t)); };
+
+function flowchart(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
+
+  const edgeRows = spec.edges ? ensureData({ data: spec.edges }) : spec.data ? ensureData(spec) : [];
+  const ff = spec.from ?? (edgeRows[0] && ('from' in edgeRows[0] ? 'from' : 'source' in edgeRows[0] ? 'source' : 'from'));
+  const tf = spec.to ?? (edgeRows[0] && ('to' in edgeRows[0] ? 'to' : 'target' in edgeRows[0] ? 'target' : 'to'));
+  const lf = spec.edgeLabel ?? 'label';
+  const nodeRows = spec.nodes ? ensureData({ data: spec.nodes }) : [];
+  const idF = spec.id ?? 'id';
+  const nodes = new Map();
+  for (const r of nodeRows) {
+    const id = String(r[idF] ?? r.label);
+    nodes.set(id, { id, label: String(r.label ?? r.name ?? id), type: String(r.type || 'process').toLowerCase(), lane: r.lane ?? r[spec.lane] ?? null, group: r.group ?? r[spec.group] ?? null, detail: r.detail ?? r.description ?? '' });
+  }
+  const edges = [];
+  for (const r of edgeRows) {
+    const a = r[ff], b = r[tf];
+    if (a === undefined || b === undefined || a === null || b === null) continue;
+    for (const id of [String(a), String(b)]) if (!nodes.has(id)) nodes.set(id, { id, label: id, type: 'process', lane: null, group: null, detail: '' });
+    edges.push({ s: String(a), t: String(b), label: r[lf] != null ? String(r[lf]) : '' });
+  }
+  if (!nodes.size) throw new PlotError(T('The flow chart has no nodes.', 'El diagrama de flujo no tiene nodos.', locale), T('Pass `nodes: [{ id, label, type }]` and `data: [{ from, to }]`.', 'Entrega `nodes: [{ id, label, type }]` y `data: [{ from, to }]`.', locale));
+  const N = [...nodes.values()];
+  const out = new Map(N.map((n) => [n.id, []])), inc = new Map(N.map((n) => [n.id, []]));
+  for (const e of edges) { out.get(e.s).push(e); inc.get(e.t).push(e); }
+
+  const state = new Map();
+  const roots = N.filter((n) => !inc.get(n.id).length);
+  const visit = (id) => {
+    state.set(id, 1);
+    for (const e of out.get(id)) {
+      const st = state.get(e.t);
+      if (st === 1) e.back = true;
+      else if (!st) visit(e.t);
+    }
+    state.set(id, 2);
+  };
+  for (const n of [...roots, ...N]) if (!state.get(n.id)) visit(n.id);
+  const fwd = edges.filter((e) => !e.back && e.s !== e.t);
+
+  const layer = new Map(N.map((n) => [n.id, 0]));
+  for (let it = 0; it < N.length; it++) {
+    let ch = false;
+    for (const e of fwd) if (layer.get(e.t) < layer.get(e.s) + 1) { layer.set(e.t, layer.get(e.s) + 1); ch = true; }
+    if (!ch) break;
+  }
+  for (const n of N) if (!inc.get(n.id).length && out.get(n.id).length && n.type !== 'start') {
+    const m = Math.min(...out.get(n.id).filter((e) => !e.back).map((e) => layer.get(e.t)));
+    if (Number.isFinite(m)) layer.set(n.id, Math.max(0, m - 1));
+  }
+  const L = Math.max(...layer.values()) + 1;
+
+  const laneKeys = spec.lanes ?? uniq(N.map((n) => n.lane).filter((v) => v !== null && v !== undefined && v !== '').map(String));
+  const hasLanes = laneKeys.length > 0 && spec.swimlanes !== false;
+  const laneOf = (n) => (hasLanes ? Math.max(0, laneKeys.indexOf(String(n.lane ?? laneKeys[0]))) : 0);
+  const layers = Array.from({ length: L }, () => []);
+  for (const n of N) layers[layer.get(n.id)].push(n);
+  const pos = new Map();
+  const reindex = () => layers.forEach((ls) => ls.forEach((n, i) => pos.set(n.id, laneOf(n) * 1000 + i)));
+  layers.forEach((ls) => ls.sort((a, b) => laneOf(a) - laneOf(b)));
+  reindex();
+  const bary = (n, nbrs) => { const ps = nbrs.map((id) => pos.get(id)).filter((v) => v !== undefined); return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : pos.get(n.id); };
+  for (let sweep = 0; sweep < 6; sweep++) {
+    for (let l = 1; l < L; l++) { layers[l].sort((a, b) => laneOf(a) - laneOf(b) || bary(a, inc.get(a.id).filter((e) => !e.back).map((e) => e.s)) - bary(b, inc.get(b.id).filter((e) => !e.back).map((e) => e.s))); reindex(); }
+    for (let l = L - 2; l >= 0; l--) { layers[l].sort((a, b) => laneOf(a) - laneOf(b) || bary(a, out.get(a.id).filter((e) => !e.back).map((e) => e.t)) - bary(b, out.get(b.id).filter((e) => !e.back).map((e) => e.t))); reindex(); }
+  }
+
+  const groupKeys = uniq(N.map((n) => n.group).filter((v) => v !== null && v !== undefined && v !== '').map(String));
+  const cmap = groupKeys.length ? colorMap(groupKeys, theme, spec.colors) : null;
+  const colorOf = (n) => (cmap && n.group != null ? cmap.get(String(n.group)) : null);
+  const legend = cmap && spec.legend !== false && groupKeys.length > 1 ? groupKeys.map((k) => ({ label: k, color: cmap.get(k), shape: 'square' })) : [];
+
+  const frame = createFrame(spec, theme, { height: 520 });
+  let area = frame.layout(legend);
+  const backs = edges.filter((e) => e.back || e.s === e.t);
+  const relPos = (n) => { const ls = layers[layer.get(n.id)]; return hasLanes ? (laneOf(n) + 0.5) / laneKeys.length : (ls.indexOf(n) + 0.5) / ls.length; };
+  for (const e of backs) e.side = (relPos(nodes.get(e.s)) + relPos(nodes.get(e.t))) / 2 < 0.5 ? -1 : 1;
+  const nBackL = backs.filter((e) => e.side < 0).length, nBackR = backs.length - nBackL;
+
+  const maxPerCell = (lane) => Math.max(1, ...layers.map((ls) => ls.filter((n) => laneOf(n) === lane).length));
+  const roomL = nBackL ? 16 + nBackL * 9 : 0, roomR = nBackR ? 16 + nBackR * 9 : 0;
+  const backRoom = roomL + roomR;
+  const lrColW = area.w / L;
+  const longestWord = Math.max(...N.map((n) => Math.max(...String(n.label).split(/\s+/).map((w) => measure(w, FS, 600)))));
+  const dir = spec.direction ? String(spec.direction).toUpperCase() : L <= 6 && lrColW - 46 >= Math.max(hasLanes ? 110 : 80, longestWord + 26) ? 'LR' : 'TB';
+  const TB = dir !== 'LR' || lrColW < 60;
+  const gapU = TB ? 40 : Math.max(20, Math.min(46, lrColW - 64));
+  const gapV = area.w < 480 ? 10 : 18; // entre nodos de una misma capa
+  let laneHead = hasLanes ? 26 : 0;
+  const lanePad = hasLanes ? (area.w < 480 ? 5 : 10) : 0;
+  const nLanes = hasLanes ? laneKeys.length : 1;
+
+  const laneBand = []; // límites del carril en el eje transversal (v)
+  const laneW = []; // ancho de nodo por carril (o uno global)
+  const maxW = spec.nodeWidth ?? (TB ? 220 : 200);
+  if (TB) {
+    const crossW = area.w - backRoom;
+    const x0 = area.x + roomL;
+    if (hasLanes) {
+      const wts = laneKeys.map((_, k) => 1 + 0.75 * (maxPerCell(k) - 1));
+      const unit = crossW / wts.reduce((a, b) => a + b, 0);
+      let bx = x0;
+      for (let k = 0; k < nLanes; k++) {
+        const bw = unit * wts[k];
+        laneBand.push([bx + 3, bx + bw - 3]);
+        bx += bw;
+        const c = maxPerCell(k);
+        laneW.push(Math.min(maxW, (bw - 6 - 2 * lanePad - (c - 1) * gapV) / c));
+      }
+    } else {
+      const C = Math.max(...layers.map((l) => l.length));
+      laneW.push(Math.min(maxW, (crossW - (C - 1) * gapV) / C));
+    }
+  } else {
+    laneW.push(Math.max(40, Math.min(maxW, lrColW - gapU)));
+  }
+  const widthOf = (n) => (TB ? Math.max(64, hasLanes ? laneW[laneOf(n)] : laneW[0]) : laneW[0]);
+  const laneTitleLines = hasLanes ? laneKeys.map((k, i) => (TB ? wrap(k, laneBand[i][1] - laneBand[i][0] - 12, 12, 600, 2) : [k])) : [];
+  if (hasLanes && TB) laneHead = laneTitleLines.some((l) => l.length > 1) ? 40 : 26;
+
+  for (const n of N) {
+    const isDec = n.type === 'decision';
+    const w = widthOf(n);
+    const tw = Math.max(30, isDec ? w * 0.64 : n.type === 'data' ? w - 34 : w - 22);
+    const wt = n.type === 'start' || n.type === 'end' ? 600 : 500;
+    const twSafe = tw * 0.92;
+    const longest = Math.max(...String(n.label).split(/\s+/).map((wd) => measure(wd, FS, wt)));
+    n.fs = longest > twSafe ? Math.max(9.5, FS * (twSafe / longest)) : FS;
+    n.lh = Math.round(n.fs * 1.3);
+    n.lines = wrap(n.label, twSafe, n.fs, wt);
+    const th = n.lines.length * n.lh;
+    n.w = w;
+    n.h = isDec ? Math.max(58, Math.ceil(th / 0.4) + 4) : Math.max(n.type === 'start' || n.type === 'end' ? 36 : 42, th + 20);
+  }
+
+  const fu = (n) => (TB ? n.h : n.w), fv = (n) => (TB ? n.w : n.h);
+  const rowSize = layers.map((ls) => Math.max(0, ...ls.map(fu)));
+  const u0 = TB ? area.y + laneHead : area.x;
+  const rowStart = [];
+  let acc = u0;
+  for (let l = 0; l < L; l++) { rowStart.push(acc); acc += rowSize[l] + gapU; }
+  const contentU = acc - gapU - u0;
+  for (let l = 0; l < L; l++) for (const n of layers[l]) n.u0 = rowStart[l] + (rowSize[l] - fu(n)) / 2;
+
+  if (TB) {
+    if (hasLanes) {
+      for (let l = 0; l < L; l++) for (let k = 0; k < nLanes; k++) {
+        const cell = layers[l].filter((n) => laneOf(n) === k);
+        const [b0, b1] = laneBand[k];
+        const slot = (b1 - b0) / Math.max(1, cell.length);
+        cell.forEach((n, i) => { n.vc = b0 + slot * (i + 0.5); });
+      }
+    } else {
+      const C = Math.max(...layers.map((l) => l.length));
+      const crossW = area.w - backRoom;
+      const slot = crossW / C;
+      for (const ls of layers) ls.forEach((n, i) => { n.vc = area.x + roomL + slot * ((C - ls.length) / 2 + i + 0.5); });
+    }
+  } else {
+    const cellH = (k) => Math.max(0, ...layers.map((ls) => { const c = ls.filter((n) => laneOf(n) === k); return c.reduce((a, n) => a + n.h, 0) + Math.max(0, c.length - 1) * gapV; }));
+    let v = area.y + roomL;
+    for (let k = 0; k < nLanes; k++) {
+      const h = cellH(k) + 2 * lanePad + laneHead;
+      laneBand.push([v, v + h]);
+      v += h + (hasLanes ? 6 : 0);
+    }
+    for (let l = 0; l < L; l++) for (let k = 0; k < nLanes; k++) {
+      const cell = layers[l].filter((n) => laneOf(n) === k);
+      const [b0, b1] = laneBand[k];
+      const inner0 = b0 + laneHead + lanePad, inner1 = b1 - lanePad;
+      const tot = cell.reduce((a, n) => a + n.h, 0) + Math.max(0, cell.length - 1) * gapV;
+      let y = (inner0 + inner1) / 2 - tot / 2;
+      cell.forEach((n) => { n.vc = y + n.h / 2; y += n.h + gapV; });
+    }
+  }
+  for (const n of N) { n.u1 = n.u0 + fu(n); n.uc = (n.u0 + n.u1) / 2; n.v0 = n.vc - fv(n) / 2; n.v1 = n.vc + fv(n) / 2; }
+
+  const contentBottom = TB ? u0 + contentU : Math.max(...laneBand.map((b) => b[1]));
+  const extraBack = !TB ? roomR : 0;
+  if (spec.height === undefined) {
+    frame.setHeight(contentBottom + extraBack + 8 + frame.chrome);
+    area = { ...area, h: frame.bottom - area.y };
+  }
+  const P = (u, v) => (TB ? [v, u] : [u, v]); // abstracto → pantalla
+
+  const free = (v, l, pad = 8) => layers[l].every((n) => v < n.v0 - pad || v > n.v1 + pad);
+  const corridorCandidates = (s, t) => {
+    const c = [t.vc, s.vc];
+    const allV = N.flatMap((n) => [n.v0 - gapV / 2, n.v1 + gapV / 2]);
+    c.push(...allV.sort((a, b) => Math.abs(a - (s.vc + t.vc) / 2) - Math.abs(b - (s.vc + t.vc) / 2)));
+    return c;
+  };
+  let maxV = Math.max(...N.map((n) => n.v1)), minV = Math.min(...N.map((n) => n.v0));
+  if (hasLanes) { maxV = Math.max(maxV, laneBand[laneBand.length - 1][1]); minV = Math.min(minV, laneBand[0][0]); }
+  const routes = [];
+  let kL = 0, kR = 0;
+  for (const e of edges) {
+    const s = nodes.get(e.s), t = nodes.get(e.t);
+    let pts;
+    if (e.back || e.s === e.t) {
+      const vb = e.side < 0 ? minV - 10 - 9 * kL++ : maxV + 10 + 9 * kR++;
+      const ls = layer.get(e.s), lt = layer.get(e.t);
+      const ugS = rowStart[ls] + rowSize[ls] + gapU / 2;
+      const ugT = rowStart[lt] - gapU / 2;
+      void ugT;
+      pts = [[s.u1, s.vc], [ugS, s.vc], [ugS, vb], [t.uc, vb], [t.uc, e.side < 0 ? t.v0 : t.v1]];
+      routes.push({ e, pts: simplify(pts), back: true });
+      continue;
+    }
+    const ls = layer.get(e.s), lt = layer.get(e.t);
+    const ugS = rowStart[ls] + rowSize[ls] + gapU / 2;
+    const ugT = rowStart[lt] - gapU / 2;
+    const fwdOut = out.get(s.id).filter((x) => !x.back && x.s !== x.t);
+    const main = fwdOut.find((x) => layer.get(x.t) === ls + 1 && Math.abs(nodes.get(x.t).vc - s.vc) < 1) || null;
+    const side = s.type === 'decision' && fwdOut.length > 1 && main !== e;
+    const between = (v) => { for (let l = ls + 1; l < lt; l++) if (!free(v, l)) return false; return true; };
+    if (side && Math.abs(t.vc - s.vc) < 1) {
+      const dirV = layers[ls].some((n) => n !== s && n.vc < s.vc) ? 1 : -1;
+      const sv = dirV > 0 ? s.v1 : s.v0;
+      const lanesEdge = hasLanes ? laneBand[laneOf(s)] : null;
+      let vc = sv + dirV * 22;
+      if (lanesEdge) vc = dirV > 0 ? Math.min(vc, lanesEdge[1] - 6) : Math.max(vc, lanesEdge[0] + 6);
+      const ok = (v) => { for (let l = ls + 1; l < lt; l++) if (!free(v, l, 6)) return false; return true; };
+      if (!ok(vc)) vc = corridorCandidates(s, t).find((v) => ok(v) && Math.sign(v - s.vc) === dirV) ?? (dirV > 0 ? maxV + 12 : minV - 12);
+      pts = [[s.uc, sv], [s.uc, vc], [ugT, vc], [ugT, t.vc], [t.u0, t.vc]];
+    } else if (side) {
+      const sv = t.vc > s.vc ? s.v1 : s.v0;
+      if (between(t.vc)) {
+        pts = [[s.uc, sv], [s.uc, t.vc], [t.u0, t.vc]];
+        const hit = layers[ls].some((n) => n !== s && Math.min(sv, t.vc) < n.v1 && Math.max(sv, t.vc) > n.v0);
+        if (hit) pts = [[s.uc, sv], [s.uc, sv + (t.vc > s.vc ? 12 : -12)], [ugS, sv + (t.vc > s.vc ? 12 : -12)], [ugS, t.vc], [t.u0, t.vc]];
+      }
+    }
+    if (!pts) {
+      if (lt === ls + 1) {
+        pts = Math.abs(s.vc - t.vc) < 1 ? [[s.u1, s.vc], [t.u0, t.vc]] : [[s.u1, s.vc], [ugS, s.vc], [ugS, t.vc], [t.u0, t.vc]];
+      } else {
+        const vc = corridorCandidates(s, t).find(between) ?? maxV + 14;
+        pts = [[s.u1, s.vc], [ugS, s.vc], [ugS, vc], [ugT, vc], [ugT, t.vc], [t.u0, t.vc]];
+      }
+    }
+    routes.push({ e, pts: simplify(pts), back: false });
+  }
+
+  const body = [];
+  const mid = 'pa-arrow-' + Math.abs(hash(String(spec.title) + N.length + area.w)).toString(36);
+  const edgeColor = theme.muted;
+  const defs = `<marker id="${mid}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${edgeColor}"/></marker>`;
+
+  if (hasLanes) {
+    const parts = [];
+    laneKeys.forEach((k, i) => {
+      const [b0, b1] = laneBand[i];
+      if (TB) {
+        const y0 = area.y, y1 = contentBottom + (backs.length ? 0 : 0) + 6;
+        parts.push(el('rect', { x: b0, y: y0, width: b1 - b0, height: y1 - y0, rx: 10, fill: theme.tint, opacity: 0.7 }));
+        laneTitleLines[i].forEach((ln, j) => parts.push(text((b0 + b1) / 2, y0 + 17 + j * 14, ln, { fill: theme.lede, fontSize: 12, fontWeight: 600, textAnchor: 'middle' })));
+      } else {
+        const x0 = area.x, x1 = area.x + area.w;
+        parts.push(el('rect', { x: x0, y: b0, width: x1 - x0, height: b1 - b0, rx: 10, fill: theme.tint, opacity: 0.7 }));
+        parts.push(text(x0 + 12, b0 + 17, k, { fill: theme.lede, fontSize: 12, fontWeight: 600 }));
+      }
+    });
+    body.push(g({ class: 'pa-lanes' }, parts));
+  }
+
+  const edgeParts = [], labelParts = [];
+  for (const r of routes) {
+    const screen = r.pts.map(([u, v]) => P(u, v));
+    edgeParts.push(el('path', { d: roundPath(screen, 8), fill: 'none', stroke: edgeColor, strokeWidth: 1.4, strokeLinejoin: 'round', markerEnd: `url(#${mid})` }));
+    if (r.e.label) {
+      let best = 0, bl = -1;
+      for (let i = 0; i < Math.min(2, screen.length - 1); i++) {
+        const l = Math.hypot(screen[i + 1][0] - screen[i][0], screen[i + 1][1] - screen[i][1]);
+        if (l > bl) { bl = l; best = i; }
+      }
+      const [ax, ay] = screen[best], [bx, by] = screen[best + 1];
+      const t = bl > 70 ? 0.4 : 0.5;
+      const lx = ax + (bx - ax) * t, ly = ay + (by - ay) * t;
+      const w = measure(r.e.label, EDGE_FS, 600) + 12;
+      labelParts.push(g({ class: 'pa-edge-label' }, [
+        el('rect', { x: lx - w / 2, y: ly - 9, width: w, height: 18, rx: 9, fill: theme.surface, stroke: theme.grid, strokeWidth: 1 }),
+        text(lx, ly + 4, r.e.label, { fill: theme.lede, fontSize: EDGE_FS, fontWeight: 600, textAnchor: 'middle' }),
+      ]));
+    }
+  }
+  body.push(g({ class: 'pa-edges' }, edgeParts));
+
+  const nodeParts = [];
+  for (const n of N) {
+    const [x, y] = TB ? [n.v0, n.u0] : [n.u0, n.v0];
+    const c = colorOf(n);
+    const neutral = theme.ink;
+    let shape, fill = theme.surface, stroke = c || (theme.mode === 'dark' ? theme.lede : theme.lede), sw = 1.5, tcol = theme.ink;
+    if (n.type === 'start' || n.type === 'end') {
+      fill = c || neutral; stroke = 'none'; tcol = textOn(fill, theme);
+      shape = el('rect', { x, y, width: n.w, height: n.h, rx: n.h / 2, fill, stroke });
+    } else if (n.type === 'decision') {
+      stroke = c || theme.categorical[0];
+      fill = mix(theme.surface, stroke, theme.mode === 'dark' ? 0.16 : 0.07);
+      shape = el('path', { d: `M${x + n.w / 2},${y}L${x + n.w},${y + n.h / 2}L${x + n.w / 2},${y + n.h}L${x},${y + n.h / 2}Z`, fill, stroke, strokeWidth: sw, strokeLinejoin: 'round' });
+    } else if (n.type === 'data') {
+      const k = 10;
+      shape = el('path', { d: `M${x + k},${y}H${x + n.w}L${x + n.w - k},${y + n.h}H${x}Z`, fill, stroke, strokeWidth: sw, strokeLinejoin: 'round' });
+    } else if (n.type === 'note') {
+      fill = c ? mix(theme.surface, c, 0.12) : theme.tint2; stroke = 'none'; tcol = theme.lede;
+      shape = el('rect', { x, y, width: n.w, height: n.h, rx: 6, fill });
+    } else {
+      fill = c ? mix(theme.surface, c, theme.mode === 'dark' ? 0.14 : 0.06) : theme.surface;
+      shape = el('rect', { x, y, width: n.w, height: n.h, rx: 9, fill, stroke, strokeWidth: sw });
+    }
+    const bold = n.type === 'start' || n.type === 'end' ? 600 : 500;
+    const ty0 = y + n.h / 2 - (n.lines.length * n.lh) / 2 + n.lh * 0.74;
+    const texts = n.lines.map((l, i) => text(x + n.w / 2, ty0 + i * n.lh, l, { fill: tcol, fontSize: n.fs, fontWeight: bold, textAnchor: 'middle' }));
+    const kind = { start: T('Start', 'Inicio', locale), end: T('End', 'Fin', locale), decision: T('Decision', 'Decisión', locale), data: T('Data', 'Dato', locale), note: T('Note', 'Nota', locale), process: T('Step', 'Paso', locale) }[n.type] || '';
+    nodeParts.push(g({ class: 'pa-m', 'data-tip': tip(n.label, n.detail, [kind, n.lane, n.group].filter(Boolean).join(' · ')) }, [shape, ...texts]));
+  }
+  body.push(g({ class: 'pa-nodes' }, nodeParts));
+  body.push(g({}, labelParts));
+  void readable;
+
+  const decisions = N.filter((n) => n.type === 'decision').length;
+  const desc = en
+    ? `Flow chart with ${N.length} steps${decisions ? `, ${decisions} decisions` : ''}${hasLanes ? ` across ${nLanes} lanes (${laneKeys.join(', ')})` : ''}. Starts at "${(roots[0] || N[0]).label}".`
+    : `Diagrama de flujo con ${N.length} pasos${decisions ? `, ${decisions} decisiones` : ''}${hasLanes ? ` en ${nLanes} carriles (${laneKeys.join(', ')})` : ''}. Comienza en "${(roots[0] || N[0]).label}".`;
+  const svg = frame.finish(body, { desc, type: 'flowchart', defs });
+  if (spec._layout) Object.assign(spec._layout, { direction: TB ? 'TB' : 'LR', nodes: N.map((n) => { const [x, y] = TB ? [n.v0, n.u0] : [n.u0, n.v0]; return { id: n.id, x, y, w: n.w, h: n.h }; }) });
+  return svg;
+}
+
+function simplify(pts) {
+  const out = [];
+  for (const p of pts) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last[0] - p[0]) < 0.5 && Math.abs(last[1] - p[1]) < 0.5) continue;
+    out.push(p);
+  }
+  return out.filter((p, i) => {
+    if (i === 0 || i === out.length - 1) return true;
+    const a = out[i - 1], b = out[i + 1];
+    return !((Math.abs(a[0] - p[0]) < 0.5 && Math.abs(p[0] - b[0]) < 0.5) || (Math.abs(a[1] - p[1]) < 0.5 && Math.abs(p[1] - b[1]) < 0.5));
+  });
+}
+
+/** Polilínea con esquinas redondeadas. */
+function roundPath(pts, r) {
+  if (pts.length < 2) return '';
+  const f = (n) => n.toFixed(1);
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const l1 = Math.hypot(x1 - x0, y1 - y0), l2 = Math.hypot(x2 - x1, y2 - y1);
+    const rr = Math.min(r, l1 / 2, l2 / 2);
+    const ax = x1 - ((x1 - x0) / l1) * rr, ay = y1 - ((y1 - y0) / l1) * rr;
+    const bx = x1 + ((x2 - x1) / l2) * rr, by = y1 + ((y2 - y1) / l2) * rr;
+    d += `L${f(ax)},${f(ay)}Q${f(x1)},${f(y1)} ${f(bx)},${f(by)}`;
+  }
+  const [lx, ly] = pts[pts.length - 1];
+  return d + `L${f(lx)},${f(ly)}`;
+}
+
+return { "flowchart": flowchart };
+});
+__def("src/charts/choropleth.js", function () {
+const { el, g, text } = __req("src/svg.js");
+const { measure, truncate } = __req("src/text.js");
+const { makeFormat } = __req("src/format.js");
+const { ramp } = __req("src/theme.js");
+const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } = __req("src/data.js");
+const { createFrame, hash } = __req("src/frame.js");
+const { niceStep } = __req("src/scale.js");
+const { getGeo } = __req("src/geo/registry.js");
+const { mercator, equalEarth, fit, aspectOf, pathD, centroid, rings } = __req("src/geo/projection.js");
+
+const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+
+/** Normaliza nombres para que "Región del Bío-Bío", "Biobio" y "BIOBÍO" coincidan. */
+function normKey(s) {
+  return String(s ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/^\s*(region|provincia|comuna)\s+(metropolitana\s+de\s+)?(de\s+la\s+|del\s+|de\s+los\s+|de\s+las\s+|de\s+)?/, (m, a, metro) => (metro ? 'metropolitana' : ''))
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function featureIndex(features, featureKey) {
+  const idx = new Map();
+  const add = (k, f) => { const n = normKey(k); if (n && !idx.has(n)) idx.set(n, f); };
+  for (const f of features) {
+    const p = f.properties || {};
+    if (featureKey) { add(p[featureKey], f); continue; }
+    for (const k of ['code', 'num', 'id', 'iso3', 'iso_a3', 'name', 'nameEn', 'NAME', 'nombre']) if (p[k] !== undefined && p[k] !== null) add(p[k], f);
+    for (const a of p.aliases || []) add(a, f);
+  }
+  return idx;
+}
+
+const nameOf = (f, locale) => {
+  const p = f.properties || {};
+  return (String(locale).startsWith('en') ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? '');
+};
+
+/** Redondeo "bonito" de un corte de clase (2 cifras relativas al rango). */
+function niceRound(v, range) {
+  if (!range) return v;
+  const step = 10 ** (Math.floor(Math.log10(range)) - 1);
+  return Math.round(v / step) * step;
+}
+
+function quantile(sorted, p) {
+  const h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
+}
+
+/** Escala de color: clases (cuantiles, intervalos iguales o cortes dados) o continua. */
+function colorScale(values, spec, theme) {
+  const v = values.filter(Number.isFinite).sort((a, b) => a - b);
+  const min = v[0], max = v[v.length - 1], range = max - min;
+  const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
+  const mode = Array.isArray(spec.scale) || Array.isArray(spec.thresholds) ? 'thresholds' : spec.scale || 'quantile';
+  if (mid !== undefined) {
+    const stops = theme.diverging;
+    const dev = Math.max(Math.abs(max - mid), Math.abs(min - mid)) || 1;
+    if (mode === 'continuous') return { mode, min: mid - dev, max: mid + dev, mid, color: (x) => ramp(stops, 0.5 + (x - mid) / dev / 2), stops };
+    const perSide = Math.max(2, Math.floor((spec.classes ?? 6) / 2));
+    const mag = 10 ** Math.floor(Math.log10(dev / perSide));
+    const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((st) => Math.ceil(dev / st - 1e-9) <= perSide) || 10 * mag;
+    const k = Math.max(1, Math.ceil(dev / step - 1e-9));
+    const breaks = Array.from({ length: 2 * k - 1 }, (_, j) => +(mid + step * (j + 1 - k)).toPrecision(12));
+    const n = 2 * k;
+    const colors = Array.from({ length: n }, (_, i) => ramp(stops, 0.5 + ((i + 0.5 - k) / k) * 0.5));
+    return { ...classed(breaks, colors, min, max), mid };
+  }
+  const stops = theme.sequential;
+  if (mode === 'continuous') return { mode, min, max, color: (x) => ramp(stops.slice(1), (x - min) / (range || 1)), stops: stops.slice(1) };
+  let breaks;
+  if (mode === 'thresholds') breaks = [...(Array.isArray(spec.scale) ? spec.scale : spec.thresholds)].map(Number).sort((a, b) => a - b);
+  else {
+    const n = Math.max(2, Math.min(9, spec.classes ?? Math.min(5, v.length)));
+    if (mode === 'equal') breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(min + (range * (k + 1)) / n, range));
+    else breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(quantile(v, (k + 1) / n), range));
+    breaks = [...new Set(breaks)].filter((b) => b > min && b <= max);
+  }
+  const n = breaks.length + 1;
+  const t0 = theme.mode === 'dark' ? 0.26 : 0.16;
+  const colors = Array.from({ length: n }, (_, i) => ramp(stops, n === 1 ? 0.6 : t0 + ((1 - t0) * i) / (n - 1)));
+  return classed(breaks, colors, min, max);
+}
+
+function classed(breaks, colors, min, max) {
+  const cls = (x) => { let i = 0; while (i < breaks.length && x >= breaks[i]) i++; return i; };
+  return { mode: 'classes', breaks, colors, min, max, cls, color: (x) => colors[cls(x)] };
+}
+
+/** Leyenda escalonada (o degradado), pegada al mapa. Devuelve { svg, h }. */
+function legendBar(sc, x, y, maxW, theme, fmt, { title, missing, locale, gid }) {
+  const out = [];
+  let lx = x;
+  const size = theme.type?.axis ?? 11.5;
+  if (title) {
+    const tw = Math.min(measure(title, 12, 500), maxW * 0.4);
+    out.push(text(lx, y + 13, truncate(title, tw, 12, 500), { fill: theme.lede, fontSize: 12, fontWeight: 500 }));
+    lx += tw + 12;
+  }
+  const missW = missing ? measure(T(locale, 'Sin dato', 'No data'), size) + 24 : 0;
+  const barW = Math.max(120, Math.min(360, x + maxW - lx - missW));
+  const by = y + 4;
+  if (sc.mode === 'classes') {
+    const n = sc.colors.length, gap = 2;
+    const sw = (barW - gap * (n - 1)) / n;
+    sc.colors.forEach((c, i) => out.push(el('rect', { x: lx + i * (sw + gap), y: by, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c })));
+    const labels = [{ x: lx, v: sc.min, anchor: 'start' }, ...sc.breaks.map((b, i) => ({ x: lx + (i + 1) * (sw + gap) - gap / 2, v: b, anchor: 'middle' })), { x: lx + barW, v: sc.max, anchor: 'end' }];
+    let last = -Infinity;
+    for (const L of labels) {
+      const s = fmt(L.v), w = measure(s, size);
+      const left = L.anchor === 'start' ? L.x : L.anchor === 'end' ? L.x - w : L.x - w / 2;
+      if (left < last + 6) continue;
+      out.push(text(L.x, by + 24, s, { fill: theme.muted, fontSize: size, textAnchor: L.anchor }));
+      last = left + w;
+    }
+  } else {
+    const id = gid + '-grad';
+    const stops = Array.from({ length: 9 }, (_, i) => el('stop', { offset: `${i * 12.5}%`, stopColor: sc.color(sc.min + ((sc.max - sc.min) * i) / 8) }));
+    out.push(el('defs', {}, el('linearGradient', { id }, stops)));
+    out.push(el('rect', { x: lx, y: by, width: barW, height: 10, rx: 3, fill: `url(#${id})` }));
+    out.push(text(lx, by + 24, fmt(sc.min), { fill: theme.muted, fontSize: size }));
+    if (sc.mid !== undefined) out.push(text(lx + barW / 2, by + 24, fmt(sc.mid), { fill: theme.muted, fontSize: size, textAnchor: 'middle' }));
+    out.push(text(lx + barW, by + 24, fmt(sc.max), { fill: theme.muted, fontSize: size, textAnchor: 'end' }));
+  }
+  if (missing) {
+    const mx = lx + barW + 14;
+    out.push(el('rect', { x: mx, y: by, width: 10, height: 10, rx: 2, fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }));
+    out.push(text(mx + 14, by + 9, T(locale, 'Sin dato', 'No data'), { fill: theme.muted, fontSize: size }));
+  }
+  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: 34 };
+}
+
+/** Patrón rayado para regiones sin dato. */
+const noDataPattern = (id, theme) =>
+  `<pattern id="${id}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="${theme.tint}"/><line x1="0" y1="0" x2="0" y2="5" stroke="${theme.muted}" stroke-width="1" stroke-opacity="0.35"/></pattern>`;
+
+/** Datos + geometría emparejados. */
+function prepare(spec, locale) {
+  const fc = getGeo(spec.geo ?? 'chile');
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const key = spec.key ?? spec.region ?? spec.x ?? spec.label ?? fields.find((f) => fieldKind(data, f) === 'category');
+  const valueF = spec.value ?? spec.y ?? (typeof spec.size === 'string' ? spec.size : null) ?? fields.find((f) => f !== key && fieldKind(data, f) === 'number');
+  requireField(data, key, 'key');
+  requireField(data, valueF, 'value');
+  let features = fc.features.filter((f) => f.geometry && rings(f.geometry).length);
+  if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
+  const idx = featureIndex(features, spec.featureKey);
+  const buckets = new Map();
+  const unmatched = [];
+  for (const r of data) {
+    const f = idx.get(normKey(r[key]));
+    if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
+    if (!buckets.has(f)) buckets.set(f, []);
+    buckets.get(f).push(num(r[valueF]));
+  }
+  const values = new Map();
+  for (const [f, vs] of buckets) { const v = aggregate(vs, spec.aggregate || 'mean'); if (Number.isFinite(v)) values.set(f, v); }
+  if (Array.isArray(spec._unmatched)) spec._unmatched.push(...new Set(unmatched));
+  const ranked = [...values.entries()].sort((a, b) => b[1] - a[1]);
+  const rank = new Map(ranked.map(([f], i) => [f, i + 1]));
+  const projName = spec.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
+  const lonSpan = (() => { let a = Infinity, b = -Infinity; for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < a) a = p[0]; if (p[0] > b) b = p[0]; } return b - a; })();
+  const raw = (projName === 'mercator' ? mercator : projName === 'equalEarth' || projName === 'equal-earth' || lonSpan > 100 ? equalEarth : mercator)();
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data };
+}
+
+/**
+ * Columna de etiquetas para mapas altos: una fila por región a la altura de
+ * su centroide (separadas si chocan), con línea guía, barra y valor.
+ */
+function labelColumn(items, x, y0, y1, w, theme, fmt, { bars = true, maxV }) {
+  const out = [];
+  const n = items.length;
+  const rowH = Math.max(12.5, Math.min(18, (y1 - y0) / Math.max(1, n)));
+  const fs = rowH < 14 ? 10.5 : 11.5;
+  const rows = items.map((it) => ({ ...it, y: it.cy })).sort((a, b) => a.cy - b.cy);
+  for (let i = 0; i < rows.length; i++) rows[i].y = Math.max(rows[i].y, i ? rows[i - 1].y + rowH : y0 + rowH / 2);
+  for (let i = rows.length - 1; i >= 0; i--) { const lim = i === rows.length - 1 ? y1 - rowH / 2 : rows[i + 1].y - rowH; if (rows[i].y > lim) rows[i].y = lim; }
+  for (let i = 0; i < rows.length; i++) if (rows[i].y < y0 + rowH / 2 + i * rowH) rows[i].y = y0 + rowH / 2 + i * rowH;
+  const nameW = Math.min(w * (bars ? 0.46 : 0.68), Math.max(...rows.map((r) => measure(r.name, fs))));
+  const valW = Math.max(...rows.map((r) => measure(r.label, fs, 600)));
+  const barX = x + nameW + 8;
+  const diverging = rows.some((r) => r.v < 0);
+  const barMax = Math.max(0, w - nameW - valW * (diverging ? 2 : 1) - (diverging ? 26 : 18));
+  const showBars = bars && barMax >= 36;
+  const negMax = diverging ? Math.max(0, ...rows.filter((r) => r.v < 0).map((r) => -r.v)) : 0;
+  const posMax = Math.max(0, ...rows.filter((r) => r.v > 0).map((r) => r.v));
+  const zeroX = diverging ? barX + valW + 6 + (barMax * negMax) / (negMax + posMax || 1) : barX;
+  const scaleW = diverging ? barMax / (negMax + posMax || 1) : barMax / (maxV || 1);
+  if (showBars && diverging) out.push(el('line', { x1: zeroX, x2: zeroX, y1: y0, y2: y1, stroke: theme.axis, strokeWidth: 1 }));
+  for (const r of rows) {
+    const parts = [];
+    parts.push(el('path', { d: `M${r.cx.toFixed(1)},${r.cy.toFixed(1)}L${(x - 14).toFixed(1)},${r.cy.toFixed(1)}L${(x - 4).toFixed(1)},${r.y.toFixed(1)}`, fill: 'none', stroke: theme.muted, strokeWidth: 0.6, opacity: 0.55 }));
+    parts.push(el('circle', { cx: r.cx, cy: r.cy, r: 1.8, fill: theme.ink, opacity: 0.7 }));
+    parts.push(text(x, r.y + fs * 0.36, truncate(r.name, nameW, fs), { fill: r.missing ? theme.muted : theme.lede, fontSize: fs }));
+    if (r.missing) parts.push(text(showBars ? barX : x + nameW + 8, r.y + fs * 0.36, r.label, { fill: theme.muted, fontSize: fs }));
+    else if (showBars) {
+      const bw = Math.max(2, Math.abs(r.v) * scaleW);
+      const bx = r.v < 0 ? zeroX - bw : zeroX;
+      parts.push(el('rect', { x: bx, y: r.y - 3.5, width: bw, height: 7, rx: 2, fill: r.barColor || r.color }));
+      parts.push(text(r.v < 0 ? bx - 6 : bx + bw + 6, r.y + fs * 0.36, r.label, { fill: theme.ink, fontSize: fs, fontWeight: 600, textAnchor: r.v < 0 ? 'end' : 'start' }));
+    } else parts.push(text(x + nameW + 8, r.y + fs * 0.36, r.label, { fill: theme.ink, fontSize: fs, fontWeight: 600 }));
+    out.push(g({ class: 'pa-m', 'data-tip': r.tip }, parts));
+  }
+  return out;
+}
+
+/** Etiquetas sobre el mapa (mapas anchos): solo las elegidas y sin choques. */
+function mapLabels(items, theme, placedBoxes = []) {
+  const out = [];
+  for (const it of items) {
+    const w = Math.max(measure(it.name, 11, 600), measure(it.label, 11));
+    const box = [it.cx - w / 2 - 2, it.cy - 13, it.cx + w / 2 + 2, it.cy + 13];
+    if (placedBoxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
+    placedBoxes.push(box);
+    const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round', textAnchor: 'middle' };
+    out.push(g({ class: 'pa-map-label', 'pointer-events': 'none' }, [
+      text(it.cx, it.cy - 2, it.name, { fill: theme.ink, fontSize: 11, fontWeight: 600, ...halo }),
+      text(it.cx, it.cy + 11, it.label, { fill: theme.lede, fontSize: 11, ...halo }),
+    ]));
+  }
+  return out;
+}
+
+function chooseLabeled(m, spec, locale, defaultN) {
+  const hl = spec.highlight === undefined ? [] : [].concat(spec.highlight).map(normKey);
+  const isHl = (f) => hl.length && featureIndexHas(f, hl);
+  if (Array.isArray(spec.labels)) { const want = spec.labels.map(normKey); return m.features.filter((f) => featureIndexHas(f, want)); }
+  const n = typeof spec.labels === 'number' ? spec.labels : spec.labels === false ? 0 : defaultN;
+  const top = m.ranked.slice(0, n).map(([f]) => f);
+  return [...new Set([...m.features.filter(isHl), ...top])];
+}
+function featureIndexHas(f, keys) {
+  const p = f.properties || {};
+  const own = [p.code, p.num, p.id, p.iso3, p.name, p.nameEn, ...(p.aliases || [])].map(normKey);
+  return keys.some((k) => own.includes(k));
+}
+
+function baseChart(spec, theme, kind) {
+  const locale = spec.locale || 'es';
+  const m = prepare(spec, locale);
+  const vals = [...m.values.values()];
+  const fmt = makeFormat(spec.format, locale, vals);
+  const W = spec.width || 720;
+  const aspect = aspectOf(m.features, m.raw);
+  const tall = aspect > 1.6 && m.features.length <= 40;
+  const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
+  const frame = createFrame(spec, theme, { height: defH });
+  let area = frame.layout([]);
+  const gid = 'pa-map-' + Math.abs(hash(String(spec.title) + kind + W)).toString(36);
+  const missingAny = spec.missing !== 'plain' && m.features.some((f) => !m.values.has(f));
+  const body = [];
+  let sc = null;
+  if (kind === 'choropleth' && vals.length) {
+    sc = colorScale(vals, spec, theme);
+    const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid });
+    body.push(lg.svg);
+    area = { ...area, y: area.y + lg.h + 8, h: area.h - lg.h - 8 };
+  }
+  if (!tall && spec.height === undefined) {
+    const mapH = area.w * Math.min(1.1, aspect);
+    frame.setHeight(area.y + mapH + frame.chrome);
+    area = { ...area, h: frame.bottom - area.y };
+  }
+  let box;
+  if (tall) {
+    const colMin = W < 480 ? 0.56 : 0.5;
+    let mapW = Math.min(area.w * (1 - colMin), area.h / aspect);
+    box = [area.x, area.y, area.x + mapW, area.y + area.h];
+  } else box = [area.x, area.y, area.x + area.w, area.y + area.h];
+  const proj = fit(m.features, m.raw, box, { align: tall ? 'left' : 'center' });
+  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall };
+}
+
+const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
+
+function choropleth(spec, theme) {
+  const B = baseChart(spec, theme, 'choropleth');
+  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall } = B;
+  const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
+  const isHl = (f) => hl && featureIndexHas(f, hl);
+  const N = m.values.size;
+  const regions = [], outlines = [];
+  const items = [];
+  for (const f of m.features) {
+    const v = m.values.get(f);
+    const has = v !== undefined;
+    const fill = has ? sc.color(v) : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
+    const name = nameOf(f, locale);
+    const tipTxt = has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`;
+    regions.push(el('path', { class: 'pa-m', d: pathD(f.geometry, proj), fill, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt }));
+    if (isHl(f)) outlines.push(el('path', { d: pathD(f.geometry, proj), fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
+    const c = centroid(f.geometry, proj);
+    items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? sc.color(v) : theme.tint, missing: !has, tip: tipTxt });
+  }
+  body.push(g({ class: 'pa-regions' }, regions), g({ class: 'pa-outlines' }, outlines));
+  if (tall && spec.labels !== false) {
+    const x = proj.bounds.x + proj.bounds.w + 26;
+    const maxV = Math.max(...[...m.values.values()].map(Math.abs));
+    body.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+  } else {
+    const chosen = new Set(chooseLabeled(m, spec, locale, m.features.length <= 30 ? m.features.length : 0));
+    const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area);
+    body.push(...mapLabels(ordered, theme));
+  }
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map'));
+  return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) });
+}
+
+/** Mapa de símbolos: círculos de área proporcional en el centroide. */
+function symbolMap(spec, theme) {
+  const B = baseChart(spec, theme, 'symbol');
+  const { locale, m, fmt, frame, area, body, proj, tall, gid } = B;
+  const N = m.values.size;
+  const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
+  const rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt(proj.bounds.w * proj.bounds.h) / (tall ? 9 : 16)));
+  const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
+  body.push(g({ class: 'pa-regions' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round' }))));
+  const items = m.features.map((f) => {
+    const c = centroid(f.geometry, proj);
+    const v = m.values.get(f);
+    const name = nameOf(f, locale);
+    return { f, name, v, cx: c.x, cy: c.y, area: c.area, r: v === undefined ? 0 : Math.sqrt(Math.abs(v) / maxV) * rMax, label: v === undefined ? '—' : fmt(v), color, missing: v === undefined,
+      tip: v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` };
+  });
+  const circles = items.filter((it) => !it.missing).sort((a, b) => b.r - a.r)
+    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': it.tip }));
+  body.push(g({ class: 'pa-symbols' }, circles));
+  const sizes = [maxV, maxV / 4, maxV / 16].map((v) => ({ v, r: Math.sqrt(v / maxV) * rMax }));
+  const lx = tall ? proj.bounds.x + proj.bounds.w + 26 : area.x + 4, ly = tall ? area.y + area.h - 4 : area.y + area.h - 4;
+  const leg = sizes.map((s) => [
+    el('circle', { cx: lx + rMax, cy: ly - s.r, r: s.r, fill: 'none', stroke: theme.muted, strokeWidth: 0.75 }),
+    el('line', { x1: lx + rMax, x2: lx + rMax * 2 + 8, y1: ly - 2 * s.r, y2: ly - 2 * s.r, stroke: theme.muted, strokeWidth: 0.5 }),
+    text(lx + rMax * 2 + 11, ly - 2 * s.r + 3.5, fmt(s.v), { fill: theme.muted, fontSize: 10.5 }),
+  ]);
+  if (tall && spec.labels !== false) {
+    const x = proj.bounds.x + proj.bounds.w + 26;
+    const legH = rMax * 2 + 12;
+    body.push(...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+  } else {
+    const chosen = new Set(chooseLabeled(m, spec, locale, Math.min(5, m.values.size)));
+    body.push(...mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme));
+  }
+  body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map'));
+  return frame.finish(body, { desc, type: 'symbolmap' });
+}
+
+function describeMap(m, fmt, locale, what) {
+  const en = String(locale).startsWith('en');
+  if (!m.ranked.length) return `${what}.`;
+  const [hiF, hiV] = m.ranked[0], [loF, loV] = m.ranked[m.ranked.length - 1];
+  let s = en
+    ? `${what} of ${humanize(m.valueF)} across ${m.values.size} areas. Highest: ${nameOf(hiF, locale)} (${fmt(hiV)}). Lowest: ${nameOf(loF, locale)} (${fmt(loV)}).`
+    : `${what} de ${humanize(m.valueF).toLowerCase()} en ${m.values.size} territorios. Mayor: ${nameOf(hiF, locale)} (${fmt(hiV)}). Menor: ${nameOf(loF, locale)} (${fmt(loV)}).`;
+  if (m.unmatched.length) s += en ? ` Unmatched: ${m.unmatched.slice(0, 8).join(', ')}.` : ` Sin coincidencia: ${m.unmatched.slice(0, 8).join(', ')}.`;
+  return s;
+}
+
+return { "normKey": normKey, "colorScale": colorScale, "choropleth": choropleth, "symbolMap": symbolMap };
+});
+__def("src/geo/registry.js", function () {
+const { PlotError } = __req("src/data.js");
+
+const REG = new Map();
+
+function registerGeo(name, fc, aliases = []) {
+  if (!fc || fc.type !== 'FeatureCollection') throw new PlotError(`La geometría "${name}" debe ser un GeoJSON FeatureCollection.`);
+  for (const n of [name, ...aliases]) REG.set(String(n).toLowerCase(), fc);
+  return fc;
+}
+
+function getGeo(geo) {
+  if (geo && typeof geo === 'object') {
+    if (geo.type === 'FeatureCollection') return geo;
+    if (geo.type === 'Feature') return { type: 'FeatureCollection', features: [geo] };
+    throw new PlotError('`geo` debe ser un nombre registrado o un GeoJSON FeatureCollection.');
+  }
+  const fc = REG.get(String(geo || '').toLowerCase());
+  if (!fc) {
+    const known = [...new Set(REG.keys())];
+    throw new PlotError(
+      `No hay una geometría registrada con el nombre "${geo}".`,
+      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
+    );
+  }
+  return fc;
+}
+
+const registeredGeo = () => [...new Set(REG.keys())];
+
+return { "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo };
+});
+__def("src/geo/projection.js", function () {
+
+const RAD = Math.PI / 180;
+
+function mercator() {
+  return ([lon, lat]) => {
+    const phi = Math.max(-85, Math.min(85, lat)) * RAD;
+    return [lon * RAD, -Math.log(Math.tan(Math.PI / 4 + phi / 2))];
+  };
+}
+
+const A1 = 1.340264, A2 = -0.081106, A3 = 0.000893, A4 = 0.003796, M = Math.sqrt(3) / 2;
+function equalEarth() {
+  return ([lon, lat]) => {
+    const l = lon * RAD;
+    const th = Math.asin(M * Math.sin(lat * RAD));
+    const t2 = th * th, t6 = t2 * t2 * t2;
+    const x = (l * Math.cos(th)) / (M * (A1 + 3 * A2 * t2 + t6 * (7 * A3 + 9 * A4 * t2)));
+    const y = th * (A1 + A2 * t2 + t6 * (A3 + A4 * t2));
+    return [x, -y];
+  };
+}
+
+const projections = { mercator, equalEarth, 'equal-earth': equalEarth };
+
+/** Recorre todos los anillos de una geometría. */
+function rings(geom) {
+  if (!geom) return [];
+  if (geom.type === 'Polygon') return geom.coordinates;
+  if (geom.type === 'MultiPolygon') return geom.coordinates.flat();
+  return [];
+}
+function polygonsOf(geom) {
+  if (!geom) return [];
+  if (geom.type === 'Polygon') return [geom.coordinates];
+  if (geom.type === 'MultiPolygon') return geom.coordinates;
+  return [];
+}
+
+/**
+ * Proyección ajustada a [x0, y0, x1, y1] conservando la proporción.
+ * Devuelve una función lon/lat → [x, y] con .bounds (ancho/alto usados).
+ */
+function fit(features, raw, [x0, y0, x1, y1], { align = 'center' } = {}) {
+  let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+  for (const f of features) for (const r of rings(f.geometry)) for (const p of r) {
+    const [x, y] = raw(p);
+    if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y;
+  }
+  const w = x1 - x0, h = y1 - y0;
+  const k = Math.min(w / (bx1 - bx0 || 1), h / (by1 - by0 || 1));
+  const mw = (bx1 - bx0) * k, mh = (by1 - by0) * k;
+  const ox = align === 'left' ? x0 : x0 + (w - mw) / 2;
+  const oy = y0 + (h - mh) / 2;
+  const proj = (p) => { const [x, y] = raw(p); return [ox + (x - bx0) * k, oy + (y - by0) * k]; };
+  proj.bounds = { x: ox, y: oy, w: mw, h: mh };
+  proj.aspect = (by1 - by0) / (bx1 - bx0 || 1);
+  return proj;
+}
+
+/** Proporción alto/ancho de la colección proyectada (para elegir el alto). */
+function aspectOf(features, raw) {
+  let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+  for (const f of features) for (const r of rings(f.geometry)) for (const p of r) {
+    const [x, y] = raw(p);
+    if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y;
+  }
+  return (by1 - by0) / (bx1 - bx0 || 1);
+}
+
+const r1 = (v) => Math.round(v * 10) / 10;
+
+/**
+ * Geometría → atributo d de SVG. Los anillos que saltan más de 180° de
+ * longitud (antimeridiano) se cortan para no cruzar el mapa entero.
+ */
+function pathD(geom, proj) {
+  let d = '';
+  for (const ring of rings(geom)) {
+    let started = false, lastLon = null, lx = null, ly = null, n = 0;
+    for (const p of ring) {
+      if (lastLon !== null && Math.abs(p[0] - lastLon) > 180) started = false;
+      lastLon = p[0];
+      const [x, y] = proj(p);
+      const X = r1(x), Y = r1(y);
+      if (started && X === lx && Y === ly) continue;
+      d += (started ? 'L' : 'M') + X + ',' + Y;
+      started = true; lx = X; ly = Y; n++;
+    }
+    if (n) d += 'Z';
+  }
+  return d;
+}
+
+/** Área (en px²) y centroide del polígono proyectado más grande. */
+function centroid(geom, proj) {
+  let best = null;
+  for (const poly of polygonsOf(geom)) {
+    const pts = poly[0].map(proj);
+    let a = 0, cx = 0, cy = 0;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const f = pts[j][0] * pts[i][1] - pts[i][0] * pts[j][1];
+      a += f; cx += (pts[j][0] + pts[i][0]) * f; cy += (pts[j][1] + pts[i][1]) * f;
+    }
+    a /= 2;
+    if (!best || Math.abs(a) > Math.abs(best.area)) best = { area: a, x: a ? cx / (6 * a) : pts[0][0], y: a ? cy / (6 * a) : pts[0][1] };
+  }
+  return best ? { x: best.x, y: best.y, area: Math.abs(best.area) } : { x: 0, y: 0, area: 0 };
+}
+
+return { "mercator": mercator, "equalEarth": equalEarth, "rings": rings, "polygonsOf": polygonsOf, "fit": fit, "aspectOf": aspectOf, "pathD": pathD, "centroid": centroid, "projections": projections };
+});
 __def("src/charts/heatmap.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
@@ -4928,13 +6501,17 @@ return { "facet": facet };
 __def("src/infer.js", function () {
 const { fieldsOf, fieldKind } = __req("src/data.js");
 
-const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar'];
+const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'choropleth', 'symbolmap'];
 
 const ALIASES = {
   barplot: ['bar', { ci: true }], countplot: 'count', columns: 'column', lineplot: 'line', areaplot: 'area',
   scatterplot: 'scatter', histplot: 'hist', histogram: 'hist', kdeplot: 'kde', density: 'kde', ecdfplot: 'ecdf',
   lmplot: 'regplot', reg: 'regplot', regression: 'regplot', joint: 'jointplot', boxplot: 'box', violinplot: 'violin',
   stripplot: 'strip', swarmplot: 'swarm', beeswarm: 'swarm', pointplot: 'point', spider: 'radar', doughnut: 'donut',
+  graph: 'network', force: 'network', red: 'network', 'chord-diagram': 'chord', cuerdas: 'chord',
+  populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
+  flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
+  map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -4948,6 +6525,10 @@ function normalizeType(t) {
 
 function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
+  if (spec.geo) return 'choropleth';
+  if (spec.nodes && spec.nodes.some?.((n) => n && n.type)) return 'flowchart';
+  if (spec.nodes) return 'network';
+  if (spec.matrix) return 'chord';
   if (spec.from || spec.to) return 'sankey';
   if (spec.path || spec.group) return 'treemap';
   if (spec.size) return 'bubble';
@@ -4974,6 +6555,10 @@ const { inferType, TYPES, normalizeType } = __req("src/infer.js");
 const { validatePalette } = __req("src/palette.js");
 const { themeFor } = __req("src/theme.js");
 
+/** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
+let RENDER_PROBE = null;
+const _setProbe = (fn) => { RENDER_PROBE = fn; };
+
 function lint(spec = {}) {
   const errors = [];
   const warnings = [];
@@ -4992,7 +6577,7 @@ function lint(spec = {}) {
   };
   if (data.length) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
-    check(spec.value, 'value'); check(spec.label, 'label'); check(spec.group, 'group'); check(spec.path, 'path');
+    check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to');
   } else if (type !== 'kpi' && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
@@ -5074,6 +6659,18 @@ function lint(spec = {}) {
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
 
+  if (type === 'choropleth' || type === 'symbolmap') {
+    const _unmatched = [];
+    try { RENDER_PROBE?.({ ...spec, _unmatched }); } catch { /* el error ya se reporta al dibujar */ }
+    if (_unmatched.length) warn('geo-unmatched', `${_unmatched.length} fila(s) no coinciden con el mapa: ${_unmatched.slice(0, 5).join(', ')}.`, 'Revisa los nombres o usa códigos (p. ej. "XIII", "ARG"), o indica `featureKey`.');
+  }
+  if (type === 'pyramid') {
+    const sf = spec.sex ?? spec.series ?? spec.hue;
+    if (sf && fields.includes(sf)) { const n = uniq(data.map((r) => String(r[sf]))).length; if (n !== 2) err('pyramid-sides', `La pirámide necesita exactamente 2 grupos en "${sf}" (hay ${n}).`, 'Usa `type: "bar"` con `series` para más grupos.'); }
+  }
+  if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
+  if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
+
   if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
   return { ok: errors.length === 0, type, errors, warnings, suggestions: tips };
@@ -5081,7 +6678,7 @@ function lint(spec = {}) {
 
 
 
-return { "lint": lint, "PlotError": PlotError };
+return { "lint": lint, "_setProbe": _setProbe, "PlotError": PlotError };
 });
 __def("src/schema.js", function () {
 const { TYPES, ALIASES } = __req("src/infer.js");
@@ -5145,6 +6742,22 @@ const schema = {
         },
       },
     },
+
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    key: field('choropleth/symbolmap: data field with the region or country name/code to match.'),
+    featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
+    midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
+    classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
+    nodes: { type: 'array', items: { type: 'object' }, description: 'network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane).' },
+    edges: { type: 'array', items: { type: 'object' }, description: 'flowchart: connections (from, to, label). Same as `data`.' },
+    layout: { type: 'string', enum: ['force', 'circle'], description: 'network layout.' },
+    matrix: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'chord: square flow matrix (with `names`).' },
+    names: { type: 'array', items: { type: 'string' }, description: 'chord: group names for `matrix`.' },
+    directed: { type: 'boolean', description: 'chord: treat flows as directed (default false).' },
+    direction: { type: 'string', enum: ['TB', 'LR'], description: 'flowchart: top-to-bottom or left-to-right (automatic by default).' },
+    age: field('pyramid: age-group field.'),
+    sex: field('pyramid: field with exactly two sides (e.g. sex).'),
+    percent: { type: 'boolean', description: 'pyramid: show shares of the total population.' },
 
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
@@ -5226,7 +6839,7 @@ const schema = {
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
 function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions / world countries built in), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
