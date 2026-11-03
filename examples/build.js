@@ -85,7 +85,7 @@ const content = `<div class="wrap">
 <section class="top">
   <h1>plot<b>agents</b></h1>
   <p>Beautiful charts from one JSON spec. Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. Built so an AI agent can chart anything without thinking about design: 26 chart types, seaborn's included, time sliders, small multiples and JSON themes.</p>
-  <span class="install">npm install github:carlosnavarreteliz/plotagents</span>
+  <span class="install">npm install plotagents</span>
   <nav>${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<a href="#sec-${slug(sec)}">${esc(SECTIONS_EN[sec] || sec)}</a>`).join('')}</nav>
 </section>
 ${ORDER.filter((sec) => cards.some((c) => c.section === sec)).map((sec) => `<section class="sec" id="sec-${slug(sec)}"><h2 class="sec-t">${esc(SECTIONS_EN[sec] || sec)} <span>${cards.filter((c) => c.section === sec).length}</span></h2>

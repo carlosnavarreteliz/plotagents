@@ -7,10 +7,8 @@
 Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 32 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids and flow charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
-npm install github:carlosnavarreteliz/plotagents
+npm install plotagents
 ```
-
-plotagents is not on the npm registry yet, so install it from GitHub for now; `npm install plotagents` will work once it is published.
 
 ```js
 import { plot } from 'plotagents';
