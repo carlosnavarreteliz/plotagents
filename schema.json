@@ -1,0 +1,390 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/plotagents/schema.json",
+  "title": "plotagents spec",
+  "description": "Especificación declarativa de un gráfico. Datos en formato de filas (tidy) y nombres de campos para cada rol. Todo lo demás tiene valores por defecto bien diseñados.",
+  "type": "object",
+  "required": [
+    "data"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "bar",
+        "column",
+        "line",
+        "area",
+        "scatter",
+        "bubble",
+        "treemap",
+        "donut",
+        "pie",
+        "heatmap",
+        "sankey",
+        "kpi"
+      ],
+      "description": "bar: comparar categorías · line: evolución en el tiempo · area: volumen en el tiempo (apila si hay series) · scatter/bubble: relación entre dos medidas · treemap: partes de un todo con jerarquía · donut: parte-todo con ≤6 partes · heatmap: magnitud en una grilla · sankey: flujos entre etapas · kpi: uno o varios números destacados. \"auto\" (por defecto) elige según los datos."
+    },
+    "data": {
+      "description": "Arreglo de filas. Ej: [{ \"region\": \"Biobío\", \"ventas\": 1240 }]. Para kpi puede omitirse y usar `items`.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "El hallazgo como frase completa, idealmente con la cifra clave. Ej: \"Biobío concentra el 32% de las ventas\"."
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Cómo leer el gráfico: medida, unidad y periodo. Ej: \"Ventas por región, millones de pesos, 2025\"."
+    },
+    "source": {
+      "type": "string",
+      "description": "Fuente de los datos. Se muestra abajo a la derecha."
+    },
+    "x": {
+      "type": "string",
+      "description": "Campo del eje x / categorías (bar, line, area, scatter, heatmap)."
+    },
+    "y": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Campo de valor. En line/bar acepta una lista de campos (tabla ancha) y cada uno se vuelve una serie."
+    },
+    "series": {
+      "type": "string",
+      "description": "Campo que separa series (color). Alias: color."
+    },
+    "value": {
+      "type": "string",
+      "description": "Campo de valor para treemap, donut, heatmap y sankey."
+    },
+    "label": {
+      "type": "string",
+      "description": "Campo de nombre (treemap, donut, etiquetas en scatter)."
+    },
+    "group": {
+      "type": "string",
+      "description": "Campo de grupo de primer nivel en treemap (color)."
+    },
+    "path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Jerarquía del treemap: [grupo, elemento]."
+    },
+    "size": {
+      "type": "string",
+      "description": "Campo de tamaño en burbujas (área proporcional)."
+    },
+    "from": {
+      "type": "string",
+      "description": "Campo de origen en sankey."
+    },
+    "to": {
+      "type": "string",
+      "description": "Campo de destino en sankey."
+    },
+    "items": {
+      "type": "array",
+      "description": "Para kpi: indicadores a mostrar.",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "delta": {
+            "type": "number",
+            "description": "Variación relativa como fracción (0.12 = +12%)."
+          },
+          "previous": {
+            "type": "number",
+            "description": "Valor anterior; si se da, la variación se calcula sola."
+          },
+          "period": {
+            "type": "string",
+            "description": "Contra qué se compara. Ej: \"vs 2025\"."
+          },
+          "good": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "description": "Si subir es bueno (up) o malo (down, p. ej. costos)."
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Serie corta para la línea de tendencia."
+          },
+          "target": {
+            "type": "number",
+            "description": "Meta: dibuja un medidor de avance."
+          },
+          "format": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "format": {
+      "description": "Formato de los valores: \"number\" | \"compact\" | \"percent\" | \"currency\" | \"integer\", o { type, prefix, suffix, decimals, currency }.",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "number",
+            "compact",
+            "percent",
+            "currency",
+            "integer"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "decimals": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "stack": {
+      "description": "bar/area: true apila; \"percent\" apila al 100%.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "percent"
+          ]
+        }
+      ]
+    },
+    "horizontal": {
+      "type": "boolean",
+      "description": "bar: fuerza barras horizontales. Por defecto se decide solo."
+    },
+    "sort": {
+      "type": "string",
+      "enum": [
+        "desc",
+        "asc",
+        "none",
+        "alpha"
+      ],
+      "description": "bar: orden de categorías (desc por defecto si no son tiempo)."
+    },
+    "top": {
+      "type": "integer",
+      "description": "bar: muestra las N mayores y agrupa el resto en \"Otros\"."
+    },
+    "highlight": {
+      "description": "Destaca una o más categorías/series y atenúa el resto.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "labels": {
+      "description": "Etiquetas de valor: true, false o \"auto\". En scatter: número de puntos o lista de nombres a rotular.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "refLines": {
+      "type": "array",
+      "description": "Líneas de referencia (metas, promedios).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "y": {
+            "type": "number"
+          },
+          "x": {
+            "type": "number"
+          },
+          "value": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "description": "line/area: eventos en el eje x.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": {},
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "index": {
+      "type": "boolean",
+      "description": "line: lleva cada serie a base 100 en su primer valor (compara crecimientos sin doble eje)."
+    },
+    "curve": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "smooth"
+      ]
+    },
+    "zero": {
+      "type": "boolean",
+      "description": "line: forzar (o no) que el eje y parta en cero."
+    },
+    "xScale": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "log"
+      ]
+    },
+    "yScale": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "log"
+      ]
+    },
+    "trend": {
+      "type": "boolean",
+      "description": "scatter: agrega recta de tendencia y R²."
+    },
+    "xLabel": {
+      "type": "string"
+    },
+    "yLabel": {
+      "type": "string"
+    },
+    "aggregate": {
+      "type": "string",
+      "enum": [
+        "sum",
+        "mean",
+        "max",
+        "min",
+        "count",
+        "last",
+        "first"
+      ],
+      "description": "Cómo combinar filas repetidas. Por defecto sum."
+    },
+    "colors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Color fijo por entidad: { \"Biobío\": \"#3A47B8\" }."
+    },
+    "theme": {
+      "description": "\"papel\" (claro, por defecto) | \"noche\" (oscuro) | objeto de tema.",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "papel",
+            "noche",
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "locale": {
+      "type": "string",
+      "enum": [
+        "es",
+        "en"
+      ],
+      "description": "Idioma y formato numérico. Por defecto es (1.234,5)."
+    },
+    "width": {
+      "type": "number",
+      "description": "Ancho en px (por defecto 720)."
+    },
+    "height": {
+      "type": "number",
+      "description": "Alto en px. Barras horizontales, heatmap y kpi lo calculan solos."
+    }
+  }
+}

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="720" height="460" role="img" aria-labelledby="paq2us65-t paq2us65-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="bubble" data-pa-mode="light" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><title id="paq2us65-t">A mayor ingreso por persona, mayor uso de internet</title><desc id="paq2us65-d">Gráfico de dispersión de Internet versus Pib con 16 puntos.</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}</style><rect width="720" height="460" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="42" fill="#141A3F" font-size="20" font-weight="600" letter-spacing="-0.01em">A mayor ingreso por persona, mayor uso de internet</text><text x="24" y="66" fill="#4A5070" font-size="14">PIB per cápita (miles de US$ PPA) y % de la población que usa internet</text><g class="pa-legend"><circle cx="29" cy="92.5" r="5" fill="#3A47B8"/><text x="40" y="97" fill="#4A5070" font-size="12.5">Sudamérica</text><circle cx="134.69" cy="92.5" r="5" fill="#D42A5E"/><text x="145.69" y="97" fill="#4A5070" font-size="12.5">Norteamérica</text><circle cx="249.84" cy="92.5" r="5" fill="#E8A33D"/><text x="260.84" y="97" fill="#4A5070" font-size="12.5">Europa</text></g></g><g class="pa-body"><g><g class="pa-axis pa-axis-y"><line x1="55.17" x2="688" y1="348.5" y2="348.5" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><text x="47.17" y="352.5" fill="#7C819C" font-size="12" text-anchor="end">60</text><line x1="55.17" x2="688" y1="300.5" y2="300.5" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><text x="47.17" y="304.5" fill="#7C819C" font-size="12" text-anchor="end">70</text><line x1="55.17" x2="688" y1="253.5" y2="253.5" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><text x="47.17" y="257.5" fill="#7C819C" font-size="12" text-anchor="end">80</text><line x1="55.17" x2="688" y1="206.5" y2="206.5" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><text x="47.17" y="210.5" fill="#7C819C" font-size="12" text-anchor="end">90</text><line x1="55.17" x2="688" y1="159.5" y2="159.5" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><text x="47.17" y="163.5" fill="#7C819C" font-size="12" text-anchor="end">100</text></g><g class="pa-axis pa-axis-x"><line x1="78.5" x2="78.5" y1="136" y2="370" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><line x1="225.5" x2="225.5" y1="136" y2="370" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><line x1="372.5" x2="372.5" y1="136" y2="370" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><line x1="519.5" x2="519.5" y1="136" y2="370" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><line x1="666.5" x2="666.5" y1="136" y2="370" stroke="#E9EBF3" stroke-width="1" shape-rendering="crispEdges"/><g><text x="78.5" y="388" fill="#7C819C" font-size="12" text-anchor="middle">0</text><text x="225.5" y="388" fill="#7C819C" font-size="12" text-anchor="middle">20</text><text x="372.5" y="388" fill="#7C819C" font-size="12" text-anchor="middle">40</text><text x="519.5" y="388" fill="#7C819C" font-size="12" text-anchor="middle">60</text><text x="666.5" y="388" fill="#7C819C" font-size="12" text-anchor="middle">80</text></g></g><line x1="55.17" x2="688" y1="370.5" y2="370.5" stroke="#C9CDE0"/><text x="24" y="124" fill="#4A5070" font-size="12" font-weight="500">Usuarios de internet (%)</text><text x="688" y="410" fill="#4A5070" font-size="12" font-weight="500" text-anchor="end">PIB per cápita (miles US$)</text><clipPath id="pa-clip-trend"><rect x="55.17" y="136" width="632.83" height="234"/></clipPath><line x1="77.67" y1="290.4" x2="665.5" y2="164.1" stroke="#141A3F" stroke-width="1.5" opacity="0.55" clip-path="url(#pa-clip-trend)"/><text x="684" y="148" fill="#4A5070" font-size="11.5" text-anchor="end" stroke="#FCFBF9" stroke-width="3" paint-order="stroke">R² = 0,63</text><g class="pa-refs"></g><g class="pa-refs"></g><circle class="pa-m" cx="665.5" cy="196.3" r="30" fill="#D42A5E" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Estados Unidos
+Norteamérica
+Pib: 80
+Internet: 92
+Poblacion: 335"/><circle class="pa-m" cx="228.3" cy="234.1" r="24.09" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Brasil
+Sudamérica
+Pib: 20,5
+Internet: 84
+Poblacion: 216"/><circle class="pa-m" cx="246.67" cy="257.73" r="18.54" fill="#D42A5E" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="México
+Norteamérica
+Pib: 23
+Internet: 79
+Poblacion: 128"/><circle class="pa-m" cx="562.63" cy="191.58" r="15.02" fill="#E8A33D" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Alemania
+Europa
+Pib: 66
+Internet: 93
+Poblacion: 84"/><circle class="pa-m" cx="481.8" cy="219.93" r="12.59" fill="#E8A33D" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Italia
+Europa
+Pib: 55
+Internet: 87
+Poblacion: 59"/><circle class="pa-m" cx="217.28" cy="286.08" r="11.82" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Colombia
+Sudamérica
+Pib: 19
+Internet: 73
+Poblacion: 52"/><circle class="pa-m" cx="445.06" cy="182.13" r="11.36" fill="#E8A33D" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="España
+Europa
+Pib: 50
+Internet: 95
+Poblacion: 48"/><circle class="pa-m" cx="276.06" cy="215.2" r="11.12" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Argentina
+Sudamérica
+Pib: 27
+Internet: 88
+Poblacion: 46"/><circle class="pa-m" cx="518.54" cy="186.85" r="10.37" fill="#D42A5E" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Canadá
+Norteamérica
+Pib: 60
+Internet: 94
+Poblacion: 40"/><circle class="pa-m" cx="195.23" cy="276.63" r="9.56" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Perú
+Sudamérica
+Pib: 16
+Internet: 75
+Poblacion: 34"/><circle class="pa-m" cx="299.57" cy="204.81" r="7.29" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Chile
+Sudamérica
+Pib: 30,2
+Internet: 90,2
+Poblacion: 19,8"/><circle class="pa-m" cx="180.54" cy="290.8" r="6.95" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Ecuador
+Sudamérica
+Pib: 14
+Internet: 72
+Poblacion: 18"/><circle class="pa-m" cx="151.15" cy="319.15" r="5.77" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Bolivia
+Sudamérica
+Pib: 10
+Internet: 66
+Poblacion: 12,4"/><circle class="pa-m" cx="408.32" cy="224.65" r="5.29" fill="#E8A33D" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Portugal
+Europa
+Pib: 45
+Internet: 86
+Poblacion: 10,4"/><circle class="pa-m" cx="198.91" cy="267.18" r="4.31" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Paraguay
+Sudamérica
+Pib: 16,5
+Internet: 77
+Poblacion: 6,9"/><circle class="pa-m" cx="298.11" cy="205.75" r="3.02" fill="#3A47B8" fill-opacity="0.78" stroke="#FCFBF9" stroke-width="1.5" data-tip="Uruguay
+Sudamérica
+Pib: 30
+Internet: 90
+Poblacion: 3,4"/><text x="310.87" y="208.81" fill="#141A3F" font-size="12" font-weight="500" text-anchor="start" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Chile</text><text x="256.39" y="238.1" fill="#141A3F" font-size="12" font-weight="500" text-anchor="start" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Brasil</text><text x="160.92" y="323.15" fill="#141A3F" font-size="12" font-weight="500" text-anchor="start" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Bolivia</text><text x="269.21" y="261.73" fill="#141A3F" font-size="12" font-weight="500" text-anchor="start" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">México</text><text x="631.5" y="200.3" fill="#141A3F" font-size="12" font-weight="500" text-anchor="end" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Estados Unidos</text></g></g><text x="696" y="434" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

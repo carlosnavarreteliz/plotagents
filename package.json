@@ -1,0 +1,52 @@
+{
+  "name": "plotagents",
+  "version": "0.1.0",
+  "description": "Gráficos bellos con una sola llamada, pensados para agentes de IA. Specs JSON simples → SVG accesible, sin dependencias.",
+  "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./schema.json": "./schema.json"
+  },
+  "bin": {
+    "plotagents": "./bin/plotagents.js"
+  },
+  "files": [
+    "src",
+    "bin",
+    "index.d.ts",
+    "schema.json",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "examples": "node examples/build.js",
+    "schema": "node -e \"import('./src/index.js').then(m=>process.stdout.write(JSON.stringify(m.schema,null,2)))\" > schema.json"
+  },
+  "keywords": [
+    "chart",
+    "plot",
+    "svg",
+    "dataviz",
+    "visualization",
+    "treemap",
+    "sankey",
+    "ai",
+    "agents",
+    "llm",
+    "tool-use"
+  ],
+  "author": "Carlos Navarrete <cnavarreteliz@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false
+}
