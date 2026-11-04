@@ -1,7 +1,7 @@
 {
   "name": "plotagents",
   "version": "0.5.0",
-  "description": "Beautiful charts from one JSON spec, built for AI agents: bars, lines, multi-level treemaps, sunbursts, sankeys and seaborn-style plots (regplot, hist, kde, box, violin…). Accessible SVG, time sliders, JSON themes, zero dependencies.",
+  "description": "The chart protocol for AI agents: one JSON spec in, a finished accessible SVG out. Bars, lines, Gantt charts, treemaps, sankeys, maps from any GeoJSON/TopoJSON, networks and seaborn-style plots. Zero dependencies.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -57,7 +57,13 @@
     "ai",
     "agents",
     "llm",
-    "tool-use"
+    "tool-use",
+    "gantt",
+    "timeline",
+    "geojson",
+    "topojson",
+    "choropleth",
+    "map"
   ],
   "author": "Carlos Navarrete <cnavarreteliz@gmail.com>",
   "license": "MIT",

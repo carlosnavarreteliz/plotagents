@@ -5,11 +5,11 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { plot, lint, resolve as resolveSpec, TYPES } from '../src/index.js';
+import { plot, lint, safePlot, resolve as resolveSpec, TYPES } from '../src/index.js';
 import { FONT_CSS } from '../src/theme.js';
 import { gallery, ORDER, nameOf, noteOf, sectionName, slug, snippet } from '../examples/gallery.js';
 import { markdown, highlight, esc } from '../site/md.js';
-import { heroSpec, quickSpec, quickCode } from '../site/home-specs.js';
+import { heroSpec, quickSpec, ganttSpec, trendSpec, exchanges, badSpec, fixedSpec, languageSpec } from '../site/home-specs.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(root, process.env.SITE_OUT || '_site');
@@ -26,7 +26,7 @@ const copy = (from, to) => { mkdirSync(dirname(join(OUT, to)), { recursive: true
 // ── Recursos ───────────────────────────────────────────────────────────────
 copy('dist/plotagents.js', 'assets/plotagents.js');
 copy('dist/plotagents-geo.js', 'assets/plotagents-geo.js');
-for (const f of ['site.css', 'site.js', 'gallery.js', 'playground.js']) copy('site/' + f, 'assets/' + f);
+for (const f of ['site.css', 'site.js', 'gallery.js', 'playground.js', 'home.js']) copy('site/' + f, 'assets/' + f);
 copy('schema.json', 'schema.json');
 copy('AGENTS.md', 'AGENTS.md');
 copy('AGENTS.md', 'llms.txt');
@@ -64,13 +64,15 @@ const ICON = {
   dark: '<svg class="i-dark" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M16.5 12.3A7 7 0 017.7 3.5a7 7 0 108.8 8.8z"/></svg>',
   menu: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>',
   search: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>',
+  // Marca: una llave de JSON que se abre en tres barras.
+  mark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5C4.8 3.5 4.5 5 4.5 6.5v3c0 1.2-.6 2.1-2 2.5 1.4.4 2 1.3 2 2.5v3c0 1.5.3 3 2.5 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="9.5" y="12" width="3" height="8" rx="1" fill="#E8A33D"/><rect x="14" y="8" width="3" height="12" rx="1" fill="var(--accent)"/><rect x="18.5" y="4" width="3" height="16" rx="1" fill="#6170E0"/></svg>',
 };
 
-const THEME_BOOT = `<script>(function(){var d=document.documentElement,p='auto';try{p=localStorage.getItem('pa-theme')||'auto'}catch(e){}if(p==='light'||p==='dark')d.setAttribute('data-theme',p);d.setAttribute('data-pref',p)})()</script>`;
+const THEME_BOOT = `<script>addEventListener('scroll',function(){document.documentElement.classList.toggle('scrolled',scrollY>8)},{passive:true});(function(){var d=document.documentElement,p='auto';try{p=localStorage.getItem('pa-theme')||'auto'}catch(e){}if(p==='light'||p==='dark')d.setAttribute('data-theme',p);d.setAttribute('data-pref',p)})()</script>`;
 
 function layout({ p, active = '', title, description, body, scripts = '', bodyClass = '' }) {
-  const nav = [['docs', 'Docs', 'docs/'], ['examples', 'Examples', 'examples/'], ['playground', 'Playground', 'playground/']];
-  const fullTitle = title ? `${title} · plotagents` : 'plotagents · charts from one JSON spec, built for AI agents';
+  const nav = [['protocol', 'Protocol', 'docs/agents.html'], ['docs', 'Docs', 'docs/'], ['examples', 'Examples', 'examples/'], ['playground', 'Playground', 'playground/']];
+  const fullTitle = title ? `${title} · plotagents` : 'plotagents · the chart protocol for AI agents';
   return `<!doctype html>
 <html lang="en" data-pref="auto"><head>
 <meta charset="utf-8">
@@ -80,13 +82,13 @@ function layout({ p, active = '', title, description, body, scripts = '', bodyCl
 <meta property="og:title" content="${esc(fullTitle)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#F4F3EF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#070A1F" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FCFBF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0F2B" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#141A3F"/><rect x="7" y="16" width="4" height="9" rx="1.5" fill="#E8A33D"/><rect x="14" y="10" width="4" height="15" rx="1.5" fill="#D42A5E"/><rect x="21" y="6" width="4" height="19" rx="1.5" fill="#6170E0"/></svg>')}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONT_CSS}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fragment+Mono&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Instrument+Serif:ital@1&display=swap">
 <link rel="stylesheet" href="${p}assets/site.css">
 ${THEME_BOOT}
 <script src="${p}assets/site.js"></script>
@@ -94,7 +96,7 @@ ${THEME_BOOT}
 <body class="${bodyClass}">
 <a class="sr-only" href="#main">Skip to content</a>
 <header class="topbar"><div class="wrap">
-  <a class="logo" href="${p}">plot<b>agents</b></a>
+  <a class="logo" href="${p}" aria-label="plotagents home">${ICON.mark}<span>plot<b>agents</b></span></a>
   <button class="icon-btn menu-btn" type="button" aria-label="Menu" aria-expanded="false">${ICON.menu}</button>
   <nav class="topnav" aria-label="Main">
     ${nav.map(([k, label, href]) => `<a href="${p}${href}"${k === active ? ' aria-current="page"' : ''}>${label}</a>`).join('\n    ')}
@@ -106,8 +108,8 @@ ${THEME_BOOT}
 ${body}
 </div>
 <footer class="foot"><div class="wrap">
-  <span>plotagents ${esc(pkg.version)} · MIT © Carlos Navarrete · All example data is illustrative.</span>
-  <nav><a href="${p}docs/">Docs</a><a href="${p}examples/">Examples</a><a href="${p}playground/">Playground</a><a href="${p}llms.txt">llms.txt</a><a href="${REPO}" rel="noopener">GitHub</a></nav>
+  <span>plotagents ${esc(pkg.version)} · MIT © Carlos Navarrete · Example data is illustrative unless a source says otherwise.</span>
+  <nav><a href="${p}docs/agents.html">Protocol</a><a href="${p}docs/">Docs</a><a href="${p}examples/">Examples</a><a href="${p}playground/">Playground</a><a href="${p}llms.txt">llms.txt</a><a href="${REPO}" rel="noopener">GitHub</a></nav>
 </div></footer>
 ${scripts}
 </body></html>
@@ -198,14 +200,13 @@ ${toc.length > 1 ? `<nav class="toc" aria-label="On this page"><h4>On this page<
   <header><h3><a href="#${e.id}">${esc(e.name)}</a></h3><span class="type">${esc(e.type)}</span></header>
   <p class="note">${esc(e.note).replace(/`([^`]+)`/g, '<code>$1</code>')}</p>
   <figure class="pa" data-id="${e.id}">${pics(e, p)}</figure>
-  <div class="actions"><details><summary>Show code</summary>${codeBlock(snippet(e.spec, { more: 'more rows' }))}</details></div>
+  <div class="actions"><details><summary>Show spec</summary>${codeBlock(snippet(e.spec, { more: 'more rows' }))}</details></div>
   <a class="pg" href="${p}playground/#ex=${e.id}">Open in playground →</a>
 </article>`;
   const body = `<div class="wrap">
 <section class="g-head">
-  <p class="kicker">Gallery</p>
-  <h1>${examples.length} examples, all live</h1>
-  <p>Every chart below is drawn in your browser from the spec under “Show code”. Hover for values, drag the time sliders, click a treemap group to drill down or a network node to focus it. Chart text uses the default Spanish (Chile) locale; set <code>locale: "en"</code> for English number formats.</p>
+  <h1>${examples.length} charts, <em>all live.</em></h1>
+  <p>Every chart below is drawn in your browser from the spec under “Show spec”: exactly what an agent would send. Hover for values, drag the time sliders, click a treemap group to drill down or a network node to focus it. Chart text uses the default Spanish (Chile) locale; set <code>locale: "en"</code> for English.</p>
 </section>
 <div class="g-tools">
   <div class="chips" role="toolbar" aria-label="Filter by section">
@@ -234,8 +235,18 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
   const presets = [
     { id: 'quick-start', name: 'Quick start (English)', section: 'Start here', spec: quickSpec },
     { id: 'hero', name: 'Treemap with a time slider (English)', section: 'Start here', spec: heroSpec },
+    { id: 'gantt-en', name: 'Gantt chart (English)', section: 'Start here', spec: ganttSpec },
+    { id: 'geojson-en', name: 'Your own GeoJSON (English)', section: 'Start here', spec: languageSpec },
+    { id: 'trend-en', name: 'Lines with a highlight (English)', section: 'Start here', spec: trendSpec },
     ...examples.map((e) => ({ id: e.id, name: e.name, section: sectionName(e.section), spec: e.spec })),
   ];
+  // Geometrías propias fuera del editor: el spec dice geo: "file:nombre.geojson".
+  const geoFiles = {};
+  for (const x of presets) if (x.spec.geo && typeof x.spec.geo === 'object') {
+    const name = `${x.id}.geojson`;
+    geoFiles[name] = x.spec.geo;
+    x.spec = { ...x.spec, geo: 'file:' + name };
+  }
   const groups = [...new Set(presets.map((x) => x.section))];
   const body = `<div class="wrap pg-page">
 <section class="pg-editor" aria-label="Spec editor">
@@ -243,10 +254,12 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
     <label class="sr-only" for="preset">Start from an example</label>
     <select id="preset"><option value="">Custom spec</option>${groups.map((g) => `<optgroup label="${esc(g)}">${presets.filter((x) => x.section === g).map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select>
     <button class="btn ghost small" type="button" id="format">Format</button>
+    <button class="btn ghost small" type="button" id="geo-btn">Insert GeoJSON…</button>
+    <input type="file" id="geo-file" accept=".json,.geojson,.topojson,application/json,application/geo+json" hidden>
   </div>
   <label class="sr-only" for="spec">Spec (JSON)</label>
   <textarea id="spec" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="hint"></textarea>
-  <p class="pg-desc" id="hint">JSON or a JavaScript object. The chart redraws as you type; <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> redraws now.</p>
+  <p class="pg-desc" id="hint">JSON or a JavaScript object. The chart redraws as you type; <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> redraws now. Drop a <code>.geojson</code> or <code>.topojson</code> file on the editor to map your own shapes: it is kept in the page and referenced as <code>geo: "file:name.geojson"</code>.</p>
 </section>
 <section class="pg-out" aria-label="Result">
   <div class="pg-bar"><span class="grow"></span><button class="btn ghost small" type="button" id="share">Copy link</button><button class="btn small" type="button" id="download">Download SVG</button></div>
@@ -258,119 +271,301 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
   write('playground/index.html', layout({
     p, active: 'playground', title: 'Playground',
     description: 'Edit a plotagents spec and see the chart, its alt text and the linter’s suggestions live.',
-    body, scripts: `${libScripts(p)}\n${jsonScript('pa-presets', presets)}\n<script src="${p}assets/playground.js"></script>`,
+    body, scripts: `${libScripts(p)}\n${jsonScript('pa-presets', presets)}\n${jsonScript('pa-geo-files', geoFiles)}\n<script src="${p}assets/playground.js"></script>`,
   }));
 }
 
 // ── Portada ────────────────────────────────────────────────────────────────
 {
   const p = '';
-  const SHOW = ['lineas', 'treemap-niveles', 'regresion', 'violin', 'sunburst', 'mapa-chile', 'red', 'cuerdas', 'piramide', 'sankey', 'conjunto', 'kpi'];
-  const thumbs = SHOW.filter((id) => exById[id]).map((id) => exById[id]);
-  const PURPOSES = [
-    ['Compare categories', ['bar', 'barplot', 'countplot']],
-    ['Change over time', ['line', 'area']],
-    ['Relationships', ['scatter', 'bubble', 'regplot', 'residplot', 'jointplot', 'radar']],
-    ['Distributions', ['hist', 'kde', 'ecdf', 'box', 'violin', 'strip', 'swarm', 'point']],
-    ['Part-to-whole', ['treemap', 'sunburst', 'donut', 'pie']],
-    ['Maps', ['choropleth', 'symbolmap']],
-    ['Networks and flows', ['network', 'chord', 'sankey', 'flowchart']],
-    ['Populations, grids, numbers', ['pyramid', 'heatmap', 'kpi']],
+  const T = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  /** Un spec como lo escribiría el modelo: una clave por línea, datos abreviados. */
+  const SHORT = new Set(['type', 'task', 'start', 'end', 'group', 'progress', 'dependsOn', 'x', 'y', 'series', 'key', 'value', 'label', 'path', 'time', 'highlight', 'locale', 'today', 'dashed', 'dashedLabel']);
+  function callText(ex) {
+    const s = ex.spec;
+    const lines = ['plot({'];
+    let row = '';
+    const flush = () => { if (row) { lines.push('  ' + row.trim()); row = ''; } };
+    const val = (v) => JSON.stringify(v, null, 0).replace(/"(\w+)":/g, '$1: ').replace(/,(?=[\w"{[])/g, ', ');
+    for (const [k, v] of Object.entries(s)) {
+      if ((ex.omit || []).includes(k)) continue;
+      if (k === 'data') { flush(); lines.push(`  data: ${ex.data},`); continue; }
+      if (k === 'geo' && ex.geo) { flush(); lines.push(`  geo: ${ex.geo}`); continue; }
+      const piece = `${k}: ${val(v)},`;
+      if (SHORT.has(k) && piece.length < 40) {
+        if ((row + ' ' + piece).length > 58) flush();
+        row += ' ' + piece;
+      } else { flush(); lines.push(`  ${piece}`); }
+    }
+    for (const [k, v] of Object.entries(ex.extra || {})) { flush(); lines.push(`  ${k}: ${v},`); }
+    flush();
+    lines.push('})');
+    return lines.join('\n');
+  }
+  function respText(spec) {
+    const r = safePlot(spec);
+    const kb = Math.round(r.svg.length / 102.4) / 10;
+    const d = r.description.length > 150 ? r.description.slice(0, 147).replace(/\s+\S*$/, '') + '…' : r.description;
+    return [
+      '{',
+      `  ok: ${r.ok}, type: ${JSON.stringify(r.type)},`,
+      `  svg: "<svg …>…</svg>",  // ${kb} kB, with <title> and <desc>`,
+      `  description: ${JSON.stringify(d)},`,
+      `  errors: [], warnings: [${r.warnings.length ? '…' : ''}], suggestions: [${r.suggestions.length ? '…' : ''}]`,
+      '}',
+    ].join('\n');
+  }
+  const lines = (code) => highlight(code, 'js').split('\n').map((l) => `<span class="ln">${l || ' '}</span>`);
+  const xcs = exchanges.map((ex) => ({ id: ex.id, label: ex.label, ask: ex.ask, call: lines(callText(ex)), resp: lines(respText(ex.spec)), spec: ex.spec }));
+  const first = xcs[0];
+
+  // El ciclo de reparación, con la respuesta real del linter.
+  const bad = safePlot(badSpec);
+  const badCall = `plot({
+  type: "donut",
+  data: /* 11 rows: city, stores */,
+  label: "city",
+  value: "store_count",
+  locale: "en",
+})`;
+  const issue = (it) => `{ message: ${JSON.stringify(it.message)},\n      fix: ${JSON.stringify(it.fix)} }`;
+  const badResp = `{
+  ok: ${bad.ok}, svg: null,
+  errors: [
+    ${bad.errors.map(issue).join(',\n    ')}
+  ],
+  warnings: [
+    ${bad.warnings.map(issue).join(',\n    ')}
+  ],
+  suggestions: [ ${bad.suggestions.map((s) => JSON.stringify(s.code)).join(', ')} ]
+}`;
+
+  const FIRST_EX = {};
+  for (const e of examples) if (!FIRST_EX[e.type]) FIRST_EX[e.type] = e.id;
+  const PLATES = [['gantt', 'w7'], ['geojson-propio', 'w5'], ['mapa-eeuu', 'w5'], ['treemap-niveles', 'w7'], ['regresion', 'w4'], ['violin', 'w4'], ['red', 'w4']].filter(([id]) => exById[id]);
+
+  const RULES = [
+    ['The title states the finding', 'A full sentence with the key number. `lint` flags titles that only name the chart; `describe` writes the alt text.'],
+    ['One axis, always', 'No dual axes: they invent correlations. `index: true` rebases to 100, `facet` draws panels on a shared scale.'],
+    ['Labels where the eye is', 'Lines are labeled at their ends, values sit on the bars, colliding labels get leader lines. A legend only when it is needed.'],
+    ['Color follows the entity', 'Eight colorblind-safe colors in a fixed order. “Copper” keeps its color when you filter, drill down or move the slider.'],
+    ['Honest about uncertainty', 'Estimates and projections are hatched with `dashed`, never a new color, and the legend says what the hatching means.'],
+    ['Fast, accessible SVG', 'Zero dependencies, server-side rendering, a `<title>` and `<desc>` in every chart, and dense data batched into paths.'],
   ];
-  const FEATURES = [
-    ['#3A47B8', 'The title states the finding', '`lint` nudges toward a title with the key number, and `describe` writes the alt text for you.'],
-    ['#D42A5E', 'One axis, always', 'There is no dual axis: `index: true` rebases series to 100 and `facet` draws panels on a shared scale.'],
-    ['#E8A33D', 'Labels where the eye is', 'Every line is labeled at its end; colliding labels spread apart with leader lines. A legend appears only when needed.'],
-    ['#1E9C89', 'Color follows the entity', 'Eight colorblind-safe colors in a fixed order. “Copper” keeps its color when you filter, drill down or move the slider.'],
-    ['#7B5CD6', 'Interactive in the browser', 'Tooltips, time sliders with play, drill-down treemaps, click-to-focus networks and linked legends.'],
-    ['#B5562E', 'SVG, fast and accessible', 'Server-side rendering with zero dependencies; dense charts are batched into paths, faster than Canvas.'],
+  const VOCAB = [
+    ['title', '<b>The finding</b>, as a sentence with the number.'],
+    ['subtitle', 'How to read it: measure, unit, period.'],
+    ['source', 'Where the data comes from. Always.'],
+    ['data', 'Rows, as they come: <code>[{ region, sales }]</code>.'],
+    ['x · y · series', 'Which field plays which role.'],
+    ['highlight', 'The one thing the reader should see.'],
+    ['dashed', 'What is not a firm number yet.'],
+    ['facet · time', 'Small multiples; one period at a time.'],
+    ['geo', 'Chile, the US, the world, or <b>your own GeoJSON</b>.'],
+    ['locale', '<code>"en"</code> or <code>"es"</code>, for numbers and dates.'],
   ];
-  const agentCode = `import Anthropic from '@anthropic-ai/sdk';
+  const typeWords = TYPES.filter((t) => !['column', 'count', 'bubble', 'residplot'].includes(t));
+
+  const integ = {
+    claude: `import Anthropic from '@anthropic-ai/sdk';
 import { safePlot, toolDefinition } from 'plotagents';
 
 const client = new Anthropic();
 const res = await client.messages.create({
   model: process.env.ANTHROPIC_MODEL,
   max_tokens: 4096,
-  tools: [toolDefinition()],          // JSON Schema of every option
+  tools: [toolDefinition()],        // the whole protocol, as JSON Schema
   messages: [{ role: 'user', content: 'Chart service times per clinic: …' }],
 });
 
 const call = res.content.find((b) => b.type === 'tool_use');
-const { ok, svg, errors, suggestions } = safePlot(call.input);
-// Never throws. If !ok, send \`errors\` back: each one has a \`fix\`.`;
+const { ok, svg, description, errors } = safePlot(call.input);
+// Never throws. If !ok, return \`errors\` as the tool result:
+// each one carries a \`fix\`, and the model calls again.`,
+    openai: `import OpenAI from 'openai';
+import { safePlot, toolDefinition } from 'plotagents';
+
+const client = new OpenAI();
+const res = await client.chat.completions.create({
+  model: process.env.OPENAI_MODEL,
+  tools: [toolDefinition({ flavor: 'openai' })],
+  messages: [{ role: 'user', content: 'Map unemployment by region: …' }],
+});
+
+const call = res.choices[0].message.tool_calls[0];
+const result = safePlot(JSON.parse(call.function.arguments));`,
+    browser: `<script src="https://unpkg.com/plotagents/dist/plotagents.js"></script>
+<div id="chart"></div>
+<script>
+  // Tooltips, time sliders, drill-down and map zoom included.
+  plotagents.render('#chart', {
+    type: 'choropleth',
+    geo: '/maps/comunas.topojson',     // your own geometry, by URL
+    data, key: 'comuna', value: 'poverty',
+    title: 'Poverty is highest in the coal towns',
+  });
+</script>`,
+    cli: `# One spec in, one SVG out. Works in any pipeline.
+npx plotagents spec.json -o chart.svg
+
+# The guide an agent needs, in its system prompt:
+curl https://carlosnavarrete.cl/plotagents/llms.txt`,
+  };
+  const INTEG_TABS = [['claude', 'Claude'], ['openai', 'OpenAI'], ['browser', 'Browser'], ['cli', 'CLI']];
+
   const body = `<div class="wrap">
 <section class="hero">
-  <div>
-    <p class="kicker">Charts for AI agents</p>
-    <h1>One JSON spec in. <em>A finished chart</em> out.</h1>
-    <p class="lede">Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. plotagents makes the design decisions so an agent, or you, never has to.</p>
-    <span class="install">npm install plotagents <button class="copy" type="button" data-copy="npm install plotagents">Copy</button></span>
-    <div class="ctas">
-      <a class="btn" href="docs/">Get started</a>
-      <a class="btn ghost" href="examples/">Browse ${examples.length} examples</a>
-      <a class="btn ghost" href="playground/">Open the playground</a>
+  <div class="h-top mono"><span>plotagents · protocol ${esc(pkg.version)}</span><span>MIT · zero dependencies · SVG</span></div>
+  <h1>Charts are a language. Now <em>AI speaks it.</em></h1>
+  <div class="hero-row">
+    <p class="lede">plotagents is an open protocol between a model and the page. The model says what a chart <b>means</b>: the data, the finding, the unit. The library answers with a <b>finished, accessible chart</b>, or with the exact fix it needs.</p>
+    <div class="hero-act">
+      <span class="install"><span class="pr">$</span> npm install plotagents <button class="copy" type="button" data-copy="npm install plotagents">Copy</button></span>
+      <div class="row">
+        <a class="btn" href="docs/agents.html">Read the protocol <span class="arr">→</span></a>
+        <a class="tlink" href="playground/">Open the playground</a>
+        <a class="tlink" href="examples/">${examples.length} live examples</a>
+      </div>
     </div>
-    <div class="stats"><span><b>${TYPES.length}</b>chart types</span><span><b>0</b>dependencies</span><span><b>SVG</b>Node, Deno, Bun, browser</span></div>
   </div>
-  <figure class="pa hero-chart" id="hero-chart">${inlineChart(heroSpec)}</figure>
+
+  <section class="xc" id="exchange" aria-label="A model calling plotagents">
+    <div class="xc-head">
+      <span class="mono">Live · a model draws by calling plotagents</span>
+      <div class="xc-tabs" role="tablist" aria-label="Examples">${xcs.map((x, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === 0}"><span class="i">0${i + 1}</span>${esc(x.label)}</button>`).join('')}</div>
+    </div>
+    <div class="xc-body">
+      <div class="xc-log">
+        <div class="turn you"><div class="who"><i></i>Person</div><p class="ask" id="xc-ask">${esc(first.ask)}</p></div>
+        <div class="turn agent"><div class="who"><i></i>Model → tool call</div><pre id="xc-call"><code>${first.call.join('')}</code></pre></div>
+        <div class="turn lib"><div class="who"><i></i>plotagents → model</div><pre id="xc-resp"><code>${first.resp.join('')}</code></pre></div>
+      </div>
+      <div class="xc-stage"><figure class="pa" id="xc-chart">${inlineChart(first.spec)}</figure></div>
+    </div>
+  </section>
 </section>
 
-<section class="band" id="quick-start">
-  <p class="kicker">Quick start</p>
-  <h2>Name the fields. Write the finding. Done.</h2>
-  <p class="sub">No margins, colors, tick counts or label positions to choose. The bars sort themselves, values sit on the tips, the axis disappears because it is no longer needed, and <code>highlight</code> mutes everything but the point of the chart.</p>
-  <div class="split">
-    ${codeBlock(quickCode)}
-    <figure class="pa panel" id="quick-chart">${inlineChart(quickSpec)}</figure>
+<section class="sec" id="protocol">
+  <div class="sec-head">
+    <div class="num"><span>01 · The protocol</span><span>safePlot(spec) → { ok, svg, description, errors, warnings, suggestions }</span></div>
+    <h2>One message each way. <em>No pixels.</em></h2>
+    <p class="sub">A model is good at knowing what the data says and bad at placing tick labels. So the protocol asks only for meaning, and keeps the craft on this side of the wire.</p>
+  </div>
+  <div class="steps">
+    <div class="step"><span class="n">01</span><h3>Say</h3><p>The model describes the chart, not the drawing: rows of data, the role of each field, and a title that states the finding.</p></div>
+    <div class="step"><span class="n">02</span><h3>Check</h3><p><code>safePlot</code> never throws. It validates against the JSON Schema and the design rules before anything is drawn.</p></div>
+    <div class="step"><span class="n">03</span><h3>Repair</h3><p>Every issue carries a <code>fix</code> written for a model to read. It applies the fix and calls again, usually once.</p></div>
+    <div class="step"><span class="n">04</span><h3>Show</h3><p>An SVG comes back with its alt text in <code>description</code>, so the model can read what it drew before it answers.</p></div>
+  </div>
+  <div class="loop" aria-label="A real repair loop">
+    <div><h4><i style="background:var(--accent)"></i>First call</h4><pre><code>${highlight(badCall, 'js').replace('&quot;store_count&quot;', '<span class="bad">&quot;store_count&quot;</span>').replace('"store_count"', '<span class="bad">"store_count"</span>')}</code></pre><p class="note">A wrong field name and an 11-slice donut: two classic mistakes.</p></div>
+    <div><h4><i style="background:var(--t-s)"></i>plotagents answers</h4><pre><code>${highlight(badResp, 'js')}</code></pre></div>
+    <div><h4><i style="background:var(--accent)"></i>Second call → chart</h4><figure class="pa" id="fix-chart">${inlineChart(fixedSpec)}</figure></div>
   </div>
 </section>
 
-<section class="band">
-  <p class="kicker">Why plotagents</p>
-  <h2>Design rules written into the code</h2>
-  <p class="sub">Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that say nothing. The rules here come from data-visualization teaching (Wilke’s <em>Fundamentals of Data Visualization</em>, the Data Viz Catalogue, the Atlas of Economic Complexity).</p>
-  <div class="features">
-    ${FEATURES.map(([c, h, t]) => `<div class="feature"><h3><span class="dot" style="background:${c}"></span>${esc(h)}</h3><p>${esc(t).replace(/`([^`]+)`/g, '<code>$1</code>')}</p></div>`).join('\n    ')}
+<section class="sec" id="vocabulary">
+  <div class="sec-head">
+    <div class="num"><span>02 · The vocabulary</span><span>${TYPES.length} chart types · schema.json</span></div>
+    <h2>A small grammar for <em>every</em> chart.</h2>
+    <p class="sub">Ten words carry most charts. Name a type, or leave it out and plotagents infers it from the data. seaborn names work too.</p>
+  </div>
+  <div class="vocab">
+    <dl class="dict">${VOCAB.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
+    <div>
+      <p class="words">${typeWords.map((t, i) => `<span class="w"><a href="${FIRST_EX[t] ? `examples/#${FIRST_EX[t]}` : 'docs/charts.html'}">${t}</a>${i < typeWords.length - 1 ? '<span class="sep">/</span>' : ''}</span>`).join(' ')}</p>
+      <p class="words-note">Plus <code>barplot</code>, <code>histplot</code>, <code>violinplot</code>, <code>lmplot</code>… and plain words like <code>timeline</code>, <code>map</code> or <code>roadmap</code>. The full contract is one file: <a href="schema.json">schema.json</a>.</p>
+    </div>
   </div>
 </section>
 
-<section class="band">
-  <p class="kicker">Gallery</p>
-  <h2>${TYPES.length} chart types, seaborn’s included</h2>
-  <p class="sub">From bars and lines to multi-level treemaps, choropleth maps of Chile, the United States and the world, networks, chord diagrams and flow charts. seaborn names work too: <code>histplot</code>, <code>violinplot</code>, <code>lmplot</code>…</p>
-  <div class="thumbs">
-    ${thumbs.map((e) => `<a class="thumb" href="examples/#${e.id}"><span class="img">${pics(e, p)}</span><span class="t">${esc(e.name)}<small>type: '${esc(e.type)}'</small></span></a>`).join('\n    ')}
+<section class="sec" id="gallery">
+  <div class="sec-head">
+    <div class="num"><span>03 · What comes back</span><span><a class="tlink" href="examples/">All ${examples.length} examples →</a></span></div>
+    <h2>Drawn by the library, <em>not guessed</em> by the model.</h2>
+    <p class="sub">Every chart here came from a spec of a few lines. Sorting, labeling, color, spacing and the mobile layout were decided on this side.</p>
   </div>
-  <div class="types">
-    ${PURPOSES.map(([h, ts]) => `<div><h3>${esc(h)}</h3>${ts.map((t) => `<code>${t}</code>`).join('')}</div>`).join('\n    ')}
+  <div class="plates">
+    ${PLATES.map(([id, w]) => { const e = exById[id]; return `<a class="plate ${w}" href="examples/#${e.id}"><span class="img">${pics(e, p)}</span><span class="cap"><span>${esc(e.name)}</span><code>type: "${esc(e.type)}"</code></span></a>`; }).join('\n    ')}
   </div>
-  <p style="margin-top:24px"><a class="btn" href="examples/">See all ${examples.length} examples</a> <a class="btn ghost" href="docs/charts.html">Chart reference</a></p>
 </section>
 
-<section class="band">
-  <p class="kicker">Built for agents</p>
-  <h2>A tool an agent can call, and fix on its own</h2>
-  <div class="split">
-    <div class="prose">
-      <ul>
-        <li><strong><code>toolDefinition()</code></strong> turns the JSON Schema into a tool for Claude or OpenAI.</li>
-        <li><strong><code>safePlot(spec)</code></strong> never throws. It returns the SVG plus <code>errors</code>, <code>warnings</code> and <code>suggestions</code>, each with a <code>fix</code>, so the agent can correct the spec and call again.</li>
-        <li><strong><code>describe(spec)</code></strong> writes alt text, so the agent can check what it drew.</li>
-        <li><strong>A one-page guide</strong> for the system prompt: <a href="docs/agents.html">read it</a>, or fetch it as <a href="AGENTS.md">AGENTS.md</a> / <a href="llms.txt">llms.txt</a>.</li>
+<section class="sec" id="maps">
+  <div class="sec-head">
+    <div class="num"><span>04 · Maps</span><span>GeoJSON · TopoJSON · URL</span></div>
+    <h2>Bring your <em>own</em> geometry.</h2>
+    <p class="sub">Chile, the United States and the world come built in. Anything else is one field away: comunas, school districts, sales territories, a campus, a floor plan.</p>
+  </div>
+  <div class="geo">
+    <div>
+      <ul class="ticks">
+        <li><b>Any shape in <code>geo</code>.</b> A FeatureCollection, a Feature, a list of features, a TopoJSON, or a URL in the browser.</li>
+        <li><b>No key to configure.</b> The property that matches your rows (<code>NOM_COM</code>, <code>GEOID</code>, <code>ADMIN</code>) is found for you.</li>
+        <li><b>Layers on top.</b> <code>markers</code> by longitude and latitude, <code>layers</code> for rivers, routes or borders.</li>
+        <li><b>Your framing.</b> <code>fitTo</code> zooms to a few regions or a box; projections from Mercator to UTM metres.</li>
+        <li><b>Text values work.</b> A party or a language colors by category, with a legend.</li>
       </ul>
-      <p><a class="btn ghost" href="docs/api.html">API reference</a></p>
+      ${codeBlock(`plot({
+  type: 'choropleth',
+  geo: myGeoJSON,     // or TopoJSON, or a URL
+  data, key: 'country', value: 'language',
+  markers: { data: capitals, label: 'city' },
+  layers: [{ geo: tropic, dash: true }],
+  fitTo: ['Chile', 'Argentina'],  // optional
+})`)}
     </div>
-    ${codeBlock(agentCode)}
+    <figure class="pa" id="geo-chart">${inlineChart(languageSpec)}</figure>
+  </div>
+</section>
+
+<section class="sec" id="rules">
+  <div class="sec-head">
+    <div class="num"><span>05 · The craft</span><span>From Wilke’s <em>Fundamentals of Data Visualization</em> and newsroom practice</span></div>
+    <h2>Rules the model <em>can’t</em> break.</h2>
+    <p class="sub">Agents reach for dual axes, twelve-slice pies and titles that say nothing. Here, the good decision is the only one available.</p>
+  </div>
+  <div class="rules">
+    ${RULES.map(([h, t], i) => `<div class="rule"><div class="n">${String(i + 1).padStart(2, '0')}</div><h3>${esc(h)}</h3><p>${T(t)}</p></div>`).join('\n    ')}
+  </div>
+</section>
+
+<section class="sec" id="integrate">
+  <div class="sec-head">
+    <div class="num"><span>06 · Integrate</span><span>Anthropic · OpenAI · any runtime</span></div>
+    <h2>Hand it to <em>any</em> model.</h2>
+    <p class="sub">The protocol ships as a JSON Schema and a ready-made tool definition, plus a one-page guide for the system prompt.</p>
+  </div>
+  <div class="integ">
+    <ul class="ticks">
+      <li><b><code>toolDefinition()</code></b> turns the schema into a tool for Claude or OpenAI.</li>
+      <li><b><code>safePlot(spec)</code></b> returns the SVG or the errors, each with a <code>fix</code>.</li>
+      <li><b><code>describe(spec)</code></b> writes alt text the model can check.</li>
+      <li><b><a href="docs/agents.html">The guide for agents</a></b>, also as <a href="AGENTS.md">AGENTS.md</a> and <a href="llms.txt">llms.txt</a>.</li>
+      <li><b><code>render()</code></b> in the browser adds tooltips, sliders, drill-down and map zoom.</li>
+    </ul>
+    <div>
+      <div class="tabs" role="tablist" aria-label="Integration">${INTEG_TABS.map(([k, l], i) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${i === 0}">${l}</button>`).join('')}</div>
+      ${INTEG_TABS.map(([k], i) => `<div data-panel="${k}"${i ? ' hidden' : ''}>${codeBlock(integ[k], k === 'cli' ? 'sh' : k === 'browser' ? 'html' : 'js')}</div>`).join('\n      ')}
+    </div>
+  </div>
+</section>
+
+<section class="close">
+  <h2>Let your agent <em>show</em>, not just tell.</h2>
+  <div class="row">
+    <span class="install"><span class="pr">$</span> npm install plotagents <button class="copy" type="button" data-copy="npm install plotagents">Copy</button></span>
+    <a class="btn" href="docs/getting-started.html">Get started <span class="arr">→</span></a>
+    <a class="tlink" href="${REPO}" rel="noopener">Star on GitHub</a>
   </div>
 </section>
 </div>`;
-  const specs = { 'hero-chart': heroSpec, 'quick-chart': quickSpec };
+  const home = { xcs: xcs.map(({ id, call, resp, ask, spec }) => ({ id, call, resp, ask, spec })), fixed: fixedSpec, geo: languageSpec };
   write('index.html', layout({
     p, active: '', title: '',
-    description: pkg.description,
+    description: 'An open protocol for AI agents to speak in charts: the model sends one JSON spec, plotagents returns a finished, accessible SVG or the exact fix it needs.',
     body,
-    scripts: `${libScripts(p, false)}\n${jsonScript('pa-home', specs)}\n<script>(function(){var s=JSON.parse(document.getElementById('pa-home').textContent);Object.keys(s).forEach(function(id){site.mount(document.getElementById(id),s[id]);});})();</script>`,
+    scripts: `${libScripts(p, false)}\n${jsonScript('pa-home', home)}\n<script src="${p}assets/home.js"></script>`,
   }));
 }
 

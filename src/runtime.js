@@ -6,6 +6,7 @@ import { themeFor, FONT_CSS } from './theme.js';
 import { ensureData, fieldKind, uniq, num, PlotError } from './data.js';
 import { parseDate, formatDate } from './format.js';
 import { dateUnit } from './scale.js';
+import { isGeoUrl } from './geo/registry.js';
 
 let plotFn = null;
 let resolveFn = null;
@@ -51,9 +52,44 @@ function ensureAssets() {
  * Dibuja `spec` en un elemento (o selector) del navegador.
  * Devuelve { svg, spec, update(spec), destroy() }.
  */
+const geoCache = new Map();
+/** Descarga (una vez por URL) un GeoJSON o TopoJSON. */
+export function loadGeo(url) {
+  if (!geoCache.has(url)) geoCache.set(url, fetch(url).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); }));
+  return geoCache.get(url);
+}
+
+/**
+ * `geo` como URL ("/mapas/comunas.geojson", "https://…/x.topojson"): se
+ * descarga y luego se dibuja. Devuelve el mismo objeto que render(), con
+ * `ready` (una promesa) mientras llega el archivo.
+ */
+function renderRemote(host, spec, opts) {
+  let inner = null, pending = null, dead = false;
+  const handle = {
+    get svg() { return inner?.svg ?? null; },
+    get spec() { return inner?.spec ?? spec; },
+    update(s) { if (inner) return inner.update(s); pending = s; },
+    destroy() { dead = true; inner?.destroy(); },
+  };
+  host.setAttribute('aria-busy', 'true');
+  handle.ready = loadGeo(spec.geo).then((geo) => {
+    host.removeAttribute('aria-busy');
+    if (dead) return handle;
+    inner = render(host, { ...(pending || spec), geo }, opts);
+    return handle;
+  }, (e) => {
+    host.removeAttribute('aria-busy');
+    host.innerHTML = `<p style="font:13px system-ui;color:#C9531A">${String(e.message).replace(/</g, '&lt;')}</p>`;
+    throw e;
+  });
+  return handle;
+}
+
 export function render(target, spec, opts = {}) {
   const host = typeof target === 'string' ? document.querySelector(target) : target;
   if (!host) throw new PlotError('No encontré el elemento destino.', 'render("#grafico", spec) o render(elemento, spec)');
+  if (spec && typeof spec.geo === 'string' && typeof fetch !== 'undefined' && isGeoUrl(spec.geo)) return renderRemote(host, spec, opts);
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
   // Fuente propia (configure({ font }) o spec.font): se carga una sola vez.

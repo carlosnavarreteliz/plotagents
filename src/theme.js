@@ -185,11 +185,13 @@ export function ramp(stops, t) {
  */
 export function colorMap(keys, theme, overrides = {}) {
   const map = new Map();
+  // Los colores fijados por el usuario no se repiten en las demás entidades.
+  const taken = new Set(Object.values(overrides || {}).map((c) => String(c).toLowerCase()));
+  const free = theme.categorical.filter((c) => !taken.has(String(c).toLowerCase()));
   let i = 0;
   for (const k of keys) {
     if (overrides && overrides[k]) map.set(k, overrides[k]);
-    else map.set(k, i < theme.categorical.length ? theme.categorical[i] : theme.other);
-    if (!(overrides && overrides[k])) i++;
+    else map.set(k, i < free.length ? free[i++] : theme.other);
   }
   return map;
 }

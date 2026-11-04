@@ -64,6 +64,44 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `fill` | Single line: `false` removes the soft gradient. |
 | `xRange` | Visible range `[from, to]`; this is what the browser slider sets. |
 
+## Projects
+
+### `gantt` (`timeline`, `roadmap`, `schedule`, `cronograma`)
+
+One row per task: `task`, `start` and `end` (or `duration`). Dates like `"2026-03-02"` or `"2026-03"`, or plain numbers for weeks or sprints. Day dates are **inclusive**: a task from March 3 to March 5 lasts 3 days. A row without `end`, or with `end` equal to `start`, is a milestone, drawn as a diamond with its date.
+
+The time axis sits on top, like a calendar. With `group`, each phase opens with its name and a thin summary bar in its color, so no legend is needed. The filled part of each bar is the progress; the rest stays in a light tint of the same color. Dependencies are thin right-angle arrows behind the bars.
+
+```js
+plot({
+  type: 'gantt',
+  title: 'The project goes live on June 15; the ERP integration is the critical path',
+  data: [
+    { phase: 'Design', task: 'Data model', start: '2026-02-09', end: '2026-03-06', progress: 80 },
+    { phase: 'Build', task: 'ERP integration', start: '2026-03-16', end: '2026-04-30', progress: 10, after: 'Data model' },
+    { phase: 'Launch', task: 'Go-live', start: '2026-06-15' },
+  ],
+  task: 'task', start: 'start', end: 'end', group: 'phase', progress: 'progress', dependsOn: 'after',
+  today: '2026-03-12', locale: 'en',
+});
+```
+
+| Option | Meaning |
+|---|---|
+| `task`, `start`, `end` | Field names (detected when they are called `task`/`tarea`, `start`/`inicio`, `end`/`fin`). |
+| `duration` | Length instead of `end`: days on a date axis, units on a numeric one. |
+| `group` (`series`, `hue`) | Phase or team: one colored section per value. `groupHeaders: false` uses a color legend instead. |
+| `progress` | 0–1 or 0–100. Shown as the filled part, with the percentage inside the bar when it fits. |
+| `dependsOn` | Field with the predecessor's name, or several: `"A, B"`. |
+| `milestone` | Boolean field that forces milestones. |
+| `today` | A date (or `true`) for the "today" line, labeled on the axis. `refLines: [{ x, label }]` adds more. |
+| `dashed`, `dashedLabel` | Hatch tentative tasks: a field (`dashed: "tentative"`), names or phases. |
+| `highlight` | Emphasize a task or a whole phase. |
+| `sort` | `"start"` orders tasks by date (default: data order, grouped by phase). |
+| `rowHeight`, `xLabel`, `unit` | Row height in px; axis title and unit for numeric axes. |
+
+`lint` warns about tasks that end before they start and suggests a `today` line. The alt text names the span, the longest task, the milestones and the overall progress weighted by duration.
+
 ## Relationships
 
 ### `scatter` · `bubble`
@@ -157,21 +195,50 @@ Age groups (`age` or `y`), two sides (`sex`, `series` or `hue`) and a value. Bac
 
 ### `choropleth` (`map`) · `symbolmap` (`bubblemap`)
 
-Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world countries (`geo: "world"`) ship with the library; any GeoJSON FeatureCollection works too. `key` is the data field to match and `value` the measure. Matching is forgiving: names, codes and aliases, ignoring accents, case and "Región de" ("RM", "Biobio", "XIII", "Aisén", "ARG", "EE.UU.", "TX", "Nueva York", "48").
+Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world countries (`geo: "world"`) ship with the library, and **any geometry of your own** works too (see below). `key` is the data field to match and `value` the measure; a text `value` (a party, a language, a zone) colors by category with a legend of swatches. Matching is forgiving: names, codes and aliases, ignoring accents, case and "Región de" ("RM", "Biobio", "XIII", "Aisén", "ARG", "EE.UU.", "TX", "Nueva York", "48").
 
 **United States.** 50 states and DC in an Albers equal-area projection (`albersUsa`, the same composite as `d3.geoAlbersUsa`): Alaska (at 0.35×) and Hawaii sit in insets at the bottom left with a fine dashed frame; Puerto Rico gets its own inset only when the data includes it (`territories: true` forces it). Each state shows its postal code, plus the value when it fits; the small northeastern states (VT, NH, MA, RI, CT, NJ, DE, MD, DC) are labeled in a column on the right with leader lines. `values: false` keeps only the codes; `labels: false` removes them.
 
 | Option | Meaning |
 |---|---|
-| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, or a GeoJSON object. |
-| `featureKey` | Feature property to match (default: tries code, id, ISO-3, name and aliases). |
+| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, or (browser) a URL. |
+| `featureKey`, `nameKey` | Feature property to match, and the one with the display name (both detected when omitted). |
+| `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box or `"markers"`. |
+| `markers`, `layers` | Points by lon/lat on top; extra GeoJSON lines, polygons or points over or under the map. |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
 | `missing` | `"plain"` drops the hatch and the "No data" legend entry. |
 | `labels`, `bars` | Chile gets a north-to-south column with name, bar and value; `bars: false` hides the bars. World maps label the top N. |
-| `projection` | `"mercator"`, `"equalEarth"` or `"albersUsa"` (picked automatically). |
+| `projection` | `"mercator"`, `"equalEarth"`, `"albersUsa"`, `"equirectangular"`, `"conic"`, `"identity"`, `"planar"` or `{ type, parallels, rotate }` (picked automatically). |
+| `borderColor`, `borderWidth` | Region borders. |
 | `dashed`, `dashedLabel` | Hatch some regions (preliminary figures, disputed areas): names, codes or a data field. They keep their class color. |
 | `maxRadius` | `symbolmap`: largest circle radius. |
+
+#### Your own geometry: GeoJSON and TopoJSON
+
+`geo` takes whatever you have: a GeoJSON `FeatureCollection`, a single `Feature`, an array of features or a bare geometry, or a TopoJSON `Topology` (`geoObject` picks the object; default the first). Polygons are filled, lines are stroked and points become dots colored by value. In the browser, `render()` also accepts a URL and downloads it once: `geo: "/maps/comunas.topojson"`. In Node, read the file and pass the object.
+
+```js
+import { readFileSync } from 'node:fs';
+const comunas = JSON.parse(readFileSync('comunas-biobio.geojson', 'utf8'));
+plot({
+  type: 'choropleth',
+  geo: comunas,                       // properties: { CUT_COM: "08101", NOM_COM: "Concepción", … }
+  data: [{ comuna: 'Concepción', poverty: 7.1 }, { comuna: 'Coronel', poverty: 12.4 }],
+  key: 'comuna', value: 'poverty',   // NOM_COM is found automatically
+  markers: { data: hospitals, lon: 'lon', lat: 'lat', label: 'name', legend: 'Hospital' },
+  layers: [{ geo: rivers, label: 'Biobío river', stroke: '#5BA3E0', width: 2 }],
+  fitTo: ['Concepción', 'Talcahuano', 'Hualpén'],
+});
+```
+
+- **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
+- **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (pixel coordinates, y down, for hand-drawn or tile maps) or `"planar"` (y up).
+- **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `tall: false` turns off the side column for elongated shapes.
+- **Markers.** `markers: [{ lon, lat, label, value }]` or `{ data, lon, lat, label, size, color, legend, maxRadius }`: dots on top, area-proportional when there is a `size`, labels placed where they don't collide.
+- **Layers.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` overlays rivers, roads, routes, faults or district lines (or draws them under the regions with `below: true`). A `label` adds a legend key.
+- **Style.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (a named or custom sequential ramp), `palette` and `colors` (categories).
+- **Register once, use by name.** `registerGeo('biobio', comunas, ['comunas-biobio'])` and then `geo: 'biobio'` in every spec, which keeps tool calls short for an agent.
 
 In the browser (`render()` or `toHTML()`), maps are interactive: hovering outlines the shape; clicking a region zooms to fit it (click again, double-click, Esc or the reset button to go back); Ctrl/⌘ + scroll zooms around the pointer (plain scroll keeps scrolling the page, as `chartjs-plugin-zoom` recommends with its `modifierKey`); pinch zooms on touch screens; drag pans when zoomed; +/− buttons work from the keyboard. Each color class in the legend is a key: hover it to light up its regions, click to pin. With `time`, every region's color transitions into the next period's instead of jumping, and the zoom is kept while the slider plays.
 

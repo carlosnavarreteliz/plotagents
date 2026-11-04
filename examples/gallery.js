@@ -10,6 +10,8 @@ import { geoGallery } from './specs-geo.js';
 import { networkGallery } from './specs-network.js';
 import { flowGallery } from './specs-flow.js';
 import { dashedGallery } from './specs-dashed.js';
+import { ganttGallery } from './specs-gantt.js';
+import { customGeoGallery } from './specs-geo-custom.js';
 
 export { NOTES_EN, SECTIONS_EN };
 
@@ -19,7 +21,7 @@ const SECTION = {
   lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración',
   burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Redes y flujos', kpi: 'Flujos y números',
 };
-export const ORDER = ['Comparar', 'Tiempo', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Configuración'];
+export const ORDER = ['Comparar', 'Tiempo', 'Proyectos', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Configuración'];
 const drop = new Set(['treemap', 'dona', 'slider-rango']); // reemplazados por versiones nuevas
 const tag = (list, sec) => list.map((e) => ({ ...e, section: e.section || sec }));
 const all = [
@@ -29,6 +31,8 @@ const all = [
   ...statsGallery.map((e) => ({ ...e, section: ['regplot', 'residplot', 'jointplot'].includes(e.spec.type) ? 'Relaciones' : 'Distribuciones' })),
   ...catGallery.map((e) => ({ ...e, section: e.spec.type === 'radar' ? 'Relaciones' : 'Distribuciones' })),
   ...tag(geoGallery, 'Mapas'),
+  ...tag(customGeoGallery, 'Mapas'),
+  ...tag(ganttGallery, 'Proyectos'),
   ...tag(networkGallery, 'Redes y flujos'),
   ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
   ...dashedGallery,
