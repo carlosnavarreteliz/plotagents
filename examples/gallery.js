@@ -12,6 +12,7 @@ import { flowGallery } from './specs-flow.js';
 import { dashedGallery } from './specs-dashed.js';
 import { ganttGallery } from './specs-gantt.js';
 import { customGeoGallery } from './specs-geo-custom.js';
+import { wordsGallery } from './specs-words.js';
 
 export { NOTES_EN, SECTIONS_EN };
 
@@ -33,6 +34,7 @@ const all = [
   ...tag(geoGallery, 'Mapas'),
   ...tag(customGeoGallery, 'Mapas'),
   ...tag(ganttGallery, 'Proyectos'),
+  ...tag(wordsGallery, 'Flujos y números'),
   ...tag(networkGallery, 'Redes y flujos'),
   ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
   ...dashedGallery,

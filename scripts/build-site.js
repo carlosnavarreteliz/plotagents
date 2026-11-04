@@ -9,6 +9,8 @@ import { plot, lint, safePlot, resolve as resolveSpec, TYPES } from '../src/inde
 import { FONT_CSS } from '../src/theme.js';
 import { gallery, ORDER, nameOf, noteOf, sectionName, slug, snippet } from '../examples/gallery.js';
 import { markdown, highlight, esc } from '../site/md.js';
+import { planDashboard, dashboardMarkup, DASH_CSS } from '../src/dashboard.js';
+import { salesDashboard } from '../examples/dashboard.js';
 import { heroSpec, quickSpec, ganttSpec, trendSpec, exchanges, badSpec, fixedSpec, languageSpec } from '../site/home-specs.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -71,7 +73,7 @@ const ICON = {
 const THEME_BOOT = `<script>addEventListener('scroll',function(){document.documentElement.classList.toggle('scrolled',scrollY>8)},{passive:true});(function(){var d=document.documentElement,p='auto';try{p=localStorage.getItem('pa-theme')||'auto'}catch(e){}if(p==='light'||p==='dark')d.setAttribute('data-theme',p);d.setAttribute('data-pref',p)})()</script>`;
 
 function layout({ p, active = '', title, description, body, scripts = '', bodyClass = '' }) {
-  const nav = [['protocol', 'Protocol', 'docs/agents.html'], ['docs', 'Docs', 'docs/'], ['examples', 'Examples', 'examples/'], ['playground', 'Playground', 'playground/']];
+  const nav = [['protocol', 'Protocol', 'docs/agents.html'], ['docs', 'Docs', 'docs/'], ['examples', 'Examples', 'examples/'], ['dashboard', 'Dashboards', 'dashboard/'], ['playground', 'Playground', 'playground/']];
   const fullTitle = title ? `${title} · plotagents` : 'plotagents · the chart protocol for AI agents';
   return `<!doctype html>
 <html lang="en" data-pref="auto"><head>
@@ -126,6 +128,7 @@ const DOCS = [
   { slug: 'getting-started', file: 'docs/getting-started.md', label: 'Getting started', group: 'Guide' },
   { slug: 'charts', file: 'docs/charts.md', label: 'Chart reference', group: 'Guide' },
   { slug: 'themes', file: 'docs/themes.md', label: 'Themes and colors', group: 'Guide' },
+  { slug: 'dashboards', file: 'docs/dashboards.md', label: 'Dashboards', group: 'Guide' },
   { slug: 'api', file: 'docs/api.md', label: 'API reference', group: 'Reference' },
   { slug: 'agents', file: 'AGENTS.md', label: 'Guide for AI agents', group: 'Reference', title: 'Guide for AI agents' },
   { slug: 'rendering', file: 'docs/rendering.md', label: 'SVG and performance', group: 'Reference' },
@@ -163,7 +166,7 @@ function examplesFor(level, text) {
 const sidebar = (cur) => {
   const groups = [...new Set(DOCS.map((d) => d.group))];
   return `<aside class="side" aria-label="Documentation">${groups.map((g) => `<h4>${g}</h4><ul>${DOCS.filter((d) => d.group === g).map((d) => `<li><a href="${d.slug}.html"${d === cur ? ' aria-current="page"' : ''}>${esc(d.label)}</a></li>`).join('')}</ul>`).join('')}
-<h4>More</h4><ul><li><a href="../examples/">Examples</a></li><li><a href="../playground/">Playground</a></li><li><a href="../schema.json">schema.json</a></li></ul></aside>`;
+<h4>More</h4><ul><li><a href="../dashboard/">Live dashboard</a></li><li><a href="../examples/">Examples</a></li><li><a href="../playground/">Playground</a></li><li><a href="../schema.json">schema.json</a></li></ul></aside>`;
 };
 
 for (const [i, d] of DOCS.entries()) {
@@ -226,6 +229,30 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
     p, active: 'examples', title: 'Examples',
     description: `${examples.length} live chart examples with code: bars, lines, treemaps, maps, networks, seaborn-style distributions and more.`,
     body, scripts: `${libScripts(p)}\n${jsonScript('pa-specs', specs)}\n<script src="${p}assets/gallery.js"></script>`,
+  }));
+}
+
+// ── Dashboard en vivo ──────────────────────────────────────────────────────
+{
+  const p = '../';
+  const spec = salesDashboard('en');
+  const plan = planDashboard(spec);
+  const svgs = {};
+  for (const x of plan.panels) svgs[x.id] = plot({ ...x.spec, width: x.span >= 12 ? 1200 : x.span >= 8 ? 800 : x.span >= 6 ? 600 : 420 });
+  const body = `<div class="wrap dash-page">
+<section class="g-head">
+  <h1>A dashboard from <em>one spec.</em></h1>
+  <p>Four KPIs, four charts and two filters, laid out by <code>dashboard()</code>: numbers first, the trend full width, balanced rows, one color per region in every chart, one source line. Click a region or a channel: every chart and KPI follows. <a href="${p}docs/dashboards.html">How it decides →</a></p>
+</section>
+<div id="board">${dashboardMarkup(plan, svgs)}</div>
+<details class="dash-spec"><summary>Show spec</summary>${codeBlock(`dashboard(${JSON.stringify({ ...spec, data: '__DATA__' }, null, 2).replace(/"(\w+)":/g, '$1:').replace('"__DATA__"', `[ /* ${spec.data.length} rows: month, year, region, channel, sales, orders */ ]`)})`)}</details>
+</div>`;
+  write('dashboard/index.html', layout({
+    p, active: 'dashboard', title: 'Live dashboard',
+    description: 'A complete, interactive dashboard built from one spec with plotagents: KPIs, a trend, a map, bars and a treemap, with shared filters.',
+    bodyClass: 'is-dash',
+    body: `<style>${DASH_CSS}.dash-page .pa-dash{padding-inline:0;max-width:none;background:transparent}.dash-spec{margin:40px 0 0}.dash-spec summary{cursor:pointer;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--src)}.is-embed .topbar,.is-embed .foot,.is-embed .g-head,.is-embed .dash-spec{display:none}.is-embed .pa-dfilters{top:0}.pa-dfilters{top:var(--top)}.is-embed .pa-dfilters{top:0}</style>${body}`,
+    scripts: `${libScripts(p)}\n${jsonScript('pa-dash-spec', spec)}\n<script>(function(){if(/embed/.test(location.search))document.body.classList.add('is-embed');var spec=JSON.parse(document.getElementById('pa-dash-spec').textContent),el=document.getElementById('board');function go(){plotagents.renderDashboard(el,Object.assign({},spec,{theme:site.isDark()?'noche':'papel'}));}go();site.onTheme(go);})();</script>`,
   }));
 }
 
@@ -542,12 +569,40 @@ curl https://carlosnavarrete.cl/plotagents/llms.txt`,
       <li><b><code>safePlot(spec)</code></b> returns the SVG or the errors, each with a <code>fix</code>.</li>
       <li><b><code>describe(spec)</code></b> writes alt text the model can check.</li>
       <li><b><a href="docs/agents.html">The guide for agents</a></b>, also as <a href="AGENTS.md">AGENTS.md</a> and <a href="llms.txt">llms.txt</a>.</li>
-      <li><b><code>render()</code></b> in the browser adds tooltips, sliders, drill-down and map zoom.</li>
+      <li><b><code>render()</code></b> in the browser adds tooltips, drill-down, map zoom, and time controls when the spec asks for them.</li>
     </ul>
     <div>
       <div class="tabs" role="tablist" aria-label="Integration">${INTEG_TABS.map(([k, l], i) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${i === 0}">${l}</button>`).join('')}</div>
       ${INTEG_TABS.map(([k], i) => `<div data-panel="${k}"${i ? ' hidden' : ''}>${codeBlock(integ[k], k === 'cli' ? 'sh' : k === 'browser' ? 'html' : 'js')}</div>`).join('\n      ')}
     </div>
+  </div>
+</section>
+
+<section class="sec" id="dashboards">
+  <div class="sec-head">
+    <div class="num"><span>07 · Dashboards</span><span><a class="tlink" href="dashboard/">Open the live dashboard →</a></span></div>
+    <h2>Ask for a dashboard. <em>Get a good one.</em></h2>
+    <p class="sub">The same idea, one level up: the model lists KPIs, charts and filters; <code>dashboard()</code> lays them out the way an analyst would, and filters work across every panel.</p>
+  </div>
+  <div class="geo">
+    <div>
+      <ul class="ticks">
+        <li><b>Numbers first.</b> Up to five KPIs, computed from the data, with year-over-year change and a sparkline.</li>
+        <li><b>Z-pattern.</b> The trend goes full width; the rest fills balanced rows of a 12-column grid.</li>
+        <li><b>One color per entity</b> across every chart, one theme, one source line.</li>
+        <li><b>Filters as buttons</b> that move every chart and KPI at once.</li>
+        <li><b>One HTML file.</b> Works offline, prints, and turns into a PDF.</li>
+      </ul>
+      ${codeBlock(`dashboard({
+  title: 'How are southern sales doing?',
+  data: sales,
+  kpis: [{ label: 'Sales 2025', field: 'sales', agg: 'sum',
+           compare: { field: 'year', current: 2025, previous: 2024 } }],
+  charts: [trend, map, byChannel, treemap],
+  filters: ['region', 'channel'],
+})`)}
+    </div>
+    <div class="dash-frame"><iframe src="dashboard/?embed" title="Live dashboard built with plotagents" loading="lazy"></iframe></div>
   </div>
 </section>
 

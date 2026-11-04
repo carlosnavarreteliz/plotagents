@@ -21,6 +21,7 @@ export const heroSpec = {
   path: ['sector', 'product'],
   value: 'value',
   time: 'year',
+  slider: true,
   locale: 'en',
 };
 

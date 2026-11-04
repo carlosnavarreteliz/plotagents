@@ -20,7 +20,8 @@ export function lint(spec = {}) {
   const sug = (code, message, fix) => tips.push({ code, message, fix });
 
   let data = [];
-  try { data = spec.type === 'kpi' || spec.items ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
+  try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
   if (!TYPES.includes(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')}`);
   const fields = fieldsOf(data);
@@ -31,7 +32,7 @@ export function lint(spec = {}) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
     check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to');
-  } else if (type !== 'kpi' && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+  } else if (type !== 'kpi' && !rawWords && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (!/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -130,6 +131,11 @@ export function lint(spec = {}) {
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
 
+  if (type === 'wordcloud') {
+    if (!data.length && !spec.text) err('empty', 'La nube no tiene palabras.', 'Pasa filas { palabra, valor } o `text: "…"` con el texto a contar.');
+    if (data.length && data.length <= 12) sug('wordcloud-few', `Con ${data.length} palabras, una nube compara mal los tamaños.`, 'Para ordenar y comparar, usa `type: "bar"` con `top: 15`.');
+    if (!spec.subtitle) sug('wordcloud-measure', 'Una nube no dice qué mide el tamaño.', 'Escribe en `subtitle` qué se contó: "Menciones en 1.240 respuestas abiertas".');
+  }
   if (type === 'gantt' && data.length) {
     const sF = spec.start ?? fields.find((f) => /^(start|inicio|desde|begin|comienzo|from)/i.test(f));
     const eF = spec.end ?? fields.find((f) => /^(end|fin|hasta|finish|termino|término|due|vence|to)$/i.test(f));
@@ -192,6 +198,8 @@ const EN = {
   'gantt-backwards': (m) => [`${n0(m.message)} task(s) end before they start.`, 'Check whether `start` and `end` are swapped.'],
   'gantt-many': (m) => [`${n0(m.message)} tasks in one chart: the critical path is hard to find.`, 'Group by phase with `group`, roll up subtasks or use `facet` by team.'],
   'gantt-today': () => ['A "today" line shows at a glance what is late.', 'Add `today: "2026-03-12"` (or `today: true`).'],
+  'wordcloud-few': (m) => [`With ${n0(m.message)} words, a cloud compares sizes poorly.`, 'To rank and compare, use `type: "bar"` with `top: 15`.'],
+  'wordcloud-measure': () => ['A word cloud does not say what its sizes measure.', 'Say what was counted in `subtitle`: "Mentions in 1,240 open answers".'],
   items: () => ['A KPI needs `items`.', 'items: [{ label: "Sales", value: 1250, delta: 0.12, period: "vs 2025" }]'],
 };
 function toEnglish(it) {

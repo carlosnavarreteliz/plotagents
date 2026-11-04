@@ -43,6 +43,7 @@
         "pyramid",
         "flowchart",
         "gantt",
+        "wordcloud",
         "choropleth",
         "symbolmap",
         "barplot",
@@ -87,6 +88,14 @@
         "symbol",
         "bubblemap",
         "mapa-simbolos",
+        "words",
+        "word-cloud",
+        "wordclouds",
+        "tagcloud",
+        "tag-cloud",
+        "nube",
+        "nube-de-palabras",
+        "cloud",
         "timeline",
         "roadmap",
         "schedule",
@@ -257,6 +266,39 @@
           }
         }
       }
+    },
+    "text": {
+      "description": "wordcloud: field with the words, OR the raw text to count (a string or a list of strings, e.g. open survey answers). Raw text drops Spanish/English stopwords.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "textField": {
+      "type": "string",
+      "description": "wordcloud: field holding free text in each row; words are counted across rows."
+    },
+    "stopwords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "wordcloud: extra words to ignore when counting raw text."
+    },
+    "minFont": {
+      "type": "number",
+      "description": "wordcloud: smallest font size (default 11)."
+    },
+    "maxFont": {
+      "type": "number",
+      "description": "wordcloud: largest font size (default from the panel size)."
     },
     "task": {
       "type": "string",
@@ -558,18 +600,29 @@
     },
     "time": {
       "type": "string",
-      "description": "Time field (d3plus-style): shows one period at a time (the latest by default) and, in the browser, a slider with play. Not used by line/area, which get a range slider."
+      "description": "Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods."
     },
     "timeValue": {
       "description": "Period to show when `time` is set."
     },
     "slider": {
-      "type": "boolean",
-      "description": "Browser: false removes the time slider (the chart shows `timeValue` or the latest period)."
+      "description": "Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. \"buttons\" or \"slider\" force one.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "buttons",
+            "slider"
+          ]
+        }
+      ]
     },
     "play": {
       "type": "boolean",
-      "description": "Browser: false keeps the time slider but hides the play button."
+      "description": "Browser: false keeps the time controls but hides the play button."
     },
     "compare": {
       "description": "With `time`: period to compute changes against: \"previous\" (default), \"first\", a specific period, or false.",
@@ -600,7 +653,7 @@
     },
     "xRange": {
       "type": "array",
-      "description": "line/area: visible x range [from, to] (what the range slider sets)."
+      "description": "line/area: visible x range [from, to] (what the range slider sets with `slider: true`)."
     },
     "focus": {
       "description": "treemap/sunburst: path to drill into, e.g. [\"Mining\"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.",

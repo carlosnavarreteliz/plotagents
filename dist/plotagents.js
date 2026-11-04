@@ -23,6 +23,7 @@ const { chord } = __req("src/charts/chord.js");
 const { pyramid } = __req("src/charts/pyramid.js");
 const { flowchart } = __req("src/charts/flowchart.js");
 const { gantt } = __req("src/charts/gantt.js");
+const { wordcloud, countWords } = __req("src/charts/wordcloud.js");
 const { choropleth, symbolMap } = __req("src/charts/choropleth.js");
 const { registerGeo, getGeo, registeredGeo, toFeatureCollection } = __req("src/geo/registry.js");
 
@@ -36,9 +37,10 @@ const { facet } = __req("src/facet.js");
 const { parseDate } = __req("src/format.js");
 const { inferType, TYPES, ALIASES, normalizeType } = __req("src/infer.js");
 const { lint, _setProbe } = __req("src/lint.js");
-const { schema, toolDefinition } = __req("src/schema.js");
+const { schema, toolDefinition, dashboardSchema } = __req("src/schema.js");
 const { attach, attachSource } = __req("src/interact.js");
 const { render, _bind, loadGeo } = __req("src/runtime.js");
+const { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } = __req("src/dashboard.js");
 const { makeFormat, formatNumber, formatCompact } = __req("src/format.js");
 const { esc } = __req("src/svg.js");
 
@@ -74,6 +76,7 @@ const RENDERERS = {
   pyramid: (s, t) => pyramid(s, t),
   flowchart: (s, t) => flowchart(s, t),
   gantt: (s, t) => gantt(s, t),
+  wordcloud: (s, t) => wordcloud(s, t),
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
 };
@@ -92,7 +95,7 @@ function resolve(spec = {}) {
     for (const [k, v] of Object.entries(extra)) if (s[k] === undefined) s[k] = v;
   }
   if (!type) {
-    const data = s.items ? [] : ensureData(s);
+    const data = s.items || (!s.data && (typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
     type = inferType(s, data);
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
@@ -262,13 +265,16 @@ function bundleSource(file = 'plotagents.js') {
 }
 
 _bind(plot, resolve);
+_bindDashboard({ plot, resolve, lint, bundleSource });
 _setProbe((s) => plot(s));
 
 
 
 
 
-return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+
+
+return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "countWords": countWords, "dashboardSchema": dashboardSchema, "dashboard": dashboard, "renderDashboard": renderDashboard, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "safeDashboard": safeDashboard, "mountDashboard": mountDashboard, "packRows": packRows, "balancedRows": balancedRows, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/theme.js", function () {
 
@@ -6123,6 +6129,146 @@ function gantt(spec, theme) {
 
 return { "gantt": gantt };
 });
+__def("src/charts/wordcloud.js", function () {
+const { g, text, tip } = __req("src/svg.js");
+const { measure } = __req("src/text.js");
+const { makeFormat, formatNumber } = __req("src/format.js");
+const { colorMap, ramp } = __req("src/theme.js");
+const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
+
+const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+
+const STOP = new Set((
+  'a al algo algún alguna algunas alguno algunos ante antes aquel aquella aquellas aquellos aquí así aun aún bajo bien cada casi como cómo con contra cual cuál cuales cuando cuándo de del desde donde dónde dos el él ella ellas ellos en entre era eran es esa esas ese eso esos esta está están estar este esto estos fue fueron ha había han hasta hay la las le les lo los más me mi mis mismo mucho muy nada ni no nos nosotros nuestra nuestro o os otra otras otro otros para pero poco por porque qué que quien quién se sea ser si sí sin sobre son su sus también tan tanto te tiene tienen todo todos tu tus un una uno unos usted ustedes ya yo estoy estamos fue sido ser hacer hace cosa cosas solo sólo vez veces etc pues entonces luego'
+  + ' a about above after again all am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its itself just me more most my no nor not now of off on once only or other our ours out over own same she should so some such than that the their them then there these they this those through to too under until up very was we were what when where which while who whom why will with would you your yours also get got really much many one two'
+).split(/\s+/));
+
+/** Texto crudo → [{ text, value }] por frecuencia. */
+function countWords(input, { locale, minLength = 3, stopwords = [] } = {}) {
+  const extra = new Set([].concat(stopwords).map((w) => String(w).toLowerCase()));
+  const counts = new Map(), shown = new Map();
+  const docs = [].concat(input).filter((d) => typeof d === 'string');
+  for (const d of docs) for (const m of d.matchAll(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)) {
+    const raw = m[0].replace(/['’-]+$/, '');
+    const k = raw.toLowerCase();
+    if (k.length < minLength || STOP.has(k) || extra.has(k) || /^\d+$/.test(k)) continue;
+    counts.set(k, (counts.get(k) || 0) + 1);
+    const f = shown.get(k) || new Map();
+    f.set(raw, (f.get(raw) || 0) + 1);
+    shown.set(k, f);
+  }
+  return [...counts].map(([k, v]) => ({ text: [...shown.get(k)].sort((a, b) => b[1] - a[1])[0][0], value: v }));
+}
+
+function wordcloud(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
+  let words, groupF = null, valueF = 'value';
+  const isField = typeof spec.text === 'string' && Array.isArray(spec.data) && spec.data.length > 0 && fieldsOf(spec.data).includes(spec.text);
+  const rawText = !isField && (typeof spec.text === 'string' || (Array.isArray(spec.text) && spec.text.length > 0 && spec.text.every((t) => typeof t === 'string')));
+  if (rawText || (spec.textField && spec.data)) {
+    const docs = rawText ? spec.text : ensureData(spec).map((r) => r[spec.textField]);
+    words = countWords(docs, { locale, minLength: spec.minLength ?? 3, stopwords: spec.stopwords });
+    valueF = T(locale, 'menciones', 'mentions');
+  } else {
+    const data = ensureData(spec);
+    const fields = fieldsOf(data);
+    const textF = spec.text ?? spec.word ?? spec.label ?? spec.x ?? fields.find((f) => /^(word|palabra|term|término|termino|text|texto|tag|keyword)$/i.test(f)) ?? fields.find((f) => fieldKind(data, f) === 'category');
+    valueF = spec.value ?? spec.size ?? spec.y ?? fields.find((f) => f !== textF && fieldKind(data, f) === 'number');
+    groupF = spec.series ?? spec.hue ?? spec.group ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : null);
+    requireField(data, textF, 'text');
+    if (valueF) requireField(data, valueF, 'value');
+    if (groupF) requireField(data, groupF, 'series');
+    const acc = new Map();
+    for (const r of data) {
+      const t = String(r[textF] ?? '').trim();
+      if (!t) continue;
+      const v = valueF ? num(r[valueF]) : 1;
+      if (!Number.isFinite(v) || v <= 0) continue;
+      const e = acc.get(t) || { text: t, value: 0, group: groupF ? String(r[groupF]) : null };
+      e.value += v;
+      acc.set(t, e);
+    }
+    words = [...acc.values()];
+  }
+  if (!words.length) throw new PlotError(T(locale, 'La nube no tiene palabras.', 'The word cloud has no words.'), T(locale, 'Pasa filas { palabra, valor } o `text: "…"` con el texto a contar.', 'Pass rows { word, value } or `text: "…"` with the text to count.'));
+  words.sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+  const total = words.reduce((a, w) => a + w.value, 0);
+  const top = spec.top ?? 80;
+  const dropped = Math.max(0, words.length - top);
+  words = words.slice(0, top);
+
+  const groups = groupF ? [...new Set(words.map((w) => w.group))] : [];
+  const cmap = groups.length ? colorMap(groups, theme, spec.colors) : null;
+  const legend = groups.map((gname) => ({ label: gname, color: cmap.get(gname), shape: 'square' }));
+  const frame = createFrame(spec, theme, { height: 460 });
+  const area = frame.layout(legend);
+  const vmax = words[0].value, vmin = words[words.length - 1].value;
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map((s) => String(s).toLowerCase()));
+  const colorOf = (w, t) => {
+    if (cmap) return cmap.get(w.group);
+    if (spec.colors && spec.colors[w.text]) return spec.colors[w.text];
+    return ramp(theme.sequential, 0.5 + 0.5 * t);
+  };
+
+  const XS = ctx.textScale;
+  const minF = spec.minFont ?? 11;
+  const maxF0 = spec.maxFont ?? Math.max(26, Math.min(80, Math.sqrt(area.w * area.h) / 6.2));
+  const cx = area.x + area.w / 2, cy = area.y + area.h / 2;
+  const pad = 3;
+  const tryLayout = (k) => {
+    const maxF = Math.max(minF + 4, maxF0 * k);
+    const placed = [], miss = [];
+    const cell = 40, grid = new Map();
+    const keyOf = (i, j) => i * 100003 + j;
+    const cellsOf = (b) => { const out = []; for (let i = Math.floor(b[0] / cell); i <= Math.floor(b[2] / cell); i++) for (let j = Math.floor(b[1] / cell); j <= Math.floor(b[3] / cell); j++) out.push(keyOf(i, j)); return out; };
+    const hit = (b) => { for (const c of cellsOf(b)) for (const o of grid.get(c) || []) if (!(b[2] <= o[0] || b[0] >= o[2] || b[3] <= o[1] || b[1] >= o[3])) return true; return false; };
+    const add = (b) => { for (const c of cellsOf(b)) { if (!grid.has(c)) grid.set(c, []); grid.get(c).push(b); } };
+    const ratio = area.w / Math.max(1, area.h);
+    for (const [idx, w] of words.entries()) {
+      const t = vmax === vmin ? 0.6 : Math.sqrt((w.value - vmin) / (vmax - vmin));
+      const size = Math.max(minF, minF + (maxF - minF) * t);
+      const weight = t > 0.55 ? 600 : t > 0.2 ? 500 : 400;
+      const bw = measure(w.text, size, weight), bh = size * XS * 1.02;
+      if (bw > area.w || bh > area.h) { miss.push(w); continue; }
+      let ok = null;
+      for (let s = 0, r = 0; r < Math.hypot(area.w, area.h); s += 0.12) {
+        r = 1.6 * s;
+        const x = cx + r * Math.cos(s + idx * 0.7) * Math.sqrt(ratio), y = cy + r * Math.sin(s + idx * 0.7) / Math.sqrt(ratio);
+        const b = [x - bw / 2 - pad, y - bh / 2 - pad, x + bw / 2 + pad, y + bh / 2 + pad];
+        if (b[0] < area.x || b[2] > area.x + area.w || b[1] < area.y || b[3] > area.y + area.h) continue;
+        if (!hit(b)) { ok = { x, y, b }; break; }
+      }
+      if (!ok) { miss.push(w); continue; }
+      add(ok.b);
+      placed.push({ ...w, x: ok.x, y: ok.y, size, weight, t, bh });
+    }
+    return { placed, miss };
+  };
+  let L = tryLayout(1);
+  for (let k = 0.88, n = 0; n < 7 && L.miss.some((w) => words.indexOf(w) < Math.max(5, words.length / 4)); k *= 0.88, n++) L = tryLayout(k);
+  const fmt = makeFormat(spec.format, locale, words.map((w) => w.value));
+  const body = L.placed.map((w) => {
+    const color = colorOf(w, w.t);
+    const dim = hl && !hl.has(w.text.toLowerCase());
+    const share = total ? ` · ${formatNumber((100 * w.value) / total, (100 * w.value) / total < 10 ? 1 : 0, locale)}%` : '';
+    return text(w.x, w.y + w.bh * 0.3, w.text, {
+      class: 'pa-m', fill: dim ? theme.dim : hl ? theme.categorical[1] : color, fontSize: w.size, fontWeight: w.weight, textAnchor: 'middle',
+      letterSpacing: w.size > 30 ? '-0.02em' : null, 'data-color': color, 'data-tip': tip(w.text, `${fmt(w.value)} ${valueF ? humanize(valueF).toLowerCase() : ''}${share}`.trim(), w.group),
+    });
+  });
+  const head = words.slice(0, 5).map((w) => `${w.text} (${fmt(w.value)})`).join(', ');
+  let desc = en ? `Word cloud of ${L.placed.length} words, sized by ${valueF ? humanize(valueF).toLowerCase() : 'frequency'}. Most frequent: ${head}.` : `Nube de ${L.placed.length} palabras, con tamaño según ${valueF ? humanize(valueF).toLowerCase() : 'frecuencia'}. Más frecuentes: ${head}.`;
+  const lost = L.miss.length + dropped;
+  if (lost) desc += en ? ` ${lost} less frequent words are not shown.` : ` No se muestran ${lost} palabras menos frecuentes.`;
+  return frame.finish([g({ class: 'pa-words' }, body)], { desc, type: 'wordcloud' });
+}
+
+
+return { "countWords": countWords, "wordcloud": wordcloud };
+});
 __def("src/charts/choropleth.js", function () {
 const { el, g, text } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
@@ -7597,7 +7743,7 @@ return { "facet": facet };
 __def("src/infer.js", function () {
 const { fieldsOf, fieldKind } = __req("src/data.js");
 
-const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'choropleth', 'symbolmap'];
+const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap'];
 
 const ALIASES = {
   barplot: ['bar', { ci: true }], countplot: 'count', columns: 'column', lineplot: 'line', areaplot: 'area',
@@ -7608,6 +7754,7 @@ const ALIASES = {
   populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
   flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
+  words: 'wordcloud', 'word-cloud': 'wordcloud', wordclouds: 'wordcloud', tagcloud: 'wordcloud', 'tag-cloud': 'wordcloud', nube: 'wordcloud', 'nube-de-palabras': 'wordcloud', cloud: 'wordcloud',
   timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
@@ -7623,6 +7770,7 @@ function normalizeType(t) {
 function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
   if (spec.geo) return 'choropleth';
+  if ((typeof spec.text === 'string' && !(data[0] && spec.text in data[0])) || (Array.isArray(spec.text) && spec.text.length && typeof spec.text[0] === 'string') || spec.textField) return 'wordcloud';
   if (spec.start !== undefined && (spec.end !== undefined || spec.duration !== undefined) && typeof spec.start === 'string') return 'gantt';
   if (spec.nodes && spec.nodes.some?.((n) => n && n.type)) return 'flowchart';
   if (spec.nodes) return 'network';
@@ -7668,7 +7816,8 @@ function lint(spec = {}) {
   const sug = (code, message, fix) => tips.push({ code, message, fix });
 
   let data = [];
-  try { data = spec.type === 'kpi' || spec.items ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
+  try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
   if (!TYPES.includes(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')}`);
   const fields = fieldsOf(data);
@@ -7679,7 +7828,7 @@ function lint(spec = {}) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
     check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to');
-  } else if (type !== 'kpi' && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+  } else if (type !== 'kpi' && !rawWords && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (!/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -7775,6 +7924,11 @@ function lint(spec = {}) {
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
 
+  if (type === 'wordcloud') {
+    if (!data.length && !spec.text) err('empty', 'La nube no tiene palabras.', 'Pasa filas { palabra, valor } o `text: "…"` con el texto a contar.');
+    if (data.length && data.length <= 12) sug('wordcloud-few', `Con ${data.length} palabras, una nube compara mal los tamaños.`, 'Para ordenar y comparar, usa `type: "bar"` con `top: 15`.');
+    if (!spec.subtitle) sug('wordcloud-measure', 'Una nube no dice qué mide el tamaño.', 'Escribe en `subtitle` qué se contó: "Menciones en 1.240 respuestas abiertas".');
+  }
   if (type === 'gantt' && data.length) {
     const sF = spec.start ?? fields.find((f) => /^(start|inicio|desde|begin|comienzo|from)/i.test(f));
     const eF = spec.end ?? fields.find((f) => /^(end|fin|hasta|finish|termino|término|due|vence|to)$/i.test(f));
@@ -7834,6 +7988,8 @@ const EN = {
   'gantt-backwards': (m) => [`${n0(m.message)} task(s) end before they start.`, 'Check whether `start` and `end` are swapped.'],
   'gantt-many': (m) => [`${n0(m.message)} tasks in one chart: the critical path is hard to find.`, 'Group by phase with `group`, roll up subtasks or use `facet` by team.'],
   'gantt-today': () => ['A "today" line shows at a glance what is late.', 'Add `today: "2026-03-12"` (or `today: true`).'],
+  'wordcloud-few': (m) => [`With ${n0(m.message)} words, a cloud compares sizes poorly.`, 'To rank and compare, use `type: "bar"` with `top: 15`.'],
+  'wordcloud-measure': () => ['A word cloud does not say what its sizes measure.', 'Say what was counted in `subtitle`: "Mentions in 1,240 open answers".'],
   items: () => ['A KPI needs `items`.', 'items: [{ label: "Sales", value: 1250, delta: 0.12, period: "vs 2025" }]'],
 };
 function toEnglish(it) {
@@ -7910,6 +8066,12 @@ const schema = {
       },
     },
 
+    text: { description: 'wordcloud: field with the words, OR the raw text to count (a string or a list of strings, e.g. open survey answers). Raw text drops Spanish/English stopwords.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    textField: field('wordcloud: field holding free text in each row; words are counted across rows.'),
+    stopwords: { type: 'array', items: { type: 'string' }, description: 'wordcloud: extra words to ignore when counting raw text.' },
+    minFont: { type: 'number', description: 'wordcloud: smallest font size (default 11).' },
+    maxFont: { type: 'number', description: 'wordcloud: largest font size (default from the panel size).' },
+
     task: field('gantt: task name field (one row per task).'),
     start: field('gantt: start date field ("2026-03-02", "2026-03") or a number (e.g. week).'),
     end: field('gantt: end date field. Day dates are inclusive. Missing end, or end equal to start, makes a milestone.'),
@@ -7952,14 +8114,14 @@ const schema = {
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
     sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
-    time: field('Time field (d3plus-style): shows one period at a time (the latest by default) and, in the browser, a slider with play. Not used by line/area, which get a range slider.'),
+    time: field('Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods.'),
     timeValue: { description: 'Period to show when `time` is set.' },
-    slider: { type: 'boolean', description: 'Browser: false removes the time slider (the chart shows `timeValue` or the latest period).' },
-    play: { type: 'boolean', description: 'Browser: false keeps the time slider but hides the play button.' },
+    slider: { description: 'Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. "buttons" or "slider" force one.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['buttons', 'slider'] }] },
+    play: { type: 'boolean', description: 'Browser: false keeps the time controls but hides the play button.' },
     compare: { description: 'With `time`: period to compute changes against: "previous" (default), "first", a specific period, or false.', anyOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }] },
     colorBy: { type: 'string', enum: ['group', 'change', 'label'], description: 'treemap: "change" colors tiles by % change vs the comparison period (diverging, growth cool / decline warm); "label" colors a single-level treemap by item.' },
     shade: { type: 'boolean', description: 'treemap/sunburst: subtle lightness steps inside each category (default false: one solid color per category).' },
-    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets).' },
+    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets with `slider: true`).' },
     focus: { description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
     depth: { type: 'integer', description: 'treemap/sunburst: how many levels to show.' },
 
@@ -8031,16 +8193,56 @@ const schema = {
   },
 };
 
+/** JSON Schema of a dashboard: dashboard({ title, kpis, charts, filters, … }). */
+const dashboardSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'plotagents dashboard',
+  description: 'A dashboard with best-practice defaults: KPIs on top, the main chart wide, the rest in balanced full rows of a 12-column grid, one color per entity across charts, shared filters, one source line.',
+  type: 'object',
+  required: ['charts'],
+  properties: {
+    title: { type: 'string', description: 'The question the dashboard answers, e.g. "How are southern sales doing?"' },
+    subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
+    source: { type: 'string', description: 'Data source, shown once at the bottom.' },
+    updated: { type: 'string', description: 'Last update, e.g. "2026-01-05".' },
+    locale: { type: 'string', enum: ['es', 'en'] },
+    theme: { description: 'One theme for every chart: "papel" (light) or "noche" (dark), or a theme object.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    data: { type: 'array', items: { type: 'object' }, description: 'Shared rows: charts without their own `data` use these, and computed KPIs and filters work on them.' },
+    kpis: {
+      type: 'array', description: 'Up to 5 key figures. Fixed ({ label, value, delta, period }) or computed from `data` ({ label, field, agg, compare, trendBy }).',
+      items: { type: 'object', properties: {
+        label: { type: 'string' }, value: { type: 'number' }, delta: { type: 'number', description: 'Change as a fraction (0.12 = +12%).' }, period: { type: 'string' },
+        field: { type: 'string' }, agg: { type: 'string', enum: ['sum', 'mean', 'median', 'min', 'max', 'count', 'distinct', 'ratio'] }, over: { type: 'string', description: 'agg "ratio": denominator field.' },
+        scale: { type: 'number', description: 'Multiply the computed value (e.g. 1000 to show thousands).' },
+        compare: { type: 'object', description: 'Current vs previous period: { field: "year", current: 2025, previous: 2024 }.', properties: { field: { type: 'string' }, current: {}, previous: {} } },
+        trendBy: { type: 'string', description: 'Field to draw a sparkline by (e.g. "month").' },
+        format: {}, good: { type: 'string', enum: ['up', 'down'] }, trend: { type: 'array', items: { type: 'number' } },
+      } },
+    },
+    charts: { type: 'array', items: { type: 'object' }, description: 'Chart specs (same as plot()). Optional per chart: `primary: true` (the main, wide chart), `size: "full" | "large" | "medium" | "small"` or `span` (of 12).' },
+    filters: { type: 'array', description: 'Fields to filter every chart and computed KPI by: "region" or { field, label, control: "buttons" | "select", value }.', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } },
+    layout: { type: 'string', enum: ['auto', 'executive', 'grid'], description: 'auto (default): balanced rows by chart type. executive: main chart full width, the rest in pairs. grid: equal panels.' },
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities across every chart.' },
+  },
+};
+
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
-function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
+function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = {}) {
+  if (kind === 'dashboard') {
+    const description = 'Builds a self-contained, interactive HTML dashboard with best-practice defaults: up to 5 KPIs on top (fixed or computed from data, with year-over-year change), the main chart wide, the rest in balanced rows, the same color for the same entity in every chart, and filters as buttons. Each chart is a plotagents spec with a `title` that states its finding.';
+    const { $schema: _s, title: _t, ...params } = dashboardSchema;
+    const n = name ?? 'dashboard';
+    return flavor === 'openai' ? { type: 'function', function: { name: n, description, parameters: params } } : { name: n, description, input_schema: params };
+  }
+  name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
 }
 
-return { "toolDefinition": toolDefinition, "schema": schema };
+return { "toolDefinition": toolDefinition, "schema": schema, "dashboardSchema": dashboardSchema };
 });
 __def("src/interact.js", function () {
 
@@ -8413,21 +8615,30 @@ function ensureAssets() {
   const st = document.createElement('style');
   st.id = 'pa-runtime-css';
   st.textContent = `
-.pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:4px 0 2px;font-size:12px;color:var(--pa-muted);user-select:none}
-.pa-play{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:var(--pa-accent);color:var(--pa-surface);cursor:pointer;display:grid;place-items:center;padding:0}
-.pa-play:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
+.pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 0 4px;font-size:12.5px;color:var(--pa-muted);user-select:none;font-variant-numeric:tabular-nums}
+.pa-play{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--pa-line);background:transparent;color:var(--pa-ink);cursor:pointer;display:grid;place-items:center;padding:0 0 0 1px;transition:border-color .15s}
+.pa-play[aria-pressed=true]{padding:0}
+.pa-play:hover{border-color:var(--pa-ink)}
+.pa-play:focus-visible,.pa-seg button:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
 .pa-play svg{display:block}
-.pa-track{position:relative;flex:1 1 220px;min-width:0;height:40px}
-.pa-track svg.pa-ov{position:absolute;left:0;top:0;width:100%;height:28px;overflow:visible}
-.pa-track input[type=range]{position:absolute;left:0;width:100%;top:6px;margin:0;height:22px;background:transparent;-webkit-appearance:none;appearance:none;pointer-events:none}
-.pa-track input[type=range]::-webkit-slider-runnable-track{background:transparent;height:22px}
-.pa-track input[type=range]::-moz-range-track{background:transparent;height:22px}
-.pa-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:16px;height:16px;margin-top:3px;border-radius:50%;background:var(--pa-accent);border:2px solid var(--pa-surface);box-shadow:0 1px 4px rgba(11,15,43,.3);cursor:grab}
-.pa-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:12px;height:12px;border-radius:50%;background:var(--pa-accent);border:2px solid var(--pa-surface);box-shadow:0 1px 4px rgba(11,15,43,.3);cursor:grab}
-.pa-track input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--pa-accent);outline-offset:2px}
-.pa-ticks{position:absolute;left:0;right:0;top:28px;height:12px;font-size:10.5px;color:var(--pa-muted)}
-.pa-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-.pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:13px;min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
+.pa-seg{display:flex;flex-wrap:wrap;gap:2px 4px}
+.pa-seg button{font:inherit;font-size:12.5px;color:var(--pa-muted);background:none;border:0;border-radius:0;padding:5px 6px;cursor:pointer;box-shadow:inset 0 -1px 0 transparent;transition:color .15s}
+.pa-seg button:hover{color:var(--pa-ink)}
+.pa-seg button[aria-checked=true]{color:var(--pa-ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--pa-accent)}
+.pa-track{position:relative;flex:1 1 200px;min-width:0;height:34px}
+.pa-track input[type=range]{position:absolute;left:0;width:100%;top:4px;margin:0;height:16px;-webkit-appearance:none;appearance:none;background:linear-gradient(to right,var(--pa-ink) var(--pa-p,100%),var(--pa-line) var(--pa-p,100%)) center/100% 2px no-repeat;cursor:pointer}
+.pa-dual input[type=range]{background:none;pointer-events:none}
+.pa-dual::before,.pa-dual::after{content:'';position:absolute;top:11px;height:2px;border-radius:1px}
+.pa-dual::before{left:0;right:0;background:var(--pa-line)}
+.pa-dual::after{left:var(--pa-a,0%);right:calc(100% - var(--pa-b,100%));background:var(--pa-ink)}
+.pa-track input[type=range]::-webkit-slider-runnable-track{background:transparent;height:16px}
+.pa-track input[type=range]::-moz-range-track{background:transparent;height:16px}
+.pa-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:12px;height:12px;margin-top:2px;border-radius:50%;background:var(--pa-ink);border:2px solid var(--pa-surface);box-shadow:0 0 0 1px var(--pa-ink);cursor:grab;position:relative;z-index:1}
+.pa-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:10px;height:10px;border-radius:50%;background:var(--pa-ink);border:2px solid var(--pa-surface);box-shadow:0 0 0 1px var(--pa-ink);cursor:grab}
+.pa-track input[type=range]:focus-visible{outline:none}
+.pa-track input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--pa-ink),0 0 0 4px color-mix(in srgb,var(--pa-accent) 35%,transparent)}
+.pa-ends{position:absolute;left:0;right:0;top:22px;display:flex;justify-content:space-between;font-size:10.5px;color:var(--pa-muted);pointer-events:none}
+.pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:12.5px;min-width:4ch;text-align:right}
 .pa-chart [data-drill],.pa-chart [data-node]{cursor:pointer}
 .pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
 @media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
@@ -8550,48 +8761,70 @@ function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};--pa-line:${theme.axis};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
-  if (opts.controls !== false && state.slider !== false) {
-    if (state.time && !SNAP_EXCLUDE.has(state.type) && state.x !== state.time) buildPeriod();
+  const want = controlMode(state, opts);
+  if (want) {
+    if (state.time && !SNAP_EXCLUDE.has(state.type) && state.x !== state.time) buildPeriod(want);
     else if (RANGE_TYPES.has(state.type)) buildRange();
   }
 
-  function buildPeriod() {
+  function buildPeriod(mode) {
     const vals = timeValuesOf(state);
     if (vals.length < 2) return;
     let i = vals.findIndex((v) => String(v) === String(state.timeValue ?? vals[vals.length - 1]));
     if (i < 0) i = vals.length - 1;
     ctl.hidden = false;
-    const play = button();
-    const track = document.createElement('div'); track.className = 'pa-track';
-    const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
-    ov.appendChild(svgEl('rect', { x: 0, y: 13, width: 100, height: 3, rx: 1.5, fill: theme.tint2 || theme.tint }));
-    const fill = svgEl('rect', { x: 0, y: 13, height: 3, rx: 1.5, fill: theme.categorical[0] });
-    ov.appendChild(fill);
-    track.appendChild(ov);
-    const input = range(0, vals.length - 1, i, 'Periodo');
-    track.appendChild(input);
-    const now = document.createElement('span'); now.className = 'pa-now';
-    if (state.play === false) ctl.append(track, now); else ctl.append(play, track, now);
-    track.appendChild(ticks(vals.map(String), (k) => k / (vals.length - 1), null, track));
+    const labels = vals.map(String);
+    const buttons = mode === 'buttons' || (mode === 'auto' && vals.length <= 8 && labels.join('').length <= 64);
+    const play = state.play === false ? null : button();
+    if (play) ctl.append(play);
+    let setUI;
+    if (buttons) {
+      const group = document.createElement('div');
+      group.className = 'pa-seg'; group.setAttribute('role', 'radiogroup'); group.setAttribute('aria-label', String(state.time));
+      const btns = labels.map((l, k) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = l; b.setAttribute('role', 'radio');
+        b.addEventListener('click', () => { stop(); set(k); });
+        b.addEventListener('keydown', (e) => {
+          const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+          if (!d) return;
+          e.preventDefault(); stop();
+          const k2 = Math.max(0, Math.min(vals.length - 1, i + d)); set(k2); btns[k2].focus();
+        });
+        group.appendChild(b);
+        return b;
+      });
+      ctl.append(group);
+      setUI = (k) => btns.forEach((b, j) => { b.setAttribute('aria-checked', j === k ? 'true' : 'false'); b.tabIndex = j === k ? 0 : -1; });
+    } else {
+      const track = document.createElement('div'); track.className = 'pa-track';
+      const input = range(0, vals.length - 1, i, String(state.time));
+      input.style.setProperty('--pa-p', '100%');
+      const ends = document.createElement('div'); ends.className = 'pa-ends';
+      ends.innerHTML = '<span></span><span></span>';
+      ends.children[0].textContent = labels[0]; ends.children[1].textContent = labels[labels.length - 1];
+      track.append(input, ends);
+      const now = document.createElement('span'); now.className = 'pa-now';
+      ctl.append(track, now);
+      input.addEventListener('input', () => { stop(); set(+input.value); });
+      setUI = (k) => { input.value = k; input.style.setProperty('--pa-p', (100 * k) / (vals.length - 1) + '%'); now.textContent = labels[k]; };
+    }
     const set = (k) => {
-      i = k; input.value = k;
-      fill.setAttribute('width', (100 * k) / (vals.length - 1));
-      now.textContent = String(vals[k]);
+      i = k; setUI(k);
       state = { ...state, timeValue: vals[k] };
       schedule();
     };
-    input.addEventListener('input', () => { stop(); set(+input.value); });
-    play.addEventListener('click', () => {
+    if (play) play.addEventListener('click', () => {
       if (timer) return stop();
       if (i >= vals.length - 1) set(0);
       setIcon(play, 'pause');
-      timer = setInterval(() => { if (i >= vals.length - 1) return stop(); set(i + 1); }, state.playInterval ?? 1000);
+      timer = setInterval(() => { if (i >= vals.length - 1) return stop(); set(i + 1); }, state.playInterval ?? 1200);
     });
-    function stop() { clearInterval(timer); timer = null; setIcon(play, 'play'); }
-    set(i);
+    function stop() { clearInterval(timer); timer = null; if (play) setIcon(play, 'play'); }
+    setUI(i);
   }
 
   function buildRange() {
@@ -8603,70 +8836,34 @@ function render(target, spec, opts = {}) {
     const raw = uniq(data.map((r) => r[xf]));
     const val = (v) => (kind === 'date' ? parseDate(v) : num(v));
     const xs = raw.map((v) => ({ v, t: val(v) })).filter((p) => Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
-    if (xs.length < (state.sliderMin ?? 6)) return;
+    if (xs.length < 3) return;
     ctl.hidden = false;
-    const ys = Array.isArray(state.y) ? state.y : [state.y];
-    const tot = new Map(xs.map((p) => [p.t, 0]));
-    for (const r of data) { const t = val(r[xf]); if (tot.has(t)) tot.set(t, tot.get(t) + ys.reduce((a, f) => a + (Number.isFinite(num(r[f])) ? num(r[f]) : 0), 0)); }
-    const tv = xs.map((p) => tot.get(p.t));
-    const mn = Math.min(...tv), mx = Math.max(...tv);
-    const t0 = xs[0].t, t1 = xs[xs.length - 1].t;
-    const px = (t) => (100 * (t - t0)) / (t1 - t0 || 1);
-    const py = (v) => 26 - (22 * (v - mn)) / (mx - mn || 1);
-    const track = document.createElement('div'); track.className = 'pa-track';
-    const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
-    const d = xs.map((p, k) => `${k ? 'L' : 'M'}${px(p.t).toFixed(2)},${py(tv[k]).toFixed(2)}`).join('');
-    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.12 }));
-    ov.appendChild(svgEl('path', { d, fill: 'none', stroke: theme.muted, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
-    const sel = svgEl('rect', { y: 0, height: 28, rx: 3, fill: theme.categorical[0], 'fill-opacity': 0.08 });
-    ov.appendChild(sel);
-    track.appendChild(ov);
     const fmtX = (p) => (kind === 'date' ? formatDate(p.t, dateUnit(xs.map((q) => q.t)), state.locale || 'es') : String(p.v));
     let lo = 0, hi = xs.length - 1;
     if (state.xRange) {
       const a = xs.findIndex((p) => p.t >= val(state.xRange[0])), b = xs.map((p) => p.t <= val(state.xRange[1])).lastIndexOf(true);
       if (a >= 0) lo = a; if (b >= 0) hi = b;
     }
+    const track = document.createElement('div'); track.className = 'pa-track pa-dual';
     const a = range(0, xs.length - 1, lo, 'Desde'), b = range(0, xs.length - 1, hi, 'Hasta');
-    const yearOf = (p) => new Date(p.t).getUTCFullYear();
-    const tickLabels = kind === 'date' ? xs.map((p) => String(yearOf(p))) : xs.map(fmtX);
-    const keep = kind === 'date' ? (k) => k === 0 || yearOf(xs[k]) !== yearOf(xs[k - 1]) : null;
-    track.append(a, b);
+    const ends = document.createElement('div'); ends.className = 'pa-ends';
+    ends.innerHTML = '<span></span><span></span>';
+    ends.children[0].textContent = fmtX(xs[0]); ends.children[1].textContent = fmtX(xs[xs.length - 1]);
+    track.append(a, b, ends);
     const now = document.createElement('span'); now.className = 'pa-now';
-    now.textContent = `${fmtX(xs[0])} – ${fmtX(xs[xs.length - 1])}`;
     ctl.append(track, now);
-    track.appendChild(ticks(tickLabels, (k) => px(xs[k].t) / 100, keep, track));
+    const n = xs.length - 1;
     const set = () => {
       let i0 = +a.value, i1 = +b.value;
-      if (i1 - i0 < 1) { if (document.activeElement === a) a.value = i0 = Math.max(0, i1 - 1); else b.value = i1 = Math.min(xs.length - 1, i0 + 1); }
-      sel.setAttribute('x', px(xs[i0].t)); sel.setAttribute('width', Math.max(0.5, px(xs[i1].t) - px(xs[i0].t)));
+      if (i1 - i0 < 1) { if (document.activeElement === a) a.value = i0 = Math.max(0, i1 - 1); else b.value = i1 = Math.min(n, i0 + 1); }
+      track.style.setProperty('--pa-a', (100 * i0) / n + '%');
+      track.style.setProperty('--pa-b', (100 * i1) / n + '%');
       now.textContent = `${fmtX(xs[i0])} – ${fmtX(xs[i1])}`;
-      state = { ...state, xRange: i0 === 0 && i1 === xs.length - 1 ? undefined : [xs[i0].v, xs[i1].v] };
+      state = { ...state, xRange: i0 === 0 && i1 === n ? undefined : [xs[i0].v, xs[i1].v] };
       schedule();
     };
     a.addEventListener('input', set); b.addEventListener('input', set);
     set();
-  }
-
-  function ticks(labels, pos, keep, trackEl) {
-    const box = document.createElement('div'); box.className = 'pa-ticks';
-    const n = labels.length;
-    const trackW = Math.max(120, (trackEl && trackEl.clientWidth) || (host.clientWidth || 600) - 180);
-    const lw = Math.max(...labels.map((l) => String(l).length)) * 6.2 + 14;
-    const every = Math.max(1, Math.ceil((n * lw) / trackW));
-    let lastPx = -Infinity;
-    labels.forEach((l, k) => {
-      if (keep ? !keep(k) : k % every && k !== n - 1) return;
-      const px = pos(k) * trackW;
-      if (px - lastPx < lw && k !== n - 1) return;
-      if (k === n - 1 && px - lastPx < lw) return;
-      lastPx = px;
-      const s = document.createElement('span'); s.textContent = l; s.style.left = (pos(k) * 100).toFixed(2) + '%';
-      if (k === 0) s.style.transform = 'none';
-      if (k === n - 1) s.style.transform = 'translateX(-100%)';
-      box.appendChild(s);
-    });
-    return box;
   }
 
   host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
@@ -8683,6 +8880,21 @@ function render(target, spec, opts = {}) {
     update(next) { clearInterval(timer); ro && ro.disconnect(); return render(host, next, opts); },
     destroy() { clearInterval(timer); ro && ro.disconnect(); host.innerHTML = ''; },
   };
+}
+
+/**
+ * ¿Qué control de tiempo dibujar? Ninguno por defecto: el gráfico muestra el
+ * último periodo (o `timeValue`). `slider: true` (o `controls: true`) elige
+ * botones o slider según cuántos periodos haya; "buttons" y "slider" fuerzan
+ * uno. `render(el, spec, { controls: false })` los apaga siempre.
+ */
+function controlMode(s, opts = {}) {
+  if (opts.controls === false) return null;
+  const v = s.slider ?? s.controls ?? opts.controls;
+  if (v === true || v === 'auto') return 'auto';
+  if (v === 'buttons' || v === 'button' || v === 'botones') return 'buttons';
+  if (v === 'slider' || v === 'range') return 'slider';
+  return null;
 }
 
 function timeValuesOf(s) {
@@ -8711,12 +8923,415 @@ function button() {
 }
 function setIcon(b, kind) {
   b.setAttribute('aria-label', kind === 'play' ? 'Reproducir' : 'Pausar');
+  b.setAttribute('aria-pressed', kind === 'play' ? 'false' : 'true');
   b.innerHTML = kind === 'play'
-    ? '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z" fill="currentColor"/></svg>'
-    : '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/><rect x="7" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/></svg>';
+    ? '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.6 1.4v7.2L8.6 5z" fill="currentColor" stroke="currentColor" stroke-width=".8" stroke-linejoin="round"/></svg>'
+    : '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.6v6.8M7 1.6v6.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 }
 
-return { "_bind": _bind, "loadGeo": loadGeo, "render": render };
+return { "_bind": _bind, "loadGeo": loadGeo, "render": render, "controlMode": controlMode };
+});
+__def("src/dashboard.js", function () {
+const { themeFor, colorMap } = __req("src/theme.js");
+const { ensureData, num, uniq, fieldKind, aggregate, PlotError } = __req("src/data.js");
+const { makeFormat, formatNumber, parseDate } = __req("src/format.js");
+const { esc } = __req("src/svg.js");
+const { render } = __req("src/runtime.js");
+
+let core = null;
+/** index.js registra plot/resolve/lint aquí (evita una importación circular). */
+function _bindDashboard(fns) { core = fns; }
+
+const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+
+const WIDE = new Set(['line', 'area', 'gantt', 'heatmap', 'sankey', 'flowchart', 'network', 'jointplot']);
+const NARROW = new Set(['donut', 'pie', 'radar', 'kpi', 'hist', 'kde', 'ecdf', 'count']);
+const AUTO_HEIGHT = new Set(['kpi', 'gantt', 'flowchart']);
+
+function spanFor(s) {
+  if (s.size === 'full' || s.span === 12) return 12;
+  if (Number.isFinite(+s.span)) return Math.max(3, Math.min(12, Math.round(+s.span)));
+  if (s.size === 'large') return 8;
+  if (s.size === 'medium') return 6;
+  if (s.size === 'small') return 4;
+  if (s.facet) return 12;
+  if (s.type === 'flowchart' || s.type === 'sankey') return 12;
+  if (WIDE.has(s.type)) return 8;
+  if (s.type === 'choropleth' || s.type === 'symbolmap') return s.geo === 'chile' || s.geo === undefined ? 4 : 6;
+  if (NARROW.has(s.type)) return 4;
+  if (s.type === 'bar') {
+    try {
+      const d = ensureData(s);
+      const n = s.x && d.length ? uniq(d.map((r) => String(r[s.x]))).length : d.length;
+      return n <= 6 && !s.series ? 4 : 6;
+    } catch { return 6; }
+  }
+  return 6;
+}
+
+/** Filas completas de 12: si el siguiente no cabe, los de la fila se estiran. */
+function packRows(spans) {
+  const rows = [];
+  let row = [];
+  const close = () => {
+    if (!row.length) return;
+    let left = 12 - row.reduce((a, r) => a + r.span, 0);
+    for (let k = 0; left > 0; k = (k + 1) % row.length) { row[k].span++; left--; }
+    rows.push(row);
+    row = [];
+  };
+  spans.forEach((span, i) => {
+    const used = row.reduce((a, r) => a + r.span, 0);
+    if (used + span > 12) close();
+    row.push({ i, span });
+  });
+  close();
+  return rows;
+}
+
+/**
+ * Filas balanceadas: el principal solo (o con un compañero angosto) y el
+ * resto en filas de 2 o 3, siempre completas: 2 → 6+6 (8+4 si uno es ancho),
+ * 3 → 4+4+4, 4 → 2+2, 5 → 3+2, 7 → 3+2+2…
+ */
+function balancedRows(spans, hasPrimary) {
+  const rows = [];
+  let idx = spans.map((_, i) => i);
+  if (hasPrimary && idx.length) {
+    const p = idx.shift();
+    if (spans[p] >= 8 || !idx.length) rows.push([{ i: p, span: 12 }]);
+    else { const q = idx.shift(); rows.push([{ i: p, span: 8 }, { i: q, span: 4 }]); }
+  }
+  const n = idx.length;
+  const sizes = n === 1 ? [1] : n === 2 ? [2] : n === 4 ? [2, 2] : [];
+  if (!sizes.length) { let m = n; while (m > 0) { if (m === 4) { sizes.push(2, 2); m = 0; } else if (m === 2) { sizes.push(2); m = 0; } else if (m === 1) { sizes.push(1); m = 0; } else { sizes.push(3); m -= 3; } } }
+  for (const k of sizes) {
+    const row = idx.splice(0, k);
+    if (k === 1) rows.push([{ i: row[0], span: 12 }]);
+    else if (k === 2) {
+      const [a, b] = row;
+      const wideA = spans[a] >= 8, wideB = spans[b] >= 8;
+      rows.push(wideA && !wideB ? [{ i: a, span: 8 }, { i: b, span: 4 }] : wideB && !wideA ? [{ i: a, span: 4 }, { i: b, span: 8 }] : [{ i: a, span: 6 }, { i: b, span: 6 }]);
+    } else rows.push(row.map((i) => ({ i, span: 4 })));
+  }
+  return rows;
+}
+
+/** Valores de un KPI calculado: { field, agg } sobre las filas. */
+function computeKpi(def, rows) {
+  if (def.value !== undefined) return num(def.value);
+  const v = rawKpi(def, rows);
+  return Number.isFinite(v) && def.scale ? v * def.scale : v;
+}
+function rawKpi(def, rows) {
+  const agg = def.agg ?? def.aggregate ?? (def.field ? 'sum' : 'count');
+  if (agg === 'count') return rows.length;
+  if (agg === 'distinct') return uniq(rows.map((r) => r[def.field])).length;
+  const vals = rows.map((r) => num(r[def.field])).filter(Number.isFinite);
+  if (agg === 'ratio' && def.over) { const a = vals.reduce((x, y) => x + y, 0); const b = rows.map((r) => num(r[def.over])).filter(Number.isFinite).reduce((x, y) => x + y, 0); return b ? a / b : NaN; }
+  return vals.length ? aggregate(vals, agg) : NaN;
+}
+
+/** Campo que identifica las entidades coloreadas de un gráfico. */
+const colorField = (s) => s.series ?? s.hue ?? (Array.isArray(s.path) ? s.path[0] : null) ?? s.group ?? (['donut', 'pie'].includes(s.type) ? s.label ?? s.x : null) ?? (s.type === 'treemap' ? s.label : null);
+
+/**
+ * Plan del dashboard: decide orden, anchos, colores comunes, filtros y KPIs.
+ * Es puro (sin DOM): dashboard() y renderDashboard() lo dibujan.
+ */
+function planDashboard(spec = {}) {
+  if (!core) throw new PlotError('plotagents no está inicializado.');
+  if (!spec || typeof spec !== 'object') throw new PlotError('El dashboard debe ser un objeto.', 'dashboard({ title, kpis, charts: [...] })');
+  const locale = spec.locale || 'es';
+  const shared = spec.data ? ensureData(spec) : null;
+  const base = {};
+  for (const k of ['locale', 'theme', 'font', 'palette', 'ramp', 'textScale']) if (spec[k] !== undefined) base[k] = spec[k];
+  let charts = (spec.charts || []).map((c, i) => {
+    const s0 = { ...base, ...c, ...(c.data === undefined && shared ? { data: shared } : {}) };
+    if (spec.theme !== undefined && c.theme === undefined) s0.theme = spec.theme;
+    let s;
+    try { s = core.resolve(s0); } catch (e) { s = { ...s0, _error: e.message }; }
+    return { i, spec: s, primary: !!c.primary };
+  });
+  let primary = charts.find((c) => c.primary) || charts.find((c) => ['line', 'area'].includes(c.spec.type));
+  if (spec.layout === 'grid') primary = null;
+  if (primary && spec.order !== 'given') charts = [primary, ...charts.filter((c) => c !== primary)];
+  const theme = themeFor({ ...base });
+  const tot = new Map();
+  for (const c of charts) {
+    const f = colorField(c.spec);
+    if (!f || !Array.isArray(c.spec.data)) continue;
+    const vf = c.spec.value ?? (typeof c.spec.y === 'string' ? c.spec.y : null);
+    for (const r of c.spec.data) { const k = r[f]; if (k === undefined || k === null) continue; tot.set(String(k), (tot.get(String(k)) || 0) + (vf && Number.isFinite(num(r[vf])) ? Math.abs(num(r[vf])) : 1)); }
+  }
+  const keys = [...tot.keys()].sort((a, b) => tot.get(b) - tot.get(a));
+  const colors = { ...Object.fromEntries(colorMap(keys, theme, spec.colors || {})), ...(spec.colors || {}) };
+  const source = spec.source;
+  const layout = spec.layout || 'auto';
+  const explicit = (spec.charts || []).some((c) => c.span !== undefined || c.size !== undefined);
+  let rows;
+  if (explicit || layout === 'grid' || layout === 'executive') {
+    const spans = charts.map((c, k) => {
+      if (layout === 'grid') return charts.length % 3 === 0 && charts.length > 4 ? 4 : 6;
+      let sp = spanFor(c.spec);
+      if (k === 0 && c === primary) sp = Math.max(sp, layout === 'executive' || WIDE.has(c.spec.type) ? 12 : 8);
+      if (layout === 'executive' && k > 0) sp = 6;
+      return sp;
+    });
+    rows = packRows(spans);
+  } else rows = balancedRows(charts.map((c) => spanFor(c.spec)), !!primary);
+  const panels = [];
+  rows.forEach((row, r) => row.forEach(({ i, span }) => {
+    const c = charts[i];
+    const s = { ...c.spec, colors: { ...colors, ...(c.spec.colors || {}) } };
+    if (source && s.source === source) delete s.source;
+    if (s.height === undefined && !AUTO_HEIGHT.has(s.type)) s.height = span >= 12 ? 380 : row.length >= 3 ? 340 : 360;
+    if (s.padding === undefined) s.padding = 16;
+    delete s.primary; delete s.size; delete s.span;
+    panels.push({ id: `p${c.i}`, row: r, span, spec: s, error: c.spec._error || null });
+  }));
+  const kpis = (spec.kpis || []).map((k) => (typeof k === 'object' ? { ...k } : { label: String(k) }));
+  const filters = [].concat(spec.filters || []).map((f) => {
+    const o = typeof f === 'string' ? { field: f } : { ...f };
+    const pool = [...(shared || []), ...panels.flatMap((p) => (Array.isArray(p.spec.data) && p.spec.data !== shared ? p.spec.data : []))];
+    const vals = uniq(pool.map((r) => r[o.field]).filter((v) => v !== undefined && v !== null && v !== ''));
+    const kind = pool.length ? fieldKind(pool, o.field) : 'category';
+    vals.sort((a, b) => (kind === 'date' ? parseDate(a) - parseDate(b) : kind === 'year' || kind === 'number' ? num(a) - num(b) : 0));
+    return { field: o.field, label: o.label ?? o.field.charAt(0).toUpperCase() + o.field.slice(1), values: vals.map(String), control: o.control ?? (vals.length <= 6 ? 'buttons' : 'select'), value: o.value ?? o.default ?? null, all: o.all ?? T(locale, 'Todos', 'All') };
+  }).filter((f) => f.values.length > 1);
+  return {
+    title: spec.title ?? '', subtitle: spec.subtitle ?? '', source, updated: spec.updated ?? null, note: spec.note ?? null,
+    locale, base, theme: { mode: theme.mode, surface: theme.surface, ink: theme.ink, lede: theme.lede, muted: theme.muted, grid: theme.grid, axis: theme.axis, tint: theme.tint, accent: theme.categorical[0], good: theme.status.good, bad: theme.status.critical, font: theme.font?.family, fontImport: theme.font?.import },
+    kpis, data: shared, panels, filters, colors,
+  };
+}
+
+function lintDashboard(spec = {}) {
+  const locale = spec.locale || 'es';
+  const L = (es, en) => T(locale, es, en);
+  const errors = [], warnings = [], suggestions = [];
+  const charts = spec.charts || [];
+  if (!charts.length && !(spec.kpis || []).length) errors.push({ code: 'dash-empty', message: L('El dashboard no tiene gráficos ni KPIs.', 'The dashboard has no charts or KPIs.'), fix: L('Agrega `charts: [spec, …]` y/o `kpis: [{ label, value }]`.', 'Add `charts: [spec, …]` and/or `kpis: [{ label, value }]`.') });
+  if (!spec.title) suggestions.push({ code: 'dash-title', message: L('Falta el título del dashboard.', 'The dashboard has no title.'), fix: L('Di qué pregunta responde: "¿Cómo van las ventas del sur en 2025?"', 'Say what question it answers: "How are southern sales doing in 2025?"') });
+  if (!spec.source && !charts.every((c) => c.source)) suggestions.push({ code: 'dash-source', message: L('Falta la fuente de los datos.', 'The data source is missing.'), fix: L('Agrega `source` al dashboard: se muestra una vez, al pie.', 'Add `source` to the dashboard: it is shown once, at the bottom.') });
+  if (charts.length > 9) warnings.push({ code: 'dash-many-charts', message: L(`${charts.length} gráficos: un dashboard que lo muestra todo no destaca nada.`, `${charts.length} charts: a dashboard that shows everything highlights nothing.`), fix: L('Quédate con 4–6 que respondan una pregunta; el resto, en otra página.', 'Keep the 4–6 that answer one question; move the rest to another page.') });
+  else if (charts.length > 6) suggestions.push({ code: 'dash-charts', message: L(`${charts.length} gráficos: sobre 6 cuesta leer el dashboard de un vistazo.`, `${charts.length} charts: beyond 6 the dashboard is hard to read at a glance.`), fix: L('Prioriza o agrupa en pestañas/páginas.', 'Prioritize, or split into pages.') });
+  const nk = (spec.kpis || []).length;
+  if (nk > 5) warnings.push({ code: 'dash-many-kpis', message: L(`${nk} KPIs: sobre 5 ninguno destaca.`, `${nk} KPIs: beyond 5 none stands out.`), fix: L('Deja los 3–5 que mueven decisiones.', 'Keep the 3–5 that drive decisions.') });
+  let types = [];
+  try { types = charts.map((c) => (core ? core.resolve({ ...c, ...(c.data === undefined && spec.data ? { data: spec.data } : {}) }).type : c.type)); } catch { types = charts.map((c) => c.type); }
+  const pies = types.filter((t) => t === 'donut' || t === 'pie').length;
+  if (pies > 1) suggestions.push({ code: 'dash-pies', message: L(`${pies} donas o tortas: compararlas entre sí es difícil.`, `${pies} donuts or pies: comparing them with each other is hard.`), fix: L('Usa una sola, o barras apiladas al 100% (`stack: "percent"`).', 'Keep one, or use 100% stacked bars (`stack: "percent"`).') });
+  const themes = new Set(charts.map((c) => (typeof c.theme === 'string' ? c.theme : c.theme ? 'custom' : null)).filter(Boolean));
+  if (themes.size > 1) warnings.push({ code: 'dash-themes', message: L('Los gráficos usan temas distintos.', 'Charts use different themes.'), fix: L('Fija `theme` en el dashboard y quítalo de los gráficos.', 'Set `theme` on the dashboard and remove it from the charts.') });
+  const untitled = charts.filter((c) => !c.title).length;
+  if (untitled) suggestions.push({ code: 'dash-chart-titles', message: L(`${untitled} gráfico(s) sin título.`, `${untitled} chart(s) without a title.`), fix: L('Cada panel necesita su hallazgo como título.', 'Every panel needs its finding as the title.') });
+  for (const f of [].concat(spec.filters || [])) {
+    const field = typeof f === 'string' ? f : f.field;
+    const has = [spec.data, ...charts.map((c) => c.data)].some((d) => Array.isArray(d) && d.some((r) => r && field in r));
+    if (!has) warnings.push({ code: 'dash-filter-field', message: L(`El filtro "${field}" no existe en los datos de ningún gráfico.`, `The filter "${field}" is not in any chart's data.`), fix: L('Usa un campo de `data`.', 'Use a field of `data`.') });
+  }
+  charts.forEach((c, i) => {
+    const r = core ? core.lint({ locale, ...c, ...(c.data === undefined && spec.data ? { data: spec.data } : {}), source: c.source ?? spec.source ?? 'dashboard' }) : null;
+    if (!r) return;
+    const tag = `${L('Gráfico', 'Chart')} ${i + 1}${c.title ? ` («${String(c.title).slice(0, 40)}»)` : ''}: `;
+    for (const [list, out] of [[r.errors, errors], [r.warnings, warnings], [r.suggestions, suggestions]]) for (const it of list) if (it.code !== 'title') out.push({ ...it, chart: i, message: tag + it.message });
+  });
+  return { ok: errors.length === 0, errors, warnings, suggestions };
+}
+
+const DASH_CSS = `
+.pa-dash{--g:24px;max-width:1440px;margin:0 auto;padding:clamp(16px,3vw,40px);color:var(--d-ink);background:var(--d-surface);font-family:var(--d-font);font-variant-numeric:lining-nums tabular-nums}
+.pa-dash *{box-sizing:border-box}
+.pa-dash header.pa-dh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 32px;padding-bottom:16px;border-bottom:1px solid var(--d-ink)}
+.pa-dash h1{font-size:clamp(26px,3.2vw,40px);line-height:1.08;letter-spacing:-.03em;font-weight:600;margin:0}
+.pa-dash .pa-dsub{color:var(--d-lede);font-size:15px;margin:6px 0 0;max-width:70ch}
+.pa-dash .pa-dmeta{font-size:12.5px;color:var(--d-muted);text-align:right}
+.pa-dfilters{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:center;padding:10px 0;border-bottom:1px solid var(--d-grid);position:sticky;top:0;z-index:5;background:var(--d-surface)}
+.pa-dfilter{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+.pa-dfilter>span{color:var(--d-muted);margin-right:4px}
+.pa-dfilter button{font:inherit;font-size:13px;color:var(--d-muted);background:none;border:0;padding:5px 6px;cursor:pointer;border-radius:0;box-shadow:inset 0 -1px 0 transparent}
+.pa-dfilter button:hover{color:var(--d-ink)}
+.pa-dfilter button[aria-pressed=true]{color:var(--d-ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--d-accent)}
+.pa-dfilter select{font:inherit;font-size:13px;color:var(--d-ink);background:transparent;border:0;border-bottom:1px solid var(--d-axis);padding:4px 2px}
+.pa-dfilter button:focus-visible,.pa-dfilter select:focus-visible{outline:2px solid var(--d-accent);outline-offset:2px}
+.pa-kpis{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));border-bottom:1px solid var(--d-grid)}
+.pa-kpi{padding:18px 20px 18px 0;min-width:0}
+.pa-kpi+.pa-kpi{padding-left:20px;border-left:1px solid var(--d-grid)}
+.pa-kpi .l{font-size:13px;color:var(--d-lede);margin:0}
+.pa-kpi .v{font-size:clamp(26px,2.6vw,36px);font-weight:600;letter-spacing:-.02em;line-height:1.15;margin:4px 0 2px;white-space:nowrap}
+.pa-kpi .d{font-size:12.5px;font-weight:600}
+.pa-kpi .d small{font-weight:400;color:var(--d-muted);margin-left:6px}
+.pa-kpi svg{display:block;width:100%;height:28px;margin-top:6px;overflow:visible}
+.pa-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0 var(--g)}
+.pa-panel{grid-column:span var(--s);min-width:0;padding-top:20px;margin-top:4px;border-top:1px solid var(--d-grid)}
+.pa-panel figure{margin:0}
+.pa-panel figure svg{width:100%;height:auto;display:block}
+.pa-panel .pa-err{font-size:13px;color:var(--d-bad);padding:12px 0}
+.pa-dfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font-size:12.5px;color:var(--d-muted);margin-top:24px;padding-top:12px;border-top:1px solid var(--d-ink)}
+@media (max-width:1000px){.pa-panel{grid-column:span max(6,var(--s))}}
+@media (max-width:1000px){.pa-kpis[data-n='4'],.pa-kpis[data-n='5']{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-kpis[data-n='4'] .pa-kpi:nth-child(n+3),.pa-kpis[data-n='5'] .pa-kpi:nth-child(n+3){border-top:1px solid var(--d-grid)}.pa-kpis[data-n='4'] .pa-kpi:nth-child(2n+1),.pa-kpis[data-n='5'] .pa-kpi:nth-child(2n+1){padding-left:0;border-left:0}}
+@media (max-width:700px){.pa-grid{grid-template-columns:minmax(0,1fr)}.pa-panel{grid-column:auto}.pa-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-kpi,.pa-kpi+.pa-kpi{padding:14px 12px 14px 0;border-left:0}.pa-kpi:nth-child(2n){padding-left:12px;border-left:1px solid var(--d-grid)}.pa-kpi:nth-child(n+3){border-top:1px solid var(--d-grid)}.pa-kpi .v{font-size:26px}}
+@media print{.pa-dfilters{position:static}.pa-panel{break-inside:avoid}}
+`;
+
+const cssVars = (t) => `--d-surface:${t.surface};--d-ink:${t.ink};--d-lede:${t.lede};--d-muted:${t.muted};--d-grid:${t.grid};--d-axis:${t.axis};--d-tint:${t.tint};--d-accent:${t.accent};--d-good:${t.good};--d-bad:${t.bad};--d-font:${(t.font || 'system-ui').replace(/"/g, "'")}`;
+
+/** KPIs en HTML: etiqueta, cifra, variación con flecha y texto, tendencia. */
+function kpiMarkup(plan, rows) {
+  if (!plan.kpis.length) return '';
+  const { locale } = plan;
+  const cells = plan.kpis.map((k) => {
+    const cmp = k.compare && k.value === undefined ? k.compare : null;
+    const inPeriod = (p) => (rows || []).filter((r) => String(r[cmp.field]) === String(p));
+    const v = cmp ? computeKpi(k, inPeriod(cmp.current)) : computeKpi(k, rows || []);
+    if (cmp && k.delta === undefined) { const pv = computeKpi(k, inPeriod(cmp.previous)); k = { ...k, delta: Number.isFinite(pv) && pv ? (v - pv) / Math.abs(pv) : undefined, period: k.period ?? `vs ${cmp.previous}` }; }
+    if (k.trendBy && !k.trend && rows && rows.length) {
+      const by = new Map();
+      for (const r of cmp ? inPeriod(cmp.current) : rows) { const key = r[k.trendBy]; if (!by.has(key)) by.set(key, []); by.get(key).push(r); }
+      const ks = [...by.keys()].sort((x, y) => (String(x) < String(y) ? -1 : 1));
+      k = { ...k, trend: ks.map((x) => computeKpi(k, by.get(x))) };
+    }
+    const fmt = makeFormat(k.format, locale, [v]);
+    const shown = k.display ?? (Number.isFinite(v) ? fmt(v) : '—');
+    let d = '';
+    let delta = k.delta !== undefined ? num(k.delta) : k.previous !== undefined && num(k.previous) ? (v - num(k.previous)) / Math.abs(num(k.previous)) : NaN;
+    if (Number.isFinite(delta)) {
+      if (Math.abs(delta) > 1.5 && k.delta !== undefined && !cmp) delta /= 100;
+      const flat = Math.abs(delta) < (Math.abs(delta) < 0.1 ? 0.0005 : 0.005), up = delta > 0 && !flat, good = flat ? null : up === ((k.good ?? 'up') === 'up');
+      const c = good === null ? 'var(--d-lede)' : good ? 'var(--d-good)' : 'var(--d-bad)';
+      d = `<p class="d" style="color:${c};margin:0">${flat ? '■' : up ? '▲' : '▼'} ${up ? '+' : flat ? '' : '−'}${formatNumber(Math.abs(delta) * 100, Math.abs(delta) < 0.1 ? 1 : 0, locale, true)}%${k.period ? `<small>${esc(k.period)}</small>` : ''}</p>`;
+    } else if (k.period) d = `<p class="d" style="margin:0"><small style="margin:0">${esc(k.period)}</small></p>`;
+    let spark = '';
+    if (Array.isArray(k.trend) && k.trend.length > 1) {
+      const ts = k.trend.map(num), mn = Math.min(...ts), mx = Math.max(...ts);
+      const pts = ts.map((y, i) => `${((i / (ts.length - 1)) * 100).toFixed(2)},${(26 - ((y - mn) / (mx - mn || 1)) * 24).toFixed(2)}`).join(' ');
+      spark = `<svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--d-accent)" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+    }
+    return `<div class="pa-kpi"><p class="l">${esc(k.label ?? '')}</p><p class="v">${esc(shown)}</p>${d}${spark}</div>`;
+  });
+  return `<section class="pa-kpis" data-n="${cells.length}" style="--n:${cells.length}" aria-label="${T(locale, 'Indicadores', 'Key figures')}">${cells.join('')}</section>`;
+}
+
+/** HTML del dashboard. `svgs` (opcional) trae los gráficos ya dibujados (servidor). */
+function dashboardMarkup(plan, svgs = {}) {
+  const { locale } = plan;
+  const filters = plan.filters.map((f, i) => {
+    const opts = f.control === 'buttons'
+      ? [`<button type="button" data-f="${i}" data-v="" aria-pressed="${f.value === null}">${esc(f.all)}</button>`, ...f.values.map((v) => `<button type="button" data-f="${i}" data-v="${esc(v)}" aria-pressed="${String(f.value) === v}">${esc(v)}</button>`)].join('')
+      : `<select data-f="${i}" aria-label="${esc(f.label)}"><option value="">${esc(f.all)}</option>${f.values.map((v) => `<option${String(f.value) === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+    return `<div class="pa-dfilter" role="group" aria-label="${esc(f.label)}"><span>${esc(f.label)}</span>${opts}</div>`;
+  }).join('');
+  const panels = plan.panels.map((p) => `<section class="pa-panel" style="--s:${p.span}" aria-label="${esc(p.spec.title || p.spec.type)}">${p.error ? `<p class="pa-err">${esc(p.error)}</p>` : `<figure class="pa" data-panel="${p.id}">${svgs[p.id] || ''}</figure>`}</section>`).join('');
+  const meta = [plan.updated ? `${T(locale, 'Actualizado', 'Updated')}: ${esc(plan.updated)}` : '', `${plan.panels.length} ${T(locale, plan.panels.length === 1 ? 'gráfico' : 'gráficos', plan.panels.length === 1 ? 'chart' : 'charts')}`].filter(Boolean).join(' · ');
+  return `<div class="pa-dash" style="${cssVars(plan.theme)}">
+<header class="pa-dh"><div>${plan.title ? `<h1>${esc(plan.title)}</h1>` : ''}${plan.subtitle ? `<p class="pa-dsub">${esc(plan.subtitle)}</p>` : ''}</div><div class="pa-dmeta">${meta}</div></header>
+${filters ? `<nav class="pa-dfilters" aria-label="${T(locale, 'Filtros', 'Filters')}">${filters}</nav>` : ''}
+<div class="pa-kslot">${kpiMarkup(plan, plan.data)}</div>
+<div class="pa-grid">${panels}</div>
+<footer class="pa-dfoot"><span>${plan.source ? `${T(locale, 'Fuente', 'Source')}: ${esc(plan.source)}` : ''}${plan.note ? ` · ${esc(plan.note)}` : ''}</span><span>plotagents</span></footer>
+</div>`;
+}
+
+/** Aplica los filtros activos a un panel (datos, o el periodo si es su campo `time`). */
+function filterSpec(spec, plan, active, locale) {
+  let s = spec;
+  const tags = [];
+  plan.filters.forEach((f, i) => {
+    const v = active[i];
+    if (v === null || v === undefined || v === '') return;
+    if (s.time === f.field) { s = { ...s, timeValue: v }; return; }
+    if (Array.isArray(s.data) && s.data.some((r) => r && f.field in r)) { s = { ...s, data: s.data.filter((r) => String(r[f.field]) === String(v)) }; tags.push(`${f.label}: ${v}`); }
+  });
+  if (tags.length) s = { ...s, subtitle: [s.subtitle, tags.join(' · ')].filter(Boolean).join(' · ') };
+  return s;
+}
+
+/** Conecta filtros y gráficos de un dashboard ya en el DOM (lo hace dashboard() en su página). */
+function mountDashboard(root, plan) {
+  const handles = {};
+  const active = plan.filters.map((f) => f.value);
+  const draw = () => {
+    for (const p of plan.panels) {
+      if (p.error) continue;
+      const fig = root.querySelector(`[data-panel="${p.id}"]`);
+      if (!fig) continue;
+      const s = filterSpec(p.spec, plan, active, plan.locale);
+      try {
+        if (handles[p.id]) handles[p.id] = handles[p.id].update(s);
+        else handles[p.id] = render(fig, s);
+      } catch (e) { fig.innerHTML = `<p class="pa-err">${esc(e.message)}</p>`; }
+    }
+    if (plan.data && plan.kpis.some((k) => k.value === undefined)) {
+      const rows = plan.data.filter((r) => plan.filters.every((f, i) => active[i] === null || active[i] === '' || !(f.field in r) || String(r[f.field]) === String(active[i])));
+      const slot = root.querySelector('.pa-kslot');
+      if (slot) slot.innerHTML = kpiMarkup(plan, rows);
+    }
+  };
+  root.querySelectorAll('.pa-dfilter button').forEach((b) => b.addEventListener('click', () => {
+    const i = +b.dataset.f;
+    active[i] = b.dataset.v || null;
+    root.querySelectorAll(`.pa-dfilter button[data-f="${i}"]`).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    draw();
+  }));
+  root.querySelectorAll('.pa-dfilter select').forEach((sel) => sel.addEventListener('change', () => { active[+sel.dataset.f] = sel.value || null; draw(); }));
+  draw();
+  return { plan, update: draw, destroy() { Object.values(handles).forEach((h) => h && h.destroy && h.destroy()); } };
+}
+
+/** Navegador: dibuja un dashboard dentro de un elemento. */
+function renderDashboard(target, spec) {
+  const host = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!host) throw new PlotError('No encontré el elemento destino.', 'renderDashboard("#tablero", spec)');
+  if (typeof document !== 'undefined' && !document.getElementById('pa-dash-css')) {
+    const st = document.createElement('style'); st.id = 'pa-dash-css'; st.textContent = DASH_CSS; document.head.appendChild(st);
+  }
+  const plan = planDashboard(spec);
+  host.innerHTML = dashboardMarkup(plan);
+  return mountDashboard(host.firstElementChild, plan);
+}
+
+/**
+ * Página HTML de un archivo con el dashboard: gráficos ya dibujados (se ven
+ * sin JavaScript, sirven para PDF) y, si está la biblioteca para el
+ * navegador, tooltips y filtros.
+ */
+function dashboard(spec) {
+  const plan = planDashboard(spec);
+  const svgs = {};
+  for (const p of plan.panels) if (!p.error) {
+    try { svgs[p.id] = core.plot({ ...p.spec, width: p.span >= 12 ? 1200 : p.span >= 8 ? 800 : p.span >= 6 ? 600 : 400 }); }
+    catch (e) { p.error = e.message.split('\n')[0]; }
+  }
+  const needsGeo = plan.panels.some((p) => ['choropleth', 'symbolmap'].includes(p.spec.type) && typeof p.spec.geo !== 'object');
+  const lib = core.bundleSource && core.bundleSource();
+  const bundle = lib && (needsGeo ? lib + '\n' + (core.bundleSource('plotagents-geo.js') || '') : lib);
+  const json = JSON.stringify(plan).replace(/</g, '\\u003c');
+  const lang = String(plan.locale).slice(0, 2);
+  const fonts = [...new Set([plan.theme.fontImport, 'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap'].filter(Boolean))];
+  return `<!doctype html>
+<html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(plan.title || 'Dashboard')}</title>
+${fonts.map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
+<style>:root{color-scheme:${plan.theme.mode === 'dark' ? 'dark' : 'light'}}body{margin:0;background:${plan.theme.surface}}${DASH_CSS}</style>
+</head><body>
+${dashboardMarkup(plan, svgs)}
+${bundle ? `<script>${bundle.replace(/<\/(script)/gi, '<\\/$1')}</script>
+<script type="application/json" id="pa-dash-plan">${json}</script>
+<script>plotagents.mountDashboard(document.querySelector('.pa-dash'),JSON.parse(document.getElementById('pa-dash-plan').textContent));</script>` : ''}
+</body></html>`;
+}
+
+/** Nunca lanza: { ok, html, plan, errors, warnings, suggestions } (para agentes). */
+function safeDashboard(spec) {
+  const rep = lintDashboard(spec || {});
+  if (!rep.ok) return { ...rep, html: null, plan: null };
+  try { const html = dashboard(spec); return { ...rep, ok: true, html, plan: planDashboard(spec) }; }
+  catch (e) { return { ...rep, ok: false, html: null, plan: null, errors: [...rep.errors, { code: 'render', message: e.message.split('\n')[0], fix: e.hint }] }; }
+}
+
+
+return { "_bindDashboard": _bindDashboard, "packRows": packRows, "balancedRows": balancedRows, "computeKpi": computeKpi, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "kpiMarkup": kpiMarkup, "dashboardMarkup": dashboardMarkup, "filterSpec": filterSpec, "mountDashboard": mountDashboard, "renderDashboard": renderDashboard, "dashboard": dashboard, "safeDashboard": safeDashboard, "DASH_CSS": DASH_CSS };
 });
 global.plotagents = __req("src/index.js");
 })(typeof window !== 'undefined' ? window : globalThis);

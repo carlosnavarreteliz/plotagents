@@ -5,7 +5,7 @@ export type ChartType =
   | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
-  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'choropleth' | 'symbolmap'
+  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
@@ -191,6 +191,12 @@ export interface Spec {
   today?: string | number | boolean;
   groupHeaders?: boolean | 'compact';
   rowHeight?: number;
+  /** Browser time controls, off by default: true (buttons or slider), "buttons" or "slider". */
+  slider?: boolean | 'buttons' | 'slider';
+  play?: boolean;
+  /** wordcloud: words field, or raw text to count. */
+  text?: string | string[];
+  textField?: string;
   columns?: number;
   [key: string]: unknown;
 }
@@ -220,6 +226,29 @@ export declare function resolve(spec: Spec): Spec;
 export declare const schema: Record<string, unknown>;
 /** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
 export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
+export interface DashboardSpec {
+  title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
+  locale?: 'es' | 'en'; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];
+  data?: Row[];
+  kpis?: Array<{ label: string; value?: number; delta?: number; period?: string; trend?: number[]; good?: 'up' | 'down'; format?: Format;
+    field?: string; agg?: 'sum' | 'mean' | 'median' | 'min' | 'max' | 'count' | 'distinct' | 'ratio'; over?: string; scale?: number;
+    compare?: { field: string; current: string | number; previous: string | number }; trendBy?: string }>;
+  charts: Array<Spec & { primary?: boolean; size?: 'full' | 'large' | 'medium' | 'small'; span?: number }>;
+  filters?: Array<string | { field: string; label?: string; control?: 'buttons' | 'select'; value?: string }>;
+  layout?: 'auto' | 'executive' | 'grid';
+  colors?: Record<string, string>;
+}
+/** Self-contained HTML dashboard with best-practice layout, shared colors, KPIs and filters. */
+export declare function dashboard(spec: DashboardSpec): string;
+/** Never throws: { ok, html, plan, errors, warnings, suggestions }. */
+export declare function safeDashboard(spec: DashboardSpec): { ok: boolean; html: string | null; plan: object | null; errors: Issue[]; warnings: Issue[]; suggestions: Issue[] };
+export declare function lintDashboard(spec: DashboardSpec): { ok: boolean; errors: Issue[]; warnings: Issue[]; suggestions: Issue[] };
+export declare function planDashboard(spec: DashboardSpec): object;
+/** Browser: draws a dashboard into an element. */
+export declare function renderDashboard(target: string | Element, spec: DashboardSpec): { update(): void; destroy(): void };
+export declare const dashboardSchema: Record<string, unknown>;
+/** Raw text → [{ text, value }] word counts without stopwords. */
+export declare function countWords(text: string | string[], opts?: { minLength?: number; stopwords?: string[] }): { text: string; value: number }[];
 export declare function registerGeo(name: string, geo: object, aliases?: string[]): object;
 /** Any GeoJSON / TopoJSON shape → FeatureCollection. */
 export declare function toFeatureCollection(geo: object | object[], objectName?: string): object;
@@ -231,7 +260,7 @@ export declare function themeFor(spec: Spec): Theme;
 export declare function timeValues(spec: Spec): (string | number)[];
 export declare function validatePalette(colors: string[], opts?: { mode?: 'light' | 'dark'; surface?: string; pairs?: 'adjacent' | 'all' }): { ok: boolean; checks: { name: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] };
 export declare function bundleSource(): string | null;
-export declare function toolDefinition(opts?: { name?: string; flavor?: 'anthropic' | 'openai' }): Record<string, unknown>;
+export declare function toolDefinition(opts?: { name?: string; flavor?: 'anthropic' | 'openai'; kind?: 'chart' | 'dashboard' }): Record<string, unknown>;
 export declare const themes: Record<'papel' | 'noche' | 'light' | 'dark', Theme>;
 export declare function getTheme(t?: Spec['theme']): Theme;
 export declare const TYPES: ChartType[];

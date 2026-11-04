@@ -212,6 +212,11 @@ figure.pa svg{width:100%;height:auto;display:block}
 .ticks li b{color:var(--ink);font-weight:600}
 @media (max-width:900px){.geo{grid-template-columns:minmax(0,1fr)}}
 
+/* Dashboard embebido */
+.dash-frame{border-top:1px solid var(--ink);min-width:0}
+.dash-frame iframe{display:block;width:100%;height:1180px;border:0;background:transparent}
+@media (max-width:900px){.dash-frame iframe{height:2300px}}
+
 /* Reglas de diseño */
 .rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 clamp(24px,4vw,64px);counter-reset:r}
 .rule{border-top:1px solid var(--line);padding:22px 0 34px}

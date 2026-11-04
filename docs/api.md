@@ -3,7 +3,8 @@
 ```js
 import {
   plot, safePlot, lint, describe, render, toHTML, configure,
-  schema, toolDefinition, validatePalette, registerGeo,
+  dashboard, safeDashboard, renderDashboard, lintDashboard, planDashboard,
+  schema, dashboardSchema, toolDefinition, validatePalette, registerGeo, countWords,
 } from 'plotagents';
 ```
 
@@ -39,7 +40,11 @@ const { ok, svg, type, description, errors, warnings, suggestions } = safePlot(s
 
 ### `lint(spec)`
 
-Reviews a spec without drawing it and returns `{ ok, type, errors, warnings, suggestions }`. Messages are written in Spanish; each one carries a `fix` with the change to make.
+Reviews a spec without drawing it and returns `{ ok, type, errors, warnings, suggestions }`. Messages follow the spec's `locale` (Spanish by default, English with `locale: "en"`); each one carries a `fix` with the change to make.
+
+### `dashboard(spec)` · `safeDashboard(spec)` · `renderDashboard(el, spec)`
+
+A self-contained HTML dashboard with best-practice layout, shared colors, KPIs and filters. `safeDashboard` never throws and returns `{ ok, html, plan, errors, warnings, suggestions }`; `renderDashboard` draws into an element in the browser; `lintDashboard` reviews; `planDashboard` returns the layout decisions. See [Dashboards](dashboards.md).
 
 ### `describe(spec)`
 
@@ -49,7 +54,7 @@ Returns a text description of the chart, such as "Highest: Biobío with 1,240 (3
 
 ### `render(target, spec, opts?)`
 
-Draws into an element (a CSS selector or a DOM node) with tooltips, responsive width, time sliders, a range slider for time series, drill-down for treemaps and sunbursts, and click-to-focus for networks.
+Draws into an element (a CSS selector or a DOM node) with tooltips, responsive width, time controls when the spec asks for them (`slider: true`), drill-down for treemaps and sunbursts, and click-to-focus for networks.
 
 ```js
 const chart = plotagents.render('#chart', spec);
@@ -59,7 +64,7 @@ chart.destroy();                                // remove listeners and markup
 
 | Option | Meaning |
 |---|---|
-| `controls` | `false` hides sliders and play buttons. |
+| `controls` | `false` hides time controls even when the spec asks for them (`slider: true`). |
 
 The handle exposes `svg` (the current `<svg>` element) and `spec`.
 

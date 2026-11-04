@@ -4,7 +4,7 @@
 
 **[Documentation, live examples and playground →](https://carlosnavarrete.cl/plotagents/)**
 
-Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 33 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids, flow charts and Gantt charts, plus time sliders, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
+Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 34 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids, flow charts and Gantt charts, plus word clouds, a dashboard builder with best-practice layouts, opt-in time controls, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
 npm install plotagents
@@ -40,10 +40,10 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **One axis.** There is no dual axis; `index: true` rebases series to 100 and `facet` draws panels on a shared scale.
 - **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
 - **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
-- **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move the time slider. One solid color per category.
+- **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move through periods. One solid color per category.
 - **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels and tooltip headers wear their series color.
 - **Estimates look like estimates.** `dashed` hatches the shapes that are projections or provisional figures (same color, striped fill, dashed outline) and `dashedFrom: 2025` turns lines, areas and columns dashed from that point on, over a soft labeled band. The legend says what the hatching means; hovering it lights up just those shapes.
-- **Maps you can explore.** Click a state or region to zoom to it, Ctrl/⌘ + scroll or pinch to zoom, drag to pan; +/−/reset buttons for the keyboard. Hovering outlines the shape instead of dimming the map, and each color class in the legend lights up its regions. With a time slider, colors glide from one year to the next.
+- **Maps you can explore.** Click a state or region to zoom to it, Ctrl/⌘ + scroll or pinch to zoom, drag to pan; +/−/reset buttons for the keyboard. Hovering outlines the shape instead of dimming the map, and each color class in the legend lights up its regions. Moving through years, colors glide from one to the next.
 - **Networks you can explore.** Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
 - **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
 - **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
@@ -64,6 +64,8 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Populations | `pyramid` |
 | Grids | `heatmap` |
 | Numbers | `kpi` |
+| Text | `wordcloud` (words sized by frequency, or raw text to count) |
+| Dashboards | `dashboard({ title, kpis, charts, filters })`: a whole HTML dashboard with best-practice layout ([guide](docs/dashboards.md)) |
 
 Leave `type` out and it is inferred: dates → `line`, two measures → `scatter`, `source`/`target` → `sankey`, `path` → `treemap`, categories → `bar`. Every option is documented in [`docs/charts.md`](docs/charts.md).
 
@@ -77,11 +79,12 @@ Leave `type` out and it is inferred: dates → `line`, two measures → `scatter
 ## Time, panels and drill-down
 
 ```js
-// One period at a time with a slider and a play button (d3plus-style `time`).
-plot({ type: 'treemap', data, path: ['sector', 'product'], value: 'value', time: 'year' });
+// One period at a time (the latest). Controls are opt-in: `slider: true` adds
+// period buttons (few periods) or a minimal slider (many), with a play button.
+plot({ type: 'treemap', data, path: ['sector', 'product'], value: 'value', time: 'year', slider: true });
 
-// Time series: in the browser, render() adds a range slider with an overview.
-render('#chart', { type: 'line', data, x: 'month', y: 'sales', series: 'region' });
+// Time series: `slider: true` adds a two-handle range in the browser.
+render('#chart', { type: 'line', data, x: 'month', y: 'sales', series: 'region', slider: true });
 
 // Small multiples (seaborn's col / col_wrap) with shared scales and colors.
 plot({ type: 'area', data, x: 'month', y: 'sales', facet: 'region', columns: 3 });
@@ -148,7 +151,7 @@ import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition,
 | `safePlot(spec)` | `{ ok, svg, description, errors, warnings, suggestions }`. Never throws. |
 | `lint(spec)` | Review of the spec without drawing: errors and design suggestions. |
 | `describe(spec)` | Alt text ("Highest: Biobío with 1,240 (30%)…"). |
-| `render(el, spec)` | Browser: tooltips, responsive width, time sliders and drill-down. |
+| `render(el, spec)` | Browser: tooltips, responsive width, drill-down, and time controls when the spec asks for them. |
 | `toHTML(specs)` | A self-contained, interactive HTML page in one file. |
 | `schema` / `toolDefinition({ flavor })` | JSON Schema of the spec and a tool definition for Claude (`anthropic`) or OpenAI (`openai`). |
 | `validatePalette(colors, opts)` | `{ ok, checks }`. |

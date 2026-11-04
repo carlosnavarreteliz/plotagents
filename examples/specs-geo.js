@@ -104,9 +104,9 @@ geoGallery.push(
     id: 'mapa-eeuu-tiempo',
     name: 'Mapa con slider temporal',
     nameEn: 'Map with a time slider',
-    note: '`time: "año"` muestra un año a la vez; con "play" el color de cada estado transita suavemente al del año siguiente. La escala de color se mantiene fija entre años (`scale` con cortes) para que los colores sean comparables.',
-    noteEn: '`time: "año"` shows one year at a time; with play, each state\'s color glides into the next year\'s. The color scale stays fixed across years (`scale` with breaks) so colors are comparable.',
-    spec: { type: 'choropleth', geo: 'usa', time: 'año', title: 'El desempleo saltó en 2020 en todos los estados y volvió a su nivel en 2022', subtitle: 'Tasa de desempleo por estado, %', source: SRC, data: usaDesempleo, key: 'estado', value: 'tasa', scale: [3, 4, 5, 6, 8], format: { suffix: '%', decimals: 1 }, legendTitle: 'Desempleo' },
+    note: '`time: "año"` muestra un año a la vez; con `slider: true` aparecen los controles y, con "play", el color de cada estado transita suavemente al del año siguiente. La escala de color se mantiene fija entre años (`scale` con cortes) para que los colores sean comparables.',
+    noteEn: '`time: "año"` shows one year at a time; `slider: true` adds the controls and, with play, each state\'s color glides into the next year\'s. The color scale stays fixed across years (`scale` with breaks) so colors are comparable.',
+    spec: { type: 'choropleth', geo: 'usa', time: 'año', slider: true, title: 'El desempleo saltó en 2020 en todos los estados y volvió a su nivel en 2022', subtitle: 'Tasa de desempleo por estado, %', source: SRC, data: usaDesempleo, key: 'estado', value: 'tasa', scale: [3, 4, 5, 6, 8], format: { suffix: '%', decimals: 1 }, legendTitle: 'Desempleo' },
   },
   {
     id: 'mapa-eeuu-simbolos',

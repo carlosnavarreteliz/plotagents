@@ -27,21 +27,30 @@ function ensureAssets() {
   const st = document.createElement('style');
   st.id = 'pa-runtime-css';
   st.textContent = `
-.pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:4px 0 2px;font-size:12px;color:var(--pa-muted);user-select:none}
-.pa-play{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:var(--pa-accent);color:var(--pa-surface);cursor:pointer;display:grid;place-items:center;padding:0}
-.pa-play:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
+.pa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 0 4px;font-size:12.5px;color:var(--pa-muted);user-select:none;font-variant-numeric:tabular-nums}
+.pa-play{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--pa-line);background:transparent;color:var(--pa-ink);cursor:pointer;display:grid;place-items:center;padding:0 0 0 1px;transition:border-color .15s}
+.pa-play[aria-pressed=true]{padding:0}
+.pa-play:hover{border-color:var(--pa-ink)}
+.pa-play:focus-visible,.pa-seg button:focus-visible{outline:2px solid var(--pa-accent);outline-offset:2px}
 .pa-play svg{display:block}
-.pa-track{position:relative;flex:1 1 220px;min-width:0;height:40px}
-.pa-track svg.pa-ov{position:absolute;left:0;top:0;width:100%;height:28px;overflow:visible}
-.pa-track input[type=range]{position:absolute;left:0;width:100%;top:6px;margin:0;height:22px;background:transparent;-webkit-appearance:none;appearance:none;pointer-events:none}
-.pa-track input[type=range]::-webkit-slider-runnable-track{background:transparent;height:22px}
-.pa-track input[type=range]::-moz-range-track{background:transparent;height:22px}
-.pa-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:16px;height:16px;margin-top:3px;border-radius:50%;background:var(--pa-accent);border:2px solid var(--pa-surface);box-shadow:0 1px 4px rgba(11,15,43,.3);cursor:grab}
-.pa-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:12px;height:12px;border-radius:50%;background:var(--pa-accent);border:2px solid var(--pa-surface);box-shadow:0 1px 4px rgba(11,15,43,.3);cursor:grab}
-.pa-track input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--pa-accent);outline-offset:2px}
-.pa-ticks{position:absolute;left:0;right:0;top:28px;height:12px;font-size:10.5px;color:var(--pa-muted)}
-.pa-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-.pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:13px;min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
+.pa-seg{display:flex;flex-wrap:wrap;gap:2px 4px}
+.pa-seg button{font:inherit;font-size:12.5px;color:var(--pa-muted);background:none;border:0;border-radius:0;padding:5px 6px;cursor:pointer;box-shadow:inset 0 -1px 0 transparent;transition:color .15s}
+.pa-seg button:hover{color:var(--pa-ink)}
+.pa-seg button[aria-checked=true]{color:var(--pa-ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--pa-accent)}
+.pa-track{position:relative;flex:1 1 200px;min-width:0;height:34px}
+.pa-track input[type=range]{position:absolute;left:0;width:100%;top:4px;margin:0;height:16px;-webkit-appearance:none;appearance:none;background:linear-gradient(to right,var(--pa-ink) var(--pa-p,100%),var(--pa-line) var(--pa-p,100%)) center/100% 2px no-repeat;cursor:pointer}
+.pa-dual input[type=range]{background:none;pointer-events:none}
+.pa-dual::before,.pa-dual::after{content:'';position:absolute;top:11px;height:2px;border-radius:1px}
+.pa-dual::before{left:0;right:0;background:var(--pa-line)}
+.pa-dual::after{left:var(--pa-a,0%);right:calc(100% - var(--pa-b,100%));background:var(--pa-ink)}
+.pa-track input[type=range]::-webkit-slider-runnable-track{background:transparent;height:16px}
+.pa-track input[type=range]::-moz-range-track{background:transparent;height:16px}
+.pa-track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:12px;height:12px;margin-top:2px;border-radius:50%;background:var(--pa-ink);border:2px solid var(--pa-surface);box-shadow:0 0 0 1px var(--pa-ink);cursor:grab;position:relative;z-index:1}
+.pa-track input[type=range]::-moz-range-thumb{pointer-events:auto;width:10px;height:10px;border-radius:50%;background:var(--pa-ink);border:2px solid var(--pa-surface);box-shadow:0 0 0 1px var(--pa-ink);cursor:grab}
+.pa-track input[type=range]:focus-visible{outline:none}
+.pa-track input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--pa-ink),0 0 0 4px color-mix(in srgb,var(--pa-accent) 35%,transparent)}
+.pa-ends{position:absolute;left:0;right:0;top:22px;display:flex;justify-content:space-between;font-size:10.5px;color:var(--pa-muted);pointer-events:none}
+.pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:12.5px;min-width:4ch;text-align:right}
 .pa-chart [data-drill],.pa-chart [data-node]{cursor:pointer}
 .pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
 @media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
@@ -169,52 +178,76 @@ export function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};--pa-line:${theme.axis};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
-  if (opts.controls !== false && state.slider !== false) {
-    if (state.time && !SNAP_EXCLUDE.has(state.type) && state.x !== state.time) buildPeriod();
+  // Controles de tiempo: SOLO si se piden (`slider: true`, "buttons" o "slider").
+  // Con pocos periodos van botones; con muchos, un slider mínimo.
+  const want = controlMode(state, opts);
+  if (want) {
+    if (state.time && !SNAP_EXCLUDE.has(state.type) && state.x !== state.time) buildPeriod(want);
     else if (RANGE_TYPES.has(state.type)) buildRange();
   }
 
-  // ── Periodo único con "play" (d3plus time) ──────────────────────────────
-  function buildPeriod() {
+  // ── Periodo único: botones o slider, con un play sobrio ─────────────────
+  function buildPeriod(mode) {
     const vals = timeValuesOf(state);
     if (vals.length < 2) return;
     let i = vals.findIndex((v) => String(v) === String(state.timeValue ?? vals[vals.length - 1]));
     if (i < 0) i = vals.length - 1;
     ctl.hidden = false;
-    const play = button();
-    const track = document.createElement('div'); track.className = 'pa-track';
-    const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
-    ov.appendChild(svgEl('rect', { x: 0, y: 13, width: 100, height: 3, rx: 1.5, fill: theme.tint2 || theme.tint }));
-    const fill = svgEl('rect', { x: 0, y: 13, height: 3, rx: 1.5, fill: theme.categorical[0] });
-    ov.appendChild(fill);
-    track.appendChild(ov);
-    const input = range(0, vals.length - 1, i, 'Periodo');
-    track.appendChild(input);
-    const now = document.createElement('span'); now.className = 'pa-now';
-    if (state.play === false) ctl.append(track, now); else ctl.append(play, track, now);
-    track.appendChild(ticks(vals.map(String), (k) => k / (vals.length - 1), null, track));
+    const labels = vals.map(String);
+    const buttons = mode === 'buttons' || (mode === 'auto' && vals.length <= 8 && labels.join('').length <= 64);
+    const play = state.play === false ? null : button();
+    if (play) ctl.append(play);
+    let setUI;
+    if (buttons) {
+      const group = document.createElement('div');
+      group.className = 'pa-seg'; group.setAttribute('role', 'radiogroup'); group.setAttribute('aria-label', String(state.time));
+      const btns = labels.map((l, k) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = l; b.setAttribute('role', 'radio');
+        b.addEventListener('click', () => { stop(); set(k); });
+        b.addEventListener('keydown', (e) => {
+          const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+          if (!d) return;
+          e.preventDefault(); stop();
+          const k2 = Math.max(0, Math.min(vals.length - 1, i + d)); set(k2); btns[k2].focus();
+        });
+        group.appendChild(b);
+        return b;
+      });
+      ctl.append(group);
+      setUI = (k) => btns.forEach((b, j) => { b.setAttribute('aria-checked', j === k ? 'true' : 'false'); b.tabIndex = j === k ? 0 : -1; });
+    } else {
+      const track = document.createElement('div'); track.className = 'pa-track';
+      const input = range(0, vals.length - 1, i, String(state.time));
+      input.style.setProperty('--pa-p', '100%');
+      const ends = document.createElement('div'); ends.className = 'pa-ends';
+      ends.innerHTML = '<span></span><span></span>';
+      ends.children[0].textContent = labels[0]; ends.children[1].textContent = labels[labels.length - 1];
+      track.append(input, ends);
+      const now = document.createElement('span'); now.className = 'pa-now';
+      ctl.append(track, now);
+      input.addEventListener('input', () => { stop(); set(+input.value); });
+      setUI = (k) => { input.value = k; input.style.setProperty('--pa-p', (100 * k) / (vals.length - 1) + '%'); now.textContent = labels[k]; };
+    }
     const set = (k) => {
-      i = k; input.value = k;
-      fill.setAttribute('width', (100 * k) / (vals.length - 1));
-      now.textContent = String(vals[k]);
+      i = k; setUI(k);
       state = { ...state, timeValue: vals[k] };
       schedule();
     };
-    input.addEventListener('input', () => { stop(); set(+input.value); });
-    play.addEventListener('click', () => {
+    if (play) play.addEventListener('click', () => {
       if (timer) return stop();
       if (i >= vals.length - 1) set(0);
       setIcon(play, 'pause');
-      timer = setInterval(() => { if (i >= vals.length - 1) return stop(); set(i + 1); }, state.playInterval ?? 1000);
+      timer = setInterval(() => { if (i >= vals.length - 1) return stop(); set(i + 1); }, state.playInterval ?? 1200);
     });
-    function stop() { clearInterval(timer); timer = null; setIcon(play, 'play'); }
-    set(i);
+    function stop() { clearInterval(timer); timer = null; if (play) setIcon(play, 'play'); }
+    setUI(i);
   }
 
-  // ── Rango con vista general (series de tiempo) ──────────────────────────
+  // ── Rango (series de tiempo): dos tiradores sobre una línea fina ────────
   function buildRange() {
     const data = ensureData(state);
     const xf = state.x;
@@ -224,72 +257,34 @@ export function render(target, spec, opts = {}) {
     const raw = uniq(data.map((r) => r[xf]));
     const val = (v) => (kind === 'date' ? parseDate(v) : num(v));
     const xs = raw.map((v) => ({ v, t: val(v) })).filter((p) => Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
-    if (xs.length < (state.sliderMin ?? 6)) return;
+    if (xs.length < 3) return;
     ctl.hidden = false;
-    // Vista general: suma de todas las series por x.
-    const ys = Array.isArray(state.y) ? state.y : [state.y];
-    const tot = new Map(xs.map((p) => [p.t, 0]));
-    for (const r of data) { const t = val(r[xf]); if (tot.has(t)) tot.set(t, tot.get(t) + ys.reduce((a, f) => a + (Number.isFinite(num(r[f])) ? num(r[f]) : 0), 0)); }
-    const tv = xs.map((p) => tot.get(p.t));
-    const mn = Math.min(...tv), mx = Math.max(...tv);
-    const t0 = xs[0].t, t1 = xs[xs.length - 1].t;
-    const px = (t) => (100 * (t - t0)) / (t1 - t0 || 1);
-    const py = (v) => 26 - (22 * (v - mn)) / (mx - mn || 1);
-    const track = document.createElement('div'); track.className = 'pa-track';
-    const ov = svgEl('svg', { class: 'pa-ov', viewBox: '0 0 100 28', preserveAspectRatio: 'none' });
-    const d = xs.map((p, k) => `${k ? 'L' : 'M'}${px(p.t).toFixed(2)},${py(tv[k]).toFixed(2)}`).join('');
-    ov.appendChild(svgEl('path', { d: d + `L100,28L0,28Z`, fill: theme.muted, 'fill-opacity': 0.12 }));
-    ov.appendChild(svgEl('path', { d, fill: 'none', stroke: theme.muted, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
-    const sel = svgEl('rect', { y: 0, height: 28, rx: 3, fill: theme.categorical[0], 'fill-opacity': 0.08 });
-    ov.appendChild(sel);
-    track.appendChild(ov);
     const fmtX = (p) => (kind === 'date' ? formatDate(p.t, dateUnit(xs.map((q) => q.t)), state.locale || 'es') : String(p.v));
     let lo = 0, hi = xs.length - 1;
     if (state.xRange) {
       const a = xs.findIndex((p) => p.t >= val(state.xRange[0])), b = xs.map((p) => p.t <= val(state.xRange[1])).lastIndexOf(true);
       if (a >= 0) lo = a; if (b >= 0) hi = b;
     }
+    const track = document.createElement('div'); track.className = 'pa-track pa-dual';
     const a = range(0, xs.length - 1, lo, 'Desde'), b = range(0, xs.length - 1, hi, 'Hasta');
-    // Con fechas, las marcas del slider son años (o el primer valor de cada año).
-    const yearOf = (p) => new Date(p.t).getUTCFullYear();
-    const tickLabels = kind === 'date' ? xs.map((p) => String(yearOf(p))) : xs.map(fmtX);
-    const keep = kind === 'date' ? (k) => k === 0 || yearOf(xs[k]) !== yearOf(xs[k - 1]) : null;
-    track.append(a, b);
+    const ends = document.createElement('div'); ends.className = 'pa-ends';
+    ends.innerHTML = '<span></span><span></span>';
+    ends.children[0].textContent = fmtX(xs[0]); ends.children[1].textContent = fmtX(xs[xs.length - 1]);
+    track.append(a, b, ends);
     const now = document.createElement('span'); now.className = 'pa-now';
-    now.textContent = `${fmtX(xs[0])} – ${fmtX(xs[xs.length - 1])}`;
     ctl.append(track, now);
-    track.appendChild(ticks(tickLabels, (k) => px(xs[k].t) / 100, keep, track));
+    const n = xs.length - 1;
     const set = () => {
       let i0 = +a.value, i1 = +b.value;
-      if (i1 - i0 < 1) { if (document.activeElement === a) a.value = i0 = Math.max(0, i1 - 1); else b.value = i1 = Math.min(xs.length - 1, i0 + 1); }
-      sel.setAttribute('x', px(xs[i0].t)); sel.setAttribute('width', Math.max(0.5, px(xs[i1].t) - px(xs[i0].t)));
+      if (i1 - i0 < 1) { if (document.activeElement === a) a.value = i0 = Math.max(0, i1 - 1); else b.value = i1 = Math.min(n, i0 + 1); }
+      track.style.setProperty('--pa-a', (100 * i0) / n + '%');
+      track.style.setProperty('--pa-b', (100 * i1) / n + '%');
       now.textContent = `${fmtX(xs[i0])} – ${fmtX(xs[i1])}`;
-      state = { ...state, xRange: i0 === 0 && i1 === xs.length - 1 ? undefined : [xs[i0].v, xs[i1].v] };
+      state = { ...state, xRange: i0 === 0 && i1 === n ? undefined : [xs[i0].v, xs[i1].v] };
       schedule();
     };
     a.addEventListener('input', set); b.addEventListener('input', set);
     set();
-  }
-
-  function ticks(labels, pos, keep, trackEl) {
-    const box = document.createElement('div'); box.className = 'pa-ticks';
-    const n = labels.length;
-    const trackW = Math.max(120, (trackEl && trackEl.clientWidth) || (host.clientWidth || 600) - 180);
-    const lw = Math.max(...labels.map((l) => String(l).length)) * 6.2 + 14;
-    const every = Math.max(1, Math.ceil((n * lw) / trackW));
-    let lastPx = -Infinity;
-    labels.forEach((l, k) => {
-      if (keep ? !keep(k) : k % every && k !== n - 1) return;
-      const px = pos(k) * trackW;
-      if (px - lastPx < lw && k !== n - 1) return;
-      if (k === n - 1 && px - lastPx < lw) return;
-      lastPx = px;
-      const s = document.createElement('span'); s.textContent = l; s.style.left = (pos(k) * 100).toFixed(2) + '%';
-      if (k === 0) s.style.transform = 'none';
-      if (k === n - 1) s.style.transform = 'translateX(-100%)';
-      box.appendChild(s);
-    });
-    return box;
   }
 
   host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
@@ -306,6 +301,21 @@ export function render(target, spec, opts = {}) {
     update(next) { clearInterval(timer); ro && ro.disconnect(); return render(host, next, opts); },
     destroy() { clearInterval(timer); ro && ro.disconnect(); host.innerHTML = ''; },
   };
+}
+
+/**
+ * ¿Qué control de tiempo dibujar? Ninguno por defecto: el gráfico muestra el
+ * último periodo (o `timeValue`). `slider: true` (o `controls: true`) elige
+ * botones o slider según cuántos periodos haya; "buttons" y "slider" fuerzan
+ * uno. `render(el, spec, { controls: false })` los apaga siempre.
+ */
+export function controlMode(s, opts = {}) {
+  if (opts.controls === false) return null;
+  const v = s.slider ?? s.controls ?? opts.controls;
+  if (v === true || v === 'auto') return 'auto';
+  if (v === 'buttons' || v === 'button' || v === 'botones') return 'buttons';
+  if (v === 'slider' || v === 'range') return 'slider';
+  return null;
 }
 
 function timeValuesOf(s) {
@@ -334,7 +344,8 @@ function button() {
 }
 function setIcon(b, kind) {
   b.setAttribute('aria-label', kind === 'play' ? 'Reproducir' : 'Pausar');
+  b.setAttribute('aria-pressed', kind === 'play' ? 'false' : 'true');
   b.innerHTML = kind === 'play'
-    ? '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z" fill="currentColor"/></svg>'
-    : '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/><rect x="7" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/></svg>';
+    ? '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.6 1.4v7.2L8.6 5z" fill="currentColor" stroke="currentColor" stroke-width=".8" stroke-linejoin="round"/></svg>'
+    : '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.6v6.8M7 1.6v6.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 }

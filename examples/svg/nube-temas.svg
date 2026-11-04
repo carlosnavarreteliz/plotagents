@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="720" height="460" role="img" aria-labelledby="paj7u17h-t paj7u17h-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="wordcloud" data-pa-mode="light" data-pa-lang="es" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><title id="paj7u17h-t">Las peticiones de tecnología superan a las de personas y negocio</title><desc id="paj7u17h-d">Nube de 24 palabras, con tamaño según menciones. Más frecuentes: datos (120), inteligencia artificial (96), clientes (80), automatización (74), costos (61). No se muestran 11 palabras menos frecuentes.</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}</style><rect width="720" height="460" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">Las peticiones de tecnología superan a las de personas y</text><text x="24" y="72.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">negocio</text><text x="24" y="98.5" fill="#4A5070" font-size="14.5">Menciones por tema en 312 respuestas abiertas, 2026</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" style="cursor:pointer"><rect x="21" y="114" width="90.58" height="19" rx="4" fill="transparent"/><rect x="24" y="118.5" width="10" height="10" rx="2.5" fill="#3A47B8"/><text x="40" y="128" fill="#4A5070" font-size="12.5">Tecnología</text></g><g class="pa-key" data-color="#D42A5E" style="cursor:pointer"><rect x="121.58" y="114" width="73.12" height="19" rx="4" fill="transparent"/><rect x="124.58" y="118.5" width="10" height="10" rx="2.5" fill="#D42A5E"/><text x="140.58" y="128" fill="#4A5070" font-size="12.5">Negocio</text></g><g class="pa-key" data-color="#E8A33D" style="cursor:pointer"><rect x="204.69" y="114" width="81.65" height="19" rx="4" fill="transparent"/><rect x="207.69" y="118.5" width="10" height="10" rx="2.5" fill="#E8A33D"/><text x="223.69" y="128" fill="#4A5070" font-size="12.5">Personas</text></g></g></g><g class="pa-body"><g class="pa-words"><text x="360" y="295.99" class="pa-m" fill="#3A47B8" font-size="53.89" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#3A47B8" data-tip="datos
+120 menciones · 11%
+Tecnología">datos</text><text x="368.5" y="353.36" class="pa-m" fill="#3A47B8" font-size="49.15" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#3A47B8" data-tip="inteligencia artificial
+96 menciones · 9,0%
+Tecnología">inteligencia artificial</text><text x="310.39" y="235.84" class="pa-m" fill="#D42A5E" font-size="45.64" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="clientes
+80 menciones · 7,5%
+Negocio">clientes</text><text x="331.03" y="181.37" class="pa-m" fill="#3A47B8" font-size="44.22" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#3A47B8" data-tip="automatización
+74 menciones · 6,9%
+Tecnología">automatización</text><text x="202.92" y="295.49" class="pa-m" fill="#D42A5E" font-size="40.93" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="costos
+61 menciones · 5,7%
+Negocio">costos</text><text x="513.64" y="269.73" class="pa-m" fill="#D42A5E" font-size="40.12" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="tiempo
+58 menciones · 5,4%
+Negocio">tiempo</text><text x="139.9" y="243.16" class="pa-m" fill="#E8A33D" font-size="38.42" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#E8A33D" data-tip="equipo
+52 menciones · 4,9%
+Personas">equipo</text><text x="416.42" y="400.91" class="pa-m" fill="#D42A5E" font-size="36.92" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="reportes
+47 menciones · 4,4%
+Negocio">reportes</text><text x="594.39" y="214.65" class="pa-m" fill="#3A47B8" font-size="35" font-weight="600" text-anchor="middle" letter-spacing="-0.02em" data-color="#3A47B8" data-tip="seguridad
+41 menciones · 3,8%
+Tecnología">seguridad</text><text x="213.45" y="399.04" class="pa-m" fill="#E8A33D" font-size="33.97" font-weight="500" text-anchor="middle" letter-spacing="-0.02em" data-color="#E8A33D" data-tip="capacitación
+38 menciones · 3,6%
+Personas">capacitación</text><text x="556.02" y="406.65" class="pa-m" fill="#D42A5E" font-size="32.91" font-weight="500" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="ventas
+35 menciones · 3,3%
+Negocio">ventas</text><text x="574.6" y="173.67" class="pa-m" fill="#D42A5E" font-size="31" font-weight="500" text-anchor="middle" letter-spacing="-0.02em" data-color="#D42A5E" data-tip="calidad
+30 menciones · 2,8%
+Negocio">calidad</text><text x="446.91" y="224.46" class="pa-m" fill="#3A47B8" font-size="29.76" font-weight="500" text-anchor="middle" data-color="#3A47B8" data-tip="nube
+27 menciones · 2,5%
+Tecnología">nube</text><text x="98.53" y="292.11" class="pa-m" fill="#3A47B8" font-size="27.49" font-weight="500" text-anchor="middle" data-color="#3A47B8" data-tip="ERP
+22 menciones · 2,1%
+Tecnología">ERP</text><text x="95.61" y="191.14" class="pa-m" fill="#D42A5E" font-size="24.85" font-weight="500" text-anchor="middle" data-color="#D42A5E" data-tip="contratos
+17 menciones · 1,6%
+Negocio">contratos</text><text x="630.65" y="272.46" class="pa-m" fill="#E8A33D" font-size="22.31" font-weight="500" text-anchor="middle" data-color="#E8A33D" data-tip="soporte
+13 menciones · 1,2%
+Personas">soporte</text><text x="515.25" y="302.79" class="pa-m" fill="#D42A5E" font-size="20.8" font-weight="500" text-anchor="middle" data-color="#D42A5E" data-tip="inventario
+11 menciones · 1,0%
+Negocio">inventario</text><text x="641.29" y="301.13" class="pa-m" fill="#D42A5E" font-size="19.94" font-weight="500" text-anchor="middle" data-color="#D42A5E" data-tip="regulación
+10 menciones · 0,9%
+Negocio">regulación</text><text x="73.85" y="325.93" class="pa-m" fill="#E8A33D" font-size="19" font-weight="400" text-anchor="middle" data-color="#E8A33D" data-tip="talento
+9 menciones · 0,8%
+Personas">talento</text><text x="633.61" y="243.42" class="pa-m" fill="#3A47B8" font-size="16.66" font-weight="400" text-anchor="middle" data-color="#3A47B8" data-tip="agentes
+7 menciones · 0,7%
+Tecnología">agentes</text><text x="659.23" y="334.37" class="pa-m" fill="#3A47B8" font-size="16.66" font-weight="400" text-anchor="middle" data-color="#3A47B8" data-tip="Excel
+7 menciones · 0,7%
+Tecnología">Excel</text><text x="73.11" y="348.39" class="pa-m" fill="#D42A5E" font-size="15" font-weight="400" text-anchor="middle" data-color="#D42A5E" data-tip="métricas
+6 menciones · 0,6%
+Negocio">métricas</text><text x="646.32" y="367.84" class="pa-m" fill="#D42A5E" font-size="15" font-weight="400" text-anchor="middle" data-color="#D42A5E" data-tip="riesgo
+6 menciones · 0,6%
+Negocio">riesgo</text><text x="72.73" y="368.19" class="pa-m" fill="#D42A5E" font-size="11" font-weight="400" text-anchor="middle" data-color="#D42A5E" data-tip="logística
+5 menciones · 0,5%
+Negocio">logística</text></g></g><text x="696" y="434" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

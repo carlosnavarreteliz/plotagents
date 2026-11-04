@@ -28,7 +28,7 @@ export const NOTES_EN = {
   sankey: ['Sankey', 'Flows between stages. Color starts at the source and is inherited downstream.'],
   kpi: ['Indicators (KPI)', 'When the story is a number, the number is the chart. Change with arrow and text, a sparkline and a target meter.'],
   noche: ['Dark theme + highlight', '`theme: "noche"` uses the same hues, re-stepped and validated for a dark surface. `highlight` mutes the rest.'],
-  'slider-periodo': ['Period with play (d3plus-style)', '`time: "año"` shows one year at a time with a slider and a play button; every tile shows its change vs the previous year. Colors follow each sector across years. `slider: false` removes the slider, `play: false` only the button.'],
+  'slider-periodo': ['Period buttons with play', '`time: "año"` shows one year at a time (the latest by default); every tile shows its change vs the previous year and colors follow each sector across years. Controls are opt-in: `slider: true` adds buttons when there are few periods and a minimal slider when there are many; `"buttons"` or `"slider"` force one, `play: false` hides play.'],
   facetas: ['Small multiples (facet)', '`facet: "region"` draws one panel per region on the same scale with the same colors (seaborn col / col_wrap). Better than tangled lines.'],
   log: ['Log scale', '`yScale: "log"`: exponential growth looks straight, so rates can be compared instead of levels. 1-2-5 ticks, no empty decades.'],
   banda: ['Line with a confidence band', '`ci: true` (seaborn lineplot): with several observations per x, it draws the mean and its 95% interval. `errorbar: "sd"` also works.'],

@@ -63,6 +63,13 @@ export const schema = {
       },
     },
 
+    // Word clouds
+    text: { description: 'wordcloud: field with the words, OR the raw text to count (a string or a list of strings, e.g. open survey answers). Raw text drops Spanish/English stopwords.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    textField: field('wordcloud: field holding free text in each row; words are counted across rows.'),
+    stopwords: { type: 'array', items: { type: 'string' }, description: 'wordcloud: extra words to ignore when counting raw text.' },
+    minFont: { type: 'number', description: 'wordcloud: smallest font size (default 11).' },
+    maxFont: { type: 'number', description: 'wordcloud: largest font size (default from the panel size).' },
+
     // Schedules
     task: field('gantt: task name field (one row per task).'),
     start: field('gantt: start date field ("2026-03-02", "2026-03") or a number (e.g. week).'),
@@ -108,14 +115,14 @@ export const schema = {
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens.' },
     sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
-    time: field('Time field (d3plus-style): shows one period at a time (the latest by default) and, in the browser, a slider with play. Not used by line/area, which get a range slider.'),
+    time: field('Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods.'),
     timeValue: { description: 'Period to show when `time` is set.' },
-    slider: { type: 'boolean', description: 'Browser: false removes the time slider (the chart shows `timeValue` or the latest period).' },
-    play: { type: 'boolean', description: 'Browser: false keeps the time slider but hides the play button.' },
+    slider: { description: 'Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. "buttons" or "slider" force one.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['buttons', 'slider'] }] },
+    play: { type: 'boolean', description: 'Browser: false keeps the time controls but hides the play button.' },
     compare: { description: 'With `time`: period to compute changes against: "previous" (default), "first", a specific period, or false.', anyOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }] },
     colorBy: { type: 'string', enum: ['group', 'change', 'label'], description: 'treemap: "change" colors tiles by % change vs the comparison period (diverging, growth cool / decline warm); "label" colors a single-level treemap by item.' },
     shade: { type: 'boolean', description: 'treemap/sunburst: subtle lightness steps inside each category (default false: one solid color per category).' },
-    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets).' },
+    xRange: { type: 'array', description: 'line/area: visible x range [from, to] (what the range slider sets with `slider: true`).' },
     focus: { description: 'treemap/sunburst: path to drill into, e.g. ["Mining"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
     depth: { type: 'integer', description: 'treemap/sunburst: how many levels to show.' },
 
@@ -193,10 +200,50 @@ export const schema = {
   },
 };
 
+/** JSON Schema of a dashboard: dashboard({ title, kpis, charts, filters, … }). */
+export const dashboardSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'plotagents dashboard',
+  description: 'A dashboard with best-practice defaults: KPIs on top, the main chart wide, the rest in balanced full rows of a 12-column grid, one color per entity across charts, shared filters, one source line.',
+  type: 'object',
+  required: ['charts'],
+  properties: {
+    title: { type: 'string', description: 'The question the dashboard answers, e.g. "How are southern sales doing?"' },
+    subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
+    source: { type: 'string', description: 'Data source, shown once at the bottom.' },
+    updated: { type: 'string', description: 'Last update, e.g. "2026-01-05".' },
+    locale: { type: 'string', enum: ['es', 'en'] },
+    theme: { description: 'One theme for every chart: "papel" (light) or "noche" (dark), or a theme object.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    data: { type: 'array', items: { type: 'object' }, description: 'Shared rows: charts without their own `data` use these, and computed KPIs and filters work on them.' },
+    kpis: {
+      type: 'array', description: 'Up to 5 key figures. Fixed ({ label, value, delta, period }) or computed from `data` ({ label, field, agg, compare, trendBy }).',
+      items: { type: 'object', properties: {
+        label: { type: 'string' }, value: { type: 'number' }, delta: { type: 'number', description: 'Change as a fraction (0.12 = +12%).' }, period: { type: 'string' },
+        field: { type: 'string' }, agg: { type: 'string', enum: ['sum', 'mean', 'median', 'min', 'max', 'count', 'distinct', 'ratio'] }, over: { type: 'string', description: 'agg "ratio": denominator field.' },
+        scale: { type: 'number', description: 'Multiply the computed value (e.g. 1000 to show thousands).' },
+        compare: { type: 'object', description: 'Current vs previous period: { field: "year", current: 2025, previous: 2024 }.', properties: { field: { type: 'string' }, current: {}, previous: {} } },
+        trendBy: { type: 'string', description: 'Field to draw a sparkline by (e.g. "month").' },
+        format: {}, good: { type: 'string', enum: ['up', 'down'] }, trend: { type: 'array', items: { type: 'number' } },
+      } },
+    },
+    charts: { type: 'array', items: { type: 'object' }, description: 'Chart specs (same as plot()). Optional per chart: `primary: true` (the main, wide chart), `size: "full" | "large" | "medium" | "small"` or `span` (of 12).' },
+    filters: { type: 'array', description: 'Fields to filter every chart and computed KPI by: "region" or { field, label, control: "buttons" | "select", value }.', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } },
+    layout: { type: 'string', enum: ['auto', 'executive', 'grid'], description: 'auto (default): balanced rows by chart type. executive: main chart full width, the rest in pairs. grid: equal panels.' },
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities across every chart.' },
+  },
+};
+
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
-export function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
+export function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = {}) {
+  if (kind === 'dashboard') {
+    const description = 'Builds a self-contained, interactive HTML dashboard with best-practice defaults: up to 5 KPIs on top (fixed or computed from data, with year-over-year change), the main chart wide, the rest in balanced rows, the same color for the same entity in every chart, and filters as buttons. Each chart is a plotagents spec with a `title` that states its finding.';
+    const { $schema: _s, title: _t, ...params } = dashboardSchema;
+    const n = name ?? 'dashboard';
+    return flavor === 'openai' ? { type: 'function', function: { name: n, description, parameters: params } } : { name: n, description, input_schema: params };
+  }
+  name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

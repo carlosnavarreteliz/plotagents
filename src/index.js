@@ -21,6 +21,7 @@ import { chord } from './charts/chord.js';
 import { pyramid } from './charts/pyramid.js';
 import { flowchart } from './charts/flowchart.js';
 import { gantt } from './charts/gantt.js';
+import { wordcloud, countWords } from './charts/wordcloud.js';
 import { choropleth, symbolMap } from './charts/choropleth.js';
 import { registerGeo, getGeo, registeredGeo, toFeatureCollection } from './geo/registry.js';
 // Mapas incluidos (Chile por regiones, estados de EE. UU. y países del mundo): listos sin importar nada más.
@@ -36,9 +37,10 @@ import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, ALIASES, normalizeType } from './infer.js';
 import { lint, _setProbe } from './lint.js';
-import { schema, toolDefinition } from './schema.js';
+import { schema, toolDefinition, dashboardSchema } from './schema.js';
 import { attach, attachSource } from './interact.js';
 import { render, _bind, loadGeo } from './runtime.js';
+import { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } from './dashboard.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
 
@@ -74,6 +76,7 @@ const RENDERERS = {
   pyramid: (s, t) => pyramid(s, t),
   flowchart: (s, t) => flowchart(s, t),
   gantt: (s, t) => gantt(s, t),
+  wordcloud: (s, t) => wordcloud(s, t),
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
 };
@@ -92,7 +95,7 @@ export function resolve(spec = {}) {
     for (const [k, v] of Object.entries(extra)) if (s[k] === undefined) s[k] = v;
   }
   if (!type) {
-    const data = s.items ? [] : ensureData(s);
+    const data = s.items || (!s.data && (typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
     type = inferType(s, data);
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
@@ -265,9 +268,12 @@ export function bundleSource(file = 'plotagents.js') {
 }
 
 _bind(plot, resolve);
+_bindDashboard({ plot, resolve, lint, bundleSource });
 _setProbe((s) => plot(s));
 export { render };
 
+export { countWords, dashboardSchema };
+export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };
 export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

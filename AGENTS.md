@@ -43,6 +43,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | A process with decisions | `flowchart` | `nodes` (`type`, `lane`), `edges` (`label`) |
 | Flows between stages | `sankey` | `from`, `to`, `value` |
 | One or more numbers | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
+| What comes up most in text | `wordcloud` | `text` (field or raw text), `value?`, `series?`; prefer `bar` + `top` to compare exactly |
 
 seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `stripplot`, `swarmplot`, `pointplot`), and `hue` is an alias of `series`. Leave `type` out to infer it from the data.
 
@@ -51,7 +52,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
 - `dashed` for what is not a firm number (estimates, projections, provisional figures): a name, a list, or a data field (`dashed: "provisional"`). Shapes keep their color, with a hatched fill and a dashed outline. On a time axis, `dashedFrom: 2025` dashes lines, areas and columns from that year on. **Always set `dashedLabel`** ("Projection", "Preliminary") so readers know what the hatching means.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
-- `time: "year"`: one period at a time (the latest) with % change vs the previous one; in the browser, a slider with play (`slider: false` / `play: false` to turn them off). Treemaps can be colored by change with `colorBy: "change"`.
+- `time: "year"`: one period at a time (the latest) with % change vs the previous one. Time controls are **off by default**: add `slider: true` only when the person asks to move through periods (buttons for ≤ 8 periods, a minimal slider otherwise; `"buttons"` / `"slider"` force one, `play: false` hides play). Treemaps can be colored by change with `colorBy: "change"`.
 - `refLines: [{ y: 600, label: "Target" }]` and `annotations: [{ x: "2024-01", label: "New branch" }]`.
 - `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.
@@ -71,6 +72,16 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - Hard-to-tell custom palette → `lint` names the offending pair.
 - Numbers as text ("1.234,5", "12%", "$ 3.000") → parsed automatically.
 - Tens of thousands of points → drawn as batched paths, still fast.
+
+## Dashboards
+
+When someone asks for a dashboard, call `safeDashboard({ title, subtitle, source, data, kpis, charts, filters })` (tool: `toolDefinition({ kind: 'dashboard' })`). Layout, widths, shared colors and filters are decided for you:
+
+- `title` is the **question** the dashboard answers; every chart still gets its finding as title.
+- At most **5 KPIs**, computed from `data` when possible: `{ label, field, agg: "sum", compare: { field: "year", current: 2025, previous: 2024 }, trendBy: "month" }`.
+- **4–6 charts**. The first time series (or the one with `primary: true`) goes full width; the rest fill balanced rows.
+- `filters: ["region", "channel"]` become buttons that filter every chart and KPI.
+- No more than one donut; one `source` for the page.
 
 ## Outputs
 

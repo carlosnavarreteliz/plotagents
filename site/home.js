@@ -116,3 +116,14 @@
     });
   });
 })();
+
+// Dashboard embebido: el iframe toma el alto de su contenido (mismo origen).
+(function () {
+  var f = document.querySelector('.dash-frame iframe');
+  if (!f) return;
+  function fit() { try { var h = f.contentDocument.documentElement.scrollHeight; if (h > 200) f.style.height = h + 'px'; } catch (e) {} }
+  f.addEventListener('load', function () {
+    fit();
+    try { new ResizeObserver(fit).observe(f.contentDocument.body); } catch (e) { setInterval(fit, 1500); }
+  });
+})();

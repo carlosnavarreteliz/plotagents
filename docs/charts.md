@@ -21,7 +21,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
 | `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. |
-| `time`, `timeValue`, `slider`, `play` | One period at a time with a slider in the browser; `slider: false` removes it, `play: false` hides only the play button. |
+| `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
+| `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
 | `theme`, `palette`, `ramp` | See [themes](themes.md). |
 | `font`, `textScale` | Typeface (Google Fonts name, CSS stack or `{ family, import }`) and a text-size multiplier (aliases `fontScale`, `labelScale`). Set them for every chart with `configure()`. |
@@ -62,7 +63,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `points` | Markers on every point (automatic for short series). |
 | `stack` | Areas: `true` (default with series), `"percent"`, or `false` to overlap. |
 | `fill` | Single line: `false` removes the soft gradient. |
-| `xRange` | Visible range `[from, to]`; this is what the browser slider sets. |
+| `xRange` | Visible range `[from, to]`; this is what the range slider sets (`slider: true`). |
 
 ## Projects
 
@@ -279,6 +280,28 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 ### `sankey`
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
+
+### `wordcloud` (`words`, `tagcloud`, `nube`)
+
+Words sized by frequency, done carefully: every word horizontal; each word's **area** proportional to its count (font size grows with the square root); a deterministic spiral layout from the most frequent word outwards, with no collisions; one hue that darkens with frequency, or one color per `series` with a legend. If the important words don't fit, the whole cloud shrinks; the words that still don't fit are named in the alt text, never cut off.
+
+```js
+plot({ type: 'wordcloud', data, text: 'word', value: 'mentions', title: '“Data” dominates what companies ask for' });
+plot({ type: 'wordcloud', text: openAnswers, title: '…', subtitle: 'Mentions in 312 open answers' });  // raw text
+```
+
+| Option | Meaning |
+|---|---|
+| `text` | Field with the words, or the raw text to count (a string or a list of strings). Raw text drops Spanish and English stopwords and numbers. |
+| `textField` | A field of free text in each row (open survey answers): words are counted across rows. |
+| `value` | Weight of each word (default: 1 per row, summed). |
+| `series` | Color by group, with a legend. |
+| `top` | Most words to show (default 80). |
+| `stopwords`, `minLength` | Extra words to ignore; shortest word kept (default 3). |
+| `minFont`, `maxFont` | Font size range. |
+| `highlight` | Words to emphasize; the rest are muted. |
+
+A cloud is good at "what comes up most" and bad at "by how much". `lint` suggests a bar chart (`top: 15`) when there are few words, and asks for a `subtitle` that says what was counted.
 
 ### `kpi`
 
