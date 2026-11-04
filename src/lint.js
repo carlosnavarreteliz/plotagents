@@ -5,6 +5,7 @@ import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
 import { themeFor } from './theme.js';
+import { parseDate } from './format.js';
 
 /** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
 let RENDER_PROBE = null;
@@ -129,9 +130,75 @@ export function lint(spec = {}) {
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
 
+  if (type === 'gantt' && data.length) {
+    const sF = spec.start ?? fields.find((f) => /^(start|inicio|desde|begin|comienzo|from)/i.test(f));
+    const eF = spec.end ?? fields.find((f) => /^(end|fin|hasta|finish|termino|término|due|vence|to)$/i.test(f));
+    if (!sF) err('gantt-start', 'La carta Gantt necesita una fecha de inicio por tarea.', 'Indica `start` y `end` (o `duration`): start: "inicio", end: "fin".');
+    else if (eF && fields.includes(eF)) {
+      const back = data.filter((r) => { const a = parseDate(r[sF]), b = parseDate(r[eF]); return Number.isFinite(a) && Number.isFinite(b) && b < a; });
+      if (back.length) warn('gantt-backwards', `${back.length} tarea(s) terminan antes de empezar.`, 'Revisa si `start` y `end` están invertidos.');
+    }
+    if (data.length > 40) sug('gantt-many', `${data.length} tareas en una sola carta: cuesta encontrar la ruta crítica.`, 'Agrupa por fase con `group`, resume subtareas o usa `facet` por equipo.');
+    if (spec.today === undefined && !spec.refLines) sug('gantt-today', 'Una línea de "hoy" dice de un vistazo qué va atrasado.', 'Agrega `today: "2026-03-12"` (o `today: true`).');
+  }
   if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
+  if (String(spec.locale || '').toLowerCase().startsWith('en')) for (const list of [errors, warnings, tips]) list.forEach((it, i) => { list[i] = toEnglish(it); });
   return { ok: errors.length === 0, type, errors, warnings, suggestions: tips };
+}
+
+// ── English messages (locale: "en") ───────────────────────────────────────
+// Agents read these to repair their own spec, so they follow the chart's
+// language. The Spanish message is the source; dynamic parts are reused.
+const qs = (s) => [...String(s).matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+const n0 = (s) => (/(\d+)/.exec(String(s)) || [])[1];
+const after = (s) => String(s ?? '').replace(/^[^:]*:\s*/, '');
+const EN = {
+  data: (m) => [m.message, 'Pass `data` as an array of rows: [{ category: "A", value: 10 }]'],
+  type: (m) => [`Chart type "${qs(m.message)[0]}" is not supported.`, `Use one of: ${after(m.fix)}`],
+  field: (m) => { const [f] = qs(m.message); const role = (/\(([^)]+)\)/.exec(m.message) || [])[1]; return [`The field "${f}" (${role}) does not exist.`, `Available fields: ${after(m.fix)}`]; },
+  empty: () => ['`data` has no rows.', 'Pass at least one row.'],
+  title: () => ['The title is missing.', 'Write the finding as a full sentence: "Biobío accounts for 32% of sales", not "Sales by region".'],
+  'title-fact': () => ['The title describes the chart but does not say what it shows.', 'A good title is a fact, ideally with the key number.'],
+  source: () => ['The data source is missing.', 'Add `source: "Census Bureau, 2025"` (or "illustrative data").'],
+  'series-max': (m) => [`${n0(m.message)} series: there are only 8 distinguishable colors; from the 9th on they turn gray.`, 'Fold the tail into "Other", use `highlight` or split into several charts.'],
+  'one-bar': () => ['A single bar compares nothing.', 'Use `type: "kpi"` to show the number.'],
+  'too-many-bars': (m) => [`${n0(m.message)} categories: the 25 largest will be shown and the rest folded into "Other".`, 'Set `top: N` to control the cut.'],
+  'stack-many': () => ['Stacking more than 5 series makes the middle segments hard to compare.', 'Consider grouped bars, `highlight` or `stack: "percent"`.'],
+  'bar-time': () => ['Many periods drawn as bars.', 'For long trends, `type: "line"` reads better.'],
+  'line-many': (m) => [`${n0(m.message)} lines: beyond 3 or 4 the chart turns into spaghetti.`, 'Use `highlight: "Series"` to emphasize one and mute the rest, or split into several charts.'],
+  'line-nominal': () => ['The x axis holds unordered categories: lines suggest continuity.', 'To compare categories, use `type: "bar"`.'],
+  'line-few': () => ['Fewer than 3 points in time.', 'With 2 periods, grouped bars or a `kpi` with its change say it better.'],
+  'dual-scale': () => ['The two measures have very different scales (there is no dual axis: it invents correlations).', 'Use `index: true` (base 100) or two separate charts.'],
+  'donut-slices': (m) => [`${n0(m.message)} slices: beyond 6 a donut cannot be read; the rest fold into "Other".`, 'Use `type: "bar"` or `type: "treemap"`.'],
+  'donut-two': () => ['Two slices are a single number.', 'Use `type: "kpi"` with the percentage.'],
+  'donut-close': () => ['The values are very similar: angles cannot tell them apart.', 'Use a sorted `type: "bar"`.'],
+  negative: (m) => (/dona/.test(m.message) ? ['Donuts cannot show negative values.', 'Use bars.'] : ['Negative values are left out of the treemap.', 'Use bars for signed data.']),
+  'groups-max': () => ['More than 8 groups: from the 8th on they go into a gray "Other".', 'Merge categories or use another hierarchy level.'],
+  'scatter-colors': (m) => [`${n0(m.message)} color groups in a scatter: only the first 3 colors stay distinct across every pair for color-blind readers.`, 'Use `highlight`, merge groups or split into several charts.'],
+  overplot: (m) => [`${n0(m.message)} points: they may overlap.`, 'Reduce `radius` or use a heatmap.'],
+  numeric: (m) => { const [f] = qs(m.message); return /regresi/.test(m.message) ? [`"${f}" is not numeric: a regression needs two measures.`, 'Use `type: "box"` to compare a measure across categories.'] : [`"${f}" is not numeric: this chart needs a measure.`, 'To count categories, use `type: "countplot"`.']; },
+  'few-obs': (m) => (/recta/.test(m.message) ? [`Only ${n0(m.message)} points: the fit and its interval are unreliable.`, 'Show the points with `type: "scatter"`.'] : [`Only ${n0(m.message)} observations: the shape of the distribution is unreliable.`, 'With little data, `type: "strip"` shows every point.']),
+  'few-per-group': (m) => [`Groups with fewer than 5 observations: ${after(m.message).replace(/\.$/, '')}.`, '`type: "strip"` or `points: true` show each observation.'],
+  'radar-many': (m) => [`${n0(m.message)} series on a radar hide one another.`, 'Use `highlight`, `facet` or grouped bars.'],
+  'log-nonpositive': () => ['There are values ≤ 0: a log scale cannot show them.', 'Drop the log scale or filter those values.'],
+  'geo-unmatched': (m) => [`${n0(m.message)} row(s) match no shape on the map: ${after(m.message).replace(/\.$/, '')}.`, 'Check the names or use codes ("XIII", "ARG", "TX"), or set `featureKey`.'],
+  'dashed-label': () => ['Some shapes are dashed but nothing says what they mean (the legend will say "Estimate").', 'Add `dashedLabel: "Projection"`, "Preliminary" or whatever applies.'],
+  'dashed-from-type': () => ['`dashedFrom` only applies to lines, areas and columns on a time axis.', 'Use `dashed` with a list of categories or a data field.'],
+  'pyramid-sides': (m) => { const [f] = qs(m.message); return [`A population pyramid needs exactly 2 groups in "${f}" (found ${(/hay (\d+)/.exec(m.message) || [])[1]}).`, 'Use `type: "bar"` with `series` for more groups.']; },
+  'chord-many': () => ['More than 16 groups in a chord diagram: the ribbons become unreadable.', 'Fold the smallest into "Other" or use `type: "sankey"`.'],
+  'network-big': (m) => [`${n0(m.message)} links: the network may look like a blob.`, 'Filter weak links or use `layout: "circle"`.'],
+  'gantt-start': () => ['A Gantt chart needs a start date per task.', 'Set `start` and `end` (or `duration`): start: "start", end: "end".'],
+  'gantt-backwards': (m) => [`${n0(m.message)} task(s) end before they start.`, 'Check whether `start` and `end` are swapped.'],
+  'gantt-many': (m) => [`${n0(m.message)} tasks in one chart: the critical path is hard to find.`, 'Group by phase with `group`, roll up subtasks or use `facet` by team.'],
+  'gantt-today': () => ['A "today" line shows at a glance what is late.', 'Add `today: "2026-03-12"` (or `today: true`).'],
+  items: () => ['A KPI needs `items`.', 'items: [{ label: "Sales", value: 1250, delta: 0.12, period: "vs 2025" }]'],
+};
+function toEnglish(it) {
+  const f = EN[it.code] || (it.code.startsWith('palette-') ? (m) => [m.message.replace(/^Paleta:/, 'Palette:'), 'Change the order or the hues, or use the default palette.'] : null);
+  if (!f) return it;
+  const [message, fix] = f(it);
+  return { ...it, message, fix };
 }
 
 export { PlotError };

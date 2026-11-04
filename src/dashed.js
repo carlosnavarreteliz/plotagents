@@ -29,7 +29,7 @@ export function dashedMatcher(spec, data, keyField, seriesField, norm = String) 
   if (d === undefined || d === null || d === false) return null;
   if (d === true) return () => true;
   const row0 = data && data[0];
-  const field = typeof d === 'object' && !Array.isArray(d) ? d.field : typeof d === 'string' && row0 && d in row0 ? d : null;
+  const field = typeof d === 'object' && !Array.isArray(d) ? d.field : typeof d === 'string' && row0 && (data || []).some((r) => r && typeof r === 'object' && d in r) ? d : null;
   if (field) {
     const eq = typeof d === 'object' ? d.equals ?? d.value : undefined;
     const pairs = new Set();

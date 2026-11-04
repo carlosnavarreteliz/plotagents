@@ -20,8 +20,9 @@ import { network } from './charts/network.js';
 import { chord } from './charts/chord.js';
 import { pyramid } from './charts/pyramid.js';
 import { flowchart } from './charts/flowchart.js';
+import { gantt } from './charts/gantt.js';
 import { choropleth, symbolMap } from './charts/choropleth.js';
-import { registerGeo, getGeo, registeredGeo } from './geo/registry.js';
+import { registerGeo, getGeo, registeredGeo, toFeatureCollection } from './geo/registry.js';
 // Mapas incluidos (Chile por regiones, estados de EE. UU. y países del mundo): listos sin importar nada más.
 // El bundle del navegador los separa en dist/plotagents-geo.js.
 import './geo/chile.js';
@@ -37,7 +38,7 @@ import { inferType, TYPES, ALIASES, normalizeType } from './infer.js';
 import { lint, _setProbe } from './lint.js';
 import { schema, toolDefinition } from './schema.js';
 import { attach, attachSource } from './interact.js';
-import { render, _bind } from './runtime.js';
+import { render, _bind, loadGeo } from './runtime.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
 
@@ -72,6 +73,7 @@ const RENDERERS = {
   chord: (s, t) => chord(s, t),
   pyramid: (s, t) => pyramid(s, t),
   flowchart: (s, t) => flowchart(s, t),
+  gantt: (s, t) => gantt(s, t),
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
 };
@@ -266,6 +268,6 @@ _bind(plot, resolve);
 _setProbe((s) => plot(s));
 export { render };
 
-export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo };
+export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };
 export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

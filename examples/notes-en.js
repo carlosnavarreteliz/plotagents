@@ -3,6 +3,7 @@
 export const SECTIONS_EN = {
   Comparar: 'Compare',
   Tiempo: 'Time',
+  Proyectos: 'Projects',
   'Partes de un todo': 'Part-to-whole',
   Distribuciones: 'Distributions',
   Relaciones: 'Relationships',

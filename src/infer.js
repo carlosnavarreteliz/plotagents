@@ -1,7 +1,7 @@
 // Elige el tipo de gráfico cuando el agente no lo indica (type: "auto").
 import { fieldsOf, fieldKind } from './data.js';
 
-export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'choropleth', 'symbolmap'];
+export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'choropleth', 'symbolmap'];
 
 // Nombres de seaborn, d3plus y otros: el agente puede usar el que conozca.
 export const ALIASES = {
@@ -13,6 +13,7 @@ export const ALIASES = {
   populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
   flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
+  timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -27,6 +28,7 @@ export function normalizeType(t) {
 export function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
   if (spec.geo) return 'choropleth';
+  if (spec.start !== undefined && (spec.end !== undefined || spec.duration !== undefined) && typeof spec.start === 'string') return 'gantt';
   if (spec.nodes && spec.nodes.some?.((n) => n && n.type)) return 'flowchart';
   if (spec.nodes) return 'network';
   if (spec.matrix) return 'chord';
@@ -36,6 +38,8 @@ export function inferType(spec, data = []) {
   const fields = fieldsOf(data);
   if ((fields.includes('source') && fields.includes('target')) || (fields.includes('from') && fields.includes('to'))) return 'sankey';
   const kinds = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
+  // Dos fechas por fila (inicio y fin) y un nombre: un cronograma.
+  if (fields.filter((f) => kinds[f] === 'date').length >= 2 && fields.some((f) => kinds[f] === 'category') && !spec.y && !spec.series) return 'gantt';
   const x = spec.x ?? fields[0];
   const xk = kinds[x];
   if (xk === 'date' || xk === 'year') return 'line';

@@ -22,8 +22,9 @@ const { network } = __req("src/charts/network.js");
 const { chord } = __req("src/charts/chord.js");
 const { pyramid } = __req("src/charts/pyramid.js");
 const { flowchart } = __req("src/charts/flowchart.js");
+const { gantt } = __req("src/charts/gantt.js");
 const { choropleth, symbolMap } = __req("src/charts/choropleth.js");
-const { registerGeo, getGeo, registeredGeo } = __req("src/geo/registry.js");
+const { registerGeo, getGeo, registeredGeo, toFeatureCollection } = __req("src/geo/registry.js");
 
 
 
@@ -37,7 +38,7 @@ const { inferType, TYPES, ALIASES, normalizeType } = __req("src/infer.js");
 const { lint, _setProbe } = __req("src/lint.js");
 const { schema, toolDefinition } = __req("src/schema.js");
 const { attach, attachSource } = __req("src/interact.js");
-const { render, _bind } = __req("src/runtime.js");
+const { render, _bind, loadGeo } = __req("src/runtime.js");
 const { makeFormat, formatNumber, formatCompact } = __req("src/format.js");
 const { esc } = __req("src/svg.js");
 
@@ -72,6 +73,7 @@ const RENDERERS = {
   chord: (s, t) => chord(s, t),
   pyramid: (s, t) => pyramid(s, t),
   flowchart: (s, t) => flowchart(s, t),
+  gantt: (s, t) => gantt(s, t),
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
 };
@@ -266,7 +268,7 @@ _setProbe((s) => plot(s));
 
 
 
-return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/theme.js", function () {
 
@@ -439,11 +441,12 @@ function ramp(stops, t) {
  */
 function colorMap(keys, theme, overrides = {}) {
   const map = new Map();
+  const taken = new Set(Object.values(overrides || {}).map((c) => String(c).toLowerCase()));
+  const free = theme.categorical.filter((c) => !taken.has(String(c).toLowerCase()));
   let i = 0;
   for (const k of keys) {
     if (overrides && overrides[k]) map.set(k, overrides[k]);
-    else map.set(k, i < theme.categorical.length ? theme.categorical[i] : theme.other);
-    if (!(overrides && overrides[k])) i++;
+    else map.set(k, i < free.length ? free[i++] : theme.other);
   }
   return map;
 }
@@ -2063,7 +2066,7 @@ function dashedMatcher(spec, data, keyField, seriesField, norm = String) {
   if (d === undefined || d === null || d === false) return null;
   if (d === true) return () => true;
   const row0 = data && data[0];
-  const field = typeof d === 'object' && !Array.isArray(d) ? d.field : typeof d === 'string' && row0 && d in row0 ? d : null;
+  const field = typeof d === 'object' && !Array.isArray(d) ? d.field : typeof d === 'string' && row0 && (data || []).some((r) => r && typeof r === 'object' && d in r) ? d : null;
   if (field) {
     const eq = typeof d === 'object' ? d.equals ?? d.value : undefined;
     const pairs = new Set();
@@ -5850,16 +5853,286 @@ function roundPath(pts, r) {
 
 return { "flowchart": flowchart };
 });
+__def("src/charts/gantt.js", function () {
+const { el, g, text, tip } = __req("src/svg.js");
+const { measure, truncate } = __req("src/text.js");
+const { makeFormat, parseDate, formatDate, formatNumber } = __req("src/format.js");
+const { timeTicks, niceStep, linear } = __req("src/scale.js");
+const { colorMap, ramp, textOn, readable } = __req("src/theme.js");
+const { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } = __req("src/data.js");
+const { xLabels } = __req("src/axes.js");
+const { createFrame, hash } = __req("src/frame.js");
+const { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } = __req("src/dashed.js");
+
+const DAY = 864e5;
+const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
+const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
+const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
+const blank = (v) => v === undefined || v === null || v === '';
+
+/** Lista de dependencias: "A", ["A", "B"] o "A, B". */
+const depsOf = (v) => (blank(v) ? [] : Array.isArray(v) ? v.map(String) : String(v).split(/\s*[,;|]\s*/)).map((s) => s.trim()).filter(Boolean);
+
+function gantt(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
+  const data = ensureData(spec);
+  if (!data.length) throw new PlotError(T(locale, 'La carta Gantt no tiene tareas.', 'The Gantt chart has no tasks.'), 'data: [{ task: "Diseño", start: "2026-03-02", end: "2026-03-20" }]');
+  const fields = fieldsOf(data);
+  const kind = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
+  const pick = (re, ok = () => true) => fields.find((f) => re.test(f) && ok(f));
+  const timeLike = (f) => kind[f] === 'date' || kind[f] === 'number' || kind[f] === 'year';
+  const taskF = spec.task ?? spec.label ?? (typeof spec.y === 'string' ? spec.y : null)
+    ?? pick(/^(task|tarea|actividad|activity|item|nombre|name|hito|entregable|deliverable)/i, (f) => kind[f] === 'category')
+    ?? fields.find((f) => kind[f] === 'category');
+  const startF = spec.start ?? (typeof spec.x === 'string' ? spec.x : null) ?? pick(/^(start|inicio|desde|begin|comienzo|from)/i) ?? fields.find((f) => kind[f] === 'date');
+  const durF = spec.duration ?? null;
+  const endF = spec.end ?? spec.x2 ?? (durF ? null : pick(/^(end|fin|hasta|finish|termino|término|due|vence|to)$/i) ?? fields.find((f) => f !== startF && kind[f] === 'date'));
+  const groupF = spec.group ?? spec.series ?? spec.hue ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : null)
+    ?? pick(/^(phase|fase|group|grupo|stream|workstream|etapa|equipo|team|area|área|categoria|categoría)$/i, (f) => f !== taskF && kind[f] === 'category');
+  const progF = spec.progress ?? pick(/^(progress|avance|progreso|complete|completado|done|pct)$/i);
+  const depF = spec.dependsOn ?? spec.after ?? pick(/^(depends|dependson|depends_on|after|predecessor|predecesor|depende|despues|después)/i);
+  const msF = spec.milestone ?? pick(/^(milestone|hito)$/i, (f) => f !== taskF);
+  requireField(data, taskF, 'task');
+  requireField(data, startF, 'start');
+  if (endF) requireField(data, endF, 'end');
+  if (durF) requireField(data, durF, 'duration');
+  if (groupF) requireField(data, groupF, 'group');
+  if (!startF) throw new PlotError(T(locale, 'La carta Gantt necesita una fecha de inicio por tarea.', 'The Gantt chart needs a start date per task.'), 'Indica `start` (y `end` o `duration`): start: "inicio", end: "fin"');
+
+  const isTime = kind[startF] === 'date' || (endF && kind[endF] === 'date');
+  const toT = (v) => (isTime ? parseDate(v) : num(v));
+  const tasks = [];
+  for (const [i, r] of data.entries()) {
+    const name = String(r[taskF] ?? '').trim();
+    const s = toT(r[startF]);
+    if (!name || !Number.isFinite(s)) continue;
+    let e;
+    const rawEnd = endF ? r[endF] : undefined;
+    if (durF && Number.isFinite(num(r[durF]))) e = s + num(r[durF]) * (isTime ? DAY : 1);
+    else if (!blank(rawEnd)) e = toT(rawEnd) + (isTime && isDay(rawEnd) ? DAY : 0); // fin inclusivo
+    const milestone = (msF && truthy(r[msF])) || blank(rawEnd) && !durF || (!durF && String(rawEnd).trim() === String(r[startF]).trim() && !isDay(rawEnd));
+    if (!milestone && !Number.isFinite(e)) continue;
+    let p = progF ? num(r[progF]) : NaN;
+    if (Number.isFinite(p) && (p > 1 || String(r[progF]).includes('%'))) p /= 100;
+    tasks.push({
+      i, row: r, name, start: s, end: milestone ? s : Math.max(e, s), milestone,
+      group: groupF ? String(r[groupF] ?? '') : null,
+      progress: Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : null,
+      deps: depF ? depsOf(r[depF]) : [],
+    });
+  }
+  if (!tasks.length) throw new PlotError(T(locale, 'Ninguna tarea tiene fechas válidas.', 'No task has valid dates.'), T(locale, 'Usa fechas como "2026-03-02" o números (semanas) en `start` y `end`.', 'Use dates like "2026-03-02" or numbers (weeks) in `start` and `end`.'));
+  if (spec.sort === 'start') tasks.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const groups = groupF ? uniq(tasks.map((t) => t.group)) : [];
+  const useHeaders = groups.length > 0 && spec.groupHeaders !== false;
+  const cmap = colorMap(groups.length ? groups : ['__all'], theme, spec.colors);
+  const colorOf = (t) => (groups.length ? cmap.get(t.group) : (spec.colors && spec.colors[t.name]) || theme.categorical[0]);
+  const rows = [];
+  if (useHeaders) {
+    for (const gname of groups) {
+      const ts = tasks.filter((t) => t.group === gname);
+      rows.push({ type: 'group', name: gname, start: Math.min(...ts.map((t) => t.start)), end: Math.max(...ts.map((t) => t.end)), color: cmap.get(gname), tasks: ts });
+      for (const t of ts) rows.push({ type: 'task', t });
+    }
+  } else for (const t of tasks) rows.push({ type: 'task', t });
+
+  const todayV = spec.today === true ? (isTime ? Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) : NaN) : blank(spec.today) || spec.today === false ? NaN : toT(spec.today);
+  const refs = (spec.refLines || []).filter((r) => r && r.x !== undefined).map((r) => ({ ...r, t: toT(r.x) })).filter((r) => Number.isFinite(r.t));
+  let t0 = Math.min(...tasks.map((t) => t.start)), t1 = Math.max(...tasks.map((t) => t.end));
+  for (const v of [todayV, ...refs.map((r) => r.t)]) if (Number.isFinite(v)) { t0 = Math.min(t0, v); t1 = Math.max(t1, v); }
+  if (Array.isArray(spec.xDomain)) { const [a, b] = spec.xDomain.map(toT); if (Number.isFinite(a)) t0 = a; if (Number.isFinite(b)) t1 = b; }
+  if (t1 <= t0) t1 = t0 + (isTime ? 7 * DAY : 1);
+  const padT = (t1 - t0) * 0.015;
+  t0 -= padT; t1 += padT;
+
+  const gid = 'pa-gantt-' + Math.abs(hash(String(spec.title) + tasks.length)).toString(36);
+  const H = hatcher(theme, gid);
+  const dm = dashedMatcher(spec, data, taskF, groupF);
+  const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
+  const isDashed = (t) => !!dm && dm(t.name, t.group ?? undefined);
+  const legend = [];
+  if (groups.length && !useHeaders) for (const gname of groups) legend.push({ label: gname, color: cmap.get(gname), shape: 'square' });
+  if (tasks.some(isDashed) && spec.legend !== false && dashedLabel) legend.push({ label: dashedLabel, color: theme.muted, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted), shape: 'square', dashed: true, key: 'dashed' });
+  const n = rows.length;
+  const rowH0 = spec.rowHeight ?? (n > 36 ? 20 : n > 22 ? 24 : 30);
+  const frame = createFrame(spec, theme, { height: 200 + n * rowH0 });
+  const area = frame.layout(legend);
+  const axisH = 26;
+  let rowH = rowH0;
+  if (spec.height !== undefined) rowH = Math.max(14, (area.h - axisH - 6) / Math.max(1, n));
+  const rowHeight = (r) => (r.type === 'group' ? rowH * (spec.groupHeaders === 'compact' ? 0.8 : 1.02) : rowH);
+  const plotH = rows.reduce((a, r) => a + rowHeight(r), 0);
+  if (spec.height === undefined) frame.setHeight(area.y + axisH + plotH + 8 + frame.chrome);
+  const fs = rowH < 22 ? 11 : 12.5;
+  const labelW = Math.min(area.w * (area.w < 480 ? 0.42 : 0.34), Math.max(...rows.map((r) => (r.type === 'group' ? measure(r.name, fs, 600) : measure(r.t.name, fs) + (useHeaders ? 12 : 0))))) + 16;
+  const inner = { x: area.x + labelW, y: area.y + axisH, w: area.w - labelW, h: plotH };
+  const x = linear(t0, t1, inner.x, inner.x + inner.w);
+
+  const fmtDay = (ms, withYear = true) => (isTime ? formatDate(ms, 'day', locale, withYear) : formatNumber(ms, Number.isInteger(ms) ? 0 : 1, locale, true));
+  const body = [];
+  const grid = [];
+  let tickItems;
+  if (isTime) {
+    const { ticks } = timeTicks(t0, t1, Math.max(2, Math.floor(inner.w / 58)), locale);
+    tickItems = ticks.map((tk) => ({ pos: x(tk.value), label: tk.label, v: tk.value }));
+  } else {
+    let st = niceStep(t1 - t0, Math.max(2, Math.floor(inner.w / 70)));
+    if (tasks.every((t) => Number.isInteger(t.start) && Number.isInteger(t.end))) st = Math.max(1, Math.round(st));
+    const fmtN = makeFormat(spec.format, locale, [t0, t1]);
+    tickItems = [];
+    for (let v = Math.ceil(t0 / st) * st; v <= t1 + 1e-9; v += st) tickItems.push({ pos: x(v), label: fmtN(+v.toPrecision(12)), v });
+  }
+  for (const tk of tickItems) {
+    const px = Math.round(tk.pos) + 0.5;
+    grid.push(el('line', { x1: px, x2: px, y1: inner.y - 4, y2: inner.y + inner.h, stroke: theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+  }
+  body.push(g({ class: 'pa-grid' }, grid));
+  const pills = [];
+  const pillLabel = (v, label) => { const px = x(v), lw = measure(label, 11, 600) + 10; const lx = Math.min(Math.max(px - lw / 2, inner.x), inner.x + inner.w - lw); pills.push([lx - 6, lx + lw + 6]); return { px, lw, lx }; };
+  const todayLabel = Number.isFinite(todayV) ? `${T(locale, 'Hoy', 'Today')} · ${fmtDay(todayV, false)}` : null;
+  if (todayLabel) pillLabel(todayV, todayLabel);
+  for (const r of refs) pillLabel(r.t, r.label || fmtDay(r.t, false));
+  const freeTicks = tickItems.filter((tk) => { const w = measure(tk.label, theme.type?.axis ?? 11.5) / 2; return !pills.some(([a, b]) => tk.pos + w > a && tk.pos - w < b); });
+  body.push(g({ class: 'pa-axis pa-axis-x' }, [xLabels(freeTicks, inner, theme, { y: area.y + 13 })]));
+  if (spec.xLabel) body.push(text(inner.x + inner.w, area.y - 2, spec.xLabel, { fill: theme.muted, fontSize: 11, textAnchor: 'end' }));
+  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: Math.round(inner.y - 4) + 0.5, y2: Math.round(inner.y - 4) + 0.5, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+
+  const fmtEnd = (t) => fmtDay(isTime && !t.milestone && isDay(t.row[endF]) ? t.end - DAY : t.end);
+  const lenOf = (t) => (isTime ? Math.round((t.end - t.start) / DAY) : +(t.end - t.start).toPrecision(6));
+  const lenText = (t) => (isTime ? `${lenOf(t)} ${T(locale, lenOf(t) === 1 ? 'día' : 'días', lenOf(t) === 1 ? 'day' : 'days')}` : `${formatNumber(lenOf(t), Number.isInteger(lenOf(t)) ? 0 : 1, locale, true)}${spec.unit ? ' ' + spec.unit : ''}`);
+  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const dim = (t) => hl && !hl.has(t.name) && !hl.has(String(t.group));
+  const pos = new Map(); // tarea → geometría (para las dependencias)
+  const labels = [], marks = [], headers = [];
+  let y = inner.y;
+  for (const r of rows) {
+    const h = rowHeight(r);
+    const cy = y + h / 2;
+    if (r.type === 'group') {
+      const ink = readable(r.color, theme, 4.5);
+      headers.push(text(area.x, cy + fs * 0.36, truncate(r.name, labelW - 10, fs, 600), { fill: ink, fontSize: fs, fontWeight: 600 }));
+      const xa = x(r.start), xb = x(r.end);
+      const sum = [el('rect', { x: xa, y: cy - 1.5, width: Math.max(2, xb - xa), height: 3, rx: 1.5, fill: r.color }),
+        el('path', { d: `M${xa},${cy - 1.5}v6l4,-6zM${xb},${cy - 1.5}v6l-4,-6z`, fill: r.color })];
+      const span = isTime ? Math.round((r.end - r.start) / DAY) : r.end - r.start;
+      headers.push(g({ class: 'pa-m', opacity: hl && !hl.has(r.name) ? 0.35 : null, 'data-color': r.color, 'data-tip': tip(r.name, `${fmtDay(r.start)} – ${fmtDay(isTime && r.tasks.every((t) => t.milestone || isDay(t.row[endF])) ? r.end - DAY : r.end)}`, `${r.tasks.length} ${T(locale, r.tasks.length === 1 ? 'tarea' : 'tareas', r.tasks.length === 1 ? 'task' : 'tasks')}${isTime ? ' · ' + span + ' ' + T(locale, 'días', 'days') : ''}`) }, sum));
+      y += h;
+      continue;
+    }
+    const t = r.t;
+    const color = colorOf(t);
+    const dashedT = isDashed(t);
+    const opacity = dim(t) ? 0.32 : null;
+    labels.push(text(area.x + (useHeaders ? 12 : 0), cy + fs * 0.36, truncate(t.name, labelW - (useHeaders ? 24 : 12), fs), { fill: dim(t) ? theme.muted : theme.ink, fontSize: fs, opacity: dim(t) ? 0.8 : null }));
+    const tipLines = [t.name, t.milestone ? fmtDay(t.start) : `${fmtDay(t.start)} – ${fmtEnd(t)} · ${lenText(t)}`, t.group, t.progress !== null ? `${T(locale, 'Avance', 'Progress')}: ${formatNumber(t.progress * 100, 0, locale)}%` : null,
+      t.deps.length ? `${T(locale, 'Después de', 'After')}: ${t.deps.join(', ')}` : null, dashedT ? (dashedLabel || null) : null];
+    if (t.milestone) {
+      const px = x(t.start), s = Math.min(9, h * 0.36);
+      const fill = groups.length ? color : theme.ink;
+      const parts = [el('path', { d: `M${px},${cy - s}L${px + s},${cy}L${px},${cy + s}L${px - s},${cy}Z`, ...(dashedT ? dashedAttrs(H, fill, { width: 1.2 }) : { fill, stroke: theme.surface, strokeWidth: 1.5 }) })];
+      const lab = fmtDay(t.start, false);
+      const hasNext = tasks.some((o) => o.deps.includes(t.name));
+      if (hasNext && px - s - 6 - measure(lab, 11) > inner.x) parts.push(text(px - s - 5, cy + 4, lab, { fill: theme.lede, fontSize: 11, textAnchor: 'end' }));
+      else if (px + s + 6 + measure(lab, 11) < inner.x + inner.w) parts.push(text(px + s + 5, cy + 4, lab, { fill: theme.lede, fontSize: 11 }));
+      else parts.push(text(px - s - 5, cy + 4, lab, { fill: theme.lede, fontSize: 11, textAnchor: 'end' }));
+      marks.push(g({ class: 'pa-m', opacity, 'data-color': color, 'data-tip': tip(...tipLines) }, parts));
+      pos.set(t.name, { x0: px - s, x1: px + s, cy, h: s * 2 });
+    } else {
+      const xa = x(t.start), xb = Math.max(xa + 3, x(t.end));
+      const bh = Math.max(6, Math.round(h * 0.6));
+      const by = cy - bh / 2, w = xb - xa, rx = Math.min(theme.marks?.barRadius ?? 4, bh / 2, w / 2);
+      const parts = [];
+      if (dashedT) parts.push(el('rect', { x: xa + 0.6, y: by + 0.6, width: Math.max(1, w - 1.2), height: bh - 1.2, rx, ...dashedAttrs(H, color) }));
+      else if (t.progress !== null) {
+        const light = ramp([theme.surface, color], theme.mode === 'dark' ? 0.38 : 0.26);
+        parts.push(el('rect', { x: xa, y: by, width: w, height: bh, rx, fill: light }));
+        if (t.progress > 0) {
+          const pw = Math.max(rx * 2, w * t.progress);
+          parts.push(el('clipPath', { id: `${gid}-c${t.i}` }, el('rect', { x: xa, y: by, width: w, height: bh, rx })));
+          parts.push(el('rect', { x: xa, y: by, width: Math.min(w, pw), height: bh, fill: color, 'clip-path': `url(#${gid}-c${t.i})` }));
+        }
+      } else parts.push(el('rect', { x: xa, y: by, width: w, height: bh, rx, fill: color }));
+      if (t.progress !== null && spec.labels !== false) {
+        const s = `${formatNumber(t.progress * 100, 0, locale)}%`;
+        const sw = measure(s, 11, 600);
+        const pw = w * t.progress;
+        if (!dashedT && pw >= sw + 10) parts.push(text(xa + pw - 5, cy + 3.8, s, { fill: textOn(color, theme), fontSize: 11, fontWeight: 600, textAnchor: 'end' }));
+        else if (xb + 6 + sw < inner.x + inner.w) parts.push(text(xb + 6, cy + 3.8, s, { fill: theme.lede, fontSize: 11, fontWeight: 600 }));
+      }
+      marks.push(g({ class: 'pa-m', opacity, 'data-color': color, 'data-tip': tip(...tipLines) }, parts));
+      pos.set(t.name, { x0: xa, x1: xb, cy, h: bh });
+    }
+    y += h;
+  }
+
+  const links = [];
+  const arrowId = `${gid}-arrow`;
+  for (const t of tasks) for (const d of t.deps) {
+    const a = pos.get(d), b = pos.get(t.name);
+    if (!a || !b) continue;
+    const xs = a.x1, ys = a.cy, xe = b.x0 - 1.5, ye = b.cy;
+    const dir = ye >= ys ? 1 : -1;
+    let dpath;
+    if (xe - xs >= 12) dpath = `M${xs.toFixed(1)},${ys}H${(xe - 8).toFixed(1)}V${ye}H${xe.toFixed(1)}`;
+    else {
+      const mid = ys + dir * (a.h / 2 + (rowH - a.h) / 2);
+      dpath = `M${xs.toFixed(1)},${ys}h6V${mid.toFixed(1)}H${(xe - 8).toFixed(1)}V${ye}H${xe.toFixed(1)}`;
+    }
+    links.push(el('path', { d: dpath, fill: 'none', stroke: theme.muted, strokeWidth: 1, strokeLinejoin: 'round', opacity: 0.85, markerEnd: `url(#${arrowId})` }));
+  }
+
+  const refsOut = [];
+  const vline = (v, label, color) => {
+    const px = Math.round(x(v)) + 0.5;
+    refsOut.push(el('line', { x1: px, x2: px, y1: inner.y - 4, y2: inner.y + inner.h, stroke: color, strokeWidth: 1.5 }));
+    const lw = measure(label, 11, 600) + 10;
+    const lx = Math.min(Math.max(px - lw / 2, inner.x), inner.x + inner.w - lw);
+    refsOut.push(el('rect', { x: lx, y: inner.y - 13, width: lw, height: 17, rx: 8.5, fill: color }));
+    refsOut.push(text(lx + lw / 2, inner.y - 1.5, label, { fill: textOn(color, theme), fontSize: 11, fontWeight: 600, textAnchor: 'middle' }));
+  };
+  if (todayLabel) vline(todayV, todayLabel, spec.todayColor || theme.categorical[1]);
+  for (const r of refs) vline(r.t, r.label || fmtDay(r.t, false), r.color || theme.ink);
+
+  body.push(g({ class: 'pa-labels' }, [...headers.filter((s) => s.startsWith('<text')), ...labels]));
+  body.push(g({ class: 'pa-links' }, links));
+  body.push(g({ class: 'pa-marks' }, [...headers.filter((s) => !s.startsWith('<text')), ...marks]));
+  body.push(g({ class: 'pa-refs' }, refsOut));
+
+  const work = tasks.filter((t) => !t.milestone);
+  const longest = work.length ? work.reduce((a, b) => (lenOf(b) > lenOf(a) ? b : a)) : null;
+  const first = Math.min(...tasks.map((t) => t.start)), last = Math.max(...tasks.map((t) => t.end));
+  const lastT = tasks.find((t) => t.end === last);
+  const ms = tasks.filter((t) => t.milestone);
+  let desc = en
+    ? `Gantt chart of ${tasks.length} tasks${groups.length ? ` in ${groups.length} phases` : ''}, from ${fmtDay(first)} to ${lastT ? fmtEnd(lastT) : fmtDay(last)}.`
+    : `Carta Gantt de ${tasks.length} tareas${groups.length ? ` en ${groups.length} fases` : ''}, del ${fmtDay(first)} al ${lastT ? fmtEnd(lastT) : fmtDay(last)}.`;
+  if (longest) desc += en ? ` Longest: ${longest.name} (${lenText(longest)}).` : ` Más larga: ${longest.name} (${lenText(longest)}).`;
+  if (ms.length) desc += en ? ` Milestones: ${ms.slice(0, 4).map((t) => `${t.name} (${fmtDay(t.start, false)})`).join(', ')}.` : ` Hitos: ${ms.slice(0, 4).map((t) => `${t.name} (${fmtDay(t.start, false)})`).join(', ')}.`;
+  const withP = tasks.filter((t) => t.progress !== null && !t.milestone);
+  if (withP.length) {
+    const avg = withP.reduce((a, t) => a + t.progress * lenOf(t), 0) / (withP.reduce((a, t) => a + lenOf(t), 0) || 1);
+    desc += en ? ` Overall progress: ${formatNumber(avg * 100, 0, locale)}%.` : ` Avance total: ${formatNumber(avg * 100, 0, locale)}%.`;
+  }
+  const defs = el('marker', { id: arrowId, viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: 'auto' }, el('path', { d: 'M0,0.8L7,4L0,7.2Z', fill: theme.muted })) + H.defs();
+  return frame.finish(body, { desc, type: 'gantt', defs });
+}
+
+
+return { "gantt": gantt };
+});
 __def("src/charts/choropleth.js", function () {
 const { el, g, text } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
 const { makeFormat } = __req("src/format.js");
-const { ramp, textOn } = __req("src/theme.js");
-const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate } = __req("src/data.js");
+const { ramp, textOn, colorMap } = __req("src/theme.js");
+const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } = __req("src/data.js");
 const { createFrame, hash } = __req("src/frame.js");
 const { niceStep } = __req("src/scale.js");
 const { getGeo } = __req("src/geo/registry.js");
-const { mercator, equalEarth, projections, fit, aspectOf, pathD, centroid, rings } = __req("src/geo/projection.js");
+const { mercator, equalEarth, planar, projections, makeProjection, fit, aspectOf, pathD, centroid, rings, isPointGeom, isLineGeom } = __req("src/geo/projection.js");
 const { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } = __req("src/dashed.js");
 
 const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
@@ -5878,7 +6151,8 @@ function featureIndex(features, featureKey) {
   const add = (k, f) => { const n = normKey(k); if (n && !idx.has(n)) idx.set(n, f); };
   for (const f of features) {
     const p = f.properties || {};
-    if (featureKey) { add(p[featureKey], f); continue; }
+    if (featureKey) { add(featureKey === 'id' && p.id === undefined ? f.id : p[featureKey], f); continue; }
+    if (f.id !== undefined && f.id !== null) add(f.id, f);
     for (const k of ['code', 'num', 'id', 'iso3', 'iso_a3', 'name', 'nameEn', 'NAME', 'nombre']) if (p[k] !== undefined && p[k] !== null) add(p[k], f);
     for (const a of p.aliases || []) add(a, f);
   }
@@ -5887,8 +6161,40 @@ function featureIndex(features, featureKey) {
 
 const nameOf = (f, locale) => {
   const p = f.properties || {};
-  return (String(locale).startsWith('en') ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? '');
+  return (String(locale).startsWith('en') ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? f.id ?? '');
 };
+
+const NAME_PROPS = ['name', 'nameEn', 'NAME', 'nombre', 'Nombre', 'NOMBRE', 'name_en', 'NAME_EN', 'NAME_1', 'NAME_2', 'NAME_3', 'ADMIN', 'admin', 'NOM_REG', 'NOM_REGION', 'Region', 'REGION', 'region', 'NOM_PROV', 'NOM_COM', 'NOM_COMUNA', 'COMUNA', 'Comuna', 'comuna', 'provincia', 'PROVINCIA', 'label', 'title', 'NAMELSAD', 'GEN', 'NUTS_NAME', 'shapeName'];
+const primitive = (v) => typeof v === 'string' || typeof v === 'number';
+
+/**
+ * GeoJSON ajeno: busca la propiedad cuyos valores calzan con más filas de
+ * los datos (p. ej. "CUT_REG", "NOM_COM" o "GEOID"). Devuelve null si
+ * ninguna mejora lo que ya calzaba.
+ */
+function bestProperty(features, keys, already) {
+  const want = new Set(keys.map(normKey).filter(Boolean));
+  if (!want.size) return null;
+  const props = new Set();
+  for (const f of features.slice(0, 80)) for (const [k, v] of Object.entries(f.properties || {})) if (primitive(v)) props.add(k);
+  let best = null, bestN = already;
+  for (const k of props) {
+    let n = 0;
+    const seen = new Set(features.map((f) => normKey(f.properties?.[k])));
+    for (const w of want) if (seen.has(w)) n++;
+    if (n > bestN) { best = k; bestN = n; }
+  }
+  return best;
+}
+
+/** Copia las features con `name` resuelto (nameKey explícito o adivinado). */
+function withNames(features, nameKey) {
+  return features.map((f) => {
+    const p = f.properties || {};
+    const v = p[nameKey];
+    return primitive(v) && p.name !== v ? { ...f, properties: { ...p, name: String(v) } } : f;
+  });
+}
 
 /** Redondeo "bonito" de un corte de clase (2 cifras relativas al rango). */
 function niceRound(v, range) {
@@ -6011,20 +6317,36 @@ const noDataPattern = (id, theme) =>
 
 /** Datos + geometría emparejados. */
 function prepare(spec, locale) {
-  const fc = getGeo(spec.geo ?? 'chile');
+  const fc = getGeo(spec.geo ?? 'chile', spec.geoObject);
   const data = ensureData(spec);
   const fields = fieldsOf(data);
   const key = spec.key ?? spec.region ?? spec.x ?? spec.label ?? fields.find((f) => fieldKind(data, f) === 'category');
   const valueF = spec.value ?? spec.y ?? (typeof spec.size === 'string' ? spec.size : null) ?? fields.find((f) => f !== key && fieldKind(data, f) === 'number');
   requireField(data, key, 'key');
   requireField(data, valueF, 'value');
-  let features = fc.features.filter((f) => f.geometry && rings(f.geometry).length);
+  const categorical = spec.scale === 'categorical' || (data.length > 0 && fieldKind(data, valueF) === 'category');
+  let features = fc.features.filter((f) => f && f.geometry && rings(f.geometry).length);
   if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
+  const hasName = (f) => { const p = f.properties || {}; return primitive(p.name) || primitive(p.nameEn) || primitive(p.NAME) || primitive(p.nombre); };
+  const firstText = () => { for (const f of features.slice(0, 20)) for (const [k, v] of Object.entries(f.properties || {})) if (typeof v === 'string' && v.trim()) return k; return null; };
+  const nameKey = spec.nameKey ?? (features.length && !features.some(hasName) ? NAME_PROPS.find((k) => features.some((f) => primitive(f.properties?.[k]))) ?? spec.featureKey ?? firstText() : null);
+  if (nameKey) features = withNames(features, nameKey);
   let idx = featureIndex(features, spec.featureKey);
+  let autoKey = null;
+  if (!spec.featureKey && data.length) {
+    const keys = data.map((r) => r[key]).filter(primitive);
+    const matched = keys.filter((k) => idx.has(normKey(k))).length;
+    if (matched < new Set(keys.map(normKey)).size) {
+      autoKey = bestProperty(features, keys, new Set(keys.filter((k) => idx.has(normKey(k))).map(normKey)).size);
+      if (autoKey) for (const [k, f] of featureIndex(features, autoKey)) if (!idx.has(k)) idx.set(k, f);
+      if (autoKey && !nameKey && !features.some(hasName)) features = withNames(features, autoKey), idx = new Map([...featureIndex(features, null), ...featureIndex(features, autoKey)]);
+    }
+  }
   if (features.some((f) => f.properties?.optional)) {
     const used = new Set(data.map((r) => idx.get(normKey(r[key]))).filter(Boolean));
     features = features.filter((f) => !f.properties?.optional || used.has(f) || spec.territories === true);
-    idx = featureIndex(features, spec.featureKey);
+    idx = featureIndex(features, spec.featureKey ?? autoKey);
+    if (!spec.featureKey && autoKey) for (const [k, f] of featureIndex(features, null)) if (!idx.has(k)) idx.set(k, f);
   }
   const buckets = new Map();
   const unmatched = [];
@@ -6032,19 +6354,123 @@ function prepare(spec, locale) {
     const f = idx.get(normKey(r[key]));
     if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
     if (!buckets.has(f)) buckets.set(f, []);
-    buckets.get(f).push(num(r[valueF]));
+    buckets.get(f).push(categorical ? r[valueF] : num(r[valueF]));
   }
   const values = new Map();
-  for (const [f, vs] of buckets) { const v = aggregate(vs, spec.aggregate || 'mean'); if (Number.isFinite(v)) values.set(f, v); }
+  const mode = (vs) => { const c = new Map(); for (const v of vs) if (primitive(v) && v !== '') c.set(String(v), (c.get(String(v)) || 0) + 1); return [...c].sort((a, b) => b[1] - a[1])[0]?.[0]; };
+  for (const [f, vs] of buckets) {
+    const v = categorical ? mode(vs) : aggregate(vs, spec.aggregate || 'mean');
+    if (categorical ? v !== undefined : Number.isFinite(v)) values.set(f, v);
+  }
   if (Array.isArray(spec._unmatched)) spec._unmatched.push(...new Set(unmatched));
-  const ranked = [...values.entries()].sort((a, b) => b[1] - a[1]);
+  const count = new Map();
+  for (const v of values.values()) count.set(v, (count.get(v) || 0) + 1);
+  const categories = categorical ? (Array.isArray(spec.order) ? spec.order.map(String).filter((c) => count.has(c)).concat([...count.keys()].filter((c) => !spec.order.map(String).includes(c))) : [...count.keys()].sort((a, b) => count.get(b) - count.get(a))) : null;
+  const ranked = categorical ? [] : [...values.entries()].sort((a, b) => b[1] - a[1]);
   const rank = new Map(ranked.map(([f], i) => [f, i + 1]));
-  const projName = spec.projection ?? fc.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
-  const lonSpan = (() => { let a = Infinity, b = -Infinity; for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < a) a = p[0]; if (p[0] > b) b = p[0]; } return b - a; })();
-  const raw = (projName && projections[projName] ? projections[projName] : lonSpan > 100 ? equalEarth : mercator)();
+  const projName = typeof spec.projection === 'string' ? spec.projection : fc.projection ?? (/^(world|mundo|countries|paises|países)$/i.test(String(spec.geo)) ? 'equalEarth' : null);
+  let lon0 = Infinity, lon1 = -Infinity, latMax = 0;
+  for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < lon0) lon0 = p[0]; if (p[0] > lon1) lon1 = p[0]; if (Math.abs(p[1]) > latMax) latMax = Math.abs(p[1]); }
+  const projected = Math.max(Math.abs(lon0), Math.abs(lon1)) > 180.5 || latMax > 90.5;
+  const raw = makeProjection(spec.projection) ?? (projName && projections[projName] ? projections[projName]() : projected ? planar() : lon1 - lon0 > 100 ? equalEarth() : mercator());
   const dm = dashedMatcher(spec, data, key, null, normKey);
   const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed };
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories };
+}
+
+const pickF = (fields, names) => names.find((n) => fields.includes(n));
+
+/** `markers`: [{ lon, lat, label, value }] o { data, lon, lat, label, size, color, legend }. */
+function markerList(spec, theme) {
+  const mk = spec.markers;
+  if (!mk) return null;
+  const o = Array.isArray(mk) ? {} : mk;
+  const rows = ensureData({ data: Array.isArray(mk) ? mk : mk.data || [] });
+  const fields = fieldsOf(rows);
+  const lonF = o.lon ?? pickF(fields, ['lon', 'lng', 'long', 'longitude', 'longitud', 'x']);
+  const latF = o.lat ?? pickF(fields, ['lat', 'latitude', 'latitud', 'y']);
+  const labelF = o.label ?? pickF(fields, ['label', 'name', 'nombre', 'city', 'ciudad', 'title']);
+  const sizeF = o.size ?? pickF(fields, ['size', 'value', 'valor']);
+  const colorF = typeof o.color === 'string' && fields.includes(o.color) ? o.color : pickF(fields, ['color']);
+  if (!lonF || !latF) throw new PlotError('Los marcadores necesitan longitud y latitud.', 'markers: [{ lon: -73.05, lat: -36.82, label: "Concepción" }]');
+  const items = rows.map((r) => ({ lon: num(r[lonF]), lat: num(r[latF]), label: labelF ? r[labelF] : undefined, size: sizeF ? num(r[sizeF]) : NaN, color: (colorF && r[colorF]) || (typeof o.color === 'string' && !fields.includes(o.color) ? o.color : null), row: r }))
+    .filter((m) => Number.isFinite(m.lon) && Number.isFinite(m.lat));
+  const maxS = Math.max(0, ...items.map((m) => Math.abs(m.size)).filter(Number.isFinite));
+  for (const m of items) m.r = Number.isFinite(m.size) && maxS ? Math.max(3, Math.sqrt(Math.abs(m.size) / maxS) * (o.maxRadius ?? 14)) : o.radius ?? 4.5;
+  return { items, color: (typeof o.color === 'string' && !fields.includes(o.color) && o.color) || theme.ink, legend: o.legend ?? o.title ?? null, labels: o.labels !== false, sizeF };
+}
+
+/** `layers`: [{ geo, stroke, fill, width, dash, opacity, label, below }]. */
+function layerList(spec, theme) {
+  return [].concat(spec.layers || []).filter(Boolean).map((L, i) => {
+    const fc = getGeo(L.geo ?? L.data, L.object ?? L.geoObject);
+    const fs = fc.features.filter((f) => f && f.geometry && rings(f.geometry).length);
+    const lines = fs.every((f) => isLineGeom(f.geometry));
+    return { ...L, features: fs, i, stroke: L.stroke ?? L.color ?? (lines ? theme.ink : theme.lede), width: L.width ?? L.strokeWidth ?? (lines ? 1.5 : 1), fill: L.fill ?? 'none' };
+  });
+}
+
+function drawLayer(L, proj, theme, locale) {
+  return g({ class: 'pa-layer', 'pointer-events': L.label || L.tooltip !== false ? null : 'none' }, L.features.map((f) => {
+    const pt = isPointGeom(f.geometry);
+    const nm = nameOf(f, locale);
+    const tipT = [L.label, nm && nm !== String(f.id ?? '') ? nm : null].filter(Boolean).join('\n');
+    return el('path', {
+      class: tipT ? 'pa-m' : null, 'data-tip': tipT || null, d: pathD(f.geometry, proj, { r: L.radius ?? 3 }),
+      fill: pt ? (L.fill !== 'none' ? L.fill : L.stroke) : L.fill, fillOpacity: L.fillOpacity ?? null,
+      stroke: pt ? theme.surface : L.stroke, strokeWidth: pt ? 1 : L.width, strokeDasharray: L.dash === true ? '5 4' : L.dash || null,
+      strokeLinejoin: 'round', strokeLinecap: 'round', opacity: L.opacity ?? null, 'data-color': L.stroke,
+    });
+  }));
+}
+
+function drawMarkers(mk, proj, theme, fmt, placed) {
+  const dots = [], labs = [];
+  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  for (const m of [...mk.items].sort((a, b) => b.r - a.r)) {
+    const [x, y] = proj([m.lon, m.lat]);
+    m.x = x; m.y = y;
+    const c = m.color || mk.color;
+    const tipT = [m.label, Number.isFinite(m.size) && mk.sizeF ? fmt(m.size) : null].filter((v) => v !== undefined && v !== null && v !== '').join('\n');
+    dots.push(el('circle', { class: 'pa-m', cx: x, cy: y, r: m.r, fill: c, fillOpacity: m.r > 6 ? 0.8 : 1, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': tipT || null, 'data-color': c }));
+  }
+  for (const m of mk.items) placed.push([m.x - m.r - 2, m.y - m.r - 2, m.x + m.r + 2, m.y + m.r + 2]);
+  if (mk.labels) for (const m of mk.items) {
+    if (m.label === undefined || m.label === null || m.label === '') continue;
+    const w = measure(String(m.label), 11, 600);
+    const hit = (box) => placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+    const cands = [
+      { box: [m.x + m.r + 3, m.y - 8, m.x + m.r + 6 + w, m.y + 8], x: m.x + m.r + 4, y: m.y + 4, anchor: 'start' },
+      { box: [m.x - m.r - 6 - w, m.y - 8, m.x - m.r - 3, m.y + 8], x: m.x - m.r - 4, y: m.y + 4, anchor: 'end' },
+      { box: [m.x - w / 2 - 2, m.y - m.r - 20, m.x + w / 2 + 2, m.y - m.r - 3], x: m.x, y: m.y - m.r - 7, anchor: 'middle' },
+    ];
+    const c = cands.find((k) => !hit(k.box));
+    if (!c) continue;
+    placed.push(c.box);
+    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...halo }));
+  }
+  return [g({ class: 'pa-markers' }, dots), g({ class: 'pa-map-label pa-marker-labels', 'pointer-events': 'none' }, labs)];
+}
+
+/** Leyenda de categorías (mapas con valores de texto): cuadros enlazados con las regiones. */
+function catLegend(sc, x, y, maxW, theme, { title, missing, locale, gid, dashed }) {
+  const out = [];
+  const size = theme.type?.axis ?? 11.5;
+  let lx = x, ly = y, rows = 1;
+  if (title) { out.push(text(lx, ly + 9.5, title, { fill: theme.lede, fontSize: 12, fontWeight: 500 })); lx += measure(title, 12, 500) + 14; }
+  const item = (label, attrs, key) => {
+    const w = 14 + measure(label, size) + 16;
+    if (lx + w > x + maxW && lx > x) { lx = x; ly += 20; rows++; }
+    out.push(g({ class: 'pa-key', 'data-color': key, style: 'cursor:pointer' }, [
+      el('rect', { x: lx, y: ly, width: 10, height: 10, rx: 2, ...attrs }),
+      text(lx + 14, ly + 9, label, { fill: theme.lede, fontSize: size }),
+    ]));
+    lx += w;
+  };
+  for (const c of sc.cats) item(c, { fill: sc.color(c) }, sc.color(c));
+  if (missing) item(T(locale, 'Sin dato', 'No data'), { fill: `url(#${gid}-nd)`, stroke: theme.axis, strokeWidth: 0.5 }, `url(#${gid}-nd)`);
+  if (dashed) item(dashed.label, { fill: dashed.fill, stroke: dashed.stroke, strokeWidth: 1.1, strokeDasharray: DASH.legend }, 'dashed');
+  return { svg: g({ class: 'pa-legend pa-map-legend' }, out), h: rows * 20 + 2 };
 }
 
 /**
@@ -6192,11 +6618,35 @@ function insetFrames(features, proj, theme) {
 function baseChart(spec, theme, kind) {
   const locale = spec.locale || 'es';
   const m = prepare(spec, locale);
-  const vals = [...m.values.values()];
-  const fmt = makeFormat(spec.format, locale, vals);
+  if (m.categorical && kind === 'symbol') throw new PlotError(T(locale, `"${m.valueF}" tiene texto, no números: un mapa de símbolos necesita cantidades.`, `"${m.valueF}" holds text, not numbers: a symbol map needs quantities.`), T(locale, 'Usa type: "choropleth" para colorear por categoría.', 'Use type: "choropleth" to color by category.'));
+  const vals = m.categorical ? [] : [...m.values.values()];
+  const numFmt = makeFormat(spec.format, locale, vals);
+  const fmt = m.categorical ? (v) => (typeof v === 'number' ? numFmt(v) : String(v ?? '')) : numFmt;
   const W = spec.width || 720;
-  const aspect = aspectOf(m.features, m.raw);
-  const tall = aspect > 1.6 && m.features.length <= 40;
+  const layers = layerList(spec, theme);
+  const markers = markerList(spec, theme);
+  let fitFeats = m.features;
+  if (spec.fitTo !== undefined && spec.fitTo !== null) {
+    const ft = spec.fitTo;
+    if (Array.isArray(ft) && ft.length === 4 && ft.every((v) => typeof v === 'number')) {
+      const [a, b, c, d] = ft;
+      fitFeats = [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[a, b], [c, b], [c, d], [a, d], [a, b]]] } }];
+    } else if (ft === 'markers' && markers?.items.length) {
+      fitFeats = [{ type: 'Feature', properties: {}, geometry: { type: 'MultiPoint', coordinates: markers.items.map((x) => [x.lon, x.lat]) } }];
+    } else {
+      const want = [].concat(ft).map(normKey);
+      const hit = m.features.filter((f) => featureIndexHas(f, want));
+      if (hit.length) fitFeats = hit;
+    }
+    if (fitFeats !== m.features) {
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const f of fitFeats) for (const r of rings(f.geometry)) for (const p of r) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); }
+      const px = (c - a) * 0.06 || 0.5, py = (d - b) * 0.06 || 0.5;
+      fitFeats = [{ type: 'Feature', properties: {}, geometry: { type: 'MultiPoint', coordinates: [[a - px, b - py], [c + px, d + py], [a - px, d + py], [c + px, b - py]] } }];
+    }
+  }
+  const aspect = aspectOf(fitFeats, m.raw);
+  const tall = aspect > 1.6 && m.features.length <= 40 && fitFeats === m.features && spec.tall !== false;
   const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
   let area = frame.layout([]);
@@ -6207,7 +6657,13 @@ function baseChart(spec, theme, kind) {
   const H = hatcher(theme, gid);
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
   const dashedKey = m.dashed.size && spec.legend !== false ? { label: dashedLabel, fill: H.fill(theme.muted), stroke: H.stroke(theme.muted) } : null;
-  if (kind === 'choropleth' && vals.length) {
+  if (kind === 'choropleth' && m.categorical && m.values.size) {
+    const cmap = colorMap(m.categories, theme, spec.colors);
+    sc = { mode: 'categories', cats: m.categories, color: (v) => cmap.get(String(v)) || theme.other };
+    const lg = spec.legend === false ? { svg: '', h: 0 } : catLegend(sc, area.x, area.y, area.w, theme, { title: spec.legendTitle ?? null, missing: missingAny, locale, gid, dashed: dashedKey });
+    body.push(lg.svg);
+    area = { ...area, y: area.y + lg.h + 8, h: area.h - lg.h - 8 };
+  } else if (kind === 'choropleth' && vals.length) {
     sc = colorScale(vals, spec, theme);
     const lg = legendBar(sc, area.x, area.y, area.w, theme, fmt.tick ? (v) => fmt(v) : fmt, { title: spec.legendTitle ?? humanize(m.valueF), missing: missingAny, locale, gid, dashed: dashedKey });
     body.push(lg.svg);
@@ -6233,7 +6689,29 @@ function baseChart(spec, theme, kind) {
     }
     lx += 10;
   }
-  if (dashedKey && !(kind === 'choropleth' && vals.length)) {
+  {
+    const size = theme.type?.axis ?? 11.5;
+    const ky = rowItems.length ? area.y + 2 * (rMax || 0) - 9 : area.y + 4.6;
+    for (const L of layers) {
+      if (!L.label) continue;
+      const pts = L.features.every((f) => isPointGeom(f.geometry)), poly = !pts && !L.features.every((f) => isLineGeom(f.geometry));
+      rowItems.push(g({ class: 'pa-key', 'data-color': L.stroke, style: 'cursor:pointer' }, [
+        pts ? el('circle', { cx: lx + 5, cy: ky + 4.9, r: 3.5, fill: L.fill !== 'none' ? L.fill : L.stroke })
+          : poly ? el('rect', { x: lx + 0.5, y: ky + 0.5, width: 9.5, height: 9.5, rx: 2, fill: L.fill === 'none' ? 'none' : L.fill, stroke: L.stroke, strokeWidth: 1.2, strokeDasharray: L.dash === true ? '3 2' : L.dash || null })
+            : el('line', { x1: lx, x2: lx + 14, y1: ky + 4.9, y2: ky + 4.9, stroke: L.stroke, strokeWidth: Math.min(3, L.width + 0.5), strokeDasharray: L.dash === true ? '4 3' : L.dash || null, strokeLinecap: 'round' }),
+        text(lx + (pts || poly ? 15 : 19), ky + 8.4, L.label, { fill: theme.lede, fontSize: size }),
+      ]));
+      lx += (pts || poly ? 15 : 19) + measure(L.label, size) + 16;
+    }
+    if (markers?.legend) {
+      rowItems.push(g({ class: 'pa-key', 'data-color': markers.color, style: 'cursor:pointer' }, [
+        el('circle', { cx: lx + 5, cy: ky + 4.9, r: 4.5, fill: markers.color, stroke: theme.surface, strokeWidth: 1 }),
+        text(lx + 15, ky + 8.4, markers.legend, { fill: theme.lede, fontSize: size }),
+      ]));
+      lx += 15 + measure(markers.legend, size) + 16;
+    }
+  }
+  if (dashedKey && !(kind === 'choropleth' && (vals.length || m.categorical))) {
     const size = theme.type?.axis ?? 11.5;
     const ky = rowItems.length ? area.y + 2 * rMax - 9 : area.y + 4.6;
     rowItems.push(g({ class: 'pa-key', 'data-color': 'dashed', style: 'cursor:pointer' }, [
@@ -6262,9 +6740,12 @@ function baseChart(spec, theme, kind) {
     let mapW = Math.min(area.w * (1 - colMin), area.h / aspect);
     box = [area.x, area.y, area.x + mapW, area.y + area.h];
   } else box = [area.x, area.y, area.x + area.w - calloutW, area.y + area.h];
-  const proj = fit(m.features, m.raw, box, { align: tall ? 'left' : 'center' });
+  const inset = m.features.some((f) => isPointGeom(f.geometry)) ? (spec.pointRadius ?? 5) + 18 : markers?.items.length ? 12 : 0;
+  const pts = m.features.some((f) => isPointGeom(f.geometry));
+  if (inset) box = [box[0] + inset * (tall ? 0 : 1), box[1] + inset + (pts ? 12 : 0), box[2] - inset, box[3] - Math.min(inset, 10)];
+  const proj = fit(fitFeats, m.raw, box, { align: tall ? 'left' : 'center' });
   const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
-  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax };
+  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax, layers, markers };
 }
 
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
@@ -6281,7 +6762,9 @@ function zoomLayer(B, children) {
 
 function choropleth(spec, theme) {
   const B = baseChart(spec, theme, 'choropleth');
-  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX } = B;
+  const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX, layers, markers } = B;
+  const borderC = spec.borderColor ?? theme.surface, borderW = spec.borderWidth ?? 0.75;
+  const ptR = spec.pointRadius ?? 5;
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl && featureIndexHas(f, hl);
   const N = m.values.size;
@@ -6293,8 +6776,9 @@ function choropleth(spec, theme) {
     const base = has ? sc.color(v) : null;
     const isDashed = m.dashed.has(f);
     const name = nameOf(f, locale);
-    const tipTxt = (has ? `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
-    const d = pathD(f.geometry, proj);
+    const tipTxt = (has ? `${name}\n${fmt(v)}${m.categorical ? '' : ' · ' + rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
+    const d = pathD(f.geometry, proj, { r: ptR });
+    const isLine = isLineGeom(f.geometry);
     const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt, 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name) };
     let fill = has ? base : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
     let stroke = null;
@@ -6305,39 +6789,45 @@ function choropleth(spec, theme) {
     } else if (isDashed) {
       stroke = theme.muted;
       dashedRegions.push(el('path', { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill }));
-    } else regions.push(el('path', { ...common, fill, stroke: theme.surface, strokeWidth: 0.75, 'data-color': fill }));
+    } else if (isLine) regions.push(el('path', { ...common, fill: 'none', stroke: has ? base : theme.muted, strokeWidth: spec.lineWidth ?? 2.5, strokeLinecap: 'round', 'data-color': has ? base : fill }));
+    else regions.push(el('path', { ...common, fill, stroke: isPointGeom(f.geometry) ? theme.surface : borderC, strokeWidth: isPointGeom(f.geometry) ? 1.2 : borderW, 'data-color': fill }));
     if (isHl(f)) outlines.push(el('path', { d, fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
     const c = centroid(f.geometry, proj);
     items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
-  const layer = [g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme)];
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
+    ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
+  const placed = [];
+  if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, placed));
   const after = [];
   if (tall && spec.labels !== false) {
     const x = proj.bounds.x + proj.bounds.w + 26;
     const maxV = Math.max(...[...m.values.values()].map(Math.abs));
-    after.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
+    after.push(...labelColumn(items, x, area.y, area.y + area.h, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false && !m.categorical, maxV }));
   } else if (spec.labels !== false && m.features.some((f) => f.properties?.abbr) && !Array.isArray(spec.labels) && typeof spec.labels !== 'number') {
     const [lab, ...rest] = abbrLabels(items, proj, theme, { calloutX, showValues: spec.values !== false, top: area.y, bottom: area.y + area.h });
     layer.push(lab);
     after.push(...rest);
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, m.features.length <= 30 ? m.features.length : 0));
-    const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area);
-    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme)));
+    const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area)
+      .map((it) => (isPointGeom(it.f.geometry) ? { ...it, cy: it.cy - ptR - 12 } : it));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme, placed)));
   }
   body.push(...(tall ? layer : zoomLayer(B, layer)), ...after);
-  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map'));
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map')) + describeExtras(markers, layers, locale);
   return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs() });
 }
 
 /** Mapa de símbolos: círculos de área proporcional en el centroide. */
 function symbolMap(spec, theme) {
   const B = baseChart(spec, theme, 'symbol');
-  const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax } = B;
+  const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax, layers, markers } = B;
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  const layer = [g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj), fill: theme.tint, stroke: theme.surface, strokeWidth: 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)) }))), insetFrames(m.features, proj, theme)];
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5 }), fill: isLineGeom(f.geometry) ? 'none' : theme.tint, stroke: isLineGeom(f.geometry) ? theme.axis : spec.borderColor ?? theme.surface, strokeWidth: isLineGeom(f.geometry) ? 1.5 : spec.borderWidth ?? 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)) }))), insetFrames(m.features, proj, theme),
+    ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);
     const v = m.values.get(f);
@@ -6351,6 +6841,7 @@ function symbolMap(spec, theme) {
     .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': it.tip, 'data-color': color,
       ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
   layer.push(g({ class: 'pa-symbols' }, circles));
+  if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, []));
   const sizes = [maxV, maxV / 4, maxV / 16].map((v) => ({ v, r: Math.sqrt(v / maxV) * rMax }));
   const lx = tall ? proj.bounds.x + proj.bounds.w + 26 : area.x + 4, ly = tall ? area.y + area.h - 4 : area.y + area.h - 4;
   const leg = sizes.map((s) => [
@@ -6368,12 +6859,29 @@ function symbolMap(spec, theme) {
     body.push(...zoomLayer(B, layer));
   }
   if (tall) body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
-  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map'));
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map')) + describeExtras(markers, layers, locale);
   return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs() });
+}
+
+function describeExtras(markers, layers, locale) {
+  const en = String(locale).startsWith('en');
+  let s = '';
+  if (markers?.items.length) s += en ? ` ${markers.items.length} markers${markers.legend ? ` (${markers.legend})` : ''}.` : ` ${markers.items.length} marcadores${markers.legend ? ` (${markers.legend})` : ''}.`;
+  const named = layers.filter((L) => L.label).map((L) => L.label);
+  if (named.length) s += en ? ` Layers: ${named.join(', ')}.` : ` Capas: ${named.join(', ')}.`;
+  return s;
 }
 
 function describeMap(m, fmt, locale, what) {
   const en = String(locale).startsWith('en');
+  if (m.categorical) {
+    const cnt = new Map();
+    for (const v of m.values.values()) cnt.set(v, (cnt.get(v) || 0) + 1);
+    const parts = m.categories.map((c) => `${c} (${cnt.get(c)})`).join(', ');
+    let s = en ? `${what} of ${humanize(m.valueF)} across ${m.values.size} areas: ${parts}.` : `${what} de ${humanize(m.valueF).toLowerCase()} en ${m.values.size} territorios: ${parts}.`;
+    if (m.unmatched.length) s += en ? ` Unmatched: ${m.unmatched.slice(0, 8).join(', ')}.` : ` Sin coincidencia: ${m.unmatched.slice(0, 8).join(', ')}.`;
+    return s;
+  }
   if (!m.ranked.length) return `${what}.`;
   const [hiF, hiV] = m.ranked[0], [loF, loV] = m.ranked[m.ranked.length - 1];
   let s = en
@@ -6390,24 +6898,29 @@ const { PlotError } = __req("src/data.js");
 
 const REG = new Map();
 
-function registerGeo(name, fc, aliases = []) {
-  if (!fc || fc.type !== 'FeatureCollection') throw new PlotError(`La geometría "${name}" debe ser un GeoJSON FeatureCollection.`);
+function registerGeo(name, geo, aliases = []) {
+  const fc = toFeatureCollection(geo);
   for (const n of [name, ...aliases]) REG.set(String(n).toLowerCase(), fc);
   return fc;
 }
 
-function getGeo(geo) {
-  if (geo && typeof geo === 'object') {
-    if (geo.type === 'FeatureCollection') return geo;
-    if (geo.type === 'Feature') return { type: 'FeatureCollection', features: [geo] };
-    throw new PlotError('`geo` debe ser un nombre registrado o un GeoJSON FeatureCollection.');
+/** ¿Parece una URL o una ruta a un archivo .json / .geojson / .topojson? */
+const isGeoUrl = (s) => typeof s === 'string' && (/^(https?:)?\/\//i.test(s) || /^(\.{0,2}\/|data:)/.test(s) || /\.(geo|topo)?json(\?.*)?$/i.test(s));
+
+function getGeo(geo, objectName) {
+  if (geo && typeof geo === 'object') return toFeatureCollection(geo, objectName);
+  if (isGeoUrl(geo)) {
+    throw new PlotError(
+      `"${geo}" es una URL o un archivo: plot() es sincrónico y no descarga nada.`,
+      "En Node, lee el archivo y pásalo como objeto: geo: JSON.parse(fs.readFileSync('mapa.geojson', 'utf8')). En el navegador, render(el, spec) sí acepta la URL."
+    );
   }
   const fc = REG.get(String(geo || '').toLowerCase());
   if (!fc) {
     const known = [...new Set(REG.keys())];
     throw new PlotError(
       `No hay una geometría registrada con el nombre "${geo}".`,
-      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile', 'plotagents/geo/usa' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
+      known.length ? `Disponibles: ${known.join(', ')}. O pasa un GeoJSON o TopoJSON en \`geo\`.` : "Importa 'plotagents/geo/chile', 'plotagents/geo/usa' o 'plotagents/geo/world', o pasa un GeoJSON en `geo`."
     );
   }
   return fc;
@@ -6415,7 +6928,74 @@ function getGeo(geo) {
 
 const registeredGeo = () => [...new Set(REG.keys())];
 
-return { "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo };
+const GEOMS = new Set(['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon', 'GeometryCollection']);
+const cache = new WeakMap();
+
+/** Cualquier forma de GeoJSON / TopoJSON → FeatureCollection. */
+function toFeatureCollection(geo, objectName) {
+  if (!geo || typeof geo !== 'object') throw new PlotError('`geo` debe ser un nombre registrado, un GeoJSON o un TopoJSON.', 'geo: "chile" | "usa" | "world" | { type: "FeatureCollection", features: [...] }');
+  if (Array.isArray(geo)) return { type: 'FeatureCollection', features: geo.map(asFeature) };
+  if (geo.type === 'FeatureCollection') {
+    if (!Array.isArray(geo.features)) throw new PlotError('El FeatureCollection no tiene `features`.');
+    return geo.features.every((f) => f && f.type === 'Feature') ? geo : { ...geo, features: geo.features.map(asFeature) };
+  }
+  if (geo.type === 'Feature') return { type: 'FeatureCollection', features: [geo] };
+  if (GEOMS.has(geo.type)) return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: geo }] };
+  if (geo.type === 'Topology') {
+    const key = objectName ?? '';
+    const memo = cache.get(geo) || {};
+    if (!memo[key]) { memo[key] = topoFeatures(geo, objectName); cache.set(geo, memo); }
+    return memo[key];
+  }
+  throw new PlotError(`No reconozco este \`geo\` (type: "${geo.type}").`, 'Usa un GeoJSON (FeatureCollection, Feature o geometría) o un TopoJSON (type: "Topology").');
+}
+
+function asFeature(f) {
+  if (f && f.type === 'Feature') return f;
+  if (f && GEOMS.has(f.type)) return { type: 'Feature', properties: {}, geometry: f };
+  throw new PlotError('Cada elemento de `geo` debe ser un Feature de GeoJSON.');
+}
+
+function topoFeatures(topo, objectName) {
+  const names = Object.keys(topo.objects || {});
+  if (!names.length) throw new PlotError('El TopoJSON no tiene objetos.');
+  const name = objectName ?? names[0];
+  const obj = topo.objects[name];
+  if (!obj) throw new PlotError(`El TopoJSON no tiene el objeto "${name}".`, `Objetos disponibles: ${names.join(', ')}. Indícalo con \`geoObject\`.`);
+  const tf = topo.transform;
+  const arcs = (topo.arcs || []).map((arc) => {
+    if (!tf) return arc.map((p) => p.slice(0, 2));
+    let x = 0, y = 0;
+    return arc.map((p) => { x += p[0]; y += p[1]; return [x * tf.scale[0] + tf.translate[0], y * tf.scale[1] + tf.translate[1]]; });
+  });
+  const point = (p) => (tf ? [p[0] * tf.scale[0] + tf.translate[0], p[1] * tf.scale[1] + tf.translate[1]] : p.slice(0, 2));
+  const line = (ids) => {
+    const out = [];
+    for (const i of ids) {
+      const a = i < 0 ? arcs[~i].slice().reverse() : arcs[i];
+      if (!a) continue;
+      for (let k = out.length ? 1 : 0; k < a.length; k++) out.push(a[k]);
+    }
+    return out;
+  };
+  const ring = (ids) => { const r = line(ids); if (r.length && (r[0][0] !== r[r.length - 1][0] || r[0][1] !== r[r.length - 1][1])) r.push(r[0]); return r; };
+  const geom = (o) => {
+    switch (o.type) {
+      case 'Point': return { type: 'Point', coordinates: point(o.coordinates) };
+      case 'MultiPoint': return { type: 'MultiPoint', coordinates: o.coordinates.map(point) };
+      case 'LineString': return { type: 'LineString', coordinates: line(o.arcs) };
+      case 'MultiLineString': return { type: 'MultiLineString', coordinates: o.arcs.map(line) };
+      case 'Polygon': return { type: 'Polygon', coordinates: o.arcs.map(ring) };
+      case 'MultiPolygon': return { type: 'MultiPolygon', coordinates: o.arcs.map((p) => p.map(ring)) };
+      default: return null;
+    }
+  };
+  const feat = (o) => ({ type: 'Feature', id: o.id, properties: { ...(o.properties || {}), ...(o.id !== undefined && (o.properties || {}).id === undefined ? { id: o.id } : {}) }, geometry: geom(o) });
+  const list = obj.type === 'GeometryCollection' ? obj.geometries.map(feat) : [feat(obj)];
+  return { type: 'FeatureCollection', features: list.filter((f) => f.geometry) };
+}
+
+return { "registerGeo": registerGeo, "getGeo": getGeo, "toFeatureCollection": toFeatureCollection, "isGeoUrl": isGeoUrl, "registeredGeo": registeredGeo };
 });
 __def("src/geo/projection.js", function () {
 
@@ -6476,19 +7056,69 @@ function albersUsa() {
   return f;
 }
 
-const projections = { mercator, equalEarth, 'equal-earth': equalEarth, albersUsa, 'albers-usa': albersUsa, albers: albersUsa };
-
-/** Recorre todos los anillos de una geometría. */
-function rings(geom) {
-  if (!geom) return [];
-  if (geom.type === 'Polygon') return geom.coordinates;
-  if (geom.type === 'MultiPolygon') return geom.coordinates.flat();
-  return [];
+/** Equirectangular (placa carré): lon/lat tal cual. Útil para mapas chicos o datos ya en grados. */
+function equirectangular() {
+  return ([lon, lat]) => [lon * RAD, -lat * RAD];
 }
+
+/**
+ * Coordenadas planas, sin proyectar: para GeoJSON en metros (UTM), en
+ * píxeles o dibujado a mano. `identity` deja el eje y hacia abajo (como
+ * SVG); `planar` lo invierte (y hacia arriba, como un plano cartesiano o UTM).
+ */
+function identity() { const f = ([x, y]) => [x, y]; f.continuous = true; return f; }
+function planar() { const f = ([x, y]) => [x, -y]; f.continuous = true; return f; }
+
+/** Cónica de áreas iguales con paralelos y meridiano central propios. */
+function conicEqualArea({ parallels = [29.5, 45.5], rotate, center = [0, 0] } = {}) {
+  const lon0 = rotate !== undefined ? -[].concat(rotate)[0] : center[0];
+  const f = conic(-lon0, [lon0, center[1] ?? 0], parallels);
+  return ([lon, lat]) => f(lon, lat);
+}
+
+const projections = {
+  mercator, equalEarth, 'equal-earth': equalEarth, albersUsa, 'albers-usa': albersUsa, albers: albersUsa,
+  equirectangular, 'plate-carree': equirectangular, latlon: equirectangular,
+  identity, none: identity, pixels: identity, planar, cartesian: planar, utm: planar,
+  conic: conicEqualArea, conicEqualArea, 'conic-equal-area': conicEqualArea,
+};
+
+/**
+ * Proyección desde el spec: un nombre ("mercator", "identity"…) o un objeto
+ * { type: "conic", parallels: [-30, -45], rotate: 72 }. Devuelve null si no
+ * se reconoce (se elige una automáticamente).
+ */
+function makeProjection(p) {
+  if (!p) return null;
+  if (typeof p === 'string') { const f = projections[p] || projections[p.toLowerCase()]; return f ? f() : null; }
+  if (typeof p === 'object') { const f = projections[p.type || p.name]; return f ? f(p) : null; }
+  return null;
+}
+
+/**
+ * Todas las secuencias de puntos de una geometría (anillos de polígonos,
+ * líneas y puntos): sirve para encuadrar y para saber si la forma existe.
+ */
+function rings(geom) {
+  if (!geom || !geom.type) return [];
+  const c = geom.coordinates;
+  switch (geom.type) {
+    case 'Polygon': case 'MultiLineString': return c || [];
+    case 'MultiPolygon': return (c || []).flat();
+    case 'LineString': case 'MultiPoint': return c && c.length ? [c] : [];
+    case 'Point': return c && c.length >= 2 ? [[c]] : [];
+    case 'GeometryCollection': return (geom.geometries || []).flatMap(rings);
+    default: return [];
+  }
+}
+/** ¿La geometría es de puntos o de líneas (sin área)? */
+const isPointGeom = (geom) => !!geom && (geom.type === 'Point' || geom.type === 'MultiPoint');
+const isLineGeom = (geom) => !!geom && (geom.type === 'LineString' || geom.type === 'MultiLineString');
 function polygonsOf(geom) {
   if (!geom) return [];
   if (geom.type === 'Polygon') return [geom.coordinates];
   if (geom.type === 'MultiPolygon') return geom.coordinates;
+  if (geom.type === 'GeometryCollection') return (geom.geometries || []).flatMap(polygonsOf);
   return [];
 }
 
@@ -6529,9 +7159,17 @@ const r1 = (v) => Math.round(v * 10) / 10;
 
 /**
  * Geometría → atributo d de SVG. Los anillos que saltan más de 180° de
- * longitud (antimeridiano) se cortan para no cruzar el mapa entero.
+ * longitud (antimeridiano) se cortan para no cruzar el mapa entero. Las
+ * líneas quedan abiertas y los puntos se dibujan como círculos de radio `r`.
  */
-function pathD(geom, proj) {
+function pathD(geom, proj, { r = 4.5 } = {}) {
+  if (!geom) return '';
+  if (geom.type === 'GeometryCollection') return (geom.geometries || []).map((x) => pathD(x, proj, { r })).join('');
+  if (isPointGeom(geom)) {
+    const pts = geom.type === 'Point' ? [geom.coordinates] : geom.coordinates || [];
+    return pts.map((p) => { const [x, y] = proj(p); return `M${r1(x - r)},${r1(y)}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0`; }).join('');
+  }
+  const open = isLineGeom(geom);
   let d = '';
   const cut = !proj.continuous;
   for (const ring of rings(geom)) {
@@ -6545,13 +7183,19 @@ function pathD(geom, proj) {
       d += (started ? 'L' : 'M') + X + ',' + Y;
       started = true; lx = X; ly = Y; n++;
     }
-    if (n) d += 'Z';
+    if (n && !open) d += 'Z';
   }
   return d;
 }
 
 /** Área (en px²) y centroide del polígono proyectado más grande. */
 function centroid(geom, proj) {
+  if (!polygonsOf(geom).length) {
+    const pts = rings(geom).flat().map(proj);
+    if (!pts.length) return { x: 0, y: 0, area: 0 };
+    const mid = isLineGeom(geom) ? pts[Math.floor(pts.length / 2)] : [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
+    return { x: mid[0], y: mid[1], area: 0, point: true };
+  }
   let best = null;
   for (const poly of polygonsOf(geom)) {
     const pts = poly[0].map(proj);
@@ -6566,7 +7210,7 @@ function centroid(geom, proj) {
   return best ? { x: best.x, y: best.y, area: Math.abs(best.area) } : { x: 0, y: 0, area: 0 };
 }
 
-return { "mercator": mercator, "equalEarth": equalEarth, "albersUsa": albersUsa, "rings": rings, "polygonsOf": polygonsOf, "fit": fit, "aspectOf": aspectOf, "pathD": pathD, "centroid": centroid, "projections": projections };
+return { "mercator": mercator, "equalEarth": equalEarth, "albersUsa": albersUsa, "equirectangular": equirectangular, "identity": identity, "planar": planar, "conicEqualArea": conicEqualArea, "makeProjection": makeProjection, "rings": rings, "polygonsOf": polygonsOf, "fit": fit, "aspectOf": aspectOf, "pathD": pathD, "centroid": centroid, "projections": projections, "isPointGeom": isPointGeom, "isLineGeom": isLineGeom };
 });
 __def("src/charts/heatmap.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
@@ -6953,7 +7597,7 @@ return { "facet": facet };
 __def("src/infer.js", function () {
 const { fieldsOf, fieldKind } = __req("src/data.js");
 
-const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'choropleth', 'symbolmap'];
+const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'choropleth', 'symbolmap'];
 
 const ALIASES = {
   barplot: ['bar', { ci: true }], countplot: 'count', columns: 'column', lineplot: 'line', areaplot: 'area',
@@ -6964,6 +7608,7 @@ const ALIASES = {
   populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
   flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
+  timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -6978,6 +7623,7 @@ function normalizeType(t) {
 function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
   if (spec.geo) return 'choropleth';
+  if (spec.start !== undefined && (spec.end !== undefined || spec.duration !== undefined) && typeof spec.start === 'string') return 'gantt';
   if (spec.nodes && spec.nodes.some?.((n) => n && n.type)) return 'flowchart';
   if (spec.nodes) return 'network';
   if (spec.matrix) return 'chord';
@@ -6987,6 +7633,7 @@ function inferType(spec, data = []) {
   const fields = fieldsOf(data);
   if ((fields.includes('source') && fields.includes('target')) || (fields.includes('from') && fields.includes('to'))) return 'sankey';
   const kinds = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
+  if (fields.filter((f) => kinds[f] === 'date').length >= 2 && fields.some((f) => kinds[f] === 'category') && !spec.y && !spec.series) return 'gantt';
   const x = spec.x ?? fields[0];
   const xk = kinds[x];
   if (xk === 'date' || xk === 'year') return 'line';
@@ -7006,6 +7653,7 @@ const { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } = __req("src/dat
 const { inferType, TYPES, normalizeType } = __req("src/infer.js");
 const { validatePalette } = __req("src/palette.js");
 const { themeFor } = __req("src/theme.js");
+const { parseDate } = __req("src/format.js");
 
 /** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
 let RENDER_PROBE = null;
@@ -7127,9 +7775,72 @@ function lint(spec = {}) {
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
 
+  if (type === 'gantt' && data.length) {
+    const sF = spec.start ?? fields.find((f) => /^(start|inicio|desde|begin|comienzo|from)/i.test(f));
+    const eF = spec.end ?? fields.find((f) => /^(end|fin|hasta|finish|termino|término|due|vence|to)$/i.test(f));
+    if (!sF) err('gantt-start', 'La carta Gantt necesita una fecha de inicio por tarea.', 'Indica `start` y `end` (o `duration`): start: "inicio", end: "fin".');
+    else if (eF && fields.includes(eF)) {
+      const back = data.filter((r) => { const a = parseDate(r[sF]), b = parseDate(r[eF]); return Number.isFinite(a) && Number.isFinite(b) && b < a; });
+      if (back.length) warn('gantt-backwards', `${back.length} tarea(s) terminan antes de empezar.`, 'Revisa si `start` y `end` están invertidos.');
+    }
+    if (data.length > 40) sug('gantt-many', `${data.length} tareas en una sola carta: cuesta encontrar la ruta crítica.`, 'Agrupa por fase con `group`, resume subtareas o usa `facet` por equipo.');
+    if (spec.today === undefined && !spec.refLines) sug('gantt-today', 'Una línea de "hoy" dice de un vistazo qué va atrasado.', 'Agrega `today: "2026-03-12"` (o `today: true`).');
+  }
   if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
+  if (String(spec.locale || '').toLowerCase().startsWith('en')) for (const list of [errors, warnings, tips]) list.forEach((it, i) => { list[i] = toEnglish(it); });
   return { ok: errors.length === 0, type, errors, warnings, suggestions: tips };
+}
+
+const qs = (s) => [...String(s).matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+const n0 = (s) => (/(\d+)/.exec(String(s)) || [])[1];
+const after = (s) => String(s ?? '').replace(/^[^:]*:\s*/, '');
+const EN = {
+  data: (m) => [m.message, 'Pass `data` as an array of rows: [{ category: "A", value: 10 }]'],
+  type: (m) => [`Chart type "${qs(m.message)[0]}" is not supported.`, `Use one of: ${after(m.fix)}`],
+  field: (m) => { const [f] = qs(m.message); const role = (/\(([^)]+)\)/.exec(m.message) || [])[1]; return [`The field "${f}" (${role}) does not exist.`, `Available fields: ${after(m.fix)}`]; },
+  empty: () => ['`data` has no rows.', 'Pass at least one row.'],
+  title: () => ['The title is missing.', 'Write the finding as a full sentence: "Biobío accounts for 32% of sales", not "Sales by region".'],
+  'title-fact': () => ['The title describes the chart but does not say what it shows.', 'A good title is a fact, ideally with the key number.'],
+  source: () => ['The data source is missing.', 'Add `source: "Census Bureau, 2025"` (or "illustrative data").'],
+  'series-max': (m) => [`${n0(m.message)} series: there are only 8 distinguishable colors; from the 9th on they turn gray.`, 'Fold the tail into "Other", use `highlight` or split into several charts.'],
+  'one-bar': () => ['A single bar compares nothing.', 'Use `type: "kpi"` to show the number.'],
+  'too-many-bars': (m) => [`${n0(m.message)} categories: the 25 largest will be shown and the rest folded into "Other".`, 'Set `top: N` to control the cut.'],
+  'stack-many': () => ['Stacking more than 5 series makes the middle segments hard to compare.', 'Consider grouped bars, `highlight` or `stack: "percent"`.'],
+  'bar-time': () => ['Many periods drawn as bars.', 'For long trends, `type: "line"` reads better.'],
+  'line-many': (m) => [`${n0(m.message)} lines: beyond 3 or 4 the chart turns into spaghetti.`, 'Use `highlight: "Series"` to emphasize one and mute the rest, or split into several charts.'],
+  'line-nominal': () => ['The x axis holds unordered categories: lines suggest continuity.', 'To compare categories, use `type: "bar"`.'],
+  'line-few': () => ['Fewer than 3 points in time.', 'With 2 periods, grouped bars or a `kpi` with its change say it better.'],
+  'dual-scale': () => ['The two measures have very different scales (there is no dual axis: it invents correlations).', 'Use `index: true` (base 100) or two separate charts.'],
+  'donut-slices': (m) => [`${n0(m.message)} slices: beyond 6 a donut cannot be read; the rest fold into "Other".`, 'Use `type: "bar"` or `type: "treemap"`.'],
+  'donut-two': () => ['Two slices are a single number.', 'Use `type: "kpi"` with the percentage.'],
+  'donut-close': () => ['The values are very similar: angles cannot tell them apart.', 'Use a sorted `type: "bar"`.'],
+  negative: (m) => (/dona/.test(m.message) ? ['Donuts cannot show negative values.', 'Use bars.'] : ['Negative values are left out of the treemap.', 'Use bars for signed data.']),
+  'groups-max': () => ['More than 8 groups: from the 8th on they go into a gray "Other".', 'Merge categories or use another hierarchy level.'],
+  'scatter-colors': (m) => [`${n0(m.message)} color groups in a scatter: only the first 3 colors stay distinct across every pair for color-blind readers.`, 'Use `highlight`, merge groups or split into several charts.'],
+  overplot: (m) => [`${n0(m.message)} points: they may overlap.`, 'Reduce `radius` or use a heatmap.'],
+  numeric: (m) => { const [f] = qs(m.message); return /regresi/.test(m.message) ? [`"${f}" is not numeric: a regression needs two measures.`, 'Use `type: "box"` to compare a measure across categories.'] : [`"${f}" is not numeric: this chart needs a measure.`, 'To count categories, use `type: "countplot"`.']; },
+  'few-obs': (m) => (/recta/.test(m.message) ? [`Only ${n0(m.message)} points: the fit and its interval are unreliable.`, 'Show the points with `type: "scatter"`.'] : [`Only ${n0(m.message)} observations: the shape of the distribution is unreliable.`, 'With little data, `type: "strip"` shows every point.']),
+  'few-per-group': (m) => [`Groups with fewer than 5 observations: ${after(m.message).replace(/\.$/, '')}.`, '`type: "strip"` or `points: true` show each observation.'],
+  'radar-many': (m) => [`${n0(m.message)} series on a radar hide one another.`, 'Use `highlight`, `facet` or grouped bars.'],
+  'log-nonpositive': () => ['There are values ≤ 0: a log scale cannot show them.', 'Drop the log scale or filter those values.'],
+  'geo-unmatched': (m) => [`${n0(m.message)} row(s) match no shape on the map: ${after(m.message).replace(/\.$/, '')}.`, 'Check the names or use codes ("XIII", "ARG", "TX"), or set `featureKey`.'],
+  'dashed-label': () => ['Some shapes are dashed but nothing says what they mean (the legend will say "Estimate").', 'Add `dashedLabel: "Projection"`, "Preliminary" or whatever applies.'],
+  'dashed-from-type': () => ['`dashedFrom` only applies to lines, areas and columns on a time axis.', 'Use `dashed` with a list of categories or a data field.'],
+  'pyramid-sides': (m) => { const [f] = qs(m.message); return [`A population pyramid needs exactly 2 groups in "${f}" (found ${(/hay (\d+)/.exec(m.message) || [])[1]}).`, 'Use `type: "bar"` with `series` for more groups.']; },
+  'chord-many': () => ['More than 16 groups in a chord diagram: the ribbons become unreadable.', 'Fold the smallest into "Other" or use `type: "sankey"`.'],
+  'network-big': (m) => [`${n0(m.message)} links: the network may look like a blob.`, 'Filter weak links or use `layout: "circle"`.'],
+  'gantt-start': () => ['A Gantt chart needs a start date per task.', 'Set `start` and `end` (or `duration`): start: "start", end: "end".'],
+  'gantt-backwards': (m) => [`${n0(m.message)} task(s) end before they start.`, 'Check whether `start` and `end` are swapped.'],
+  'gantt-many': (m) => [`${n0(m.message)} tasks in one chart: the critical path is hard to find.`, 'Group by phase with `group`, roll up subtasks or use `facet` by team.'],
+  'gantt-today': () => ['A "today" line shows at a glance what is late.', 'Add `today: "2026-03-12"` (or `today: true`).'],
+  items: () => ['A KPI needs `items`.', 'items: [{ label: "Sales", value: 1250, delta: 0.12, period: "vs 2025" }]'],
+};
+function toEnglish(it) {
+  const f = EN[it.code] || (it.code.startsWith('palette-') ? (m) => [m.message.replace(/^Paleta:/, 'Palette:'), 'Change the order or the hues, or use the default palette.'] : null);
+  if (!f) return it;
+  const [message, fix] = f(it);
+  return { ...it, message, fix };
 }
 
 
@@ -7156,7 +7867,7 @@ const schema = {
       type: 'string',
       enum: ['auto', ...TYPES, ...Object.keys(ALIASES)],
       description:
-        'Compare: bar, count. Time: line, area. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. Maps: choropleth, symbolmap. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -7172,7 +7883,7 @@ const schema = {
     hue: field('Alias of series (seaborn naming).'),
     value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
-    group: field('Level-1 group field for a two-level treemap (shortcut for path).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase).'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
     size: field('Bubble size field (area-proportional).'),
     from: field('Sankey source field.'),
@@ -7199,13 +7910,34 @@ const schema = {
       },
     },
 
-    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    task: field('gantt: task name field (one row per task).'),
+    start: field('gantt: start date field ("2026-03-02", "2026-03") or a number (e.g. week).'),
+    end: field('gantt: end date field. Day dates are inclusive. Missing end, or end equal to start, makes a milestone.'),
+    duration: field('gantt: duration field (days, or units of a numeric axis) instead of `end`.'),
+    progress: field('gantt: completion field, 0–1 or 0–100. The filled part of each bar is the progress.'),
+    dependsOn: field('gantt: field with the name(s) of the predecessor task(s) ("A" or "A, B"): draws arrows.'),
+    milestone: field('gantt: boolean field that marks milestones (drawn as diamonds).'),
+    today: { description: 'gantt: date of the "today" line ("2026-03-12"), or true for the current date.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'number' }] },
+    groupHeaders: { description: 'gantt: false draws phases as a color legend instead of section headers.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['compact'] }] },
+    rowHeight: { type: 'number', description: 'gantt: row height in px.' },
+
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or YOUR OWN geometry: a GeoJSON FeatureCollection, Feature, list of Features or bare geometry, or a TopoJSON Topology. Polygons are filled, LineStrings stroked and Points drawn as dots. In the browser, render() also accepts a URL to a .geojson/.topojson file.', anyOf: [{ type: 'string' }, { type: 'object' }, { type: 'array', items: { type: 'object' } }] },
+    geoObject: field('TopoJSON: name of the object inside `objects` to draw (default: the first one).'),
     key: field('choropleth/symbolmap: data field with the region, state or country name/code to match (US: "TX", "Texas", "06").'),
-    projection: { type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa'], description: 'choropleth/symbolmap: map projection (picked automatically).' },
+    projection: { description: 'Map projection (picked automatically): "mercator", "equalEarth", "albersUsa", "equirectangular", "conic" (or { type: "conic", parallels: [-30, -45], rotate: 72 }), "identity" (coordinates already in pixels, y down) or "planar" (projected coordinates such as UTM metres, y up; chosen automatically when coordinates are outside lon/lat range).', anyOf: [{ type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa', 'equirectangular', 'conic', 'identity', 'planar'] }, { type: 'object', properties: { type: { type: 'string' }, parallels: { type: 'array', items: { type: 'number' } }, rotate: { type: 'number' }, center: { type: 'array', items: { type: 'number' } } } }] },
     values: { type: 'boolean', description: 'choropleth with state codes (usa): false shows only the codes, without values.' },
-    featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
+    featureKey: field('choropleth: feature property to match `key` against. Default tries code, id, ISO-3, name and aliases, then any property whose values match the data (e.g. "CUT_REG", "GEOID").'),
+    nameKey: field('choropleth: feature property with the display name (default: name, NOMBRE, NAME_1, ADMIN…).'),
+    fitTo: { description: 'Map framing: zoom to some regions (names or codes), a bounding box [lonMin, latMin, lonMax, latMax], or "markers". The rest of the map stays as context, clipped.', anyOf: [{ type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] } }] },
+    markers: { description: 'Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color, legend, maxRadius, labels }. With a size field, circles are area-proportional.', anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }] },
+    layers: { type: 'array', description: 'Map: extra GeoJSON drawn over (or `below: true` under) the regions: rivers, roads, routes, borders, points. Each { geo, label?, stroke?, width?, fill?, dash?, opacity?, below? }; a `label` adds a legend key.', items: { type: 'object' } },
+    borderColor: { type: 'string', description: 'Map: color of the borders between regions.' },
+    borderWidth: { type: 'number', description: 'Map: width of the borders between regions.' },
+    pointRadius: { type: 'number', description: 'Map: radius of Point features in your own GeoJSON (default 5).' },
+    tall: { type: 'boolean', description: 'Map: false prevents the tall layout (map on the left, ranked label column on the right) for elongated territories.' },
     midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
     classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
+    scale: { description: 'choropleth: "quantile" (default), "equal", "continuous", "categorical" (text values get one color each; automatic when `value` holds text) or a list of thresholds.', anyOf: [{ type: 'string', enum: ['quantile', 'equal', 'continuous', 'categorical'] }, { type: 'array', items: { type: 'number' } }] },
     nodes: { type: 'array', items: { type: 'object' }, description: 'network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane).' },
     edges: { type: 'array', items: { type: 'object' }, description: 'flowchart: connections (from, to, label). Same as `data`.' },
     layout: { type: 'string', enum: ['force', 'circle'], description: 'network layout.' },
@@ -7302,7 +8034,7 @@ const schema = {
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
 function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions / world countries built in), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
@@ -7660,6 +8392,7 @@ const { themeFor, FONT_CSS } = __req("src/theme.js");
 const { ensureData, fieldKind, uniq, num, PlotError } = __req("src/data.js");
 const { parseDate, formatDate } = __req("src/format.js");
 const { dateUnit } = __req("src/scale.js");
+const { isGeoUrl } = __req("src/geo/registry.js");
 
 let plotFn = null;
 let resolveFn = null;
@@ -7705,9 +8438,44 @@ function ensureAssets() {
  * Dibuja `spec` en un elemento (o selector) del navegador.
  * Devuelve { svg, spec, update(spec), destroy() }.
  */
+const geoCache = new Map();
+/** Descarga (una vez por URL) un GeoJSON o TopoJSON. */
+function loadGeo(url) {
+  if (!geoCache.has(url)) geoCache.set(url, fetch(url).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); }));
+  return geoCache.get(url);
+}
+
+/**
+ * `geo` como URL ("/mapas/comunas.geojson", "https://…/x.topojson"): se
+ * descarga y luego se dibuja. Devuelve el mismo objeto que render(), con
+ * `ready` (una promesa) mientras llega el archivo.
+ */
+function renderRemote(host, spec, opts) {
+  let inner = null, pending = null, dead = false;
+  const handle = {
+    get svg() { return inner?.svg ?? null; },
+    get spec() { return inner?.spec ?? spec; },
+    update(s) { if (inner) return inner.update(s); pending = s; },
+    destroy() { dead = true; inner?.destroy(); },
+  };
+  host.setAttribute('aria-busy', 'true');
+  handle.ready = loadGeo(spec.geo).then((geo) => {
+    host.removeAttribute('aria-busy');
+    if (dead) return handle;
+    inner = render(host, { ...(pending || spec), geo }, opts);
+    return handle;
+  }, (e) => {
+    host.removeAttribute('aria-busy');
+    host.innerHTML = `<p style="font:13px system-ui;color:#C9531A">${String(e.message).replace(/</g, '&lt;')}</p>`;
+    throw e;
+  });
+  return handle;
+}
+
 function render(target, spec, opts = {}) {
   const host = typeof target === 'string' ? document.querySelector(target) : target;
   if (!host) throw new PlotError('No encontré el elemento destino.', 'render("#grafico", spec) o render(elemento, spec)');
+  if (spec && typeof spec.geo === 'string' && typeof fetch !== 'undefined' && isGeoUrl(spec.geo)) return renderRemote(host, spec, opts);
   ensureAssets();
   let state = resolveFn ? resolveFn(spec) : { ...spec };
   const fontUrl = themeFor(state).font?.import;
@@ -7948,7 +8716,7 @@ function setIcon(b, kind) {
     : '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/><rect x="7" y="1.5" width="2.5" height="9" rx="1" fill="currentColor"/></svg>';
 }
 
-return { "_bind": _bind, "render": render };
+return { "_bind": _bind, "loadGeo": loadGeo, "render": render };
 });
 global.plotagents = __req("src/index.js");
 })(typeof window !== 'undefined' ? window : globalThis);

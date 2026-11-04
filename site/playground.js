@@ -8,6 +8,7 @@
   var msgs = document.getElementById('msgs');
   var desc = document.getElementById('desc');
   var sel = document.getElementById('preset');
+  var files = JSON.parse((document.getElementById('pa-geo-files') || {}).textContent || '{}');
   var entry = null;
   var lastSpec = null;
   var timer = 0;
@@ -63,7 +64,11 @@
       msgs.innerHTML = '<div class="msg error"><b>Invalid JSON</b>' + esc(p.error) + '</div>';
       return;
     }
-    var spec = p.spec;
+    var spec = withFiles(p.spec);
+    if (spec.__missing) {
+      msgs.innerHTML = '<div class="msg error"><b>Missing file</b>' + esc(spec.__missing) + '<span class="fix">Drop the file on the editor (or use “Insert GeoJSON…”) to load it again.</span></div>';
+      return;
+    }
     var r = plotagents.safePlot(spec);
     var html = list('error', 'Error', r.errors) + list('warning', 'Warning', r.warnings) + list('suggestion', 'Suggestion', r.suggestions);
     if (r.ok && !r.errors.length && !r.warnings.length && !r.suggestions.length) html = '<div class="msg ok"><b>Looks good</b>No errors, warnings or suggestions.</div>';
@@ -75,6 +80,69 @@
     var fixed = !!spec.theme;
     entry = site.mount(fig, spec, { fixed: fixed });
   }
+  // geo: "file:x.geojson" → el objeto cargado en la página (también en `layers`).
+  function withFiles(spec) {
+    var miss = null;
+    function res(g) { if (typeof g === 'string' && g.indexOf('file:') === 0) { var f = files[g.slice(5)]; if (!f) miss = g.slice(5); return f || g; } return g; }
+    var out = Object.assign({}, spec);
+    if (out.geo) out.geo = res(out.geo);
+    if (Array.isArray(out.layers)) out.layers = out.layers.map(function (L) { return L && L.geo ? Object.assign({}, L, { geo: res(L.geo) }) : L; });
+    if (miss) out.__missing = '"' + miss + '" is not loaded in this page.';
+    return out;
+  }
+
+  // ── Tu propio GeoJSON / TopoJSON ────────────────────────────────────────
+  var NAME_KEYS = ['name', 'NAME', 'nombre', 'NOMBRE', 'Nombre', 'NOM_COM', 'NOM_COMUNA', 'NOM_REG', 'NOM_REGION', 'NAME_1', 'NAME_2', 'ADMIN', 'admin', 'name_en', 'region', 'Region', 'REGION', 'comuna', 'COMUNA', 'label', 'title', 'id', 'ID', 'code', 'CODE'];
+  function insertGeo(obj, filename) {
+    var fc;
+    try { fc = plotagents.toFeatureCollection(obj); } catch (e) { msgs.innerHTML = '<div class="msg error"><b>Not a map</b>' + esc(e.message) + '</div>'; return; }
+    var feats = fc.features.filter(function (f) { return f && f.geometry; });
+    if (!feats.length) { msgs.innerHTML = '<div class="msg error"><b>Empty map</b>The file has no features with geometry.</div>'; return; }
+    var props = feats[0].properties || {};
+    var key = NAME_KEYS.filter(function (k) { return props[k] !== undefined && props[k] !== null && typeof props[k] !== 'object'; })[0]
+      || Object.keys(props).filter(function (k) { return typeof props[k] === 'string'; })[0];
+    var name = (filename || 'map.geojson').replace(/[^\w.\-]+/g, '-');
+    files[name] = obj;
+    var seen = {};
+    var data = [];
+    feats.forEach(function (f, i) {
+      var k = key ? f.properties[key] : f.id !== undefined ? f.id : null;
+      if (k === undefined || k === null || seen[k]) return;
+      seen[k] = 1;
+      data.push({ area: k, value: Math.round(((i * 37) % 97) + 3) });
+    });
+    var spec = {
+      type: 'choropleth',
+      geo: 'file:' + name,
+      title: 'Your map: ' + feats.length + ' shapes from ' + name,
+      subtitle: 'Placeholder values: replace `data` with your own (one row per shape)',
+      source: 'illustrative data',
+      data: data.slice(0, 400),
+      key: 'area', value: 'value',
+      locale: 'en',
+    };
+    if (key) spec.featureKey = key;
+    if (!key) delete spec.featureKey;
+    sel.value = '';
+    history.replaceState(null, '', location.pathname);
+    load(spec);
+  }
+  function readFile(file) {
+    var rd = new FileReader();
+    rd.onload = function () {
+      try { insertGeo(JSON.parse(rd.result), file.name); }
+      catch (e) { msgs.innerHTML = '<div class="msg error"><b>Could not read ' + esc(file.name) + '</b>' + esc(e.message) + '</div>'; }
+    };
+    rd.readAsText(file);
+  }
+  var gf = document.getElementById('geo-file');
+  document.getElementById('geo-btn').addEventListener('click', function () { gf.click(); });
+  gf.addEventListener('change', function () { if (gf.files[0]) readFile(gf.files[0]); gf.value = ''; });
+  var ed = ta.parentNode;
+  ['dragenter', 'dragover'].forEach(function (ev) { ta.addEventListener(ev, function (e) { if (e.dataTransfer && [].indexOf.call(e.dataTransfer.types, 'Files') >= 0) { e.preventDefault(); ed.classList.add('drag'); } }); });
+  ['dragleave', 'drop'].forEach(function (ev) { ta.addEventListener(ev, function () { ed.classList.remove('drag'); }); });
+  ta.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) { e.preventDefault(); readFile(f); } });
+
   function schedule() { clearTimeout(timer); timer = setTimeout(run, 280); }
 
   function load(spec) { ta.value = pretty(spec); run(); }
@@ -123,6 +191,7 @@
     if (!p.spec) return;
     var b64 = btoa(unescape(encodeURIComponent(JSON.stringify(p.spec)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     history.replaceState(null, '', '#spec=' + b64);
+    if (typeof p.spec.geo === 'string' && p.spec.geo.indexOf('file:') === 0 && !/^file:(geojson-propio|geojson-en)\.geojson$/.test(p.spec.geo)) msgs.insertAdjacentHTML('afterbegin', '<div class="msg warning"><b>Heads-up</b>The link keeps the spec but not your file: whoever opens it will need to drop it again.</div>');
     site.copyText(location.href, e.currentTarget);
   });
   window.addEventListener('hashchange', fromHash);

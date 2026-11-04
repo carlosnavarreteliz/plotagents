@@ -5,9 +5,11 @@ export type ChartType =
   | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
+  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'choropleth' | 'symbolmap'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
-  | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider';
+  | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
+  | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa';
 
 export type Row = Record<string, string | number | Date | null | undefined>;
 
@@ -161,10 +163,34 @@ export interface Spec {
   centerLabel?: string;
   midpoint?: number;
   diverging?: boolean;
-  /** choropleth/symbolmap: "chile" (default), "usa", "world", a registered name or a GeoJSON FeatureCollection. */
-  geo?: 'chile' | 'usa' | 'world' | string | object;
+  /** choropleth/symbolmap: "chile" (default), "usa", "world", a registered name, your own GeoJSON (FeatureCollection, Feature, Feature[] or geometry) or TopoJSON. In the browser, render() also accepts a URL. */
+  geo?: 'chile' | 'usa' | 'world' | string | object | object[];
+  /** TopoJSON: object to draw (default: the first). */
+  geoObject?: string;
   key?: string;
-  projection?: 'mercator' | 'equalEarth' | 'albersUsa';
+  /** Feature property matched against `key` (auto-detected when omitted). */
+  featureKey?: string;
+  /** Feature property with the display name. */
+  nameKey?: string;
+  projection?: 'mercator' | 'equalEarth' | 'albersUsa' | 'equirectangular' | 'conic' | 'identity' | 'planar' | { type: string; parallels?: [number, number]; rotate?: number; center?: [number, number] };
+  /** Zoom to regions, a [lonMin, latMin, lonMax, latMax] box, or "markers". */
+  fitTo?: string | string[] | [number, number, number, number];
+  markers?: Array<{ lon: number; lat: number; label?: string; value?: number; color?: string }> | { data: Row[]; lon?: string; lat?: string; label?: string; size?: string; color?: string; legend?: string; maxRadius?: number; radius?: number; labels?: boolean };
+  layers?: Array<{ geo: object | string; label?: string; stroke?: string; width?: number; fill?: string; dash?: boolean | string; opacity?: number; below?: boolean; object?: string }>;
+  borderColor?: string;
+  borderWidth?: number;
+  pointRadius?: number;
+  /** gantt */
+  task?: string;
+  start?: string;
+  end?: string;
+  duration?: string;
+  progress?: string;
+  dependsOn?: string;
+  milestone?: string;
+  today?: string | number | boolean;
+  groupHeaders?: boolean | 'compact';
+  rowHeight?: number;
   columns?: number;
   [key: string]: unknown;
 }
@@ -194,7 +220,11 @@ export declare function resolve(spec: Spec): Spec;
 export declare const schema: Record<string, unknown>;
 /** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
 export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
-export declare function registerGeo(name: string, featureCollection: object, aliases?: string[]): object;
+export declare function registerGeo(name: string, geo: object, aliases?: string[]): object;
+/** Any GeoJSON / TopoJSON shape → FeatureCollection. */
+export declare function toFeatureCollection(geo: object | object[], objectName?: string): object;
+/** Browser: downloads (once per URL) a GeoJSON or TopoJSON. */
+export declare function loadGeo(url: string): Promise<object>;
 export declare const palettes: Record<string, string[]>;
 export declare const ramps: Record<string, string[]>;
 export declare function themeFor(spec: Spec): Theme;

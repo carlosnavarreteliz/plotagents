@@ -20,7 +20,7 @@ export const schema = {
       type: 'string',
       enum: ['auto', ...TYPES, ...Object.keys(ALIASES)],
       description:
-        'Compare: bar, count. Time: line, area. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. Maps: choropleth, symbolmap. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -36,7 +36,7 @@ export const schema = {
     hue: field('Alias of series (seaborn naming).'),
     value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
-    group: field('Level-1 group field for a two-level treemap (shortcut for path).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase).'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
     size: field('Bubble size field (area-proportional).'),
     from: field('Sankey source field.'),
@@ -63,14 +63,36 @@ export const schema = {
       },
     },
 
+    // Schedules
+    task: field('gantt: task name field (one row per task).'),
+    start: field('gantt: start date field ("2026-03-02", "2026-03") or a number (e.g. week).'),
+    end: field('gantt: end date field. Day dates are inclusive. Missing end, or end equal to start, makes a milestone.'),
+    duration: field('gantt: duration field (days, or units of a numeric axis) instead of `end`.'),
+    progress: field('gantt: completion field, 0–1 or 0–100. The filled part of each bar is the progress.'),
+    dependsOn: field('gantt: field with the name(s) of the predecessor task(s) ("A" or "A, B"): draws arrows.'),
+    milestone: field('gantt: boolean field that marks milestones (drawn as diamonds).'),
+    today: { description: 'gantt: date of the "today" line ("2026-03-12"), or true for the current date.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'number' }] },
+    groupHeaders: { description: 'gantt: false draws phases as a color legend instead of section headers.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['compact'] }] },
+    rowHeight: { type: 'number', description: 'gantt: row height in px.' },
+
     // Maps, networks, flows
-    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or a GeoJSON FeatureCollection.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    geo: { description: 'choropleth/symbolmap: "chile" (16 regions, default), "usa" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), "world" (countries), a name registered with registerGeo(), or YOUR OWN geometry: a GeoJSON FeatureCollection, Feature, list of Features or bare geometry, or a TopoJSON Topology. Polygons are filled, LineStrings stroked and Points drawn as dots. In the browser, render() also accepts a URL to a .geojson/.topojson file.', anyOf: [{ type: 'string' }, { type: 'object' }, { type: 'array', items: { type: 'object' } }] },
+    geoObject: field('TopoJSON: name of the object inside `objects` to draw (default: the first one).'),
     key: field('choropleth/symbolmap: data field with the region, state or country name/code to match (US: "TX", "Texas", "06").'),
-    projection: { type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa'], description: 'choropleth/symbolmap: map projection (picked automatically).' },
+    projection: { description: 'Map projection (picked automatically): "mercator", "equalEarth", "albersUsa", "equirectangular", "conic" (or { type: "conic", parallels: [-30, -45], rotate: 72 }), "identity" (coordinates already in pixels, y down) or "planar" (projected coordinates such as UTM metres, y up; chosen automatically when coordinates are outside lon/lat range).', anyOf: [{ type: 'string', enum: ['mercator', 'equalEarth', 'albersUsa', 'equirectangular', 'conic', 'identity', 'planar'] }, { type: 'object', properties: { type: { type: 'string' }, parallels: { type: 'array', items: { type: 'number' } }, rotate: { type: 'number' }, center: { type: 'array', items: { type: 'number' } } } }] },
     values: { type: 'boolean', description: 'choropleth with state codes (usa): false shows only the codes, without values.' },
-    featureKey: field('choropleth: feature property to match against (default tries code, id, ISO-3, name and aliases).'),
+    featureKey: field('choropleth: feature property to match `key` against. Default tries code, id, ISO-3, name and aliases, then any property whose values match the data (e.g. "CUT_REG", "GEOID").'),
+    nameKey: field('choropleth: feature property with the display name (default: name, NOMBRE, NAME_1, ADMIN…).'),
+    fitTo: { description: 'Map framing: zoom to some regions (names or codes), a bounding box [lonMin, latMin, lonMax, latMax], or "markers". The rest of the map stays as context, clipped.', anyOf: [{ type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] } }] },
+    markers: { description: 'Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color, legend, maxRadius, labels }. With a size field, circles are area-proportional.', anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }] },
+    layers: { type: 'array', description: 'Map: extra GeoJSON drawn over (or `below: true` under) the regions: rivers, roads, routes, borders, points. Each { geo, label?, stroke?, width?, fill?, dash?, opacity?, below? }; a `label` adds a legend key.', items: { type: 'object' } },
+    borderColor: { type: 'string', description: 'Map: color of the borders between regions.' },
+    borderWidth: { type: 'number', description: 'Map: width of the borders between regions.' },
+    pointRadius: { type: 'number', description: 'Map: radius of Point features in your own GeoJSON (default 5).' },
+    tall: { type: 'boolean', description: 'Map: false prevents the tall layout (map on the left, ranked label column on the right) for elongated territories.' },
     midpoint: { type: 'number', description: 'choropleth/heatmap: diverging color scale around this value (e.g. 0 for changes).' },
     classes: { type: 'integer', description: 'choropleth: number of color classes (default 5).' },
+    scale: { description: 'choropleth: "quantile" (default), "equal", "continuous", "categorical" (text values get one color each; automatic when `value` holds text) or a list of thresholds.', anyOf: [{ type: 'string', enum: ['quantile', 'equal', 'continuous', 'categorical'] }, { type: 'array', items: { type: 'number' } }] },
     nodes: { type: 'array', items: { type: 'object' }, description: 'network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane).' },
     edges: { type: 'array', items: { type: 'object' }, description: 'flowchart: connections (from, to, label). Same as `data`.' },
     layout: { type: 'string', enum: ['force', 'circle'], description: 'network layout.' },
@@ -174,7 +196,7 @@ export const schema = {
 /** Tool definition ready for Claude (Anthropic) or OpenAI. */
 export function toolDefinition({ name = 'plot', flavor = 'anthropic' } = {}) {
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions / world countries built in), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` adds a per-period slider. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
