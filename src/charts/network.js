@@ -604,7 +604,10 @@ export function network(spec, theme) {
     // la nube) y y hacia abajo como en SVG, salvo `flipY: true` (y hacia arriba).
     for (const n of nodes) { n.x = n.fx; n.y = spec.flipY ? -n.fy : n.fy; }
     // `stretch`: posiciones ya normalizadas por eje (0–1): cada eje llena el área.
-    lim = spec.stretch === true ? Infinity : 1; center = false; withR = true; geometric = false;
+    // Sin `withR`: las posiciones vienen en sus unidades (0–1 de un MDS, ±10 de
+    // un UMAP) y el radio en px; sumarlos encogía la nube. El margen `pad` ya
+    // reserva el radio mayor.
+    lim = spec.stretch === true ? Infinity : 1; center = false; withR = false; geometric = false;
   } else if (layout === 'grid') {
     gridLayout(nodes, { pin: focusNode, aw: area.w, ah: area.h });
     lim = Infinity; center = false;

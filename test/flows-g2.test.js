@@ -150,6 +150,21 @@ test('network href: each node links to its page; minRadius', () => {
   assert.ok(r(plot({ ...knSpec, minRadius: 9 }), 'hist') >= 9);
 });
 
+test('network preset: positions in any unit fill the area; stretch fills each axis', () => {
+  const pos = (s) => Object.fromEntries([...s.matchAll(/<circle class="pa-m" cx="([\d.-]+)" cy="([\d.-]+)"[^>]*data-node="([^"]+)"/g)].map((m) => [m[3], [+m[1], +m[2]]]));
+  const one = pos(plot(knSpec)), two = pos(plot({ ...knSpec, stretch: true }));
+  // One scale: the 0–1 square fills the 400 px height (it used to shrink to a
+  // few dozen px: radii in px were added to positions in their own units).
+  assert.ok(one.agro[1] - one.math[1] > 250, `${one.agro[1] - one.math[1]}`);
+  assert.ok(one.chem[0] - one.hist[0] < 400);
+  // Stretched: x spans most of the 800 px.
+  assert.ok(two.chem[0] - two.hist[0] > 650);
+  assert.ok(two.math[1] < two.agro[1]); // flipY: y = 1 on top
+  // The same map at ±10 or at 0–1 is the same picture.
+  const big = pos(plot({ ...knSpec, nodes: kn.map((n) => ({ ...n, x: n.x * 20 - 10, y: n.y * 20 - 10 })) }));
+  for (const id of Object.keys(one)) assert.ok(Math.abs(big[id][0] - one[id][0]) < 0.6 && Math.abs(big[id][1] - one[id][1]) < 0.6, id);
+});
+
 test('network: the new options under skins and CSS-variable colors', () => {
   const spec = { ...knSpec, filled: 'held', stretch: true, edgeOpacity: [0.35, 0.95], tooltip: { title: 'label', fields: ['n'], replace: true } };
   const svg = plot({ ...spec, skins: [{ edgeColor: 'var(--line, #e0d6c4)', colors: { nat: '#6e86c8' } }, { when: 'html.classic', edgeColor: 'var(--line, #dfe5ed)', colors: { nat: '#0b3f8c' } }] });
