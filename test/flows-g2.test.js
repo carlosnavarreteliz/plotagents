@@ -176,3 +176,79 @@ test('network: the new options under skins and CSS-variable colors', () => {
   assert.ok(!r.warnings.some((w) => w.code === 'unknown-option'), JSON.stringify(r.warnings));
   assert.equal(safePlot({ ...spec, filled: 'nope' }).ok, false);
 });
+
+// ── dendrogram: tooltips, color por campo, pesos ────────────────────────────
+// Doce ramas cortadas de un árbol de comunas: la forma del árbol del sitio.
+const tree = [
+  { id: 'root', parent: null, height: 15.4, label: '342 comunas' },
+  { id: 'n1', parent: 'root', height: 10.1, label: '263 comunas' },
+  { id: 'n2', parent: 'root', height: 5.4, label: '79 comunas' },
+  { id: 'b0', parent: 'n1', label: 'Los Ángeles · Curicó', dim: 'Housing', comunas: 70, why: '↑ apartments 1.6' },
+  { id: 'b1', parent: 'n1', label: 'San Vicente · Molina', dim: 'Economy', comunas: 48, why: '↓ income 19.7' },
+  { id: 'b2', parent: 'n2', label: 'Las Condes · Ñuñoa', dim: 'Housing', comunas: 5, why: '↑ apartments 71.6' },
+  { id: 'b3', parent: 'n2', label: 'Huara · Camiña', dim: 'Ageing', comunas: 3, why: '↑ crowding 16.7' },
+];
+const dSpec = { type: 'dendrogram', data: tree, label: 'label', width: 900, locale: 'en' };
+
+test('dendrogram series: leaf colors from a field without cut, with a legend and colors', () => {
+  const svg = plot({ ...dSpec, series: 'dim', colors: { Ageing: '#9c7bc4' } });
+  const sw = [...svg.matchAll(/<rect x="[\d.]+" y="[\d.]+" width="5" height="[\d.]+" rx="1.5" fill="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(sw.length, 4);
+  assert.equal(sw[0], sw[2]); // both Housing
+  assert.notEqual(sw[0], sw[1]);
+  assert.equal(sw[3], '#9c7bc4');
+  assert.match(svg, />Housing</); // legend
+  assert.doesNotMatch(plot({ ...dSpec, series: 'dim', legend: false }), />Housing</);
+  // The leaf's group carries its color for the tooltip header.
+  assert.match(svg, /data-color="#9c7bc4"/);
+  assert.doesNotMatch(svg, /stroke-dasharray="4 3"/); // no cut
+});
+
+test('dendrogram size and sub: weight bars with figures, two-line leaves, axis title', () => {
+  const svg = plot({ ...dSpec, series: 'dim', size: 'comunas', sub: 'why', xLabel: 'Ward merge height' });
+  for (const v of ['70', '48', '5', '3']) assert.match(svg, new RegExp(`>${v}</text>`));
+  const bars = [...svg.matchAll(/<rect x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="[\d.]+" rx="1" /g)].map((m) => +m[1]);
+  assert.equal(bars.length, 4);
+  assert.ok(Math.abs(bars[0] / bars[1] - 70 / 48) < 0.02);
+  assert.match(svg, />↑ apartments 71\.6</);
+  assert.match(svg, />Ward merge height</);
+  // Two-line leaves: taller than the one-line tree.
+  const h = (s) => +s.match(/viewBox="0 0 [\d.]+ ([\d.]+)"/)[1];
+  assert.ok(h(svg) > h(plot(dSpec)) + 40);
+  // Leaf tooltip: name, category, weight, second line.
+  assert.match(svg, /data-tip="Las Condes · Ñuñoa\nHousing\nComunas: 5\n↑ apartments 71\.6"/);
+  // Vertical: the weight stays in the tooltip, no bars.
+  const v = plot({ ...dSpec, size: 'comunas', orientation: 'vertical' });
+  assert.doesNotMatch(v, /rx="1" /);
+  assert.match(v, /Comunas: 70/);
+});
+
+test('dendrogram tooltips through tipper: leaves and, with tooltip, every join', () => {
+  const plain = plot(dSpec);
+  assert.doesNotMatch(plain, /pa-joins/);
+  const svg = plot({ ...dSpec, size: 'comunas', tooltip: true });
+  const joins = svg.match(/<g class="pa-joins">(.*?)<\/g>/s)[1];
+  assert.equal((joins.match(/<rect /g) || []).length, 3);
+  assert.match(joins, /data-tip="342 comunas\nHeight: 15\.4\n4 leaves\nComunas: 126"/);
+  // Fields of a row: the leaf's and the join's own.
+  const f = plot({ ...dSpec, tooltip: { fields: ['why'], title: 'label' } });
+  assert.match(f, /data-tip="Huara · Camiña\nWhy: ↑ crowding 16\.7"/);
+  assert.match(f, /data-tip="79 comunas\nHeight: 5\.4\n2 leaves"/);
+  // tooltip: false silences every card.
+  assert.doesNotMatch(plot({ ...dSpec, tooltip: false }), /data-tip=/);
+  // linkage input: joins are named by their leaf count.
+  const Z = [[0, 1, 0.2, 2], [2, 3, 0.3, 2], [4, 5, 0.7, 4]];
+  assert.match(plot({ type: 'dendrogram', linkage: Z, labels: ['a', 'b', 'c', 'd'], tooltip: true, locale: 'en' }), /data-tip="4 leaves\nHeight: 0\.7"/);
+});
+
+test('dendrogram: new options under skins and CSS variables, lint clean, deterministic', () => {
+  const spec = { ...dSpec, series: 'dim', size: 'comunas', sub: 'why', tooltip: true, xLabel: 'h', title: 'Twelve kinds of commune', source: 'Census' };
+  const svg = plot({ ...spec, skins: [{ colors: { Housing: '#19a17d', Economy: 'var(--accent, #5a6fae)' } }, { when: 'html.classic', colors: { Housing: '#1d7a74', Economy: 'var(--accent, #0b3f8c)' } }] });
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{[^}]*#1d7a74/);
+  assert.match(svg, /var\(--accent, #5a6fae\)/);
+  const r = safePlot(spec);
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.ok(!r.warnings.some((w) => w.code === 'unknown-option'), JSON.stringify(r.warnings));
+  assert.equal(safePlot({ ...spec, sub: 'nope' }).ok, false);
+  assert.equal(plot(spec), plot(spec));
+});

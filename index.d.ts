@@ -161,7 +161,10 @@ export interface Spec {
   label?: string;
   group?: string;
   path?: string[];
+  /** Bubble size field. network: node weight (field of `nodes`). dendrogram: each leaf's weight (bar + figure; joins add up). */
   size?: string;
+  /** dendrogram (rows input): a second line under each leaf name. */
+  sub?: string;
   from?: string;
   to?: string;
   items?: KpiItem[];
@@ -191,8 +194,8 @@ export interface Spec {
   yScale?: 'linear' | 'log';
   trend?: boolean;
   xLabel?: string;
-  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. */
-  tooltip?: false | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
+  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. true keeps the defaults (dendrogram: also a card on every join). */
+  tooltip?: boolean | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
   /** line/area: false writes a tooltip column per x instead of the browser crosshair. */
   crosshair?: boolean;
   /** line/area: an interval already computed, drawn as is. */

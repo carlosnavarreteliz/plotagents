@@ -201,6 +201,11 @@ How things group, and at what height they join. The tree comes in already comput
 | `orientation` | `"horizontal"` (root left, default) or `"vertical"` (root on top). |
 | `labels` | Leaf labels: `"auto"` (every k-th when they do not fit), `true`, `false`; with `linkage`, the list of leaf names. |
 | `label` | Rows input: field with the display name of each leaf. |
+| `series` | Rows input: a field that colors each leaf (a swatch at its end and the weight bar), with a legend unless `legend: false`. No `cut` needed; `colors` fixes a category's color. |
+| `size` | Rows input: each leaf's weight (how many things hang off it), a bar with its figure beside the name (`sizeFormat` formats it). Each join adds up its leaves. Vertical trees show it in the tooltip only. |
+| `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. |
+| `xLabel` | Title of the height axis ("Ward merge height": a merge height is not a distance, say what it is). |
+| `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 

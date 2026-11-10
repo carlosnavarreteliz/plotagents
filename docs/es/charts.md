@@ -201,6 +201,11 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `orientation` | `"horizontal"` (raíz a la izquierda, por defecto) o `"vertical"` (raíz arriba). |
 | `labels` | Rótulos de hojas: `"auto"` (una de cada k si no caben), `true`, `false`; con `linkage`, la lista de nombres. |
 | `label` | Entrada por filas: campo con el nombre visible de cada hoja. |
+| `series` | Entrada por filas: un campo que colorea cada hoja (una muestra al pie y la barra de peso), con leyenda salvo `legend: false`. No necesita `cut`; `colors` fija el color de una categoría. |
+| `size` | Entrada por filas: el peso de cada hoja (cuántas cosas cuelgan de ella), una barra con su cifra junto al nombre (`sizeFormat` le da formato). Cada unión suma sus hojas. En vertical va sólo en el tooltip. |
+| `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. |
+| `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
+| `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
