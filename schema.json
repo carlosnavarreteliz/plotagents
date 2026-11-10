@@ -217,7 +217,7 @@
     },
     "idPrefix": {
       "type": "string",
-      "description": "Base of the SVG's internal ids (aria ids, map clip path, no-data pattern). Set it when the same chart appears twice on a page or ids must be stable across builds; letters, digits, - and _."
+      "description": "Base of the SVG's internal ids (aria title/desc, clip paths, gradients, hatch patterns, arrow markers, map clip and no-data pattern): every id becomes \"<idPrefix>-<kind>\". Without it, ids carry a hash of what the chart draws (colors left out, so skins and CSS-variable colors keep the same ids): two charts that draw differently never share an id. Set it when the same chart appears twice on a page or ids must not change when the data does; letters, digits, - and _."
     },
     "locale": {
       "type": "string",
@@ -607,7 +607,7 @@
       ]
     },
     "links": {
-      "description": "choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), widthScale (\"linear\" default, or \"sqrt\": width by the square root of value/max), opacity, label, fromLabel / toLabel (fields naming each end in the line's tooltip), format (number format of the line's tooltip, default the map's), ends (true or { radius }: a dot at each place a line joins) }. Ends are region keys (same matching as `key`) or [lon, lat] (named \"lat, lon\"; on already-projected geometry, \"x, y\"). A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key \"from→to\".",
+      "description": "choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), widthScale (\"linear\" default, or \"sqrt\": width by the square root of value/max), opacity, label, fromLabel / toLabel (fields naming each end in the line's tooltip), format (number format of the line's tooltip, default the map's), ends (true or { radius, scale, skip, skipPoints }: a dot at each place a line joins; radius a number (2.5) or [min, max] sized by the sum of the lines meeting there, area-proportional with scale \"sqrt\" (default) or \"linear\"; skip: keys left without a dot; skipPoints: true leaves point regions without one; colored by the group or one class per color, restylable without !important) }. Ends are region keys (same matching as `key`) or [lon, lat] (named \"lat, lon\"; on already-projected geometry, \"x, y\"). A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key \"from→to\".",
       "anyOf": [
         {
           "type": "array",
@@ -639,7 +639,7 @@
       "description": "dendrogram: \"horizontal\" (root left, leaves right, default) or \"vertical\" (root on top)."
     },
     "markers": {
-      "description": "Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color, legend, maxRadius, labels }. With a size field, circles are area-proportional.",
+      "description": "Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color (a color, or a field with one per row), key, legend, radius (4.5), maxRadius (14), minRadius (3: the smallest dot of a size field), labels, stroke (false, or a color; default the background), strokeWidth (1.5), opacity (fill opacity of every dot; default 0.8 on dots over 6 px), precision (decimals of cx/cy/r; default `pathPrecision`, else 2), inset (px kept at the map edge for a dot and its label, 12), tooltip (like the chart `tooltip`, over the marker row: fields, { title, text, fields, replace }, a function, or false), format (number format of the size in the tooltip; default the map's) }. With a size field, circles are area-proportional. Dots are lean: border and opacity on the group, one class per color with one CSS rule (one color: the group's fill), so a page restyles them without !important and skins change one rule. choropleth with `views`: a view may bring its own `markers` (or `markers: false`).",
       "anyOf": [
         {
           "type": "array",
@@ -719,7 +719,7 @@
     },
     "views": {
       "type": "array",
-      "description": "choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view's lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root's data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView), or a selector outside the SVG with `viewSelector`. Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).",
+      "description": "choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view's lines), markers? (that view's points, or false for none; hidden views' points cost only their lean markup; a view with no data and the first view's ground adds nothing to the regions) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root's data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView), or a selector outside the SVG with `viewSelector`. Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).",
       "items": {
         "type": "object",
         "properties": {
@@ -755,6 +755,38 @@
     "sprite": {
       "type": "string",
       "description": "choropleth: path of an outlines file written once with mapSprite(spec) (e.g. \"/maps/chile.svg\"). Each region becomes a <use href=\"file#id\"> through one transform that frames and turns it, so one cached file serves every page, width and framing; colors, classes, tooltips and links stay on the <use>. Points are still drawn inline. Paths and http(s) only, no #."
+    },
+    "only": {
+      "description": "Maps: draw only these regions (codes or names, matched like `key`); the rest of `geo` is not drawn and its data rows are not reported as unmatched. With `sprite`, the file's frame stays that of the whole geometry, so a region drawn alone still lands where it belongs.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "edgeLabels": {
+      "description": "choropleth/symbolmap (wide maps): a rail of names along one side of the map, outside the land: a tick at each place and its name. [{ at, label, key? }] or { data, at, label, key (field names), side (\"bottom\" default, \"top\", \"right\", \"left\"), max (how many names show), ticks (false: no ticks) }. `at` is a region key or [x, y] / [lon, lat]. Names are placed in list order (the first matters most); one that collides or passes `max` is written hidden (display=\"none\", class pa-edge-off) so page CSS can reveal it; each item is a <g class=\"pa-edge\" data-key>.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "inlineSize": {
+      "type": "boolean",
+      "description": "false: leave `max-width:100%;height:auto` out of the root <svg> inline style, so page CSS sizes it without !important (width, height and viewBox stay). Default true."
     },
     "microstates": {
       "description": "Maps with ISO countries (geo: \"world\"): draw as a dot the states and territories too small to have an outline at this scale (Singapore, Malta, Bahrain, Hong Kong… 74 of them, matched by ISO-2, ISO-3 or name). true: only those with data; \"all\": every one. Dot radius: `pointRadius` (default 2.5).",
@@ -2813,7 +2845,7 @@
         "top",
         "bottom"
       ],
-      "description": "heatmap: column labels under the grid (default) or over it."
+      "description": "heatmap: column labels under the grid (default) or over it. Horizontal box/violin/strip/swarm/point: the value axis (tick labels and its title) under the rows (default) or \"top\", over them; the chart keeps its height."
     },
     "yLabelPosition": {
       "type": "string",
@@ -2821,7 +2853,31 @@
         "left",
         "above"
       ],
-      "description": "Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or \"above\" each row, so the value axis keeps the full width (a phone). In strip/swarm each row is a strip of `rowHeight` with its name on top and the dots under it, the name right above its highest dot."
+      "description": "Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or \"above\" each row, so the value axis keeps the full width (a phone). In strip/swarm each row is a strip of `rowHeight` with its name on top and the dots under it, the name right above its highest dot. heatmap: \"above\" writes each row name over its row, across the full width (no row-label column)."
+    },
+    "rowLabelWidth": {
+      "type": "number",
+      "description": "heatmap: cap of the row-label column, in px (> 1) or as a fraction of the width (≤ 1). Default 0.3."
+    },
+    "groupLabels": {
+      "type": "boolean",
+      "description": "heatmap with xGroup / yGroup: false drops the band of group names (on a phone they read «Indus…»); `groupColors` stripes stay, on the grid edge next to the labels, with the group name in their tooltip."
+    },
+    "leanDots": {
+      "type": "boolean",
+      "description": "strip/swarm: lean dot markup. The dot style (fill, fill-opacity, ring) goes once on a <g class=\"pa-dots\"> per run of same-styled dots, and each dot carries only cx/cy (1 decimal), r and its tooltip; with skins, the color variable also goes once on the group (~50% fewer bytes). Dots have no stroke of their own, so a page rule styles the hover ring (`.pa-dots .pa-m:hover { stroke: … }`; the chart ships one in currentColor). Above 1,500 dots the dense layer applies as always."
+    },
+    "subWidth": {
+      "type": "string",
+      "enum": [
+        "label",
+        "full"
+      ],
+      "description": "dendrogram with `sub` and `size` (horizontal): \"label\" (default) fits `sub` lines into the names column, which widens to hold them; \"full\" lets them run under the size column too (the bar and count move up to the name line), so a narrow layout keeps both."
+    },
+    "stackGap": {
+      "type": "number",
+      "description": "Stacked bar/column: px between stacked segments (default 2; 0 joins them: with many series the gaps wash out thin segments)."
     },
     "clamp": {
       "description": "strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so (\"≤ 0,01%\", \"≥ 100%\") when some value lies beyond; \"always\" marks both edge ticks even when nothing lies beyond. On a log axis it also lets 0 sit on the low edge.",
@@ -2885,8 +2941,31 @@
       ]
     },
     "labelWidth": {
-      "type": "number",
-      "description": "network: widest node label in px before it is truncated (default 150). dendrogram: widest names column in px (default 30% of the width horizontal, 120 px vertical)."
+      "description": "network: widest node label in px before it is truncated (default 150). dendrogram: widest names column in px (default 30% of the width horizontal, 120 px vertical). sankey: cap of each end label column, in px (> 1) or as a fraction of the width (≤ 1), one number for both sides or [left, right] / { left, right } (default 0.22).",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            }
+          }
+        }
+      ]
     },
     "treeWidth": {
       "type": "number",
@@ -3145,7 +3224,7 @@
       ]
     },
     "colorScale": {
-      "description": "Continuous color scale (heatmap, choropleth, treemap change, pointmap values): any matplotlib colormap name, case-insensitive, `_r` reverses (\"viridis\", \"plasma\", \"inferno\", \"magma\", \"cividis\", \"Blues\", \"Greens\", \"YlOrRd\", \"RdBu\", \"coolwarm\", \"Spectral\", \"turbo\", \"twilight\"…); diverging names imply a diverging scale. Or a list of hex colors, or { name | colors, reverse, mid }. Aliases: cmap, colormap. Qualitative palettes (tab10…) go in `palette`; avoid rainbow maps (jet, hsv).",
+      "description": "Continuous color scale (heatmap, choropleth, treemap change, pointmap values): any matplotlib colormap name, case-insensitive, `_r` reverses (\"viridis\", \"plasma\", \"inferno\", \"magma\", \"cividis\", \"Blues\", \"Greens\", \"YlOrRd\", \"RdBu\", \"coolwarm\", \"Spectral\", \"turbo\", \"twilight\"…); diverging names imply a diverging scale. Or a list of colors (hex, rgb()/rgba() without the alpha, or CSS names), or { name | colors, reverse, mid }. Aliases: cmap, colormap. Qualitative palettes (tab10…) go in `palette`; avoid rainbow maps (jet, hsv).",
       "anyOf": [
         {
           "type": "string"
