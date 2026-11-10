@@ -23,6 +23,10 @@
       "types": "./index.d.ts",
       "default": "./src/table-entry.js"
     },
+    "./views": {
+      "types": "./views.d.ts",
+      "default": "./src/views-client.js"
+    },
     "./types/*": {
       "types": "./index.d.ts",
       "default": "./src/types/*.js"
@@ -44,6 +48,7 @@
     "skills",
     "bin",
     "index.d.ts",
+    "views.d.ts",
     "schema.json",
     "README.md",
     "AGENTS.md",

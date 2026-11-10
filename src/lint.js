@@ -415,6 +415,30 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (typeof spec.tiles === 'string') enumCheck('tiles', spec.tiles.toLowerCase(), TILES, '"osm", "esri-gray", "esri-dark", "carto-light", "carto-dark", "mapbox-light", "mapbox-dark", { url, attribution } o false');
     if (spec.tileStyle !== undefined) enumCheck('tileStyle', spec.tileStyle, ['muted', 'original']);
   }
+  // Mapas: vistas, trazos compactos y microestados.
+  if (spec.views !== undefined && spec.views !== null) {
+    if (type !== 'choropleth') warn('views-type', L('`views` sólo aplica a mapas coropléticos: se ignora.', '`views` only applies to choropleth maps: it is ignored.'), L('Usa `type: "choropleth"`, o un gráfico por vista.', 'Use `type: "choropleth"`, or one chart per view.'));
+    else if (!Array.isArray(spec.views) || !spec.views.length) err('views-list', L('`views` debe ser una lista de vistas.', '`views` must be a list of views.'), 'views: [{ id: "poblacion", value: "poblacion" }, { id: "inmigrantes", value: "pct_inmigrantes" }]');
+    else {
+      const ids = new Set();
+      spec.views.forEach((v, i) => {
+        if (!v || typeof v !== 'object') return err('views-item', L(`views[${i}] debe ser un objeto.`, `views[${i}] must be an object.`), '{ id: "inmigrantes", value: "pct_inmigrantes" }');
+        const id = v.id === undefined ? String(i) : String(v.id);
+        if (!/^[a-z0-9][a-z0-9_-]*$/.test(id)) err('views-id', L(`views[${i}].id "${id}" no sirve en un atributo.`, `views[${i}].id "${id}" cannot go in an attribute.`), L('Usa minúsculas, dígitos, "-" o "_": id: "inmigrantes".', 'Use lowercase letters, digits, "-" or "_": id: "migrants".'));
+        else if (ids.has(id)) err('views-id', L(`Dos vistas se llaman "${id}".`, `Two views are called "${id}".`), L('Cada vista necesita un `id` distinto.', 'Each view needs its own `id`.'));
+        ids.add(id);
+        const rows = Array.isArray(v.data) ? v.data : data;
+        const rf = rows && rows[0] && typeof rows[0] === 'object' ? Object.keys(rows[0]) : fields;
+        if (typeof v.value === 'string' && rf.length && !rf.includes(v.value)) err('views-field', L(`views[${i}]: el campo "${v.value}" no está en los datos.`, `views[${i}]: field "${v.value}" is not in the data.`), L(`Campos: ${rf.slice(0, 8).join(', ')}.`, `Fields: ${rf.slice(0, 8).join(', ')}.`));
+      });
+      if (spec.views.length > 12) warn('views-many', L(`${spec.views.length} vistas: cada una suma un tooltip por región al SVG.`, `${spec.views.length} views: each adds one tooltip per region to the SVG.`), L('Deja las que el lector va a elegir; el resto, en otra página o en una tabla.', 'Keep the ones readers will pick; put the rest on another page or in a table.'));
+    }
+  }
+  if (spec.pathPrecision !== undefined && !(Number.isInteger(+spec.pathPrecision) && +spec.pathPrecision >= 0 && +spec.pathPrecision <= 3)) err('path-precision', L('`pathPrecision` son los decimales de los trazos: un entero de 0 a 3.', '`pathPrecision` is the decimals of the paths: an integer from 0 to 3.'), 'pathPrecision: 1');
+  if (spec.simplify !== undefined && !(+spec.simplify >= 0)) err('simplify', L('`simplify` es una tolerancia en píxeles: un número ≥ 0.', '`simplify` is a tolerance in pixels: a number ≥ 0.'), 'simplify: 0.5');
+  else if (+spec.simplify > 2) warn('simplify-coarse', L(`\`simplify: ${spec.simplify}\` borra detalles que se ven: las costas y las comunas chicas pierden su forma.`, `\`simplify: ${spec.simplify}\` removes visible detail: coastlines and small regions lose their shape.`), L('Entre 0,3 y 1 px no se nota en la página.', '0.3 to 1 px is invisible on a page.'));
+  if (spec.microstates !== undefined && typeof spec.microstates !== 'boolean' && spec.microstates !== 'all') err('enum-microstates', L(`\`microstates: ${q(spec.microstates)}\` no es válido.`, `\`microstates: ${q(spec.microstates)}\` is not valid.`), 'microstates: true | "all"');
+  if (MAPS.has(type) && spec.fitTo === 'mainland' && spec.geo === 'world') warn('fit-mainland-world', L('`fitTo: "mainland"` busca islas lejanas de un país; en el mundo deja fuera continentes.', '`fitTo: "mainland"` looks for one country\'s far islands; on the world it leaves out continents.'), L('Quita `fitTo`, o encuadra con una caja [lon0, lat0, lon1, lat1].', 'Drop `fitTo`, or frame with a box [lon0, lat0, lon1, lat1].'));
   // Un token secreto de Mapbox quedaría a la vista en el SVG.
   const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);
   if (token !== undefined && token !== null && String(token).trim().startsWith('sk.')) err('tiles-secret', L('El token de Mapbox es secreto (empieza con "sk."): quedaría a la vista de cualquiera en el SVG.', 'The Mapbox token is secret (it starts with "sk."): anyone could read it in the SVG.'), L('Usa un token público ("pk.…") restringido a tu dominio, de account.mapbox.com.', 'Use a public token ("pk.…") restricted to your domain, from account.mapbox.com.'));

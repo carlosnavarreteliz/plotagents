@@ -147,6 +147,39 @@ export interface TooltipSpec {
 export interface TooltipContext { title: string; lines: string[]; rows: Row[]; row?: Row; match?: Record<string, unknown> }
 export interface XBand { from: string | number; to?: string | number; label?: string; color?: string }
 
+/** Geometry projected at build time: SVG path strings in pixels (y down), keyed by id. */
+export interface PathsGeo {
+  paths: Record<string, string | { d: string; at?: [number, number]; name?: string }>;
+  /** Places too small for an outline, drawn as dots. */
+  points?: Record<string, [number, number]>;
+  /** Display names (a [name, …] array uses the first). */
+  names?: Record<string, string | string[]>;
+}
+
+/** One reading of a multi-view choropleth: a patch of the spec over the same shapes. */
+export interface MapView {
+  /** Goes in data-view / data-vtip-<id>: lowercase letters, digits, "-" or "_" (default: the index). */
+  id?: string;
+  label?: string;
+  value?: string;
+  data?: Row[];
+  format?: Spec['format'];
+  colorScale?: Spec['colorScale'];
+  scale?: Spec['scale'];
+  classes?: number;
+  thresholds?: number[];
+  midpoint?: number;
+  colors?: Record<string, string>;
+  legendTitle?: string;
+  legend?: boolean;
+  tooltip?: Spec['tooltip'];
+  missing?: 'hatch' | 'plain' | 'context';
+  /** Outlined in this view only. */
+  highlight?: string | string[];
+  /** This view's lines (replace the spec's). */
+  links?: Spec['links'];
+}
+
 export interface Spec {
   type?: ChartType;
   data?: Row[] | Record<string, number>;
@@ -203,7 +236,7 @@ export interface Spec {
   missingMark?: string;
   /** bar (columns), line, area: shaded ranges of the x axis. */
   xBands?: XBand | XBand[];
-  /** treemap tiles, horizontal bar names, scatter dots: field with the URL to link to. */
+  /** treemap tiles, horizontal bar names, scatter dots, choropleth regions: field with the URL to link to (paths and http(s) only). */
   href?: string;
   /** scatter/bubble: rows where this field is truthy are hollow dots. */
   hollow?: string;
@@ -311,7 +344,7 @@ export interface Spec {
   midpoint?: number;
   diverging?: boolean;
   /** choropleth/symbolmap: "chile" (default), "usa", "world", a registered name, your own GeoJSON (FeatureCollection, Feature, Feature[] or geometry) or TopoJSON. In the browser, render() also accepts a URL. */
-  geo?: 'chile' | 'usa' | 'world' | string | object | object[];
+  geo?: 'chile' | 'usa' | 'world' | string | object | object[] | PathsGeo;
   /** TopoJSON: object to draw (default: the first). */
   geoObject?: string;
   key?: string;
@@ -321,7 +354,7 @@ export interface Spec {
   nameKey?: string;
   projection?: 'mercator' | 'equalEarth' | 'albersUsa' | 'equirectangular' | 'conic' | 'identity' | 'planar' | { type: string; parallels?: [number, number]; rotate?: number; center?: [number, number] };
   /** Zoom to regions, a [lonMin, latMin, lonMax, latMax] box, or "markers". */
-  fitTo?: string | string[] | [number, number, number, number];
+  fitTo?: 'mainland' | 'markers' | string | string[] | [number, number, number, number];
   /** Maps: lines between places (region keys or [lon, lat]); width ∝ value, one color, no arrowheads. */
   links?: Array<{ from: string | [number, number]; to: string | [number, number]; value?: number }> | { data: Row[]; from?: string; to?: string; value?: string; color?: string; curveness?: number; width?: [number, number]; opacity?: number; label?: string };
   /** Maps: turn the projected map clockwise (labels stay upright). -90 puts north on the left. */
@@ -333,6 +366,14 @@ export interface Spec {
   borderColor?: string;
   borderWidth?: number;
   pointRadius?: number;
+  /** choropleth: several readings of one geometry in one SVG; switch with `data-view` on the root (plotagents/views). */
+  views?: MapView[];
+  /** Maps: decimals of path coordinates in px; setting it (or `simplify`) writes compact relative paths. */
+  pathPrecision?: 0 | 1 | 2 | 3;
+  /** Maps: on-screen simplification tolerance in px (Douglas–Peucker); 0.3–1 is invisible. */
+  simplify?: number;
+  /** World maps: draw states too small for an outline (Singapore, Malta…) as dots; true = with data, "all" = every one. */
+  microstates?: boolean | 'all';
   /** network: node rows (id, group, size). flowchart: steps (id, label, type, lane). */
   nodes?: Row[];
   /** flowchart: connections (from, to, label). Same as `data`. */
@@ -375,7 +416,8 @@ export interface Spec {
   center?: [number, number];
   /** choropleth */
   /** choropleth: 'hatch' (default) | 'plain'. heatmap: 'tint' (default) | 'plain' | 'hatch' | 'gap'. */
-  missing?: 'hatch' | 'plain' | 'tint' | 'gap';
+  /** Regions/cells without data. choropleth "context": flat tint, no tooltip, no "no data" key. */
+  missing?: 'hatch' | 'plain' | 'context' | 'tint' | 'gap';
   thresholds?: number[];
   classes?: number;
   scale?: 'quantile' | 'equal' | 'continuous' | 'categorical' | number[] | string;

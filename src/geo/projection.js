@@ -169,8 +169,9 @@ const r1 = (v) => Math.round(v * 10) / 10;
  * longitud (antimeridiano) se cortan para no cruzar el mapa entero. Las
  * líneas quedan abiertas y los puntos se dibujan como círculos de radio `r`.
  */
-export function pathD(geom, proj, { r = 4.5 } = {}) {
+export function pathD(geom, proj, { r = 4.5, compact = null } = {}) {
   if (!geom) return '';
+  if (compact) return compactD(geom, proj, r, compact);
   if (geom.type === 'GeometryCollection') return (geom.geometries || []).map((x) => pathD(x, proj, { r })).join('');
   if (isPointGeom(geom)) {
     const pts = geom.type === 'Point' ? [geom.coordinates] : geom.coordinates || [];
@@ -216,4 +217,116 @@ export function centroid(geom, proj) {
     if (!best || Math.abs(a) > Math.abs(best.area)) best = { area: a, x: a ? cx / (6 * a) : pts[0][0], y: a ? cy / (6 * a) : pts[0][1] };
   }
   return best ? { x: best.x, y: best.y, area: Math.abs(best.area) } : { x: 0, y: 0, area: 0 };
+}
+
+// ── Trazos compactos (`precision`, `simplify`) ──────────────────────────────
+//
+// Un mapa de cientos de formas pesa por sus coordenadas. Con `precision` (los
+// decimales, en píxeles) y `simplify` (la tolerancia, en píxeles), cada anillo
+// se simplifica en la pantalla (Douglas–Peucker), se redondea a la grilla y se
+// escribe en coordenadas relativas ("l1.2-.3"), que es lo que más ahorra. Sin
+// esas opciones el trazo es el de siempre.
+
+/** Douglas–Peucker sobre una lista abierta de puntos [x, y]: los que quedan. */
+function simplifyLine(pts, tol) {
+  if (pts.length < 3 || !(tol > 0)) return pts;
+  const keep = new Uint8Array(pts.length);
+  keep[0] = keep[pts.length - 1] = 1;
+  const t2 = tol * tol;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    const [ax, ay] = pts[a], [bx, by] = pts[b];
+    const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+    let far = -1, best = t2;
+    for (let i = a + 1; i < b; i++) {
+      const [px, py] = pts[i];
+      let d;
+      if (!L) d = (px - ax) ** 2 + (py - ay) ** 2;
+      else { const c = dx * (py - ay) - dy * (px - ax); d = (c * c) / L; }
+      if (d > best) { best = d; far = i; }
+    }
+    if (far > 0) { keep[far] = 1; stack.push([a, far], [far, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
+/** Un anillo cerrado: se corta en su punto más lejano al primero y se simplifica por mitades. */
+function simplifyRing(pts, tol) {
+  if (pts.length < 4 || !(tol > 0)) return pts;
+  const [x0, y0] = pts[0];
+  let far = 0, best = -1;
+  for (let i = 1; i < pts.length; i++) { const d = (pts[i][0] - x0) ** 2 + (pts[i][1] - y0) ** 2; if (d > best) { best = d; far = i; } }
+  if (far === 0) return pts;
+  const a = simplifyLine(pts.slice(0, far + 1), tol), b = simplifyLine(pts.slice(far), tol);
+  return a.concat(b.slice(1));
+}
+
+/** Un número de la grilla (entero en unidades de 10^-p) como texto corto: 12 → "1.2", -3 → "-.3". */
+function gridNum(n, p) {
+  if (!p) return String(n);
+  const neg = n < 0, s = String(Math.abs(n)).padStart(p + 1, '0');
+  let int = s.slice(0, s.length - p), dec = s.slice(s.length - p).replace(/0+$/, '');
+  if (int === '0' && dec) int = '';
+  return (neg ? '-' : '') + int + (dec ? '.' + dec : '') || '0';
+}
+
+/** Une números de un trazo sin separadores de más ("1.2-.3.5"). */
+function joinNums(list) {
+  let s = '';
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i];
+    if (i && !(t[0] === '-' || (t[0] === '.' && list[i - 1].includes('.')))) s += ' ';
+    s += t;
+  }
+  return s;
+}
+
+function compactD(geom, proj, r, { precision = 1, simplify = 0 } = {}) {
+  const p = Math.max(0, Math.min(3, Math.round(+precision || 0)));
+  const q = 10 ** p;
+  const G = (v) => Math.round(v * q);
+  if (geom.type === 'GeometryCollection') return (geom.geometries || []).map((x) => compactD(x, proj, r, { precision, simplify })).join('');
+  if (isPointGeom(geom)) {
+    const pts = geom.type === 'Point' ? [geom.coordinates] : geom.coordinates || [];
+    const R = gridNum(G(r), p), D = gridNum(G(2 * r), p);
+    return pts.map((pt) => { const [x, y] = proj(pt); return `M${gridNum(G(x - r), p)},${gridNum(G(y), p)}a${R} ${R} 0 1 0 ${D} 0a${R} ${R} 0 1 0 -${D} 0`; }).join('');
+  }
+  const open = isLineGeom(geom);
+  const cut = !proj.continuous;
+  const runs = [];
+  for (const ring of rings(geom)) {
+    // Como en pathD: un anillo que cruza el antimeridiano se corta en tramos y sólo el último cierra.
+    let run = [], lastLon = null;
+    for (const pt of ring) {
+      if (cut && lastLon !== null && Math.abs(pt[0] - lastLon) > 180 && run.length) { runs.push({ pts: run, closed: false }); run = []; }
+      lastLon = pt[0];
+      run.push(proj(pt));
+    }
+    if (run.length) runs.push({ pts: run, closed: !open });
+  }
+  const parts = [];
+  let biggest = null;
+  for (const run of runs) {
+    const s = run.closed ? simplifyRing(run.pts, simplify) : simplifyLine(run.pts, simplify);
+    const g = [];
+    for (const [x, y] of s) { const X = G(x), Y = G(y); const l = g[g.length - 1]; if (!l || l[0] !== X || l[1] !== Y) g.push([X, Y]); }
+    if (run.closed && g.length > 1 && g[0][0] === g[g.length - 1][0] && g[0][1] === g[g.length - 1][1]) g.pop();
+    const part = { g, closed: run.closed };
+    if (!biggest || g.length > biggest.g.length) biggest = part;
+    // Un anillo que en la pantalla es menos que un triángulo no se ve: se omite.
+    if (run.closed ? g.length >= 3 : g.length >= 2) parts.push(part);
+  }
+  if (!parts.length && biggest && biggest.g.length) parts.push(biggest);
+  let d = '';
+  for (const { g, closed } of parts) {
+    d += 'M' + gridNum(g[0][0], p) + ',' + gridNum(g[0][1], p);
+    if (g.length > 1) {
+      const nums = [];
+      for (let i = 1; i < g.length; i++) nums.push(gridNum(g[i][0] - g[i - 1][0], p), gridNum(g[i][1] - g[i - 1][1], p));
+      d += 'l' + joinNums(nums);
+    }
+    if (closed) d += 'z';
+  }
+  return d;
 }
