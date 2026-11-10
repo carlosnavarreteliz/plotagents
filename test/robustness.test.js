@@ -221,7 +221,9 @@ test('CLI: dashboard specs render to HTML and --tool dashboard prints its tool',
   const dir = mkdtempSync(join(tmpdir(), 'pa-cli-'));
   const file = join(dir, 'dash.json');
   writeFileSync(file, JSON.stringify({ title: '¿Cómo van las ventas?', data: bars, charts: [{ type: 'bar', x: 'region', y: 'ventas', title: 'Maule lidera' }] }));
-  const html = execFileSync(process.execPath, [CLI, file], { encoding: 'utf8' });
+  // El HTML incrusta la biblioteca entera (~1 MB): más que el búfer de 1 MB
+  // que Node le da por omisión a la salida de un proceso.
+  const html = execFileSync(process.execPath, [CLI, file], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
   assert.match(html, /^<!doctype html>/i);
   const tool = JSON.parse(execFileSync(process.execPath, [CLI, '--tool', 'dashboard'], { encoding: 'utf8' }));
   assert.equal(tool.name, 'dashboard');
