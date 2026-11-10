@@ -174,6 +174,7 @@ __req("src/types/bump.js");
 __req("src/types/waffle.js");
 __req("src/types/dendrogram.js");
 __req("src/types/dotplot.js");
+__req("src/types/rail.js");
 
 __star.push(__req("src/base.js"));
 const __re0 = __req("src/base.js");
@@ -863,15 +864,17 @@ function resolveColorScale(v) {
 /**
  * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
  * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
- * i si breaks[i − 1] ≤ v < breaks[i]. Devuelve { breaks, colors, cls, color } o
+ * i si breaks[i − 1] ≤ v < breaks[i] (con `closed: 'right'`, breaks[i − 1] < v ≤
+ * breaks[i]); los cortes repetidos se funden. Devuelve { breaks, colors, cls, color } o
  * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
  */
 function binnedScale(spec) {
   const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
   if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
-  const breaks = cs.breaks.map(Number);
+  let breaks = cs.breaks.map(Number);
   if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
-  for (let i = 1; i < breaks.length; i++) if (!(breaks[i] > breaks[i - 1])) throw new PlotError('`colorScale.breaks` debe ir en orden creciente y sin repetir.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  for (let i = 1; i < breaks.length; i++) if (breaks[i] < breaks[i - 1]) throw new PlotError('`colorScale.breaks` debe ir en orden creciente.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  if (cs.closed !== undefined && cs.closed !== 'left' && cs.closed !== 'right') throw new PlotError('`colorScale.closed` es "left" (un valor igual a un corte va a la clase de arriba) o "right" (a la de abajo).', 'closed: "right"');
   let colors;
   if (Array.isArray(cs.colors)) {
     colors = cs.colors.map(String);
@@ -882,8 +885,15 @@ function binnedScale(spec) {
     colors = sample(base.stops, breaks.length + 1);
   }
   if (cs.reverse) colors = [...colors].reverse();
-  const cls = (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
-  return { breaks, colors, cls, color: (v) => colors[cls(v)] };
+  if (breaks.some((b, i) => i > 0 && b === breaks[i - 1])) {
+    const keep = breaks.map((b, i) => i === 0 || b !== breaks[i - 1]);
+    colors = colors.filter((_, i) => i >= breaks.length || keep[i]); // la clase i va de breaks[i − 1] a breaks[i]
+    breaks = breaks.filter((_, i) => keep[i]);
+  }
+  const cls = cs.closed === 'right'
+    ? (v) => { let i = 0; while (i < breaks.length && v > breaks[i]) i++; return i; }
+    : (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
+  return { breaks, colors, cls, color: (v) => colors[cls(v)], closed: cs.closed === 'right' ? 'right' : 'left' };
 }
 
 return { "interpolate": interpolate, "sample": sample, "colorScaleNames": colorScaleNames, "resolveColorScale": resolveColorScale, "binnedScale": binnedScale, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "DIVERGING": DIVERGING, "CYCLIC": CYCLIC, "RAINBOW": RAINBOW };
@@ -1382,7 +1392,7 @@ return { "langOf": langOf, "detectLocale": detectLocale, "browserLocale": browse
 __def("src/facet.js", function () {
 const { el, g } = __req("src/svg.js");
 const { createFrame } = __req("src/frame.js");
-const { colorMap, themeFor } = __req("src/theme.js");
+const { colorMap, themeFor, readable } = __req("src/theme.js");
 const { ensureData, requireField, uniq, fieldKind, num } = __req("src/data.js");
 const { niceDomain } = __req("src/scale.js");
 
@@ -1462,14 +1472,33 @@ function facet(spec, theme, renderOne) {
     if (shareX && !xDomain && xs.length) xDomain = [Math.min(...xs.map((d) => d[0])), Math.max(...xs.map((d) => d[1]))];
   }
 
-  const svgs = keys.map((k, i) => {
+  const pc = spec.panelColor;
+  const titleColors = keys.map((k, i) => {
+    if (!pc) return undefined;
+    let c;
+    if (typeof pc === 'function') c = pc(k, subsets[i]);
+    else if (typeof pc === 'object') c = pc[k];
+    else if (pc === true || typeof pc === 'string') {
+      const own = sf ? uniq(subsets[i].map((r) => String(r[sf]))) : [];
+      c = colors[k] ?? (own.length === 1 ? colors[own[0]] : undefined) ?? (typeof pc === 'string' ? pc : undefined);
+    }
+    if (typeof c !== 'string' || !c) return undefined;
+    return /^#[0-9a-f]{3,8}$/i.test(c) ? readable(c, theme) : c;
+  });
+
+  const draw = (k, i, extra = {}) => {
     try {
       const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
-      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}) });
+      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
     } catch (e) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
     }
-  });
+  };
+  const xd = keys.map(() => ({}));
+  let svgs = keys.map((k, i) => draw(k, i, xDomain ? { _xShared: true, _domains: xd[i] } : {}));
+  const xPads = xd.map((d) => d.xPad).filter((v) => Number.isFinite(v));
+  const xPadMax = xPads.length ? Math.max(...xPads) : 0;
+  if (xPadMax > 0 && xPads.some((v) => v !== xPadMax)) svgs = keys.map((k, i) => draw(k, i, { _xShared: true, _xPad: xPadMax }));
   const heightOf = (svg) => +((/^<svg\b[^>]*?\sheight="([\d.]+)"/.exec(svg) || [])[1]) || ph;
   const rowH = Array.from({ length: rows }, (_, r) => Math.max(ph, ...svgs.slice(r * cols, (r + 1) * cols).map(heightOf)));
   const rowY = rowH.map((_, r) => area.y + rowH.slice(0, r).reduce((a, h) => a + h + gap, 0));
@@ -1640,7 +1669,7 @@ function createFrame(spec, theme, defaults = {}) {
   const X = ctx.textScale; // alturas de línea crecen con la escala de texto
   const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: spec._titleColor ?? theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
   if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {
@@ -2157,7 +2186,7 @@ return { "niceStep": niceStep, "niceDomain": niceDomain, "linear": linear, "log"
 __def("src/infer.js", function () {
 const { fieldsOf, fieldKind } = __req("src/data.js");
 
-const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot', 'spark', 'bump', 'waffle', 'dendrogram', 'dotplot'];
+const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot', 'spark', 'bump', 'waffle', 'dendrogram', 'dotplot', 'rail'];
 
 const ALIASES = {
   barplot: ['bar', { ci: true }], countplot: 'count', columns: 'column', lineplot: 'line', areaplot: 'area',
@@ -2180,6 +2209,7 @@ const ALIASES = {
   bumpchart: 'bump', 'bump-chart': 'bump', rank: 'bump', ranking: 'bump', slope: ['bump', { ends: 'first-last' }], slopegraph: ['bump', { ends: 'first-last' }], 'slope-chart': ['bump', { ends: 'first-last' }],
   'waffle-chart': 'waffle', squares: 'waffle', unitchart: 'waffle', 'unit-chart': 'waffle', cuadros: 'waffle',
   dendrograma: 'dendrogram', linkage: 'dendrogram', hclust: 'dendrogram', 'cluster-tree': 'dendrogram',
+  riel: 'rail', 'range-rail': 'rail', 'field-rail': 'rail',
   'dot-plot': 'dotplot', wilkinson: 'dotplot', 'dot-histogram': 'dotplot', 'puntos-apilados': 'dotplot',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
@@ -2930,6 +2960,7 @@ __def("src/axes.js", function () {
 const { el, g, text, linkWrap } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
 const { SIZES } = __req("src/frame.js");
+const { isColor } = __req("src/theme.js");
 const { ctx } = __req("src/context.js");
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
@@ -3154,13 +3185,19 @@ function groupBandWidth(runs, maxW, size = 11.5) {
  * Banda de grupos bajo un eje horizontal. `pos(i)` → [x0, x1] de la categoría i;
  * `y` es el borde superior de la banda; la línea entre grupos sube hasta `top`.
  */
-function groupBandX(runs, pos, y, theme, top, size = 11.5) {
+function groupBandX(runs, pos, y, theme, top, size = 11.5, colors) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
-    if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
+    const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
+    if (c) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: 3, fill: c }));
+    else if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: a - 1, x2: a - 1, y1: top, y2: y + GROUP_BAND - 4, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
-    if (r.group && b - a >= 24) out.push(text((a + b) / 2, y + 13 + (ctx.textScale - 1) * 4, truncate(r.group, b - a - 6, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' }));
+    if (r.group && b - a >= 24) {
+      const t = truncate(r.group, b - a - 6, size, 500);
+      const node = text((a + b) / 2, y + 13 + (c ? 2 : 0) + (ctx.textScale - 1) * 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' });
+      out.push(t === r.group ? node : g({ 'data-tip': r.group }, node));
+    } else if (r.group) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, fill: 'transparent', 'data-tip': r.group }));
   });
   return g({ class: 'pa-groups pa-groups-x' }, out);
 }
@@ -3169,13 +3206,19 @@ function groupBandX(runs, pos, y, theme, top, size = 11.5) {
  * Banda de grupos a la izquierda de un eje vertical. `pos(i)` → [y0, y1];
  * `x`, `w` = posición y ancho de la banda; la línea entre grupos llega a `right`.
  */
-function groupBandY(runs, pos, x, w, theme, right, size = 11.5) {
+function groupBandY(runs, pos, x, w, theme, right, size = 11.5, colors) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
-    if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
+    const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
+    if (c) out.push(el('rect', { x, y: a, width: 3, height: Math.max(0, b - a), fill: c }));
+    else if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: x, x2: right, y1: a - 1, y2: a - 1, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
-    if (r.group && b - a >= 12) out.push(text(x + 6, (a + b) / 2 + 4, truncate(r.group, w - 14, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500 }));
+    if (r.group && b - a >= 12) {
+      const t = truncate(r.group, w - 14, size, 500);
+      const node = text(x + 6, (a + b) / 2 + 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500 });
+      out.push(t === r.group ? node : g({ 'data-tip': r.group }, node));
+    } else if (r.group) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), fill: 'transparent', 'data-tip': r.group }));
   });
   return g({ class: 'pa-groups pa-groups-y' }, out);
 }
@@ -3805,7 +3848,7 @@ function line(spec, theme, variant = 'line') {
     : pointsOpt && typeof pointsOpt === 'object' ? !!pointsOpt[k] : pointsOpt ?? autoDots);
   const widthOf = (k, w) => { const v = spec.lineWidths && typeof spec.lineWidths === 'object' ? +spec.lineWidths[k] : NaN; return Number.isFinite(v) && v > 0 ? v : w; };
   let xPad = 0;
-  if (isInside(theme, inside) && !singleX && !spec.xDomain) {
+  if (isInside(theme, inside) && !singleX && (!spec.xDomain || spec._xShared)) {
     const axisSize = theme.type?.axis ?? 12;
     const k = 5 * Math.max(1, ctx.textScale * 0.8);
     const boxes = yTicksArr.map((t) => { const base = Math.round(yS(t)) + 0.5 - k; return { w: measure(tickF(t), axisSize), y0: base - axisSize * 0.75 * ctx.textScale, y1: base + 1 }; });
@@ -3818,6 +3861,8 @@ function line(spec, theme, variant = 'line') {
       if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) xPad = Math.max(xPad, Math.min(Math.max(...boxes.map((b) => b.w)) + 8, inner.w * 0.25));
     }
   }
+  if (spec._xPad > xPad) xPad = Math.min(spec._xPad, inner.w * 0.25);
+  if (spec._domains) spec._domains.xPad = xPad;
   const xS = (xLog ? log : linear)(x0, x1, inner.x + xPad, inner.x + inner.w);
   const xNumFmt = m.kind === 'number' ? makeFormat(spec.xFormat, locale, xsAll) : null;
   const xFmt = (xv) => {
@@ -4236,7 +4281,7 @@ function scatter(spec, theme) {
   const yS = (yLog ? log : linear)(dy.min, dy.max, inner.y + inner.h - bp, inner.y + bp);
   const rOf = (p) => (size ? Math.max(2.5, Math.sqrt(Math.max(0, p.s) / (maxS || 1)) * rMax) : spec.radius ?? (pts.length > 300 ? 3 : 5));
   let xPad = 0;
-  if (isInside(theme, undefined) && !spec.xDomain) {
+  if (isInside(theme, undefined) && (!spec.xDomain || spec._xShared)) {
     const axisSize = SIZES.axis;
     const kk = 5 * Math.max(1, ctx.textScale * 0.8);
     const yT = yS.ticks(dy.step);
@@ -4250,6 +4295,8 @@ function scatter(spec, theme) {
       if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) { xPad = Math.min(Math.max(0, wMax + 6 - bp + r), inner.w * 0.2); if (xPad >= inner.w * 0.2) break; }
     }
   }
+  if (spec._xPad > xPad) xPad = Math.min(spec._xPad, inner.w * 0.2);
+  if (spec._domains) spec._domains.xPad = xPad;
   const xS = (xLog ? log : linear)(dx.min, dx.max, inner.x + bp + xPad, inner.x + inner.w - bp);
 
   const body = [];
@@ -4510,8 +4557,8 @@ function treemap(spec, theme) {
   const ofTotal = en ? 'of total' : 'del total';
   const shareText = (n) => {
     if (!focus.path.length || shareOf === 'group') return share(n.value, total);
-    if (shareOf === 'total') return `${share(n.value, grand)} ${ofTotal}`;
-    return `${share(n.value, total)} · ${share(n.value, grand)} ${ofTotal}`;
+    if (shareOf === 'total') return [`${share(n.value, grand)} ${ofTotal}`, share(n.value, grand)];
+    return [`${share(n.value, total)} · ${share(n.value, grand)} ${ofTotal}`, share(n.value, total)];
   };
   const wrapMode = spec.tileLabels === 'wrap';
 
@@ -4553,43 +4600,72 @@ function treemap(spec, theme) {
   return frame.finish(body, { desc, type: 'treemap' });
 }
 
-/** Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. */
+/**
+ * Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. `pct` es
+ * la cifra o una lista de cifras de la más larga a la más corta: se escribe la
+ * primera que cabe bajo el nombre. Con `wrapMode`, el nombre toma las líneas
+ * que quepan a lo alto (más de tres si hay lugar) y la cifra va debajo siempre
+ * que quepa a algún tamaño; sólo si no, el nombre solo.
+ */
 function tileLabel(name, pct, x, y, w, h, fill, value, depth, wrapMode = false) {
   const out = [];
   const pad = w < 60 || h < 40 ? 5 : 8;
   const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
-  for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) {
-    const lines = wrap(name, w - pad * 2, size, 600, 3);
-    const X = ctx.textScale;
+  const subs = [].concat(pct).map((p) => (value ? `${p} · ${value}` : p));
+  const X = ctx.textScale;
+  const room = w - pad * 2;
+  const sizes = [];
+  for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) sizes.push(size);
+  const linesAt = (size, lh, below) => wrap(name, room, size, 600, wrapMode ? Math.max(3, Math.floor((h - pad * 1.5 - below) / lh)) : 3);
+  const put = (lines, size, lh, sub, pctSize) => {
+    lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+    if (sub !== undefined) out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
+    return out;
+  };
+  const fitsWidth = (lines, size) => lines.every((l) => measure(l, size, 600) <= room) && !/…$/.test(lines[lines.length - 1]);
+  /** El nombre con su cifra (la primera que quepa), o null. */
+  const withShare = (size, cands = subs) => {
     const lh = size * X * 1.14;
     const pctSize = Math.max(9.5, size * 0.78);
-    const sub = value ? `${pct} · ${value}` : pct;
+    const lines = linesAt(size, lh, pctSize * X + 3);
     const need = pad + lines.length * lh + 3 + pctSize * X + pad * 0.5;
-    const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(sub, pctSize));
-    const fitsW = lines.every((l) => measure(l, size, 600) <= w - pad * 2) && !/…$/.test(lines[lines.length - 1]);
-    if (fitsW && widest <= w - pad * 2 && need <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
-      return out;
-    }
-    if (lines.length === 1 && fitsW && pad + lh <= h) {
-      out.push(text(x + pad, y + pad + size * X * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
-      return out;
-    }
-    if (wrapMode && fitsW && pad + lines.length * lh <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      return out;
-    }
+    if (!fitsWidth(lines, size) || need > h) return null;
+    const names = Math.max(...lines.map((l) => measure(l, size, 600)));
+    for (const sub of cands) if (Math.max(names, measure(sub, pctSize)) <= room) return put(lines, size, lh, sub, pctSize);
+    return null;
+  };
+  /** Sólo el nombre: en una línea, o (en `wrap`) en las que quepan a lo alto. */
+  const nameOnly = (size) => {
+    const lh = size * X * 1.14;
+    const lines = linesAt(size, lh, 0);
+    const fitsW = fitsWidth(lines, size);
+    if (lines.length === 1 && fitsW && pad + lh <= h) return put(lines, size, lh);
+    if (wrapMode && fitsW && pad + lines.length * lh <= h) return put(lines, size, lh);
+    return null;
+  };
+  if (wrapMode || subs.length > 1) {
+    for (const sub of subs) for (const size of sizes) if (withShare(size, [sub])) return out;
+    for (const size of sizes) if (nameOnly(size)) return out;
+    if (!wrapMode) return out;
+  } else {
+    for (const size of sizes) if (withShare(size) || nameOnly(size)) return out;
+    return out;
   }
-  if (!wrapMode) return out;
-  const size = 9.5, X = ctx.textScale, lh = size * X * 1.14;
-  const room = w - pad * 2;
-  const rows = Math.min(3, Math.floor((h - pad) / lh));
-  if (rows < 1 || room < measure('Abc…', size, 600)) return out;
-  const lines = wrap(name, room, size, 600, rows).map((l) => truncate(l, room, size, 600));
-  if (lines.every((l) => l === '…' || l.length < 2)) return out;
-  lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-  return out;
+  const size = 9.5, lh = size * X * 1.14, pctSize = 9.5;
+  if (room < measure('Abc…', size, 600)) return out;
+  const cut = (rows) => wrap(name, room, size, 600, rows).map((l) => truncate(l, room, size, 600));
+  const empty = (lines) => lines.every((l) => l === '…' || l.length < 2);
+  const rows = Math.floor((h - pad) / lh);
+  if (rows < 1) return out;
+  const lines = cut(rows);
+  if (empty(lines)) return out;
+  const rowsS = Math.floor((h - pad - pctSize * X - 4 - pad * 0.5) / lh);
+  const sub = subs.find((t) => measure(t, pctSize) <= room);
+  if (rowsS >= 1 && sub !== undefined) {
+    const withSub = cut(rowsS);
+    if (withSub.length >= lines.length && !empty(withSub)) return put(withSub, size, lh, sub, pctSize);
+  }
+  return put(lines, size, lh);
 }
 
 return { "squarify": squarify, "treemap": treemap };
@@ -6053,6 +6129,7 @@ const { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, Plot
 const { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } = __req("src/axes.js");
 const { createFrame } = __req("src/frame.js");
 const { ctx } = __req("src/context.js");
+const { tipper } = __req("src/tooltip.js");
 const { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } = __req("src/stats.js");
 
 const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
@@ -6089,14 +6166,17 @@ function prepare(spec) {
   const cats = Array.isArray(spec.order) ? spec.order.map(String) : uniq(data.map(catOf));
   const hues = hue ? (Array.isArray(spec.hueOrder) ? spec.hueOrder.map(String) : uniq(data.map((r) => String(r[hue])))) : [''];
   const groups = new Map();
+  const groupRows = new Map();
   for (const r of data) {
     const v = num(r[val]);
     if (!Number.isFinite(v)) continue;
     const k = catOf(r) + '\u0000' + (hue ? String(r[hue]) : '');
-    if (!groups.has(k)) groups.set(k, []);
+    if (!groups.has(k)) { groups.set(k, []); groupRows.set(k, []); }
     groups.get(k).push(v);
+    groupRows.get(k).push(r);
   }
   const get = (c, h) => groups.get(c + '\u0000' + h) || [];
+  const rowsOf = (c, h) => groupRows.get(c + '\u0000' + h) || [];
   const all = [...groups.values()].flat();
   if (!all.length) {
     const en = String(spec.locale || 'es').startsWith('en');
@@ -6104,7 +6184,7 @@ function prepare(spec) {
       ? new PlotError(`No numeric values in \`${val}\`.`, `\`${val}\` must hold numbers (empty, null and non-finite values are skipped). To count rows per category, use \`type: "countplot"\`.`)
       : new PlotError(`No hay valores numéricos en \`${val}\`.`, `\`${val}\` debe tener números (se omiten vacíos, nulos y valores no finitos). Para contar filas por categoría usa \`type: "countplot"\`.`);
   }
-  return { data, cat, val, hue, cats, hues, get, all, swapped };
+  return { data, cat, val, hue, cats, hues, get, rowsOf, all, swapped };
 }
 
 /**
@@ -6115,7 +6195,9 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const locale = spec.locale || 'es';
   const vertical = !(spec.horizontal ?? (spec.orient === 'h' ? true : spec.orient === 'v' ? false : undefined) ?? autoHorizontal(spec, m));
   const valueScale = (vertical ? spec.yScale : spec.xScale) ?? spec.valueScale ?? spec.scale;
-  const isLog = valueScale === 'log' && extent[0] > 0;
+  const dom = spec.yDomain ?? (vertical ? undefined : spec.xDomain) ?? spec.valueDomain;
+  const clamp = !!spec.clamp && Array.isArray(dom) && dom.length === 2 && dom.every(Number.isFinite) && dom[0] < dom[1];
+  const isLog = valueScale === 'log' && (extent[0] > 0 || (clamp && dom[0] > 0));
   const fmt = makeFormat(spec.format, locale, m.all);
   const multiHue = m.hues.length > 1;
   const cmap = colorMap(m.hues, theme, spec.colors);
@@ -6130,7 +6212,6 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
 
   const frame = createFrame(spec, theme, { height: 420 });
   let area = frame.layout(spec.legend === false ? [] : legend);
-  const dom = spec.yDomain ?? (vertical ? undefined : spec.xDomain) ?? spec.valueDomain;
   let lo = extent[0], hi = extent[1];
   if (zero && !isLog) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
   const axisSize = theme.type?.axis ?? 11.5;
@@ -6149,9 +6230,11 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     const h0 = area.h - top - bottom;
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(h0 / 56)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
+    if (clamp) tickFmt = clampTicks(tickFmt, nd, m.all);
     const leftM = yAxisMargin(ticks, tickFmt, theme);
     inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: h0 };
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
+    if (clamp) valS = clampScale(valS, nd);
     catS = band(m.cats, inner.x, inner.x + inner.w, { inner: 0.28, outer: 0.12 });
     body.pre.push(yGrid(ticks, valS, inner, theme, { baseline: zero ? 0 : NaN }));
     body.post.push(yTickLabels(ticks, valS, inner, theme, tickFmt));
@@ -6164,7 +6247,8 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     body.pre.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis, strokeWidth: 1 }));
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   } else {
-    const labelW = m.cat ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
+    const above = spec.yLabelPosition === 'above' && !!m.cat;
+    const labelW = m.cat && !above ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
     const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
     if (spec.height === undefined) {
       frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
@@ -6172,16 +6256,19 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     }
     const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
     inner = { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
+    if (above) { inner.y += 14; inner.h -= 14; }
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(inner.w / 100)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.x, inner.x + inner.w);
-    catS = band(m.cats, inner.y, inner.y + inner.h, { inner: 0.28, outer: 0.08 });
+    if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all); }
+    catS = band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
     body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN }));
     if (runs) body.pre.push(groupBandY(runs, (i) => [catS.center(m.cats[i]) - catS.step / 2 + 1, catS.center(m.cats[i]) + catS.step / 2 - 1], area.x, gW, theme, inner.x + inner.w));
     if (m.cat) for (const [ci, c] of m.cats.entries()) {
       if (ci % tickEvery) continue;
       const strong = !hl || hl.has(c);
-      body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
+      if (above) body.post.push(text(inner.x, catS(c) - 4, truncate(c, inner.w, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5 }));
+      else body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
     }
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
@@ -6195,6 +6282,20 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const center = (c, hi2) => catS(c) + (k > 1 ? slot * (hi2 + 0.5) : catS.bandwidth / 2);
   const P = (cpos, v) => (vertical ? [cpos, valS(v)] : [valS(v), cpos]);
   return { frame, vertical, valS, catS, slot, center, P, fmt, colorOf, body, inner, locale, hl, multiHue };
+}
+
+/**
+ * `clamp`: la escala lleva lo de fuera al borde del dominio, y la marca del
+ * borde dice «≤» o «≥» cuando algún valor quedó más allá.
+ */
+function clampScale(sc, nd) {
+  const s = (v) => sc(Math.min(nd.max, Math.max(nd.min, v)));
+  return Object.assign(s, sc);
+}
+function clampTicks(tf, nd, all) {
+  const below = all.some((v) => v < nd.min), over = all.some((v) => v > nd.max);
+  const at = (t, b) => Math.abs(t - b) <= Math.abs(b) * 1e-9 + 1e-12;
+  return (t) => (below && at(t, nd.min) ? `≤ ${tf(t)}` : over && at(t, nd.max) ? `≥ ${tf(t)}` : tf(t));
 }
 
 function autoHorizontal(spec, m) {
@@ -6349,15 +6450,17 @@ function strip(spec, theme) {
   const n = m.all.length;
   const r = spec.radius ?? (n > 600 ? 2 : n > 200 ? 2.75 : (theme.marks?.pointRadius ?? 4) - 0.5);
   const jitter = spec.jitter ?? 0.6;
+  const TT = tipper(spec, m.data, s.locale);
   m.cats.forEach((c, ci) => m.hues.forEach((h, hi2) => {
     const vs = m.get(c, h);
+    const rows = m.rowsOf(c, h);
     if (!vs.length) return;
     const color = s.colorOf(c, h);
     const cpos = s.center(c, hi2);
     const w = s.slot * (jitter === true ? 0.6 : jitter || 0);
     const parts = vs.map((v, i) => {
       const [x, y] = s.P(cpos + (rand(ci * 7919 + hi2 * 104729 + i) - 0.5) * w, v);
-      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': tip(fmtTipLabel(c, h), s.fmt(v)) };
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': TT([rows[i]], fmtTipLabel(c, h), s.fmt(v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
     if (spec.mean || spec.showMeans) {
@@ -6402,8 +6505,9 @@ function swarm(spec, theme) {
   const s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
   const groupsOf = (c) => (s.multiHue && (spec.dodge ?? false) ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
   let r = spec.radius ?? (theme.marks?.pointRadius ?? 4);
+  const TT = tipper(spec, m.data, s.locale);
   const layouts = () => m.cats.map((c) => groupsOf(c).map(([hs, hi2]) => {
-    const items = hs.flatMap((h) => m.get(c, h).map((v) => ({ v, h })));
+    const items = hs.flatMap((h) => { const rows = m.rowsOf(c, h); return m.get(c, h).map((v, i) => ({ v, h, row: rows[i] })); });
     const offs = beeswarm(items.map((it) => s.valS(it.v)), r);
     return { c, hi2, items, offs, width: Math.max(0, ...offs.map(Math.abs)) * 2 + 2 * r };
   }));
@@ -6416,7 +6520,7 @@ function swarm(spec, theme) {
       const o = Math.max(-room / 2 + r, Math.min(room / 2 - r, grp.offs[i]));
       const [x, y] = s.vertical ? [cpos + o, s.valS(it.v)] : [s.valS(it.v), cpos + o];
       const color = s.colorOf(grp.c, it.h);
-      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': tip(fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
+      return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': TT([it.row], fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
@@ -7283,6 +7387,7 @@ function network(spec, theme) {
   const curv = spec.curveness !== undefined && spec.curveness !== null && spec.curveness !== '' && Number.isFinite(+spec.curveness) ? +spec.curveness : layout === 'grid' ? 0.18 : layout === 'preset' ? 0.15 : 0.3;
   const P = (x, y) => `${f1(x)},${f1(y)}`;
   const linkG = [];
+  const edgeTips = spec.edgeTip !== false && spec.tooltip !== false;
   for (const e of [...edges].sort((a, b) => (!!pinE(a) - !!pinE(b)) || a.v - b.v)) {
     const a = byId.get(e.src), b = byId.get(e.dst);
     const w = Number.isFinite(eW) ? eW : pair(eW) ? eW[0] + (eW[1] - eW[0]) * Math.sqrt(e.v / maxE) : valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
@@ -7309,7 +7414,7 @@ function network(spec, theme) {
       class: 'pa-m', d, stroke: hl && !active ? theme.muted : pinE(e) || edgeInk || colorOf(a),
       strokeOpacity: op === baseOp ? undefined : op, strokeWidth: sw === 1 ? undefined : sw,
       'data-s': e.src, 'data-t': e.dst,
-      'data-tip': tip(`${a.label} — ${b.label}`, fmtE(e.v)),
+      'data-tip': edgeTips ? tip(`${a.label} — ${b.label}`, fmtE(e.v)) : undefined,
     }));
   }
   const links = g({ class: 'pa-links', fill: 'none', strokeLinecap: 'round', strokeOpacity: baseOp, strokeWidth: 1 }, linkG);
@@ -7348,6 +7453,7 @@ function network(spec, theme) {
   const angles = []; // etiquetas radiales ya puestas: [ángulo, medio alto angular]
   const labG = [];
   const h = labelPx + 1;
+  const labelMax = Number.isFinite(+spec.labelWidth) && spec.labelWidth !== null && +spec.labelWidth > 0 ? +spec.labelWidth : 150;
   const inArea = (b) => b[0] >= area.x - 2 && b[2] <= area.x + area.w + 2 && b[1] >= area.y - 6 && b[3] <= area.y + area.h + 6;
   for (const n of lbls) {
     const isF = focusNode && n === focusNode;
@@ -7366,7 +7472,7 @@ function network(spec, theme) {
       labG.push(el('text', { x: lx, y: ly, dy: '0.35em', textAnchor: flip ? 'end' : 'start', transform: `rotate(${f1(deg)} ${f1(lx)} ${f1(ly)})`, ...attrs }, esc(label)));
       continue;
     }
-    const label = truncate(n.label, 150, labelSize, weight);
+    const label = truncate(n.label, labelMax, labelSize, weight);
     const w = measure(label, labelSize, weight);
     const cands = [
       [n.px + n.r + 5, n.py + labelPx * 0.35, 'start'],
@@ -8807,6 +8913,8 @@ const { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND }
 const { createFrame, hash, SIZES } = __req("src/frame.js");
 const { binnedScale } = __req("src/colorscales.js");
 
+const CS = 11.5; // cuerpo del título de la esquina
+
 function heatmap(spec, theme) {
   const data = ensureData(spec);
   const fields = fieldsOf(data);
@@ -8841,9 +8949,11 @@ function heatmap(spec, theme) {
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const stops = mid !== undefined ? theme.diverging : theme.sequential;
   const bins0 = binnedScale(spec);
-  const bins = bins0 && spec.midClass === 'neutral' && !bins0.breaks.includes(0) && bins0.breaks[0] < 0 && bins0.breaks[bins0.breaks.length - 1] > 0
-    ? (() => { const k = bins0.cls(0); const colors = bins0.colors.map((c, i) => (i === k ? theme.tint : c)); return { ...bins0, colors, color: (v) => colors[bins0.cls(v)] }; })()
+  const midC = spec.midClass === 'neutral' ? theme.tint : spec.midClass && typeof spec.midClass === 'object' ? (isColor(spec.midClass.color) ? spec.midClass.color : theme.tint) : null;
+  const bins = bins0 && midC && !bins0.breaks.includes(0) && bins0.breaks[0] < 0 && bins0.breaks[bins0.breaks.length - 1] > 0
+    ? (() => { const k = bins0.cls(0); const colors = bins0.colors.map((c, i) => (i === k ? midC : c)); return { ...bins0, colors, color: (v) => colors[bins0.cls(v)] }; })()
     : bins0;
+  const missingLabel = spec.missingLabel === undefined || spec.missingLabel === null ? '—' : String(spec.missingLabel);
   const missing = ['tint', 'plain', 'hatch', 'gap'].includes(spec.missing) ? spec.missing : 'tint';
   const ndId = 'pa-hm-nd-' + Math.abs(hash(String(valueF) + xs.length + ys.length + (spec.title || ''))).toString(36);
   const colorOf = (v) => {
@@ -8872,7 +8982,8 @@ function heatmap(spec, theme) {
   const yRuns = spec.yGroup ? (requireField(data, spec.yGroup, 'yGroup'), groupRuns(ys, data, y, spec.yGroup)) : null;
   const gW = yRuns ? groupBandWidth(yRuns, area.w * 0.22) : 0;
   const gH = xRuns ? GROUP_BAND : 0;
-  const yW = Math.min(area.w * 0.3, Math.max(...ys.map((v) => measure(v, 12)))) + 12;
+  const corner = spec.cornerLabel === undefined || spec.cornerLabel === null || spec.cornerLabel === '' ? null : String(spec.cornerLabel).split('\n');
+  const yW = Math.min(area.w * 0.3, Math.max(...ys.map((v) => measure(v, 12)), ...(corner ? corner.map((l) => measure(l, CS, 500)) : []))) + 12;
   const top = spec.xLabelPosition === 'top';
   const maxLab = rot ? labCap(area.w) : 0;
   const headH = rot ? Math.ceil(maxLab * Math.abs(sin) + XS * Math.abs(cos)) + 10 : 26;
@@ -8917,7 +9028,7 @@ function heatmap(spec, theme) {
       const cx = inner.x + i * cw + gx / 2, cy = inner.y + j * ch + gy / 2;
       const box = { x: cx, y: cy, width: Math.max(0, cw - gx), height: Math.max(0, ch - gy), rx };
       const sp = apart.none || !Number.isFinite(v) ? null : apart.of(a, b);
-      const tipTxt = TT({ [x]: a, [y]: b }, `${b} · ${a}`, Number.isFinite(v) ? fmt(v) : '—', sp ? sp.label : '');
+      const tipTxt = TT({ [x]: a, [y]: b }, `${b} · ${a}`, Number.isFinite(v) ? fmt(v) : missingLabel, sp ? sp.label : '');
       if (!Number.isFinite(v) && missing === 'gap') return;
       if (sp) {
         const parts = [el('rect', { ...box, fill: sp.color, fillOpacity: sp.opacity })];
@@ -8954,8 +9065,19 @@ function heatmap(spec, theme) {
     });
     body.push(g({ class: 'pa-xlabels' }, out));
   }
-  if (xRuns) body.push(groupBandX(xRuns, (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1], inner.y + inner.h + below, theme, inner.y));
-  if (yRuns) body.push(groupBandY(yRuns, (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1], area.x, gW, theme, inner.x + inner.w));
+  const gc = spec.groupColors && typeof spec.groupColors === 'object' ? spec.groupColors : undefined;
+  if (xRuns) body.push(groupBandX(xRuns, (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1], inner.y + inner.h + below, theme, inner.y, undefined, gc));
+  if (yRuns) body.push(groupBandY(yRuns, (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1], area.x, gW, theme, inner.x + inner.w, undefined, gc));
+  if (corner) {
+    const room = Math.max(0, inner.x - 10 - (area.x + gW));
+    const fit = Math.max(1, Math.floor((headH - 4) / 14));
+    const lines = corner.length > fit ? [...corner.slice(0, fit - 1), corner.slice(fit - 1).join(' ')] : corner;
+    const shown = lines.map((l) => truncate(l, room, CS, 500));
+    const cut = corner.length > fit || shown.some((l, i) => l !== lines[i]);
+    const y0 = top ? inner.y - 9 - (shown.length - 1) * 14 : inner.y + inner.h + 18;
+    const nodes = shown.map((l, i) => text(inner.x - 10, y0 + i * 14, l, { fill: theme.muted, fontSize: CS, fontWeight: 500, textAnchor: 'end' }));
+    body.push(g({ class: 'pa-corner', 'data-tip': cut ? corner.join(' ') : undefined }, nodes));
+  }
 
   const en = String(locale).startsWith('en');
   let best = null;
@@ -9806,9 +9928,13 @@ function sankey(spec, theme) {
     const anchor = i === 0 ? 'end' : i === cols.length - 1 ? 'start' : 'middle';
     body.push(text(x, area0.y + 12, stages[i], { fill: theme.muted, fontSize: 11.5, fontWeight: 600, textAnchor: anchor, letterSpacing: '0.04em' }));
   });
+  const pp = Number.isInteger(spec.pathPrecision) ? Math.max(0, Math.min(3, spec.pathPrecision)) : 2;
+  const PREC = 10 ** pp;
   for (const l of [...links].sort((a, b) => b.v - a.v)) {
-    const x0 = l.sn.x + NW, x1 = l.tn.x, xm = (x0 + x1) / 2, w = l.v * ky;
-    const d = `M${x0},${l.y0}C${xm},${l.y0} ${xm},${l.y1} ${x1},${l.y1}L${x1},${l.y1 + w}C${xm},${l.y1 + w} ${xm},${l.y0 + w} ${x0},${l.y0 + w}Z`;
+    const R = (v) => +(Math.round(v * PREC) / PREC);
+    const x0 = R(l.sn.x + NW), x1 = R(l.tn.x), xm = R((l.sn.x + NW + l.tn.x) / 2), w = l.v * ky;
+    const ya = R(l.y0), yb = R(l.y1), yc = R(l.y1 + w), yd = R(l.y0 + w);
+    const d = `M${x0},${ya}C${xm},${ya} ${xm},${yb} ${x1},${yb}L${x1},${yc}C${xm},${yc} ${xm},${yd} ${x0},${yd}Z`;
     const share = l.sn.value ? Math.round((l.v / l.sn.value) * 100) : 0;
     linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-key': `${l.s}→${l.t}`, 'data-tip': T({ [from]: l.s, [to]: l.t }, `${l.sn.name} → ${l.tn.name}`, `${fmt(l.v)} · ${share}% ${en ? 'of' : 'de'} ${l.sn.name}`) }));
   }
@@ -10343,7 +10469,8 @@ function waffle(spec, theme) {
   const gap = theme.marks?.gap ?? 2;
   const cell = Math.max(3, Math.min(spec.cellSize ?? 22, area.w / cols, spec.height !== undefined ? area.h / rowsN : Infinity));
   const s = cell - gap;
-  const rad = Math.min(theme.marks?.barRadius ?? 4, s / 4);
+  const cr = spec.cellRadius;
+  const rad = cr !== undefined && cr !== null && Number.isFinite(+cr) ? Math.max(0, Math.min(+cr, s / 2)) : Math.min(theme.marks?.barRadius ?? 4, s / 4);
   if (spec.height === undefined) frame.setHeight(area.y + rowsN * cell + frame.chrome);
 
   const body = [];
@@ -10360,11 +10487,9 @@ function waffle(spec, theme) {
       const list = rowsOf.get(k);
       for (let j = 0; j < squares[i]; j++, idx++) {
         const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;
-        const d = rad > 0.5
-          ? `M${(cx + rad).toFixed(2)},${cy.toFixed(2)}h${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${rad}v${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${rad}h${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${-rad}v${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${-rad}Z`
-          : `M${cx.toFixed(2)},${cy.toFixed(2)}h${s.toFixed(2)}v${s.toFixed(2)}h${(-s).toFixed(2)}Z`;
+        const sq = el('rect', { x: cx, y: cy, width: s, height: s, rx: rad > 0.5 ? rad : undefined, fill: colorOf(k) });
         const row = list[Math.min(j, list.length - 1)];
-        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [el('path', { d, fill: colorOf(k) })]));
+        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [sq]));
       }
     });
   } else keys.forEach((k, i) => {
@@ -10493,15 +10618,18 @@ function dendrogram(spec, theme) {
   let gap = leafSpan0 / n;
   const swW = cats.length ? 9 : 0;
   const fsSub = 11;
-  const labW = (lblMode === false ? 0 : Math.min(horizontal ? area.w * 0.3 : 120, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
   const barMax = sizeF && horizontal && maxWt > 0 ? Math.min(60, area.w * 0.1) : 0;
   const weightW = barMax ? barMax + 8 + Math.max(...weights.map((v) => measure(fmtW(v), 11))) + 6 : 0;
   const groupLabel = (i) => `${gNames[i]} · ${leaves(groups[i]).length}`;
   const groupW = groups.length && horizontal ? Math.min(area.w * 0.25, Math.max(...groups.map((_, i) => measure(groupLabel(i), fs, 600)))) + 16 : 0;
+  const posNum = (v) => (Number.isFinite(+v) && v !== null && +v > 0 ? +v : null);
+  const treeW = horizontal ? posNum(spec.treeWidth) : null;
+  const labCap = treeW !== null ? Math.max(40, area.w - treeW - groupW - weightW - 8 - swW - 14) : posNum(spec.labelWidth) ?? (horizontal ? area.w * 0.3 : 120);
+  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
   const hTitle = horizontal ? spec.xLabel ?? spec.yLabel : spec.yLabel ?? spec.xLabel;
   const axisH = 26 + (hTitle && horizontal ? 16 : 0);
   const inner = horizontal
-    ? { x: area.x, y: area.y, w: Math.max(60, area.w - labW - groupW - weightW - 8), h: n * gap }
+    ? { x: area.x, y: area.y, w: treeW !== null ? Math.max(60, Math.min(treeW, area.w - labW - groupW - weightW - 8)) : Math.max(60, area.w - labW - groupW - weightW - 8), h: n * gap }
     : { x: area.x, y: area.y + (hTitle ? 16 : 0), w: area.w - groupW, h: Math.max(60, area.h - labW - axisH - (hTitle ? 16 : 0)) };
   if (!horizontal) gap = inner.w / n;
   if (spec.height === undefined && horizontal) frame.setHeight(inner.y + inner.h + axisH + frame.chrome);
@@ -10726,11 +10854,13 @@ function dotplot(spec, theme) {
     binPx = Math.abs(sc(lo + w) - sc(lo));
   }
   const maxD = spec.dotSize ?? 14;
-  let d = Math.max(2, Math.min(binPx, maxD));
+  const fixedR = Number.isFinite(+spec.dotRadius) && spec.dotRadius !== null && +spec.dotRadius > 0 ? +spec.dotRadius : null;
+  const pad = (dd) => (dd > 6 ? 0.75 : 0.25);
+  let d = fixedR !== null ? 2 * fixedR + (2 * fixedR + 1.5 > 6 ? 1.5 : 0.5) : Math.max(2, Math.min(binPx, maxD));
   if (spec.height !== undefined) d = Math.max(2, Math.min(d, (inner.h - refTop) / maxStack));
   else { inner.h = maxStack * d + 4 + (hl && labelF ? 20 : 0) + refTop; frame.setHeight(inner.y + inner.h + axisH + frame.chrome); }
   const base = inner.y + inner.h;
-  const r = Math.max(1, d / 2 - (d > 6 ? 0.75 : 0.25));
+  const r = Math.max(1, d / 2 - pad(d));
 
   const body = [];
   body.push(el('line', { x1: inner.x - 6, x2: inner.x + inner.w + 6, y1: base + 0.5, y2: base + 0.5, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
@@ -10771,9 +10901,10 @@ function dotplot(spec, theme) {
     for (const r of refs) {
       const px = Math.round(xs.value(r.v)) + 0.5;
       const lab = r.label ? (r.showValue === false ? String(r.label) : `${r.label} · ${fmt(r.v)}`) : '';
-      const tipTxt = tip(r.label ? String(r.label) : '', fmt(r.v));
+      const tipTxt = r.label && r.showValue === false ? tip(String(r.label)) : tip(r.label ? String(r.label) : '', fmt(r.v));
+      const dash = r.dash === true ? '3 3' : typeof r.dash === 'string' && /^[\d.\s,]+$/.test(r.dash.trim()) && r.dash.trim() ? r.dash.trim() : undefined;
       lines.push(g({ class: 'pa-ref', 'data-tip': tipTxt }, [
-        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7 }),
+        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7, strokeDasharray: dash }),
         el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: 'transparent', strokeWidth: 8 }),
       ]));
       if (lab) {
@@ -10797,6 +10928,222 @@ function dotplot(spec, theme) {
 }
 
 return { "dotplot": dotplot };
+});
+__def("src/types/rail.js", function () {
+var __star = [];
+const { registerRenderer } = __req("src/base.js");
+const { rail } = __req("src/charts/rail.js");
+
+registerRenderer('rail', (s, t) => rail(s, t));
+
+__star.push(__req("src/base.js"));
+const __re0 = __req("src/base.js");
+
+return Object.assign({}, ...__star, { "default": __re0["default"] });
+});
+__def("src/charts/rail.js", function () {
+const { tipper } = __req("src/tooltip.js");
+const { el, g, text } = __req("src/svg.js");
+const { makeFormat } = __req("src/format.js");
+const { ensureData, num, humanize } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+const { langOf } = __req("src/i18n.js");
+const { railAccessors, railAccessor, railValues, railExtent, railMarks, railTip, textOf } = __req("src/rail.js");
+
+const F = Number.isFinite;
+
+function rail(spec, theme) {
+  const locale = spec.locale || 'es';
+  const en = langOf(locale) === 'en';
+  const data = Array.isArray(spec.data) && spec.data.length ? ensureData(spec) : [];
+  const row = data[0] ?? {};
+  const vKey = spec.value ?? spec.x ?? spec.y;
+  const v = railAccessor(vKey)(row);
+  const acc = railAccessors(spec);
+  const vals = railValues(acc, row);
+  const hasRange = F(vals.min) && F(vals.max);
+
+  const frame = createFrame(spec, theme, { chrome: false, width: 160, height: 18, fixedHeight: true, minWidth: 24, minHeight: 8, padding: 0 });
+  const W = frame.width, H = frame.height;
+  const my = H / 2;
+  const ref = Math.max(2, Math.min(8, my - 1));
+  const sizes = {
+    ref, median: Math.max(1.5, Math.min(6, ref - 2)), band: Math.max(1.5, Math.min(4, ref / 2)),
+    dot: spec.dotRadius ?? Math.max(2, Math.min(4.5, my - 1.5)), rail: Math.max(1, Math.min(2, H / 9)),
+  };
+  const inset = Math.max(Math.ceil(sizes.dot + 1), 6);
+  const x0 = inset, w = Math.max(4, W - inset * 2);
+
+  const all = railExtent(v, vals);
+  const fmt = makeFormat(spec.format, locale, all);
+  const s = F(v) ? fmt(v) : '';
+  const label = textOf(spec.valueLabel, row) ?? (typeof vKey === 'string' ? humanize(vKey) : en ? 'Value' : 'Valor');
+  const TT = tipper(spec, data, locale);
+
+  let a, b, clipped = false;
+  if (vals.domain) { [a, b] = vals.domain; clipped = true; }
+  else if (hasRange && spec.clip) { a = Math.min(vals.min, vals.max); b = Math.max(vals.min, vals.max); clipped = b > a; }
+  else if (hasRange) { a = Math.min(...all); b = Math.max(...all); }
+
+  const body = [];
+  let desc;
+  if (a === undefined) {
+    if (spec.fallback !== 'none' && s) {
+      const size = Math.max(9, Math.min(12.5, H * 0.72));
+      body.push(text(spec.align === 'right' ? W - 1 : 1, my + size * 0.36, s, { fill: theme.ink, fontSize: size, fontWeight: 500, textAnchor: spec.align === 'right' ? 'end' : null }));
+    }
+    desc = s ? `${label}: ${s}` : '';
+  } else {
+    const colors = { rail: spec.colors?.rail, band: spec.colors?.band, median: spec.colors?.median, ref: spec.colors?.ref };
+    const dot = spec.colors?.value ?? (typeof spec.color === 'string' && spec.color ? spec.color : theme.categorical[0]);
+    const marks = railMarks({ v, vals, a, b, x0, w, my, clipped, track: !hasRange, theme, colors, dot, sizes });
+    body.push(...marks.out);
+    const tipText = railTip({ en, label, s: s || '—', fr: fmt, vals, row, past: marks.past, scale: clipped ? [a, b] : null,
+      labels: { band: spec.bandLabel, median: spec.medianLabel, min: spec.minLabel, max: spec.maxLabel, domain: spec.domainLabel } });
+    desc = tipText.split('\n').join('; ') + '.';
+    const head = spec.title ?? '';
+    body.push(g({ class: 'pa-m', 'data-tip': TT(data.length ? [row] : null, head, ...tipText.split('\n')) }, [
+      el('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent' }),
+    ]));
+  }
+  return frame.finish(body, { desc, type: 'rail' });
+}
+
+return { "rail": rail };
+});
+__def("src/rail.js", function () {
+const { el } = __req("src/svg.js");
+const { num } = __req("src/data.js");
+
+const F = Number.isFinite;
+
+/**
+ * Un extremo del riel: el nombre de un campo de la fila o un número fijo.
+ * Devuelve (fila) → número (NaN si no hay).
+ */
+const railAccessor = (k) => (typeof k === 'string' ? (r) => num(r?.[k]) : F(+k) && k !== null && k !== undefined && typeof k !== 'boolean' ? () => +k : () => NaN);
+
+/**
+ * Las referencias de un riel: `refs: [{ value | field, label, color }]` más la
+ * `ref` suelta de siempre (que va primero, con `refLabel`).
+ */
+function railRefs(spec) {
+  const out = [];
+  if (spec.ref !== undefined && spec.ref !== null) out.push({ get: railAccessor(spec.ref), label: spec.refLabel, color: undefined });
+  for (const r of [].concat(spec.refs ?? [])) {
+    if (r === null || r === undefined) continue;
+    if (typeof r !== 'object') { out.push({ get: railAccessor(r), label: undefined }); continue; }
+    out.push({ get: railAccessor(r.field ?? r.value), label: r.label, color: r.color });
+  }
+  return out;
+}
+
+/** Accesores de un riel a partir de su spec (columna de tabla o tipo `rail`). */
+function railAccessors(spec) {
+  const band = Array.isArray(spec.band) ? spec.band : [];
+  const dom = Array.isArray(spec.domain) ? spec.domain : null;
+  return {
+    min: railAccessor(spec.min), max: railAccessor(spec.max), lo: railAccessor(band[0]), hi: railAccessor(band[1]),
+    median: railAccessor(spec.median), refs: railRefs(spec),
+    domain: dom ? [railAccessor(dom[0]), railAccessor(dom[1])] : null,
+  };
+}
+
+/** Los valores de una fila: { min, max, lo, hi, median, refs: [{ v, label, color }], domain }. */
+function railValues(acc, r) {
+  const d = acc.domain ? [acc.domain[0](r), acc.domain[1](r)] : null;
+  return {
+    min: acc.min(r), max: acc.max(r), lo: acc.lo(r), hi: acc.hi(r), median: acc.median(r),
+    refs: acc.refs.map((x) => ({ v: x.get(r), label: textOf(x.label, r), color: x.color })),
+    domain: d && F(d[0]) && F(d[1]) && d[1] > d[0] ? d : null,
+  };
+}
+
+/** Un rótulo: texto, el nombre de un campo de la fila que lo trae, o una función (fila) → texto. */
+function textOf(t, r) {
+  if (t === undefined || t === null) return undefined;
+  if (typeof t === 'function') return t(r);
+  const s = String(t);
+  if (r && Object.prototype.hasOwnProperty.call(r, s) && r[s] !== null && r[s] !== undefined && r[s] !== '') return String(r[s]);
+  return s;
+}
+
+/** Todo lo dibujable de una fila, para la extensión de la escala. */
+const railExtent = (v, vals) => [v, vals.min, vals.max, vals.lo, vals.hi, vals.median, ...vals.refs.map((x) => x.v)].filter(F);
+
+/**
+ * Las marcas del riel. `x0` y `w`: dónde va la pista; `my`: su línea media;
+ * `[a, b]`: la escala; `clipped`: lo de fuera se marca con un chevrón.
+ * `track`: dibujar la pista entera de a a b cuando no hay mínimo y máximo.
+ * Devuelve { out: [svg], past: -1 | 0 | 1 } (por dónde se sale el valor).
+ */
+function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, theme, colors = {}, dot, muted, sizes = {} }) {
+  const span = b - a || 1;
+  const X = (t) => x0 + ((t - a) / span) * w;
+  const C = (t) => (clipped ? Math.min(b, Math.max(a, t)) : t);
+  const out = [];
+  const S = { rail: 2, band: 4, median: 6, ref: 8, dot: 4.5, ...sizes };
+  const railC = colors.rail ?? theme.axis, bandC = colors.band ?? theme.tint2, medC = colors.median ?? theme.lede;
+  if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(C(vals.min)), x2: X(C(vals.max)), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  else if (track) out.push(el('line', { x1: X(a), x2: X(b), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  if (F(vals.lo) && F(vals.hi)) {
+    const l = C(Math.min(vals.lo, vals.hi)), h = C(Math.max(vals.lo, vals.hi));
+    if (!(clipped && l === h && (l === a || l === b))) out.push(el('rect', { x: X(l), y: my - S.band, width: Math.max(1.5, Math.abs(X(h) - X(l))), height: S.band * 2, rx: 2, fill: bandC }));
+  }
+  const inside = (t) => !clipped || (t >= a && t <= b);
+  if (F(vals.median) && inside(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - S.median, y2: my + S.median, stroke: medC, strokeWidth: 1.5 }));
+  for (const ref of vals.refs) {
+    if (!F(ref.v)) continue;
+    const rc = ref.color ?? colors.ref ?? theme.ink;
+    if (inside(ref.v)) out.push(el('line', { x1: X(ref.v), x2: X(ref.v), y1: my - S.ref, y2: my + S.ref, stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }));
+    else {
+      const e = ref.v > b ? x0 + w + 2 : x0 - 2, k = ref.v > b ? -1 : 1;
+      out.push(el('path', { d: `M${r1(e + k * 5)},${r1(my - S.ref + 2)}L${r1(e)},${r1(my)}L${r1(e + k * 5)},${r1(my + S.ref - 2)}`, fill: 'none', stroke: rc, strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+  }
+  let past = 0;
+  if (F(v)) {
+    const fill = dot;
+    if (inside(v)) out.push(el('circle', { cx: X(v), cy: my, r: S.dot, fill, stroke: theme.surface, strokeWidth: 1.5 }));
+    else {
+      past = v > b ? 1 : -1;
+      const e = past > 0 ? x0 + w + 2 : x0 - 2, k = -past;
+      const hh = Math.min(5, S.dot + 0.5);
+      out.push(el('path', { d: `M${r1(e)},${r1(my)}L${r1(e + k * 7)},${r1(my - hh)}L${r1(e + k * 7)},${r1(my + hh)}Z`, fill, stroke: theme.surface, strokeWidth: 1, strokeLinejoin: 'round' }));
+    }
+  }
+  return { out, past, muted };
+}
+
+const r1 = (n) => Math.round(n * 10) / 10;
+
+/**
+ * El texto del tooltip: el valor, el rango (o sus dos extremos con nombre), la
+ * banda, la mediana, cada referencia con su rótulo y, si se recortó, la
+ * escala. Lo que cae fuera de ella lo dice.
+ */
+function railTip({ en, label, s, fr, vals, labels = {}, past = 0, scale = null, row }) {
+  const off = en ? 'beyond the scale' : 'fuera de la escala';
+  const parts = [`${label}: ${s}${past ? ` (${off})` : ''}`];
+  const minL = textOf(labels.min, row), maxL = textOf(labels.max, row);
+  if (F(vals.min) && F(vals.max)) {
+    if (minL !== undefined || maxL !== undefined) {
+      parts.push(`${minL ?? (en ? 'Lowest' : 'Mínimo')}: ${fr(vals.min)}`);
+      parts.push(`${maxL ?? (en ? 'Highest' : 'Máximo')}: ${fr(vals.max)}`);
+    } else parts.push(`${en ? 'Range' : 'Rango'}: ${fr(vals.min)}–${fr(vals.max)}`);
+  }
+  if (F(vals.lo) && F(vals.hi)) parts.push(`${textOf(labels.band, row) ?? (en ? 'Middle half' : 'Mitad central')}: ${fr(vals.lo)}–${fr(vals.hi)}`);
+  if (F(vals.median)) parts.push(`${textOf(labels.median, row) ?? (en ? 'Median' : 'Mediana')}: ${fr(vals.median)}`);
+  for (const ref of vals.refs) {
+    if (!F(ref.v)) continue;
+    const out = scale && (ref.v < scale[0] || ref.v > scale[1]);
+    parts.push(`${ref.label ?? (en ? 'Reference' : 'Referencia')}: ${fr(ref.v)}${out ? ` (${off})` : ''}`);
+  }
+  if (scale && labels.domain !== undefined && labels.domain !== null) parts.push(`${textOf(labels.domain, row)}: ${fr(scale[0])}–${fr(scale[1])}`);
+  return parts.join('\n');
+}
+
+return { "railRefs": railRefs, "railAccessors": railAccessors, "railValues": railValues, "textOf": textOf, "railMarks": railMarks, "railTip": railTip, "railAccessor": railAccessor, "railExtent": railExtent };
 });
 __def("src/palette.js", function () {
 const { parseRgb } = __req("src/rgb.js");
@@ -10959,7 +11306,7 @@ function colorScale(values, spec, theme) {
   const v = values.filter(Number.isFinite).sort((a, b) => a - b);
   const min = v[0], max = v[v.length - 1], range = max - min;
   const bins = binnedScale(spec);
-  if (bins) return classed(bins.breaks, bins.colors, min, max);
+  if (bins) return { mode: 'classes', breaks: bins.breaks, colors: bins.colors, min, max, cls: bins.cls, color: bins.color };
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const mode = Array.isArray(spec.scale) || Array.isArray(spec.thresholds) ? 'thresholds' : spec.scale || 'quantile';
   if (mid !== undefined) {
@@ -13231,7 +13578,7 @@ async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, c
 return { "mercY": mercY, "tileProvider": tileProvider, "tileUrl": tileUrl, "pointmap": pointmap, "embedTiles": embedTiles, "mercX": mercX, "TILE_PROVIDERS": TILE_PROVIDERS, "refusesPrefetch": refusesPrefetch };
 });
 __def("src/charts/table.js", function () {
-const { el, g, text, tip, esc } = __req("src/svg.js");
+const { el, g, text, tip, esc, linkWrap } = __req("src/svg.js");
 const { measure, truncate, wrap } = __req("src/text.js");
 const { makeFormat, formatDate, parseDate, currencyPrefix } = __req("src/format.js");
 const { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } = __req("src/data.js");
@@ -13241,6 +13588,7 @@ const { ramp, textOn, readable, hexToRgb, rgbToHex, contrast } = __req("src/them
 const { dateUnit } = __req("src/scale.js");
 const { resolveColorScale, sample } = __req("src/colorscales.js");
 const { words, langOf } = __req("src/i18n.js");
+const { railAccessors, railValues, railExtent, railMarks, railTip } = __req("src/rail.js");
 
 const TYPE_ALIAS = {
   text: 'text', string: 'text', label: 'text', category: 'text',
@@ -13413,11 +13761,12 @@ function prepareColumns(spec, data, theme, locale) {
       c.fmt = c.hasTarget ? columnFormat(c.format ?? spec.format ?? hint, finite, locale, null) : makeFormat({ type: 'percent', scale: c.scale100 ? 1 : 100, decimals: 0 }, locale, finite);
       c.pctFmt = makeFormat({ type: 'percent', scale: 100, decimals: 0 }, locale, []);
     } else if (type === 'range') {
-      const acc = (k) => (typeof k === 'string' ? (r) => num(r[k]) : Number.isFinite(+k) && k !== null && k !== undefined ? () => +k : () => NaN);
-      const band = Array.isArray(c.band) ? c.band : [];
-      c.rg = { min: acc(c.min), max: acc(c.max), lo: acc(band[0]), hi: acc(band[1]), median: acc(c.median), ref: acc(c.ref) };
-      const ends = data.flatMap((r) => [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))]).filter(Number.isFinite);
+      c.rg = railAccessors(c);
+      const ends = data.flatMap((r) => railExtent(num(r[c.field]), railValues(c.rg, r)));
       c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      const mins = data.map((r) => c.rg.min(r)).filter(Number.isFinite), maxs = data.map((r) => c.rg.max(r)).filter(Number.isFinite);
+      c.clo = mins.length ? Math.min(...mins) : c.rlo; c.chi = maxs.length ? Math.max(...maxs) : c.rhi;
+      c.ranged = c.min !== undefined && c.min !== null && c.max !== undefined && c.max !== null;
       c.fmt = columnFormat(c.format ?? spec.format ?? hint, ends, locale, null);
     } else if (numeric || (type === 'number' && kind === 'year')) {
       c.fmt = kind === 'year' && !c.format ? (v) => String(Math.round(v)) : columnFormat(c.format ?? spec.format ?? hint, finite, locale, null);
@@ -13438,7 +13787,7 @@ function prepareColumns(spec, data, theme, locale) {
         const by = c.formatBy;
         const keyOf = (r) => { const v = r[by]; return isNil(v) ? null : typeof v === 'object' ? JSON.stringify(v) : String(v); };
         const cache = new Map();
-        const valsOf = (r) => (type === 'range' ? [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))] : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
+        const valsOf = (r) => (type === 'range' ? railExtent(num(r[c.field]), railValues(c.rg, r)) : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
         c.rowFmt = (r) => {
           const k = keyOf(r);
           if (k === null) return c.fmt;
@@ -13615,6 +13964,8 @@ function table(spec, theme) {
   const hasTotal = spec.total !== false && cols.some((c) => totalOf(c) !== null);
   const totalLabel = spec.totalLabel ?? (spec.total && typeof spec.total === 'object' ? spec.total.label : undefined) ?? W.total;
 
+  const missingLabel = spec.missingLabel === undefined || spec.missingLabel === null || spec.missingLabel === '' ? null : String(spec.missingLabel);
+
   const edge = Math.min(BASE.pad, Math.max(4, frame.pad - 6));
   const tableX = area.x - edge, tableW = area.w + edge * 2;
   const sample = all.length > 1500 ? all.filter((_, i) => i % Math.ceil(all.length / 1500) === 0) : all;
@@ -13626,6 +13977,7 @@ function table(spec, theme) {
     const widths = texts.map((t) => measure(t, FS, weight));
     let tw = Math.max(0, ...widths);
     if (hasTotal && c.isLabel) tw = Math.max(tw, measure(totalLabel, FS, 600));
+    if (missingLabel !== null && c.type !== 'rank' && sample.some((r) => isNil(r[c.field]))) tw = Math.max(tw, measure(missingLabel, FS, 400));
     const tot = hasTotal ? totalOf(c) : null;
     if (tot !== null) tw = Math.max(tw, measure(c.type === 'progress' && !c.hasTarget ? c.pctFmt(tot / (c.scale100 ? 100 : 1)) : c.fmt(tot), FS, 600));
     const longest = Math.max(0, ...texts.map((t) => Math.max(0, ...String(t).split(/\s+/).map((w) => measure(w, FS, weight)))));
@@ -13752,7 +14104,12 @@ function table(spec, theme) {
       else put(ts);
       return { out };
     }
-    if (c.type !== 'rank' && isNil(v)) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+    if (c.type !== 'rank' && isNil(v)) {
+      if (missingLabel === null) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+      const ms = truncate(missingLabel, iw, FS, 400);
+      put(ms, { fill: theme.muted, fontWeight: 400, ...((c.type === 'bar' || c.type === 'progress' || c.type === 'range') && c.align === 'right' ? { x: ix + c.valueW, textAnchor: 'end' } : {}) });
+      return { out, tip: `${c.label}: ${missingLabel}` };
+    }
     const s = cellText(c, r, locale, W);
     switch (c.type) {
       case 'rank': put(s, { fill: theme.muted, fontWeight: 400 }); break;
@@ -13817,34 +14174,29 @@ function table(spec, theme) {
         if (!Number.isFinite(n)) { put(s); break; }
         const vw = c.valueW;
         out.push(text(ix + vw, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        const vals = railValues(c.rg, r);
+        const F = Number.isFinite;
+        const hasRange = F(vals.min) && F(vals.max);
+        if (c.ranged && !hasRange && !vals.domain) break;
         const trackX = ix + vw + 12, trackW = Math.max(16, ix + iw - trackX - 6);
-        const R = c.rg;
-        const vals = { min: R.min(r), max: R.max(r), lo: R.lo(r), hi: R.hi(r), median: R.median(r), ref: R.ref(r) };
-        let a = c.rlo, b = c.rhi;
-        if (c.scale === 'row') {
-          const own = [n, ...Object.values(vals)].filter(Number.isFinite);
+        let a = c.rlo, b = c.rhi, clipped = false;
+        if (vals.domain) { [a, b] = vals.domain; clipped = true; }
+        else if (c.clip && hasRange && c.scale === 'row') { a = Math.min(vals.min, vals.max); b = Math.max(vals.min, vals.max); clipped = true; }
+        else if (c.clip && c.chi > c.clo) { a = c.clo; b = c.chi; clipped = true; }
+        else if (c.scale === 'row') {
+          const own = railExtent(n, vals);
           a = Math.min(...own); b = Math.max(...own);
         }
-        const span = b - a || 1;
-        const X = (t) => trackX + ((t - a) / span) * trackW;
-        const F = Number.isFinite;
-        if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(vals.min), x2: X(vals.max), y1: my, y2: my, stroke: theme.axis, strokeWidth: 2, strokeLinecap: 'round' }));
-        if (F(vals.lo) && F(vals.hi)) out.push(el('rect', { x: X(Math.min(vals.lo, vals.hi)), y: my - 4, width: Math.max(1.5, Math.abs(X(vals.hi) - X(vals.lo))), height: 8, rx: 2, fill: theme.tint2 }));
-        if (F(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - 6, y2: my + 6, stroke: theme.lede, strokeWidth: 1.5 }));
-        if (F(vals.ref)) out.push(el('line', { x1: X(vals.ref), x2: X(vals.ref), y1: my - 8, y2: my + 8, stroke: theme.ink, strokeWidth: 2, strokeLinecap: 'round' }));
-        out.push(el('circle', { cx: X(n), cy: my, r: 4.5, fill: muted ? dimC : accent, stroke: theme.surface, strokeWidth: 1.5 }));
+        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
+        out.push(...rail.out);
         const en = String(locale).startsWith('en');
-        const fr = fmtOf(c, r);
-        const parts = [`${c.label}: ${s}`];
-        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${fr(vals.min)}–${fr(vals.max)}`);
-        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${fr(vals.lo)}–${fr(vals.hi)}`);
-        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${fr(vals.median)}`);
-        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${fr(vals.ref)}`);
-        return { out, tip: parts.join('\n') };
+        const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
+          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
+        return { out, tip: tipText };
       }
       case 'sparkline': {
         const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
-        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : '—', { fill: theme.muted }); break; }
+        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : missingLabel ?? '—', { fill: theme.muted }); break; }
         const sw = Math.min(iw, 120), sh = Math.max(10, Math.min(18, h - 2 * padY - 2));
         const sx = c.align === 'right' ? x + w - P - sw : c.align === 'center' ? x + (w - sw) / 2 : ix;
         out.push(spark(sx, my, sw, sh, vals, muted));
@@ -13866,7 +14218,7 @@ function table(spec, theme) {
         const lines = wrap(s, iw, FS, 400, c.lines);
         const color = readable(accent, theme);
         const t = lines.map((l, k) => text(tx, by + k * LH, l, { fill: color, fontSize: FS, textAnchor: anchor, textDecoration: 'underline' })).join('');
-        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : t);
+        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : linkWrap(href, t));
         return { out, lines: lines.length, tip: lines.join(' ') !== s ? s : null };
       }
       case 'text': case 'date': default: {
@@ -14142,7 +14494,7 @@ __def("src/lint.js", function () {
 const { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } = __req("src/data.js");
 const { inferType, TYPES, normalizeType } = __req("src/infer.js");
 const { validatePalette } = __req("src/palette.js");
-const { themeFor, themes, palettes, ramps } = __req("src/theme.js");
+const { themeFor, themes, palettes, ramps, isColor } = __req("src/theme.js");
 const { resolveColorScale, colorScaleNames, RAINBOW } = __req("src/colorscales.js");
 const { schema } = __req("src/schema.js");
 const { parseDate } = __req("src/format.js");
@@ -14180,7 +14532,8 @@ function lintSpec(spec = {}) {
   const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
   const linkageOnly = Array.isArray(spec.linkage) && !spec.data;
   const presetNodes = spec.data === undefined && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''));
-  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  const railOnly = spec.data === undefined && typeof spec.type === 'string' && normalizeType(spec.type.trim())[0] === 'rail';
+  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly || railOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
@@ -14189,9 +14542,9 @@ function lintSpec(spec = {}) {
   };
   if (data.length) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); if (type !== 'network') check(spec.size, 'size');
-    check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
+    if (!(type === 'rail' && typeof spec.value !== 'string')) check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
-  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -14296,7 +14649,23 @@ function lintSpec(spec = {}) {
       const bare = named.filter((v) => !(spec.colors && spec.colors[v]));
       if (bare.length) sug('cellcolor-no-color', L(`Las clases de \`cellColor\` sin color en \`colors\` van en gris: ${bare.slice(0, 4).join(', ')}.`, `\`cellColor\` classes without a color in \`colors\` are drawn gray: ${bare.slice(0, 4).join(', ')}.`), `colors: { ${JSON.stringify(bare[0])}: "#7A3E9D" }`);
     }
+    if (spec.groupColors && typeof spec.groupColors === 'object') {
+      const gf = [spec.xGroup, spec.yGroup].filter((f) => typeof f === 'string' && fields.includes(f));
+      if (!gf.length) warn('groupcolors-no-group', L('`groupColors` pinta las bandas de `xGroup` / `yGroup`, y no hay grupos.', '`groupColors` paints the bands of `xGroup` / `yGroup`, and there are no groups.'), L('Agrega `xGroup: "familia"`.', 'Add `xGroup: "family"`.'));
+      else {
+        const names = new Set(gf.flatMap((f) => data.map((r) => String(r[f] ?? ''))));
+        const stray = Object.keys(spec.groupColors).filter((k) => !names.has(k));
+        if (stray.length) sug('groupcolors-unknown', L(`\`groupColors\` nombra grupos que no están en los datos: ${stray.slice(0, 4).join(', ')}.`, `\`groupColors\` names groups that are not in the data: ${stray.slice(0, 4).join(', ')}.`), L('Usa los valores del campo de grupo, tal cual.', 'Use the values of the group field, exactly.'));
+      }
+    }
+    if (spec.midClass && typeof spec.midClass === 'object' && !isColor(spec.midClass.color)) warn('midclass-color', L('`midClass.color` no es un color: la clase del medio va en el tinte del tema.', '`midClass.color` is not a color: the middle class takes the theme tint.'), 'midClass: { color: "#f3ece0" }');
     if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
+  }
+  {
+    const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+    const br = cs && typeof cs === 'object' && Array.isArray(cs.breaks) ? cs.breaks.map(Number) : [];
+    const rep = br.filter((b, i) => i > 0 && b === br[i - 1]);
+    if (rep.length) sug('colorscale-repeated-breaks', L(`Cortes repetidos (${uniq(rep).join(', ')}): la clase vacía entre ellos se funde y su color no se usa.`, `Repeated breaks (${uniq(rep).join(', ')}): the empty class between them is merged and its color is not used.`), L('Normal con cuantiles de datos con empates; si la leyenda es tuya, dibuja las mismas clases.', 'Expected with quantiles of tied data; if you draw your own key, draw the same classes.'));
   }
   if (type === 'dotplot' && data.length && !spec.facet && !spec.col) {
     for (const r of [].concat(spec.refLines ?? [])) {
@@ -14362,6 +14731,13 @@ function lintSpec(spec = {}) {
       if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
     }
   }
+  if (type === 'rail') {
+    lintRail(spec, 'rail', { data, fields, check, err, warn, L });
+    if (data.length > 1) warn('rail-rows', L(`Un riel dibuja una fila: se usa la primera de ${data.length}.`, `A rail draws one row: the first of ${data.length} is used.`), L('Un `plot` por celda, con `data: [fila]`; para una tabla entera, `type: "table"` con una columna `range`.', 'One `plot` per cell, with `data: [row]`; for a whole table, `type: "table"` with a `range` column.'));
+    const has = (k) => spec[k] !== undefined && spec[k] !== null;
+    if (!(has('min') && has('max')) && !Array.isArray(spec.domain)) sug('rail-no-range', L('Sin `min` y `max` (ni `domain`) el riel no tiene escala: se escribe sólo la cifra.', 'Without `min` and `max` (or `domain`) the rail has no scale: only the figure is written.'), L('Da `min` y `max` (campos o números), o `domain: [desde, hasta]`.', 'Give `min` and `max` (fields or numbers), or `domain: [from, to]`.'));
+    if (spec.value === undefined && spec.x === undefined && spec.y === undefined) err('rail-value', L('El riel no dice cuál es el valor de la fila.', 'The rail does not say which value is the row\'s.'), L('Usa `value: "campo"` (o un número).', 'Use `value: "field"` (or a number).'));
+  }
   if (type === 'table' && data.length) {
     const cols = Array.isArray(spec.columns) ? spec.columns : [];
     for (const c of cols) {
@@ -14373,6 +14749,7 @@ function lintSpec(spec = {}) {
       if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
       else if (f !== undefined) check(f, 'columns');
       if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+      if (c && typeof c === 'object' && columnType(c.type) === 'range') lintRail(c, `columns["${f}"]`, { data, fields, check, err, warn, L });
       if (c && typeof c === 'object' && typeof c.formatBy === 'string') check(c.formatBy, 'columns.formatBy');
       if (c && typeof c === 'object' && c.formatBy !== undefined && c.type !== undefined && !['number', 'bar', 'heat', 'delta', 'range'].includes(columnType(c.type))) warn('table-formatby-type', L(`\`formatBy\` sólo aplica a columnas number, bar, heat, delta y range (columna "${f}").`, `\`formatBy\` only applies to number, bar, heat, delta and range columns (column "${f}").`), L('Quita `formatBy` o cambia el tipo de la columna.', 'Remove `formatBy` or change the column type.'));
       if (c && typeof c === 'object' && c.formatBy !== undefined && columnType(c.type) === 'bar') sug('table-formatby-bar', L(`Barras en unidades distintas por fila (columna "${f}") se comparan entre sí aunque no midan lo mismo.`, `Bars in different units per row (column "${f}") are compared with each other although they do not measure the same thing.`), L('Usa `type: "range"` (un riel por fila) o `type: "number"`.', 'Use `type: "range"` (one rail per row) or `type: "number"`.'));
@@ -14539,6 +14916,9 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   try { binnedScale(spec); } catch (e) {
     err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
   }
+  if (spec.clamp && !(Array.isArray(spec.xDomain) || Array.isArray(spec.yDomain) || Array.isArray(spec.valueDomain))) {
+    warn('clamp-no-domain', L('`clamp` lleva lo de fuera al borde de un dominio, y no hay dominio: no hace nada.', '`clamp` pulls what lies outside onto the edge of a domain, and there is none: it does nothing.'), L('Agrega `xDomain: [mín, máx]` (horizontal) o `yDomain`.', 'Add `xDomain: [min, max]` (horizontal) or `yDomain`.'));
+  }
   const f = spec.format;
   if (typeof f === 'string') enumCheck('format', f, FORMAT_TYPES, '"number", "compact", "percent", "currency", "integer" o { prefix, suffix, decimals }');
   else if (f && typeof f === 'object') {
@@ -14666,6 +15046,34 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
 }
 
+/**
+ * Un riel (tipo `rail` o columna `range`): los extremos que nombran un campo
+ * existen, `refs` trae un valor o un campo en cada entrada, `domain` es un par
+ * y `fallback` / `clip` tienen valores válidos.
+ */
+function lintRail(o, where, { data, fields, check, err, L }) {
+  const named = (k, v) => { if (typeof v === 'string' && data.length) check(v, `${where}.${k}`); };
+  for (const k of ['min', 'max', 'median', 'ref']) named(k, o[k]);
+  if (o.band !== undefined) {
+    if (!Array.isArray(o.band) || o.band.length !== 2) err('rail-band', L(`\`band\` (${where}) es un par [desde, hasta].`, `\`band\` (${where}) is a pair [from, to].`), 'band: ["q1", "q3"]');
+    else o.band.forEach((v, i) => named(`band[${i}]`, v));
+  }
+  if (o.domain !== undefined && o.domain !== null) {
+    if (!Array.isArray(o.domain) || o.domain.length !== 2) err('rail-domain', L(`\`domain\` (${where}) es un par [desde, hasta]: números o campos.`, `\`domain\` (${where}) is a pair [from, to]: numbers or fields.`), 'domain: ["p5", "p95"]');
+    else o.domain.forEach((v, i) => named(`domain[${i}]`, v));
+  }
+  if (o.refs !== undefined) {
+    if (!Array.isArray(o.refs)) err('rail-refs', L(`\`refs\` (${where}) es una lista.`, `\`refs\` (${where}) is a list.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+    else o.refs.forEach((r, i) => {
+      if (typeof r === 'number' || typeof r === 'string') { named(`refs[${i}]`, r); return; }
+      if (!r || typeof r !== 'object' || (r.value === undefined && r.field === undefined)) err('rail-refs', L(`\`refs[${i}]\` (${where}) no trae \`value\` ni \`field\`.`, `\`refs[${i}]\` (${where}) has neither \`value\` nor \`field\`.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+      else { named(`refs[${i}].field`, r.field); named(`refs[${i}].value`, r.value); }
+    });
+  }
+  if (o.clip !== undefined && typeof o.clip !== 'boolean') err('rail-clip', L(`\`clip\` (${where}) es true o false.`, `\`clip\` (${where}) is true or false.`), 'clip: true');
+  if (o.fallback !== undefined && !['value', 'none'].includes(o.fallback)) err('enum-fallback', L(`\`fallback\` (${where}) es "value" o "none".`, `\`fallback\` (${where}) is "value" or "none".`), 'fallback: "value"');
+}
+
 return { "lint": lint, "editDistance": editDistance, "didYouMean": didYouMean, "_setProbe": _setProbe, "KNOWN_TYPES": KNOWN_TYPES, "PlotError": PlotError };
 });
 __def("src/schema.js", function () {
@@ -14690,7 +15098,7 @@ const colorScaleSpec = (d) => ({
   anyOf: [
     { type: 'string' },
     { type: 'array', items: { type: 'string' }, minItems: 2 },
-    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' }, breaks: { type: 'array', items: { type: 'number' }, description: 'Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key.' } } },
+    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' }, breaks: { type: 'array', items: { type: 'number' }, description: 'Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped.' }, closed: { type: 'string', enum: ['left', 'right'], description: 'With `breaks`: which end of a class includes its break. "left" (default): breaks[i−1] ≤ v < breaks[i], a value equal to a break goes to the class above; "right": breaks[i−1] < v ≤ breaks[i], to the class below.' } } },
   ],
 });
 
@@ -14706,7 +15114,7 @@ const schema = {
       type: 'string',
       enum: [...new Set(['auto', ...TYPES, 'pointmap', ...Object.keys(ALIASES)])],
       description:
-        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, spark (a sparkline for a table cell), rail (one row of a distribution for a table cell: min–max, a band, the median, the value and reference ticks), network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -14721,7 +15129,7 @@ const schema = {
     series: field('Field that splits the data into colored series. Alias: hue.'),
     color: field('Alias of series when it names a field (a "#hex" value is a fixed color instead).'),
     hue: field('Alias of series (seaborn naming).'),
-    value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
+    value: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'Value field for treemap, sunburst, donut, heatmap, sankey and radar. rail: the row value drawn as the dot (a field of the row, or a number).' },
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
     group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value.'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
@@ -14793,7 +15201,7 @@ const schema = {
     pointRadius: { type: 'number', description: 'Map: radius of Point features in your own GeoJSON (default 5).' },
     missing: { type: 'string', enum: ['hatch', 'plain', 'context', 'tint', 'gap'], description: 'Cells/regions without data. choropleth: "hatch" (default), "plain" (flat tint) or "context" (flat tint, no tooltip and no "no data" key: regions drawn only as surroundings). heatmap: "tint" (default), "plain" (outline only), "hatch" or "gap" (nothing drawn).' },
     views: { type: 'array', description: 'choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view\'s lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root\'s data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView). Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, value: { type: 'string' }, data: { type: 'array', items: { type: 'object' } } } } },
-    pathPrecision: { type: 'integer', minimum: 0, maximum: 3, description: 'Maps: decimals of the drawn path coordinates, in pixels. Setting it (or `simplify`) writes compact paths: relative commands, rounded to this grid (default 1). About half the bytes of the default paths.' },
+    pathPrecision: { type: 'integer', minimum: 0, maximum: 3, description: 'sankey: decimals of the link paths (default 2). Maps: decimals of the drawn path coordinates, in pixels. Setting it (or `simplify`) writes compact paths: relative commands, rounded to this grid (default 1). About half the bytes of the default paths.' },
     simplify: { type: 'number', minimum: 0, description: 'Maps: simplify each outline on screen (Douglas–Peucker) with this tolerance in pixels (0.3–1 is invisible on a page and cuts a detailed map to a third). Implies compact paths (`pathPrecision`).' },
     sprite: { type: 'string', description: 'choropleth: path of an outlines file written once with mapSprite(spec) (e.g. "/maps/chile.svg"). Each region becomes a <use href="file#id"> through one transform that frames and turns it, so one cached file serves every page, width and framing; colors, classes, tooltips and links stay on the <use>. Points are still drawn inline. Paths and http(s) only, no #.' },
     microstates: { description: 'Maps with ISO countries (geo: "world"): draw as a dot the states and territories too small to have an outline at this scale (Singapore, Malta, Bahrain, Hong Kong… 74 of them, matched by ISO-2, ISO-3 or name). true: only those with data; "all": every one. Dot radius: `pointRadius` (default 2.5).', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['all'] }] },
@@ -14840,7 +15248,7 @@ const schema = {
     col: field('Alias of facet (seaborn naming).'),
     facetOrder: { type: 'array', items: { type: 'string' }, description: 'facet: panel order (values of the facet field; the rest follow).' },
     columns: {
-      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and a reference tick; `scale: "row"` gives each row its own scale). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row. waffle: squares per row.',
+      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and reference ticks (`ref` or `refs: [{ field | value, label }]`); `scale: "row"` gives each row its own scale; `clip: true` cuts the scale to min–max and `domain: [from, to]` (numbers or fields) to any span, drawing what falls past an end as a chevron; a row without min/max in a column that has them prints only its number). link: a URL (opens in a new tab) or a site path such as "/es/x" (same tab). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row. waffle: squares per row.',
       anyOf: [
         { type: 'integer' },
         { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
@@ -14851,6 +15259,10 @@ const schema = {
           min: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: field (or fixed number) with the low end of the rail.' }, max: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: high end of the rail.' },
           band: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2, description: 'range: [lo, hi] fields of the shaded band (e.g. quartiles).' }, bandLabel: { type: 'string' },
           median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: notch.' }, ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: reference tick (e.g. the national figure).' }, refLabel: { type: 'string' },
+          refs: { type: 'array', items: { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'object', properties: { value: { type: 'number' }, field: { type: 'string' }, label: { type: 'string' }, color: { type: 'string' } } }] }, description: 'range: several reference ticks, each with its label in the tooltip.' },
+          clip: { type: 'boolean', description: 'range: the scale is min–max (the column\'s, or the row\'s with scale: "row"); what falls past an end is a chevron.' },
+          domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'range: each row\'s scale, [from, to] as numbers or fields (e.g. p5–p95); past an end, a chevron.' },
+          minLabel: { type: 'string' }, maxLabel: { type: 'string' }, medianLabel: { type: 'string' }, domainLabel: { type: 'string' },
           scale: { type: 'string', enum: ['shared', 'row'], description: 'range: one scale for the column (default) or one per row (indicators in different units).' },
           formatBy: { type: 'string', description: 'number/bar/heat/delta/range: one format per row (indicators in different units). A field whose value is a format ("percent", { suffix: " yrs" }); from JS also a function (value, row) => text. Range rails go per row; no total.' },
           total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
@@ -14875,11 +15287,27 @@ const schema = {
     bin: number('dotplot: bin width in units of `x` (or `bins` for a count).'),
     ticks: { type: 'array', description: 'dotplot: your own axis ticks, [[value, label], …] (e.g. income brackets), instead of the automatic ones.', items: { anyOf: [{ type: 'number' }, { type: 'array' }] } },
     dotSize: number('dotplot: largest dot diameter in px (default 14).'),
+    min: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: low end of the rail (a field of the row, or a number).' },
+    max: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: high end of the rail.' },
+    median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: the median notch.' },
+    ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: one reference tick (same as a one-entry `refs`), named by `refLabel`.' },
+    refs: { type: 'array', description: 'rail and table `range` columns: reference ticks, each with its own label in the tooltip: [{ field: "region", label: "Biobío" }, { value: 12, label: "Target", color }]. `label` may name a field of the row. A ref outside a clipped scale is an open chevron at that end.', items: { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'object', properties: { value: { type: 'number' }, field: { type: 'string' }, label: { type: 'string' }, color: { type: 'string' } } }] } },
+    refLabel: { type: 'string', description: 'rail: name of `ref` in the tooltip (default "Reference").' },
+    bandLabel: { type: 'string', description: 'rail: name of the band in the tooltip (default "Middle half").' },
+    medianLabel: { type: 'string', description: 'rail: name of the median in the tooltip (default "Median").' },
+    minLabel: { type: 'string', description: 'rail: name of the low end in the tooltip, or a field of the row holding it (e.g. the lowest place). With minLabel/maxLabel the tooltip lists both ends instead of "Range: a–b".' },
+    maxLabel: { type: 'string', description: 'rail: name of the high end in the tooltip, or a field of the row holding it.' },
+    valueLabel: { type: 'string', description: 'rail: name of the dot in the tooltip (default: the value field), or a field of the row holding it.' },
+    domainLabel: { type: 'string', description: 'rail: with `domain`, a tooltip line naming the scale (e.g. "Middle 90% of communes").' },
+    domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'rail: the scale, [from, to] as numbers or fields (e.g. ["p5", "p95"]). Anything past an end is drawn as a chevron at that end instead of stretching the scale; without min/max the rail spans the whole domain.' },
+    clip: bool('rail: the scale is [min, max]; a value or reference past an end is a chevron at that end (it does not stretch the scale).'),
+    fallback: { type: 'string', enum: ['value', 'none'], description: 'rail: what a row without min/max (and no `domain`) shows: the figure alone (default) or nothing. Never a lone dot.' },
     dot: bool('spark: false hides the end dot.'),
-    dotRadius: number('spark: end dot radius in px.'),
+    dotRadius: number('spark: end dot radius in px. rail: the dot radius (default 4.5 at 18 px tall). dotplot: dot radius in px, not capped by the pixel width of a bin (a fine bin in a narrow box keeps readable dots; neighbours may touch). With an explicit `height` it still shrinks so the tallest stack fits.'),
     unit: number('waffle: what one square is worth (default 1, or a round number when the total passes `maxSquares`).'),
     maxSquares: { type: 'integer', description: 'waffle: most squares before each square is worth a round `unit` (default 400).' },
-    perSquare: bool('waffle: each square is its own mark with its own row\'s tooltip (one check, one person), in data order within each series. Only while one square is one unit.'),
+    perSquare: bool('waffle: each square is its own mark (a <rect>, with `rx` when rounded) with its own row\'s tooltip (one check, one person), in data order within each series. Only while one square is one unit.'),
+    cellRadius: { type: 'number', minimum: 0, description: 'waffle: corner radius of each square in px (0 = square corners). Default: the theme\'s bar radius, at most a quarter of the square.' },
     cards: { description: 'table: one card per row. "auto" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['auto'] }] },
     density: { type: 'string', enum: ['compact', 'normal', 'comfortable'], description: 'table: row height.' },
     striped: { type: 'boolean', description: 'table: tint every other row (helps on very wide tables).' },
@@ -14889,6 +15317,7 @@ const schema = {
     panelHeight: number('facet: height of each panel in px (a `panelNote` adds its own lines on top).'),
     sharey: { description: 'facet: same y scale in every panel (default true). "span": the same span in every panel, each with its own floor, and the same plot size in pixels, so a slope means the same change everywhere.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['span'] }] },
     panelNote: field('facet: a field whose value is written under each panel name (e.g. the latest value and its change). Space is reserved for it in every panel, so panels never overlap and keep the same plot height.'),
+    panelColor: { anyOf: [{ type: 'boolean' }, { type: 'object', additionalProperties: { type: 'string' } }], description: 'facet: write each panel name in a colour: true takes the panel\'s series colour (facet and series on the same field, or one series per panel); an object { panel: color }; from JS a function (panel, rows) => color. Hex colours are darkened as needed to stay readable.' },
     time: field('Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods.'),
     timeValue: { description: 'Period to show when `time` is set.' },
     slider: { description: 'Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. "buttons" or "slider" force one.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['buttons', 'slider'] }] },
@@ -14924,7 +15353,7 @@ const schema = {
     dashedFrom: { description: 'line/area/bar on a time axis: x value from which marks are dashed (a projection). Lines turn dashed from the last firm point, over a soft labeled band.', anyOf: [{ type: 'string' }, { type: 'number' }] },
     dashedLabel: { description: 'What the dashed shapes mean ("Projection", "Preliminary"): legend entry, band label and tooltip line. false hides the band label.', anyOf: [{ type: 'string' }, { type: 'boolean' }] },
     labels: { description: 'Value labels: true, false or "auto". In scatter/regplot: a number of points or a list of names to label. network: true labels every node. dendrogram: leaf labels true/false/"auto" (every k-th when they do not fit), or with `linkage`, the list of leaf names.', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'number' }, { type: 'array', items: { type: 'string' } }] },
-    refLines: { type: 'array', description: 'Reference lines (targets, averages). dotplot: vertical lines at `x` (a number, or a field whose rows all hold the same value), label on top; `showValue: false` writes the label without the value.', items: { type: 'object', properties: { y: { type: 'number' }, x: { anyOf: [{ type: 'number' }, { type: 'string' }] }, value: { type: 'number' }, label: { type: 'string' }, color: { type: 'string' }, showValue: { type: 'boolean' } } } },
+    refLines: { type: 'array', description: 'Reference lines (targets, averages). dotplot: vertical lines at `x` (a number, or a field whose rows all hold the same value), label on top; `showValue: false` writes the label without the value, on the line and in its tooltip; `dash: true` (3 3) or an SVG dash pattern ("4 2") dashes it.', items: { type: 'object', properties: { y: { type: 'number' }, x: { anyOf: [{ type: 'number' }, { type: 'string' }] }, value: { type: 'number' }, label: { type: 'string' }, color: { type: 'string' }, showValue: { type: 'boolean' }, dash: { anyOf: [{ type: 'boolean' }, { type: 'string' }] } } } },
     annotations: { type: 'array', description: 'line/area: events on the x axis.', items: { type: 'object', properties: { x: {}, label: { type: 'string' } } } },
 
     stack: { description: 'bar/area: true stacks; "percent" stacks to 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
@@ -14954,8 +15383,8 @@ const schema = {
       anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } }, { type: 'object', properties: { title: { type: 'string' }, fields: { type: 'array' }, text: { type: 'string' }, replace: { type: 'boolean' } } }],
     },
     crosshair: bool('line/area: false writes one tooltip column per x (with `data-tip`) instead of the browser crosshair: for pages that bring their own tooltip layer. Implied by `tooltip`.'),
-    band: { type: 'object', properties: { lower: { type: 'string' }, upper: { type: 'string' }, label: { type: 'string' } }, required: ['lower', 'upper'], description: 'line/area: an interval that comes already computed (a model\'s 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`.' },
-    missingLabel: { type: 'string', description: 'bar: what the tooltip says for a value that is missing (default "sin dato" / "no data"). A missing value is never drawn as 0.' },
+    band: { anyOf: [{ type: 'object', properties: { lower: { type: 'string' }, upper: { type: 'string' }, label: { type: 'string' } }, required: ['lower', 'upper'] }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2 }], description: 'line/area: an interval that comes already computed (a model\'s 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`. rail: [lo, hi] fields (or numbers) of the shaded band, e.g. the quartiles.' },
+    missingLabel: { type: 'string', description: 'bar: what the tooltip says for a value that is missing (default "sin dato" / "no data"). A missing value is never drawn as 0. heatmap: what the tooltip of a cell without a value says (default "—"). table: what a cell (and its tooltip) prints for a missing value (default "—").' },
     missingMark: { type: 'string', description: 'bar: text written at the base where a bar is missing ("n/a").' },
     xBands: { description: 'bar (columns) and line/area: shaded ranges of the x axis behind the marks: [{ from, to, label, color }].', anyOf: [{ type: 'object' }, { type: 'array', items: { type: 'object', properties: { from: {}, to: {}, label: { type: 'string' }, color: { type: 'string' } } } }] },
     href: field('treemap tiles, horizontal bar names, scatter dots, choropleth regions and network nodes (a field of `nodes`) link to the URL in this field (paths and http(s) only).'),
@@ -14994,13 +15423,20 @@ const schema = {
     cellHeight: number('heatmap: maximum cell height in px.'),
     floor: number('heatmap: values below are drawn as plain empty cells (not "no data"; the tooltip keeps the value) and do not count for the color scale.'),
     ceiling: number('heatmap: values above are drawn as plain empty cells and do not count for the color scale.'),
-    midClass: { type: 'string', enum: ['neutral'], description: 'heatmap with binned `colorScale.breaks` around 0: the class that contains 0 is drawn in the neutral tint, so near-zero cells are not painted.' },
+    midClass: { description: 'heatmap with binned `colorScale.breaks` around 0: "neutral" draws the class that contains 0 in the theme\'s neutral tint, so near-zero cells are not painted; { color } gives that class this color instead (a skin patch can set it without replacing the theme).', anyOf: [{ type: 'string', enum: ['neutral'] }, { type: 'object', properties: { color: { type: 'string' } } }] },
+    cornerLabel: { type: 'string', description: 'heatmap: a title in the empty corner where the row labels meet the column labels, e.g. "born in ↓ / lives in →". "\\n" breaks it into lines; the row-label column widens to fit (same cap). What does not fit is truncated, with the full text in its tooltip.' },
+    groupColors: { type: 'object', additionalProperties: { type: 'string' }, description: 'heatmap with `xGroup` / `yGroup`: a color per group name. Each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid, instead of the alternate tint.' },
     emptyRow: { type: 'string', description: 'heatmap: a row with no values at all is written across with this text (e.g. "no data") instead of empty cells.' },
     rowTip: field('heatmap: tooltip of each row label, from this field (first row of that label that has it): what belongs to the whole row and need not repeat in every cell. From JS, also a function (label) => text.'),
     rowHref: field('heatmap: row labels link to the URL in this field (first row of that label that has one; paths and http(s) only). From JS, also a function (label) => url.'),
     colHref: field('heatmap: column labels link to the URL in this field. From JS, also a function (label) => url.'),
     xLabelAngle: { type: 'number', minimum: -90, maximum: 90, description: 'heatmap: rotate the column labels (-90 upright, -45 slanted). The label strip grows to fit (long labels are cut, full name in the tooltip); labels are thinned only when they would touch.' },
     xLabelPosition: { type: 'string', enum: ['top', 'bottom'], description: 'heatmap: column labels under the grid (default) or over it.' },
+    yLabelPosition: { type: 'string', enum: ['left', 'above'], description: 'Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or "above" each row, so the value axis keeps the full width (a phone).' },
+    clamp: bool('strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0,01%", "≥ 100%") when some value lies beyond. On a log axis it also lets 0 sit on the low edge.'),
+    labelWidth: number('network: widest node label in px before it is truncated (default 150). dendrogram: widest names column in px (default 30% of the width horizontal, 120 px vertical).'),
+    treeWidth: number('dendrogram (horizontal): width of the tree in px; the names column takes the rest (e.g. 250 of 1236).'),
+    edgeTip: bool('network: false writes no tooltip on edges (also with `tooltip: false`). Hundreds of edges each with its own text weigh more than the drawing.'),
     cellGap: { description: 'heatmap: space between cells in px (default 2). 0 joins them (square corners); [x, y] per axis.', anyOf: [{ type: 'number', minimum: 0 }, { type: 'array', items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2 }] },
     diagonal: { description: 'heatmap: cells where x equals y (e.g. "stayed in the same region") are drawn apart: their own color, outside the color scale, with a legend entry and a tooltip line. true, a label, or { label, color, opacity }. A missing value stays "no data".', anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'object', properties: { label: { type: 'string' }, color: { type: 'string' }, opacity: { type: 'number', minimum: 0, maximum: 1 } } }] },
     cellColor: field('heatmap: a field whose value names the class of a cell ("Revised", "Estimate"); those cells are drawn in `colors[class]`, outside the color scale, with a legend entry and a tooltip line. A value written as a color (#hex, rgb(), var()) is used as is, without a legend entry.'),
@@ -15108,7 +15544,7 @@ function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = {}) {
   }
   name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, rail (one row of a distribution sized for a table cell), table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
