@@ -211,6 +211,14 @@
       "type": "string",
       "description": "Data source, shown at the bottom right."
     },
+    "ariaLabel": {
+      "type": "string",
+      "description": "Accessible name of the chart (the SVG <title> a screen reader reads) without drawing a title; default `title`, or the chart type when there is none."
+    },
+    "idPrefix": {
+      "type": "string",
+      "description": "Base of the SVG's internal ids (aria ids, map clip path, no-data pattern). Set it when the same chart appears twice on a page or ids must be stable across builds; letters, digits, - and _."
+    },
     "locale": {
       "type": "string",
       "enum": [
@@ -285,7 +293,7 @@
     },
     "sub": {
       "type": "string",
-      "description": "dendrogram (rows input): a second line under each leaf name (horizontal); rows grow to fit it."
+      "description": "dendrogram (rows input): a second line under each leaf name (horizontal); \"\\n\" splits it into several lines. Rows grow to fit."
     },
     "from": {
       "type": "string",
@@ -450,7 +458,7 @@
     },
     "rowHeight": {
       "type": "number",
-      "description": "gantt: row height in px."
+      "description": "gantt: row height in px. Horizontal box/violin/strip/swarm/point: px per category row, the exact pitch between rows (default 46; with hue and dodge, 22 per group + 12). Sets the chart height when `height` is not given."
     },
     "collapsed": {
       "description": "gantt: phases (values of `group`) drawn collapsed into one summary row; true collapses all. In the browser a click on a phase header toggles it.",
@@ -599,7 +607,7 @@
       ]
     },
     "links": {
-      "description": "choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), opacity, label }. Ends are region keys (same matching as `key`) or [lon, lat]. A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key \"from→to\".",
+      "description": "choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), widthScale (\"linear\" default, or \"sqrt\": width by the square root of value/max), opacity, label, fromLabel / toLabel (fields naming each end in the line's tooltip), format (number format of the line's tooltip, default the map's), ends (true or { radius }: a dot at each place a line joins) }. Ends are region keys (same matching as `key`) or [lon, lat] (named \"lat, lon\"; on already-projected geometry, \"x, y\"). A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key \"from→to\".",
       "anyOf": [
         {
           "type": "array",
@@ -651,6 +659,41 @@
         "type": "object"
       }
     },
+    "highlightMode": {
+      "type": "string",
+      "enum": [
+        "dim",
+        "outline"
+      ],
+      "description": "Maps with `highlight`: \"dim\" (default) outlines the highlighted regions and draws the rest at half opacity; \"outline\" only outlines them."
+    },
+    "highlightColor": {
+      "type": "string",
+      "description": "Maps: color of the outline around highlighted regions (default the theme ink). A CSS variable with a fallback works, and a skin or a view can set its own."
+    },
+    "highlightWidth": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Maps: width in pixels of the outline around highlighted regions (default 1.5)."
+    },
+    "fitPadding": {
+      "description": "Maps with `fitTo`: the margin around what is framed. A number is a fraction of the framed extent on each side (default 0.06; 0 = flush); \"12px\" is pixels inside the map box.",
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "string",
+          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*px\\s*$"
+        }
+      ]
+    },
+    "viewSelector": {
+      "type": "string",
+      "description": "choropleth with `views`: switch views with CSS from outside the SVG. A selector for an ANCESTOR of the <svg> with \"{id}\" in it, e.g. \"#map-block:has(input[value={id}]:checked)\" or \".show-{id}\"; from JS also a function (id, index) => selector. The emitted rules follow it instead of `data-view`: the first view shows when no selector matches. Tooltips are attributes and still need setView/bindViews (plotagents/views) to swap."
+    },
     "borderColor": {
       "type": "string",
       "description": "Map: color of the borders between regions."
@@ -676,7 +719,7 @@
     },
     "views": {
       "type": "array",
-      "description": "choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view's lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root's data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView). Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).",
+      "description": "choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view's lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root's data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView), or a selector outside the SVG with `viewSelector`. Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).",
       "items": {
         "type": "object",
         "properties": {
@@ -1257,6 +1300,14 @@
                   "domainLabel": {
                     "type": "string"
                   },
+                  "halo": {
+                    "type": "boolean",
+                    "description": "range: false drops the ring around the dot."
+                  },
+                  "outsideLabel": {
+                    "type": "string",
+                    "description": "range: how the tooltip says a value falls past a clipped end."
+                  },
                   "scale": {
                     "type": "string",
                     "enum": [
@@ -1557,6 +1608,18 @@
     "clip": {
       "type": "boolean",
       "description": "rail: the scale is [min, max]; a value or reference past an end is a chevron at that end (it does not stretch the scale)."
+    },
+    "railWidth": {
+      "type": "number",
+      "description": "rail: thickness of the min–max line in px (default: 2 at 18 px tall, thinner on shorter rails)."
+    },
+    "halo": {
+      "type": "boolean",
+      "description": "rail (and table `range` columns): false drops the ring in the background colour around the dot and the value chevron."
+    },
+    "outsideLabel": {
+      "type": "string",
+      "description": "rail (and table `range` columns): how the tooltip says a value or reference falls past a clipped end (default \"fuera de la escala\" / \"beyond the scale\"), e.g. \"más allá de la comuna más alta\". Text or a field of the row."
     },
     "fallback": {
       "type": "string",
@@ -2329,7 +2392,7 @@
       ]
     },
     "tooltip": {
-      "description": "What each mark says on hover, beyond its value. true keeps the default lines (on a dendrogram it also gives every join a card: height, leaves, weight, and the fields of its own row). A list of fields (\"Field: value\" lines from the mark's rows), or { title: field, fields: [field | { field, label, format }], text: field (pre-written text, may hold line breaks), replace: true (drop the default lines) }, or false. From JavaScript, also a function (d) => text | { title, lines }. A mark made of several rows shows a field only when they agree.",
+      "description": "What each mark says on hover, beyond its value. true keeps the default lines (on a dendrogram it also gives every join a card: height, leaves, weight, and the fields of its own row). A list of fields (\"Field: value\" lines from the mark's rows), or { title: field, fields: [field | { field, label, format }], text: field (pre-written text, may hold line breaks), replace: true (drop the default lines), omit: [\"Name\"] (drop only the default lines with that name) }, or false. Without a `title` the first line is the first in `data-tip`, and a host that reads \"heading\nlines\" (one reading `data-tip` itself) shows it as the heading. From JavaScript, also a function (d) => text | { title, lines }. A mark made of several rows shows a field only when they agree.",
       "anyOf": [
         {
           "type": "boolean"
@@ -2364,6 +2427,13 @@
             },
             "replace": {
               "type": "boolean"
+            },
+            "omit": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Default lines to drop, by name: \"Escala\" drops \"Escala: 0–40\" (the text before the colon, or the whole line); the rest stay. From JS also a RegExp."
             }
           }
         }
@@ -2570,7 +2640,25 @@
     },
     "radius": {
       "type": "number",
-      "description": "Point radius in px (scatter, regplot, strip, swarm)."
+      "description": "Point radius in px (scatter, regplot, strip, swarm). swarm: a starting value that shrinks until the widest cluster fits its band, unless `fixedRadius`."
+    },
+    "fixedRadius": {
+      "type": "boolean",
+      "description": "swarm: keep `radius` as given. Horizontal without `rowHeight` or `height`, the rows grow until the widest cluster fits; otherwise the dots that do not fit are pressed against the edge of their band and overlap."
+    },
+    "rowLine": {
+      "description": "box/violin/strip/swarm/point: a guide line along each category, across the value axis, behind the marks. true: solid; \"dashed\": dashed (2 3). Theme grid color.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "dashed"
+          ]
+        }
+      ]
     },
     "split": {
       "type": "boolean",
@@ -2660,7 +2748,7 @@
       "description": "heatmap: values above are drawn as plain empty cells and do not count for the color scale."
     },
     "midClass": {
-      "description": "heatmap with binned `colorScale.breaks` around 0: \"neutral\" draws the class that contains 0 in the theme's neutral tint, so near-zero cells are not painted; { color } gives that class this color instead (a skin patch can set it without replacing the theme).",
+      "description": "heatmap with binned `colorScale.breaks` around 0: \"neutral\" draws the class that contains 0 in the theme's neutral tint, so near-zero cells are not painted; { color } gives that class this color instead (a skin patch can set it without replacing the theme). `colorScale.colors` may then list one color per break (one fewer than the classes): the diverging colors without the middle one; the mid color is inserted at position k = the number of negative breaks (counted from the top with `reverse`). Needs 0 strictly inside the breaks and not a break itself.",
       "anyOf": [
         {
           "type": "string",
@@ -2687,7 +2775,15 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "heatmap with `xGroup` / `yGroup`: a color per group name. Each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid, instead of the alternate tint."
+      "description": "heatmap with `xGroup` / `yGroup`: a color per group name. Each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid, instead of the alternate tint (see `groupStripe`)."
+    },
+    "groupStripe": {
+      "type": "string",
+      "enum": [
+        "grid",
+        "labels"
+      ],
+      "description": "heatmap with `groupColors`: where the stripe goes. \"grid\" (default): on the group band, at its edge facing the grid. \"labels\": on the grid edge on the labels side, between the labels and the cells (over the grid with `xLabelPosition: \"top\"`; left of it for rows); the group band keeps only the names."
     },
     "emptyRow": {
       "type": "string",
@@ -2725,11 +2821,68 @@
         "left",
         "above"
       ],
-      "description": "Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or \"above\" each row, so the value axis keeps the full width (a phone)."
+      "description": "Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or \"above\" each row, so the value axis keeps the full width (a phone). In strip/swarm each row is a strip of `rowHeight` with its name on top and the dots under it, the name right above its highest dot."
     },
     "clamp": {
-      "type": "boolean",
-      "description": "strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so (\"≤ 0,01%\", \"≥ 100%\") when some value lies beyond. On a log axis it also lets 0 sit on the low edge."
+      "description": "strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so (\"≤ 0,01%\", \"≥ 100%\") when some value lies beyond; \"always\" marks both edge ticks even when nothing lies beyond. On a log axis it also lets 0 sit on the low edge.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "always"
+          ]
+        }
+      ]
+    },
+    "tickFormat": {
+      "description": "dendrogram: format of the height-axis ticks, apart from `format` (tooltips). Also read as `xFormat` (horizontal) or `yFormat` (vertical). Default: `format`.",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "number",
+            "compact",
+            "percent",
+            "currency",
+            "integer"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "number",
+                "compact",
+                "percent",
+                "currency",
+                "integer"
+              ]
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "decimals": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "currency": {
+              "type": "string"
+            },
+            "scale": {
+              "type": "number"
+            }
+          }
+        }
+      ]
     },
     "labelWidth": {
       "type": "number",
@@ -2924,6 +3077,23 @@
       },
       "description": "Pin colors to entities: { \"Biobío\": \"#3A47B8\" }. Any color may be a CSS variable with a fallback, \"var(--accent, #3A47B8)\": the page decides it, the fallback is used for contrast and tints."
     },
+    "bare": {
+      "description": "A light SVG for tiny chrome-less marks repeated in an HTML page that already says what they are (rail, spark; any type works): no <style> block (a type's own functional CSS stays), aria-hidden=\"true\" with no role, <title> or <desc>, no empty groups, no background unless `background: true`, no data-pa-* attributes (no runtime), no inline max-width, font-family only when there is text. Colours that are CSS variables are written once, as style=\"fill:var(--x, #fallback)\", without the presentation attribute. With `skins`, a var() of the page in every skin needs no skin rules; colours that change between skins become content-named variables on the class \"pa-skins\", whose rules go in a <style> of each SVG or, with { skinCSS: false }, once in the page from skinCSS(specs). For HTML pages: SVG files and rasterizers that ignore CSS should not use it.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "skinCSS": {
+              "type": "boolean",
+              "description": "false: no skin rules inside the SVG; write skinCSS(specs) once in the page."
+            }
+          }
+        }
+      ]
+    },
     "skins": {
       "type": "array",
       "description": "Several color sets in one SVG; page CSS picks which one shows. Each item patches the colors of the spec (theme, palette, ramp, colorScale, colors). The first is the default (written in the attributes); every other one needs `when`, the CSS selector of an ancestor under which it applies (e.g. \"html.dark\"). Geometry and text must not change between skins.",
@@ -3011,7 +3181,7 @@
               "items": {
                 "type": "number"
               },
-              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped."
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped. `breaks: []` with one color is a single class."
             },
             "closed": {
               "type": "string",
@@ -3062,7 +3232,7 @@
               "items": {
                 "type": "number"
               },
-              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped."
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped. `breaks: []` with one color is a single class."
             },
             "closed": {
               "type": "string",
@@ -3113,7 +3283,7 @@
               "items": {
                 "type": "number"
               },
-              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped."
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped. `breaks: []` with one color is a single class."
             },
             "closed": {
               "type": "string",

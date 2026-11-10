@@ -51,7 +51,7 @@ const { expandSkins, mergeSkins, cssVars, plotWithVars } = __req("src/skins.js")
 const { resolveColorScale, colorScaleNames, interpolate: interpolateColor, COLORMAPS, QUALITATIVE } = __req("src/colorscales.js");
 
 __req("src/core.js");
-const { RENDERERS, resolve, plot, configure, timeValues, withDefaults, registerRenderer } = __req("src/base.js");
+const { RENDERERS, resolve, plot, configure, timeValues, withDefaults, registerRenderer, skinCSS } = __req("src/base.js");
 
 registerRenderer('table', (s, t) => table(s, t));
 registerRenderer('choropleth', (s, t) => choropleth(s, t));
@@ -145,7 +145,7 @@ _setProbe((s) => plot(s));
 
 
 
-return { "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "registerRenderer": registerRenderer, "render": render, "countWords": countWords, "dashboardSchema": dashboardSchema, "detectLocale": detectLocale, "correlations": correlations, "resolveColorScale": resolveColorScale, "colorScaleNames": colorScaleNames, "interpolateColor": interpolateColor, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "dashboard": dashboard, "renderDashboard": renderDashboard, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "safeDashboard": safeDashboard, "mountDashboard": mountDashboard, "packRows": packRows, "balancedRows": balancedRows, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "mapSprite": mapSprite, "registerTheme": registerTheme, "resolveDefaults": withDefaults, "embedTiles": embedTiles, "TILE_PROVIDERS": TILE_PROVIDERS, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+return { "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "registerRenderer": registerRenderer, "skinCSS": skinCSS, "render": render, "countWords": countWords, "dashboardSchema": dashboardSchema, "detectLocale": detectLocale, "correlations": correlations, "resolveColorScale": resolveColorScale, "colorScaleNames": colorScaleNames, "interpolateColor": interpolateColor, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "dashboard": dashboard, "renderDashboard": renderDashboard, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "safeDashboard": safeDashboard, "mountDashboard": mountDashboard, "packRows": packRows, "balancedRows": balancedRows, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "mapSprite": mapSprite, "registerTheme": registerTheme, "resolveDefaults": withDefaults, "embedTiles": embedTiles, "TILE_PROVIDERS": TILE_PROVIDERS, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/core.js", function () {
 var __star = [];
@@ -204,7 +204,7 @@ const { facet } = __req("src/facet.js");
 const { parseDate } = __req("src/format.js");
 const { inferType, TYPES, normalizeType } = __req("src/infer.js");
 const { resolveColorScale } = __req("src/colorscales.js");
-const { expandSkins, mergeSkins, cssVars, plotWithVars } = __req("src/skins.js");
+const { expandSkins, mergeSkins, cssVars, plotWithVars, collectSkins, skinRules } = __req("src/skins.js");
 
 const RENDERERS = {};
 
@@ -254,8 +254,12 @@ function resolve(spec = {}) {
 function plot(spec) {
   if (spec && typeof spec === 'object') {
     const full = { ...DEFAULTS, ...spec };
+    if (full.bare && Array.isArray(full.skins) && full.skins.length) {
+      const [specs, whens] = expandSkins(full);
+      return mergeSkins(specs.map(plot), whens, { bare: true, style: !(typeof full.bare === 'object' && full.bare.skinCSS === false) });
+    }
     const vars = cssVars(full);
-    if (vars.size) return plotWithVars(full, vars, plot);
+    if (vars.size) return plotWithVars(full, vars, plot, !!full.bare);
   }
   const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
   if (Array.isArray(skins) && skins.length) {
@@ -271,6 +275,26 @@ function plot(spec) {
     if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
     return RENDERERS[s.type](s, theme);
   });
+}
+
+/**
+ * Las reglas de las pieles de unos gráficos `bare`, para escribirlas una vez
+ * en la página (con `bare: { skinCSS: false }` cada SVG no las lleva):
+ *
+ *   const css = skinCSS(specs);   // ".pa-skins{--pa-k:#6e86c8}html.x .pa-skins{--pa-k:#0b3f8c}"
+ *
+ * Dibuja cada spec (en modo `bare`) y junta las variables: cada una va una
+ * vez. Vacío si ningún color literal cambia entre pieles (los `var(--x)` de
+ * la página no necesitan reglas).
+ */
+function skinCSS(specs) {
+  const list = collectSkins(() => {
+    for (const s of [].concat(specs ?? [])) {
+      if (!s || typeof s !== 'object') continue;
+      plot({ ...s, bare: { ...(s.bare && typeof s.bare === 'object' ? s.bare : {}), skinCSS: false } });
+    }
+  });
+  return skinRules(list);
 }
 
 const DEFAULTS = {};
@@ -394,7 +418,7 @@ const __re1 = __req("src/format.js");
 const __re2 = __req("src/data.js");
 
 
-return { "registerTheme": __re0["registerTheme"], "themeFor": __re0["themeFor"], "themes": __re0["themes"], "palettes": __re0["palettes"], "ramps": __re0["ramps"], "makeFormat": __re1["makeFormat"], "formatNumber": __re1["formatNumber"], "formatCompact": __re1["formatCompact"], "PlotError": __re2["PlotError"], "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "registerRenderer": registerRenderer, "RENDERERS": RENDERERS, "default": plot, "withDefaults": withDefaults, "TYPES": TYPES };
+return { "registerTheme": __re0["registerTheme"], "themeFor": __re0["themeFor"], "themes": __re0["themes"], "palettes": __re0["palettes"], "ramps": __re0["ramps"], "makeFormat": __re1["makeFormat"], "formatNumber": __re1["formatNumber"], "formatCompact": __re1["formatCompact"], "PlotError": __re2["PlotError"], "resolve": resolve, "plot": plot, "skinCSS": skinCSS, "configure": configure, "timeValues": timeValues, "registerRenderer": registerRenderer, "RENDERERS": RENDERERS, "default": plot, "withDefaults": withDefaults, "TYPES": TYPES };
 });
 __def("src/theme.js", function () {
 
@@ -865,14 +889,36 @@ function resolveColorScale(v) {
  * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
  * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
  * i si breaks[i − 1] ≤ v < breaks[i] (con `closed: 'right'`, breaks[i − 1] < v ≤
- * breaks[i]); los cortes repetidos se funden. Devuelve { breaks, colors, cls, color } o
+ * breaks[i]); los cortes repetidos se funden; sin cortes, una sola clase. Devuelve { breaks, colors, cls, color } o
  * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
  */
+/**
+ * `midClass` con los colores divergentes sin el del medio: si
+ * `colorScale.colors` trae tantos colores como cortes (uno menos de lo que
+ * piden las clases), y el 0 cae dentro de una clase (no es un corte y hay
+ * cortes a ambos lados), `midColor` se inserta en la clase que contiene el 0:
+ * en la posición k = número de cortes negativos (contando desde abajo; con
+ * `reverse`, desde arriba, porque la lista se invierte después). Así una
+ * paleta divergente de 6 pasa tal cual con 6 cortes y un neutro en medio.
+ * Cualquier otro caso devuelve el spec sin tocar.
+ */
+function withMidClass(spec, midColor) {
+  const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+  if (!spec.midClass || !midColor || !cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks) || !Array.isArray(cs.colors)) return spec;
+  const breaks = cs.breaks.map(Number);
+  if (cs.colors.length !== breaks.length || breaks.some((b) => !Number.isFinite(b)) || breaks.includes(0) || !(breaks[0] < 0 && breaks[breaks.length - 1] > 0)) return spec;
+  const k = breaks.filter((b) => b < 0).length;
+  const at = cs.reverse ? breaks.length - k : k;
+  const colors = [...cs.colors.slice(0, at), midColor, ...cs.colors.slice(at)];
+  const key = spec.colorScale !== undefined ? 'colorScale' : spec.cmap !== undefined ? 'cmap' : 'colormap';
+  return { ...spec, [key]: { ...cs, colors } };
+}
+
 function binnedScale(spec) {
   const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
   if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
   let breaks = cs.breaks.map(Number);
-  if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
+  if (breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
   for (let i = 1; i < breaks.length; i++) if (breaks[i] < breaks[i - 1]) throw new PlotError('`colorScale.breaks` debe ir en orden creciente.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
   if (cs.closed !== undefined && cs.closed !== 'left' && cs.closed !== 'right') throw new PlotError('`colorScale.closed` es "left" (un valor igual a un corte va a la clase de arriba) o "right" (a la de abajo).', 'closed: "right"');
   let colors;
@@ -896,7 +942,7 @@ function binnedScale(spec) {
   return { breaks, colors, cls, color: (v) => colors[cls(v)], closed: cs.closed === 'right' ? 'right' : 'left' };
 }
 
-return { "interpolate": interpolate, "sample": sample, "colorScaleNames": colorScaleNames, "resolveColorScale": resolveColorScale, "binnedScale": binnedScale, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "DIVERGING": DIVERGING, "CYCLIC": CYCLIC, "RAINBOW": RAINBOW };
+return { "interpolate": interpolate, "sample": sample, "colorScaleNames": colorScaleNames, "resolveColorScale": resolveColorScale, "withMidClass": withMidClass, "binnedScale": binnedScale, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "DIVERGING": DIVERGING, "CYCLIC": CYCLIC, "RAINBOW": RAINBOW };
 });
 __def("src/rgb.js", function () {
 
@@ -1489,7 +1535,8 @@ function facet(spec, theme, renderOne) {
   const draw = (k, i, extra = {}) => {
     try {
       const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
-      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
+      const own = base.idPrefix !== undefined && base.idPrefix !== null && base.idPrefix !== '' ? { idPrefix: `${base.idPrefix}-${i}` } : {};
+      return renderOne({ ...base, ariaLabel: undefined, ...own, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
     } catch (e) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
     }
@@ -1506,7 +1553,7 @@ function facet(spec, theme, renderOne) {
   const body = svgs.map((svg, i) => {
     const c = i % cols, r = Math.floor(i / cols);
     const px = area.x + c * (pw + gap), py = rowY[r];
-    return svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/ style="[^"]*"/, '');
+    return svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/^(<svg\b[^>]*?) style="[^"]*"/, '$1'); // sólo el de la raíz (con `bare` la raíz no lo trae y el primero sería de una marca)
   });
   const en = String(spec.locale || 'es').startsWith('en');
   const desc = (en ? `Small multiples by ${f}: ` : `Paneles por ${f}: `) + keys.join(', ') + '.';
@@ -1731,8 +1778,11 @@ function createFrame(spec, theme, defaults = {}) {
         header.push(svg);
       }
       srcLines.forEach((l, i) => parts.push(text(width - pad, height - pad - 2 - (srcLines.length - 1 - i) * srcLH, l, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' })));
-      const id = 'pa' + Math.abs(hash((spec.title || '') + type + width + desc)).toString(36);
+      const label = spec.ariaLabel === undefined || spec.ariaLabel === null || spec.ariaLabel === '' ? null : String(spec.ariaLabel);
+      const id = spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '' ? domId(spec.idPrefix)
+        : 'pa' + Math.abs(hash((spec.title || '') + type + width + desc + (label ? '|' + label : ''))).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
+      if (spec.bare) return bareSvg({ spec, theme, width, height, header, body, parts, defs, css: fontImport + css, root });
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
         + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '')
@@ -1758,7 +1808,7 @@ function createFrame(spec, theme, defaults = {}) {
           ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
-          el('title', { id: `${id}-t` }, esc(spec.title || type)),
+          el('title', { id: `${id}-t` }, esc(label ?? (spec.title || type))),
           el('desc', { id: `${id}-d` }, esc(desc)),
           el('style', {}, style),
           defs ? el('defs', {}, defs) : '',
@@ -1771,6 +1821,41 @@ function createFrame(spec, theme, defaults = {}) {
     },
   };
   return frame;
+}
+
+/**
+ * `bare: true`: la marca liviana, para cientos de rieles o sparklines en una
+ * página HTML que ya dice qué son. Sin <style> de interacción (sí el CSS
+ * propio del tipo: vistas de un mapa, fichas de una tabla), sin <title> ni
+ * <desc> y `aria-hidden` (el sentido lo lleva el HTML de alrededor), sin
+ * grupos vacíos, sin fondo (salvo `background: true`), sin data-pa-* (no hay
+ * runtime) y sin `max-width:100%` en línea, que en una tabla automática deja
+ * la columna en cero. `font-family` sólo si hay texto y no es `inherit`.
+ */
+function bareSvg({ spec, theme, width, height, header, body, parts, defs, css, root }) {
+  const h = r2(height);
+  const inner = [
+    defs ? el('defs', {}, defs) : '',
+    spec.background === true ? el('rect', { width, height: h, fill: theme.surface }) : '',
+    header.length ? g({ class: 'pa-header' }, header) : '',
+    body,
+    parts.join(''),
+  ].flat(Infinity).filter(Boolean).join('');
+  const hasText = /<text\b/.test(inner);
+  const family = spec.fontFamily || theme.font?.family || FONT;
+  const { class: cls, ...rest } = root || {};
+  return el('svg', {
+    xmlns: 'http://www.w3.org/2000/svg',
+    viewBox: `0 0 ${width} ${h}`,
+    width,
+    height: h,
+    'aria-hidden': 'true',
+    class: 'pa-chart' + (cls ? ' ' + cls : ''),
+    fontFamily: hasText && family !== 'inherit' ? family : null,
+    style: hasText ? 'font-variant-numeric:lining-nums' : null,
+    'data-pa-tip': theme.tooltip && (theme.tooltip.bg || theme.tooltip.ink) ? `${theme.tooltip.bg || ''},${theme.tooltip.ink || ''}` : null,
+    ...rest,
+  }, (css ? el('style', {}, css) : '') + inner);
 }
 
 /** Posición de la leyenda: `legend: "top" | "bottom" | "left" | "right"` (o { position }). */
@@ -1873,13 +1958,16 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
   return { svg: g({ class: 'pa-legend' }, out), h: rows * rowH - 6 * X };
 }
 
+/** Un id de SVG/CSS a partir de lo que dé quien llama (letras, dígitos, - y _). */
+const domId = (v) => { const s = String(v).replace(/[^A-Za-z0-9_-]+/g, '-'); return /^[A-Za-z_]/.test(s) ? s : 'pa-' + s; };
+
 function hash(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return h;
 }
 
-return { "createFrame": createFrame, "legendPosition": legendPosition, "hash": hash, "SIZES": SIZES };
+return { "createFrame": createFrame, "legendPosition": legendPosition, "hash": hash, "SIZES": SIZES, "domId": domId };
 });
 __def("src/text.js", function () {
 const { ctx } = __req("src/context.js");
@@ -2265,11 +2353,13 @@ const COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g;
 const PRESENTATION = new Set(['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color', 'color']);
 const OWN = new Set(['when', 'name']);
 
+const COLOR_OR_VAR = new RegExp(`var\\(\\s*--[\\w-]+\\s*,\\s*(?:${COLOR.source})\\s*\\)|${COLOR.source}`, 'g');
+
 /** Parte un SVG en [texto, color, texto, color, …, texto]. */
-function tokens(svg) {
+function tokens(svg, re = COLOR) {
   const out = [];
   let last = 0;
-  for (const m of svg.matchAll(COLOR)) {
+  for (const m of svg.matchAll(re)) {
     out.push(svg.slice(last, m.index), m[0]);
     last = m.index + m[0].length;
   }
@@ -2326,7 +2416,7 @@ function same(parts, msg, fix) {
  * `css(color)`; en un atributo de presentación se suma `prop:decl` al style y
  * el atributo conserva el literal. En data-* y en el texto no se toca.
  */
-function rewrite(svg, base, at) {
+function rewrite(svg, base, at, bare = false) {
   const offsets = [];
   let pos = 0;
   for (const t of base) { offsets.push(pos); pos += t.length; }
@@ -2338,10 +2428,21 @@ function rewrite(svg, base, at) {
     if (c.kind === 'css' || (c.kind === 'tag' && c.attr === 'style')) {
       svg = svg.slice(0, start) + css(color) + svg.slice(start + color.length);
     } else if (c.kind === 'tag' && PRESENTATION.has(c.attr)) {
+      if (bare) svg = dropAttr(svg, c.start, start);
       svg = addStyle(svg, c.start, `${c.attr}:${decl}`);
     }
   }
   return svg;
+}
+
+/** Quita el atributo que contiene la posición `at` de la etiqueta que empieza en `start`. */
+function dropAttr(svg, start, at) {
+  const head = svg.slice(start, at);
+  const m = head.match(/\s[\w:-]+="[^"]*$/);
+  if (!m) return svg;
+  const from = start + m.index;
+  const to = svg.indexOf('"', at) + 1;
+  return svg.slice(0, from) + svg.slice(to);
 }
 
 
@@ -2396,7 +2497,7 @@ function replaceVars(v, map, which, key) {
 }
 
 /** Dibuja un spec con colores `var(--x, respaldo)`; `draw` es plot() sin variables. */
-function plotWithVars(spec, map, draw) {
+function plotWithVars(spec, map, draw, bare = false) {
   const a = draw(replaceVars(spec, map, 'fallback'));
   const b = draw(replaceVars(spec, map, 'probe'));
   const pa = tokens(a);
@@ -2411,7 +2512,7 @@ function plotWithVars(spec, map, draw) {
     if (!v) continue; // un derivado: queda calculado con el respaldo
     at.push([j, (c) => `var(${v.name}, ${c})`, `var(${v.name}, ${pa[j]})`]);
   }
-  return rewrite(a, pa, at);
+  return rewrite(a, pa, at, bare);
 }
 
 /** Un hash corto y estable (para el nombre de la clase de la piel). */
@@ -2438,12 +2539,14 @@ function skinSpec(spec, patch) {
  * Une los SVG de varias pieles en uno. `svgs[0]` es la piel por defecto;
  * `whens[i]` es el selector CSS (de un ancestro) bajo el que rige la piel i.
  */
-function mergeSkins(svgs, whens) {
+function mergeSkins(svgs, whens, { bare = false, style = true } = {}) {
   if (svgs.length === 1) return svgs[0];
-  const parts = svgs.map(tokens);
+  const parts = svgs.map((s) => tokens(s, bare ? COLOR_OR_VAR : COLOR));
   const n = parts[0].length;
   same(parts, (i) => `La piel ${i + 1} cambia algo más que colores (posiciones, textos u orden).`,
-    'Una piel sólo puede traer theme, palette, ramp, colorScale y colors: lo demás va en el spec.');
+    bare ? 'Con `bare`, un color es `var()` en todas las pieles o en ninguna; y una piel sólo puede traer theme, palette, ramp, colorScale y colors.'
+      : 'Una piel sólo puede traer theme, palette, ramp, colorScale y colors: lo demás va en el spec.');
+  if (bare) return mergeBare(svgs, parts, whens, style);
   const vars = new Map();
   const at = []; // [índice del token, nombre de la variable]
   for (let j = 1; j < n; j += 2) {
@@ -2471,6 +2574,71 @@ function mergeSkins(svgs, whens) {
   return svg;
 }
 
+
+const VAR_NAME = /^var\(\s*(--[\w-]+)/;
+const SKINS_CLASS = 'pa-skins';
+
+let sink = null;
+
+/** Corre `fn` y devuelve las pieles `bare` que se dibujaron: [{ whens, vars: [{ name, combo }] }]. */
+function collectSkins(fn) {
+  const prev = sink;
+  const got = [];
+  sink = got;
+  try { fn(); } finally { sink = prev; }
+  return got;
+}
+
+/** La hoja de estilo de unas pieles `bare` (ver collectSkins), con cada variable una vez. */
+function skinRules(list) {
+  const groups = new Map(); // selectores → { whens, vars: Map(name → combo) }
+  for (const { whens, vars } of list) {
+    const key = whens.join('\u0000');
+    if (!groups.has(key)) groups.set(key, { whens, vars: new Map() });
+    for (const v of vars) groups.get(key).vars.set(v.name, v.combo);
+  }
+  const out = [];
+  for (const { whens, vars } of groups.values()) {
+    const names = [...vars.keys()].sort();
+    const decl = (i) => names.map((nm) => `${nm}:${vars.get(nm)[i]}`).join(';');
+    out.push(`${whens[0] ? whens[0] + ' ' : ''}.${SKINS_CLASS}{${decl(0)}}`);
+    for (let i = 1; i < whens.length; i++) if (whens[i]) out.push(`${whens[i]} .${SKINS_CLASS}{${decl(i)}}`);
+  }
+  return out.join('');
+}
+
+function mergeBare(svgs, parts, whens, style) {
+  const vars = new Map();
+  const at = [];
+  let pos = 0;
+  for (let j = 1; j < parts[0].length; j += 2) {
+    pos += parts[0][j - 1].length;
+    const at0 = pos;
+    pos += parts[0][j].length;
+    const combo = parts.map((p) => p[j]);
+    if (combo.every((c) => c.toLowerCase() === combo[0].toLowerCase())) continue;
+    const c = contextAt(svgs[0], at0);
+    if (!(c.kind === 'css' || (c.kind === 'tag' && (c.attr === 'style' || PRESENTATION.has(c.attr))))) continue;
+    const v0 = VAR_NAME.exec(combo[0]);
+    if (v0 && combo.every((c) => (VAR_NAME.exec(c) || [])[1] === v0[1])) continue;
+    const key = combo.map((c) => c.toLowerCase().replace(/\s+/g, '')).join('|');
+    if (!vars.has(key)) vars.set(key, { name: '--pa-' + hash(key + '\u0000' + whens.join('|')), combo });
+    at.push([j, vars.get(key).name]);
+  }
+  if (!vars.size) return svgs[0];
+  let svg = rewrite(svgs[0], parts[0], at.map(([j, name]) => [j, (c) => `var(${name}, ${c})`, `var(${name}, ${parts[0][j]})`]), true);
+  svg = svg.replace(/^<svg\b([^>]*?)\sclass="([^"]*)"/, (m, a, c) => `<svg${a} class="${c} ${SKINS_CLASS}"`);
+  if (!svg.includes(SKINS_CLASS)) svg = svg.replace(/^<svg\b/, `<svg class="${SKINS_CLASS}"`);
+  const entry = { whens, vars: [...vars.values()] };
+  if (sink) sink.push(entry);
+  if (style) {
+    const css = skinRules([entry]);
+    if (/^<svg\b[^>]*>(<style>)/.test(svg)) svg = svg.replace('</style>', css + '</style>');
+    else svg = svg.replace(/^(<svg\b[^>]*>)/, `$1<style>${css}</style>`);
+  }
+  return svg;
+}
+
 /** Valida `skins` y devuelve [specs, whens]. */
 function expandSkins(spec) {
   const list = spec.skins;
@@ -2485,7 +2653,7 @@ function expandSkins(spec) {
   return [list.map((p) => skinSpec(spec, p)), list.map((p) => (p.when ? p.when.trim() : null))];
 }
 
-return { "cssVars": cssVars, "plotWithVars": plotWithVars, "skinSpec": skinSpec, "mergeSkins": mergeSkins, "expandSkins": expandSkins };
+return { "cssVars": cssVars, "plotWithVars": plotWithVars, "skinSpec": skinSpec, "mergeSkins": mergeSkins, "collectSkins": collectSkins, "skinRules": skinRules, "expandSkins": expandSkins, "SKINS_CLASS": SKINS_CLASS };
 });
 __def("src/charts/bar.js", function () {
 const { parseRgb } = __req("src/rgb.js");
@@ -2917,6 +3085,8 @@ function tipper(spec, data, locale) {
     }
     return index.get(sig).get(keys.map((f) => String(match[f])).join('\u0000')) || [];
   };
+  const omit = o.omit === undefined || o.omit === null ? [] : [].concat(o.omit);
+  const dropped = (l) => omit.some((p) => (p instanceof RegExp ? p.test(l) : l === String(p) || l.startsWith(String(p) + ':')));
   const fmts = new Map();
   const fmtField = (f, fmt) => {
     if (!fmts.has(f)) fmts.set(f, makeFormat(fmt ?? spec.format, locale, (data || []).map((r) => num(r[f])).filter(Number.isFinite)));
@@ -2929,7 +3099,7 @@ function tipper(spec, data, locale) {
   };
   return (match, title, ...lines) => {
     const rows = rowsOf(match);
-    const base = lines.filter((l) => l !== undefined && l !== null && l !== '');
+    const base = lines.filter((l) => l !== undefined && l !== null && l !== '' && !(omit.length && dropped(String(l))));
     if (o.fn) {
       const out = o.fn({ title, lines: base, rows, row: rows[0], match: Array.isArray(match) ? undefined : match });
       if (out === null || out === undefined || out === false) return undefined;
@@ -3185,17 +3355,17 @@ function groupBandWidth(runs, maxW, size = 11.5) {
  * Banda de grupos bajo un eje horizontal. `pos(i)` → [x0, x1] de la categoría i;
  * `y` es el borde superior de la banda; la línea entre grupos sube hasta `top`.
  */
-function groupBandX(runs, pos, y, theme, top, size = 11.5, colors) {
+function groupBandX(runs, pos, y, theme, top, size = 11.5, colors, stripe = true) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
     const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
-    if (c) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: 3, fill: c }));
+    if (c) { if (stripe) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: 3, fill: c })); }
     else if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: a - 1, x2: a - 1, y1: top, y2: y + GROUP_BAND - 4, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
     if (r.group && b - a >= 24) {
       const t = truncate(r.group, b - a - 6, size, 500);
-      const node = text((a + b) / 2, y + 13 + (c ? 2 : 0) + (ctx.textScale - 1) * 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' });
+      const node = text((a + b) / 2, y + 13 + (c && stripe ? 2 : 0) + (ctx.textScale - 1) * 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' });
       out.push(t === r.group ? node : g({ 'data-tip': r.group }, node));
     } else if (r.group) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, fill: 'transparent', 'data-tip': r.group }));
   });
@@ -3206,12 +3376,12 @@ function groupBandX(runs, pos, y, theme, top, size = 11.5, colors) {
  * Banda de grupos a la izquierda de un eje vertical. `pos(i)` → [y0, y1];
  * `x`, `w` = posición y ancho de la banda; la línea entre grupos llega a `right`.
  */
-function groupBandY(runs, pos, x, w, theme, right, size = 11.5, colors) {
+function groupBandY(runs, pos, x, w, theme, right, size = 11.5, colors, stripe = true) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
     const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
-    if (c) out.push(el('rect', { x, y: a, width: 3, height: Math.max(0, b - a), fill: c }));
+    if (c) { if (stripe) out.push(el('rect', { x, y: a, width: 3, height: Math.max(0, b - a), fill: c })); }
     else if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: x, x2: right, y1: a - 1, y2: a - 1, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
     if (r.group && b - a >= 12) {
@@ -6191,7 +6361,7 @@ function prepare(spec) {
  * Ejes, escalas, colores y leyenda compartidos por los cinco gráficos.
  * `extent` = [min, max] de los valores a mostrar (incluye bigotes, IC, etc.).
  */
-function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowStep } = {}) {
+function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowStep, tight = false } = {}) {
   const locale = spec.locale || 'es';
   const vertical = !(spec.horizontal ?? (spec.orient === 'h' ? true : spec.orient === 'v' ? false : undefined) ?? autoHorizontal(spec, m));
   const valueScale = (vertical ? spec.yScale : spec.xScale) ?? spec.valueScale ?? spec.scale;
@@ -6218,7 +6388,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const yTitle = vertical ? spec.yLabel ?? humanize(m.val) : spec.yLabel;
   const xTitle = vertical ? spec.xLabel : spec.xLabel ?? humanize(m.val);
   const body = { pre: [], marks: [], post: [] };
-  let valS, nd, ticks, tickFmt, inner, catS;
+  let valS, nd, ticks, tickFmt, inner, catS, step, placeLabels = null;
   const groupF = m.cat ? spec.xGroup ?? spec.yGroup : null;
   if (groupF) requireField(m.data, groupF, spec.xGroup ? 'xGroup' : 'yGroup');
   const runs = groupF ? groupRuns(m.cats, m.data, m.cat, groupF) : null;
@@ -6230,7 +6400,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     const h0 = area.h - top - bottom;
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(h0 / 56)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
-    if (clamp) tickFmt = clampTicks(tickFmt, nd, m.all);
+    if (clamp) tickFmt = clampTicks(tickFmt, nd, m.all, spec.clamp === 'always');
     const leftM = yAxisMargin(ticks, tickFmt, theme);
     inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: h0 };
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
@@ -6248,27 +6418,43 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   } else {
     const above = spec.yLabelPosition === 'above' && !!m.cat;
+    const tightAbove = above && tight;
     const labelW = m.cat && !above ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
-    const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
+    step = rowStep ?? rowHeightOf(spec) ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
+    const exact = rowStep !== undefined || rowHeightOf(spec) !== undefined;
+    const span = !exact ? m.cats.length * step : tightAbove ? m.cats.length * step : (m.cats.length - (above ? 0.42 : 0.28) + 0.16) * step + (above ? 14 : 0);
     if (spec.height === undefined) {
-      frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
+      frame.setHeight(area.y + span + 30 + (xTitle ? 20 : 0) + frame.chrome);
       area = { ...area, h: frame.bottom - area.y };
     }
     const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
     inner = { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
-    if (above) { inner.y += 14; inner.h -= 14; }
+    if (above && !tightAbove) { inner.y += 14; inner.h -= 14; }
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(inner.w / 100)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.x, inner.x + inner.w);
-    if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all); }
-    catS = band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
+    if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all, spec.clamp === 'always'); }
+    const lineH = (axisSize + 0.5) * ctx.textScale + 4;
+    catS = tightAbove ? rowBands(m.cats, inner.y, inner.h, lineH) : band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
     body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN }));
-    if (runs) body.pre.push(groupBandY(runs, (i) => [catS.center(m.cats[i]) - catS.step / 2 + 1, catS.center(m.cats[i]) + catS.step / 2 - 1], area.x, gW, theme, inner.x + inner.w));
-    if (m.cat) for (const [ci, c] of m.cats.entries()) {
+    const rowSpan = (c) => (tightAbove ? [catS.top(c) + 1, catS.top(c) + catS.step - 1] : [catS.center(c) - catS.step / 2 + 1, catS.center(c) + catS.step / 2 - 1]);
+    if (runs) body.pre.push(groupBandY(runs, (i) => rowSpan(m.cats[i]), area.x, gW, theme, inner.x + inner.w));
+    const label = (c, y, attrs) => text(attrs ? inner.x - 10 : inner.x, y, truncate(c, attrs ? labelW - 12 : inner.w, axisSize + 0.5), { fill: !hl || hl.has(c) ? theme.ink : theme.muted, fontSize: axisSize + 0.5, ...attrs });
+    if (m.cat && tightAbove) {
+      const at = body.post.length;
+      placeLabels = (topOf) => {
+        const out = [];
+        for (const [ci, c] of m.cats.entries()) {
+          if (ci % tickEvery) continue;
+          const dotTop = topOf.get(c) ?? catS.center(c) - 4;
+          out.push(label(c, Math.max(catS.top(c) + (axisSize + 0.5) * ctx.textScale, dotTop - 4)));
+        }
+        body.post.splice(at, 0, ...out);
+      };
+    } else if (m.cat) for (const [ci, c] of m.cats.entries()) {
       if (ci % tickEvery) continue;
-      const strong = !hl || hl.has(c);
-      if (above) body.post.push(text(inner.x, catS(c) - 4, truncate(c, inner.w, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5 }));
-      else body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
+      if (above) body.post.push(label(c, catS(c) - 4));
+      else body.post.push(label(c, catS.center(c) + 4.5, { textAnchor: 'end' }));
     }
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
@@ -6277,11 +6463,23 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const refs = [].concat(spec.refLines ?? []).filter((r) => r && typeof r === 'object').map((r) => ({ ...r, y: r.value ?? r.y ?? r.x }));
   if (refs.length) body.post.push(vertical ? refLinesY(refs, valS, inner, theme, fmt) : refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), valS, inner, theme, fmt));
 
+  if (spec.rowLine && m.cat) {
+    const dash = spec.rowLine === 'dashed' ? '2 3' : null;
+    const lines = m.cats.map((c) => {
+      const p = Math.round(catS.center(c)) + 0.5;
+      return vertical
+        ? el('line', { x1: p, x2: p, y1: inner.y, y2: inner.y + inner.h, stroke: theme.grid, strokeWidth: 1, strokeDasharray: dash })
+        : el('line', { x1: inner.x, x2: inner.x + inner.w, y1: p, y2: p, stroke: theme.grid, strokeWidth: 1, strokeDasharray: dash });
+    });
+    body.pre.push(g({ class: 'pa-rowlines' }, lines));
+  }
+
   const k = multiHue && dodge ? m.hues.length : 1;
   const slot = catS.bandwidth / k;
   const center = (c, hi2) => catS(c) + (k > 1 ? slot * (hi2 + 0.5) : catS.bandwidth / 2);
   const P = (cpos, v) => (vertical ? [cpos, valS(v)] : [valS(v), cpos]);
-  return { frame, vertical, valS, catS, slot, center, P, fmt, colorOf, body, inner, locale, hl, multiHue };
+  const s = { frame, vertical, valS, catS, slot, center, P, fmt, colorOf, body, inner, locale, hl, multiHue, step, placeLabels };
+  return s;
 }
 
 /**
@@ -6292,10 +6490,37 @@ function clampScale(sc, nd) {
   const s = (v) => sc(Math.min(nd.max, Math.max(nd.min, v)));
   return Object.assign(s, sc);
 }
-function clampTicks(tf, nd, all) {
-  const below = all.some((v) => v < nd.min), over = all.some((v) => v > nd.max);
+function clampTicks(tf, nd, all, always = false) {
+  const below = always || all.some((v) => v < nd.min), over = always || all.some((v) => v > nd.max);
   const at = (t, b) => Math.abs(t - b) <= Math.abs(b) * 1e-9 + 1e-12;
   return (t) => (below && at(t, nd.min) ? `≤ ${tf(t)}` : over && at(t, nd.max) ? `≥ ${tf(t)}` : tf(t));
+}
+
+/** `rowHeight`: px por fila en horizontal (un número positivo), o undefined. */
+function rowHeightOf(spec) {
+  const h = +spec.rowHeight;
+  return spec.rowHeight != null && Number.isFinite(h) && h > 0 ? h : undefined;
+}
+
+/**
+ * Filas de alto fijo para `yLabelPosition: "above"` en strip/swarm: la franja
+ * de cada fila lleva una línea de texto arriba y la banda de puntos debajo.
+ * Misma forma que `band()` (s(c) = inicio de la banda, center, bandwidth,
+ * step) más `top(c)`, el borde superior de la fila.
+ */
+function rowBands(cats, y0, h, lineH) {
+  const n = Math.max(1, cats.length);
+  const step = h / n;
+  const bw = Math.max(1, step - lineH - 2);
+  const idx = new Map(cats.map((d, i) => [d, i]));
+  const top = (c) => y0 + (idx.get(c) ?? 0) * step;
+  const s = (c) => top(c) + lineH;
+  s.bandwidth = bw;
+  s.step = step;
+  s.domain = cats;
+  s.center = (c) => s(c) + bw / 2;
+  s.top = top;
+  return s;
 }
 
 function autoHorizontal(spec, m) {
@@ -6446,7 +6671,8 @@ function violin(spec, theme) {
 
 function strip(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true });
+  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true, tight: true });
+  const tops = new Map();
   const n = m.all.length;
   const r = spec.radius ?? (n > 600 ? 2 : n > 200 ? 2.75 : (theme.marks?.pointRadius ?? 4) - 0.5);
   const jitter = spec.jitter ?? 0.6;
@@ -6460,6 +6686,7 @@ function strip(spec, theme) {
     const w = s.slot * (jitter === true ? 0.6 : jitter || 0);
     const parts = vs.map((v, i) => {
       const [x, y] = s.P(cpos + (rand(ci * 7919 + hi2 * 104729 + i) - 0.5) * w, v);
+      if (s.placeLabels) tops.set(c, Math.min(tops.get(c) ?? Infinity, y - r));
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': TT([rows[i]], fmtTipLabel(c, h), s.fmt(v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
@@ -6469,6 +6696,7 @@ function strip(spec, theme) {
     }
     s.body.marks.push(g({}, parts));
   }));
+  if (s.placeLabels) s.placeLabels(tops);
   return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip');
 }
 
@@ -6502,8 +6730,10 @@ function beeswarm(positions, r) {
 
 function swarm(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
-  const groupsOf = (c) => (s.multiHue && (spec.dodge ?? false) ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
+  const dodge = spec.dodge ?? false;
+  let s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge, tight: true });
+  const groupsOf = (c) => (s.multiHue && dodge ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
+  const fixed = !!spec.fixedRadius;
   let r = spec.radius ?? (theme.marks?.pointRadius ?? 4);
   const TT = tipper(spec, m.data, s.locale);
   const layouts = () => m.cats.map((c) => groupsOf(c).map(([hs, hi2]) => {
@@ -6511,20 +6741,38 @@ function swarm(spec, theme) {
     const offs = beeswarm(items.map((it) => s.valS(it.v)), r);
     return { c, hi2, items, offs, width: Math.max(0, ...offs.map(Math.abs)) * 2 + 2 * r };
   }));
+  const roomOf = () => (spec.dodge ? s.slot : s.catS.bandwidth) * 0.98;
   let L = layouts();
-  const room = (spec.dodge ? s.slot : s.catS.bandwidth) * 0.98;
-  for (let it = 0; it < 12 && Math.max(...L.flat().map((x) => x.width)) > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
+  let room = roomOf();
+  const widest = () => Math.max(...L.flat().map((x) => x.width));
+  if (!fixed) {
+    for (let it = 0; it < 12 && widest() > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
+  } else if (!s.vertical && spec.height === undefined && spec.rowHeight == null) {
+    for (let it = 0; it < 3 && widest() > room + 1e-6; it++) {
+      const k = dodge && s.multiHue ? m.hues.length : 1;
+      const need = (widest() * k) / 0.98;
+      const band = s.catS.bandwidth;
+      const step = s.step + (need - band) * (s.step / Math.max(1e-9, s.placeLabels ? s.step : band)) + 0.5;
+      s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge, tight: true, rowStep: Math.ceil(step) });
+      L = layouts();
+      room = roomOf();
+    }
+  }
+  const tops = new Map();
   for (const grp of L.flat()) {
     const cpos = spec.dodge ? s.center(grp.c, grp.hi2) : s.catS.center(grp.c);
+    const lim = Math.max(0, room / 2 - r);
     const parts = grp.items.map((it, i) => {
-      const o = Math.max(-room / 2 + r, Math.min(room / 2 - r, grp.offs[i]));
+      const o = Math.max(-lim, Math.min(lim, grp.offs[i]));
       const [x, y] = s.vertical ? [cpos + o, s.valS(it.v)] : [s.valS(it.v), cpos + o];
+      if (s.placeLabels) tops.set(grp.c, Math.min(tops.get(grp.c) ?? Infinity, y - r));
       const color = s.colorOf(grp.c, it.h);
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': TT([it.row], fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
+  if (s.placeLabels) s.placeLabels(tops);
   return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
 }
 
@@ -7388,6 +7636,11 @@ function network(spec, theme) {
   const P = (x, y) => `${f1(x)},${f1(y)}`;
   const linkG = [];
   const edgeTips = spec.edgeTip !== false && spec.tooltip !== false;
+  const titleF = spec.tooltip && typeof spec.tooltip === 'object' && !Array.isArray(spec.tooltip) && typeof spec.tooltip.title === 'string' ? spec.tooltip.title : null;
+  const fullName = (n) => {
+    const v = titleF && n.row ? n.row[titleF] : undefined;
+    return v === undefined || v === null || v === '' ? n.label : String(v);
+  };
   for (const e of [...edges].sort((a, b) => (!!pinE(a) - !!pinE(b)) || a.v - b.v)) {
     const a = byId.get(e.src), b = byId.get(e.dst);
     const w = Number.isFinite(eW) ? eW : pair(eW) ? eW[0] + (eW[1] - eW[0]) * Math.sqrt(e.v / maxE) : valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
@@ -7414,7 +7667,7 @@ function network(spec, theme) {
       class: 'pa-m', d, stroke: hl && !active ? theme.muted : pinE(e) || edgeInk || colorOf(a),
       strokeOpacity: op === baseOp ? undefined : op, strokeWidth: sw === 1 ? undefined : sw,
       'data-s': e.src, 'data-t': e.dst,
-      'data-tip': edgeTips ? tip(`${a.label} — ${b.label}`, fmtE(e.v)) : undefined,
+      'data-tip': edgeTips ? tip(`${fullName(a)} — ${fullName(b)}`, fmtE(e.v)) : undefined,
     }));
   }
   const links = g({ class: 'pa-links', fill: 'none', strokeLinecap: 'round', strokeOpacity: baseOp, strokeWidth: 1 }, linkG);
@@ -8911,7 +9164,7 @@ const { ramp, textOn, isColor, hexToRgb, rgbToHex } = __req("src/theme.js");
 const { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize } = __req("src/data.js");
 const { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } = __req("src/axes.js");
 const { createFrame, hash, SIZES } = __req("src/frame.js");
-const { binnedScale } = __req("src/colorscales.js");
+const { binnedScale, withMidClass } = __req("src/colorscales.js");
 
 const CS = 11.5; // cuerpo del título de la esquina
 
@@ -8948,8 +9201,8 @@ function heatmap(spec, theme) {
   const fmt = makeFormat(spec.format, locale, finite);
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const stops = mid !== undefined ? theme.diverging : theme.sequential;
-  const bins0 = binnedScale(spec);
   const midC = spec.midClass === 'neutral' ? theme.tint : spec.midClass && typeof spec.midClass === 'object' ? (isColor(spec.midClass.color) ? spec.midClass.color : theme.tint) : null;
+  const bins0 = binnedScale(withMidClass(spec, midC));
   const bins = bins0 && midC && !bins0.breaks.includes(0) && bins0.breaks[0] < 0 && bins0.breaks[bins0.breaks.length - 1] > 0
     ? (() => { const k = bins0.cls(0); const colors = bins0.colors.map((c, i) => (i === k ? midC : c)); return { ...bins0, colors, color: (v) => colors[bins0.cls(v)] }; })()
     : bins0;
@@ -9066,8 +9319,25 @@ function heatmap(spec, theme) {
     body.push(g({ class: 'pa-xlabels' }, out));
   }
   const gc = spec.groupColors && typeof spec.groupColors === 'object' ? spec.groupColors : undefined;
-  if (xRuns) body.push(groupBandX(xRuns, (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1], inner.y + inner.h + below, theme, inner.y, undefined, gc));
-  if (yRuns) body.push(groupBandY(yRuns, (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1], area.x, gW, theme, inner.x + inner.w, undefined, gc));
+  const atLabels = !!gc && spec.groupStripe === 'labels';
+  const xPos = (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1];
+  const yPos = (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1];
+  if (xRuns) body.push(groupBandX(xRuns, xPos, inner.y + inner.h + below, theme, inner.y, undefined, gc, !atLabels));
+  if (yRuns) body.push(groupBandY(yRuns, yPos, area.x, gW, theme, inner.x + inner.w, undefined, gc, !atLabels));
+  if (atLabels) {
+    const stripes = [];
+    for (const r of xRuns || []) {
+      if (!isColor(gc[r.group])) continue;
+      const a = xPos(r.from)[0], b = xPos(r.to)[1];
+      stripes.push(el('rect', { x: a, y: top ? inner.y - 5 : inner.y + inner.h + 2, width: Math.max(0, b - a), height: 3, fill: gc[r.group] }));
+    }
+    for (const r of yRuns || []) {
+      if (!isColor(gc[r.group])) continue;
+      const a = yPos(r.from)[0], b = yPos(r.to)[1];
+      stripes.push(el('rect', { x: inner.x - 5, y: a, width: 3, height: Math.max(0, b - a), fill: gc[r.group] }));
+    }
+    body.push(g({ class: 'pa-group-stripes' }, stripes));
+  }
   if (corner) {
     const room = Math.max(0, inner.x - 10 - (area.x + gW));
     const fit = Math.max(1, Math.floor((headH - 4) / 14));
@@ -10243,8 +10513,8 @@ function spark(spec, theme) {
     const lineTxt = vals.map(([k, v]) => (series ? `${k}: ` : '') + (Number.isFinite(v) ? fmt(v) : '—'));
     const cx = px(xn);
     const x0r = Math.max(0, cx - step / 2), x1r = Math.min(frame.width, cx + step / 2);
-    body.push(g({ class: 'pa-m', 'data-tip': TT({ [x]: xs.get(xn) }, xs.get(xn), ...lineTxt) }, [
-      el('rect', { x: x0r, y: 0, width: Math.max(0.5, x1r - x0r), height: frame.height, fill: 'transparent' }),
+    body.push(g({ class: spec.bare ? null : 'pa-m', 'data-tip': TT({ [x]: xs.get(xn) }, xs.get(xn), ...lineTxt) }, [
+      el('rect', { x: spec.bare && !x0r ? null : x0r, y: spec.bare ? null : 0, width: Math.max(0.5, x1r - x0r), height: frame.height, fill: 'transparent' }),
     ]));
   }
 
@@ -10574,6 +10844,8 @@ function dendrogram(spec, theme) {
   const maxH = tree.h || 1;
   const horizontal = (spec.orientation ?? 'horizontal') !== 'vertical';
   const fmt = makeFormat(spec.format, locale, [0, maxH]);
+  const tickSpec = spec.tickFormat ?? (horizontal ? spec.xFormat : spec.yFormat);
+  const tickFmt = tickSpec !== undefined ? makeFormat(tickSpec, locale, [0, maxH]) : fmt;
   const T = tipper(spec, rows, locale);
   const rowsOfLeaf = (l) => (rowOf.has(String(l)) ? [rowOf.get(String(l))] : []);
 
@@ -10589,6 +10861,7 @@ function dendrogram(spec, theme) {
   const catOf = (l) => (seriesF && field(l, seriesF) !== null ? String(field(l, seriesF)) : null);
   const weightOf = (l) => { const v = sizeF ? num(field(l, sizeF)) : NaN; return Number.isFinite(v) ? v : null; };
   const subOf = (l) => (subF && field(l, subF) !== null ? String(field(l, subF)) : null);
+  const subLines = (l) => (subOf(l) === null ? [] : subOf(l).split(/\r?\n/));
 
   const cut = Number.isFinite(+spec.cut) && spec.cut !== null && spec.cut !== undefined ? +spec.cut : null;
   const groups = cut !== null ? cutTree(tree, cut) : [];
@@ -10610,8 +10883,10 @@ function dendrogram(spec, theme) {
   const fs = 11.5;
   const lblMode = spec.labels === undefined || Array.isArray(spec.labels) ? 'auto' : spec.labels;
   const twoLines = horizontal && subF && order.some((l) => subOf(l) !== null);
-  const rowH = twoLines ? 34 : 16;
-  const frame = createFrame(spec, theme, { height: horizontal ? Math.min(twoLines ? 1400 : 900, 80 + n * rowH) : 420 });
+  const subN = twoLines ? Math.max(1, ...order.map((l) => subLines(l).length)) : 0;
+  const SUB_LH = 13;
+  const rowH = twoLines ? 34 + (subN - 1) * SUB_LH : 16;
+  const frame = createFrame(spec, theme, { height: horizontal ? Math.min(twoLines ? Math.round((1400 * rowH) / 34) : 900, 80 + n * rowH) : 420 });
   const legend = cats.length && spec.legend !== false ? cats.map((c) => ({ label: c, color: smap.get(c) })) : [];
   const area = frame.layout(legend);
   const leafSpan0 = horizontal ? area.h - 30 : area.w;
@@ -10625,7 +10900,7 @@ function dendrogram(spec, theme) {
   const posNum = (v) => (Number.isFinite(+v) && v !== null && +v > 0 ? +v : null);
   const treeW = horizontal ? posNum(spec.treeWidth) : null;
   const labCap = treeW !== null ? Math.max(40, area.w - treeW - groupW - weightW - 8 - swW - 14) : posNum(spec.labelWidth) ?? (horizontal ? area.w * 0.3 : 120);
-  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
+  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? Math.max(...subLines(l).map((t) => measure(t, fsSub))) : 0)))) + 14) + swW;
   const hTitle = horizontal ? spec.xLabel ?? spec.yLabel : spec.yLabel ?? spec.xLabel;
   const axisH = 26 + (hTitle && horizontal ? 16 : 0);
   const inner = horizontal
@@ -10643,14 +10918,26 @@ function dendrogram(spec, theme) {
     body.push(el('path', { d, fill: 'none', stroke: color, strokeWidth: n > 150 ? 1 : 1.4, strokeLinejoin: 'round' }));
   }
 
-  const nd = niceDomain(0, maxH, 4);
-  const ticks = [];
-  for (let t = nd.min; t <= maxH + 1e-9; t += nd.step) ticks.push(t);
+  const ticksFor = (cnt) => {
+    const d = niceDomain(0, maxH, cnt);
+    const ts = [];
+    for (let t = d.min; t <= maxH + 1e-9; t += d.step) ts.push(t);
+    return ts;
+  };
+  const fits = (ts) => ts.every((t, i) => {
+    if (!i) return true;
+    const dist = Math.abs(hs(t) - hs(ts[i - 1]));
+    return horizontal ? dist >= (measure(tickFmt(t), 11) + measure(tickFmt(ts[i - 1]), 11)) / 2 + 6 : dist >= 15;
+  });
+  let ticks = ticksFor(4);
+  for (let cnt = 3; cnt >= 1 && !fits(ticks); cnt--) ticks = ticksFor(cnt);
+  if (!fits(ticks)) ticks = [0, ticks[ticks.length - 1]].filter((t, i, a) => a.indexOf(t) === i);
+  if (!fits(ticks)) ticks = [0];
   for (const t of ticks) {
     const p = hs(t);
     body.push(horizontal
-      ? text(p, inner.y + inner.h + 18, fmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'middle' })
-      : text(inner.x - 6, p + 4, fmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'end' }));
+      ? text(p, inner.y + inner.h + 18, tickFmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'middle' })
+      : text(inner.x - 6, p + 4, tickFmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'end' }));
   }
 
   if (hTitle) {
@@ -10689,7 +10976,7 @@ function dendrogram(spec, theme) {
       : el('line', { x1: inner.x, x2: inner.x + inner.w, y1: p, y2: p, stroke: theme.ink, strokeWidth: 1, strokeDasharray: '4 3', opacity: 0.6 }));
   }
 
-  const need = twoLines ? fs + fsSub + 6 : fs + 2;
+  const need = twoLines ? fs + subN * (fsSub + 2) + 4 : fs + 2;
   const every = lblMode === true ? 1 : lblMode === false ? 0 : Math.max(1, Math.ceil(need / gap));
   order.forEach((l, i) => {
     const pos = leafPos.get(l);
@@ -10697,6 +10984,8 @@ function dendrogram(spec, theme) {
     const lc = leafColor(l);
     const c = gi !== undefined ? cmap.get(gNames[gi]) : lc ?? theme.muted;
     const w = weightOf(l), sub = twoLines ? subOf(l) : null;
+    const sl = sub !== null ? subLines(l) : [];
+    const nameY = sub !== null ? pos - 2 - ((sl.length - 1) * SUB_LH) / 2 : pos + 4;
     const lines = [name(l), gi !== undefined ? gNames[gi] : ''];
     if (seriesF && catOf(l) !== null) lines.push(catOf(l));
     if (w !== null) lines.push(`${sizeName}: ${fmtW(w)}`);
@@ -10714,9 +11003,9 @@ function dendrogram(spec, theme) {
     if (every && i % every === 0) {
       const s = truncate(name(l), labW - 6 - swW, fs);
       parts.push(horizontal
-        ? text(inner.x + inner.w + 6 + swW, sub !== null ? pos - 2 : pos + 4, s, { fill: sub !== null ? theme.ink : theme.lede, fontSize: fs })
+        ? text(inner.x + inner.w + 6 + swW, nameY, s, { fill: sub !== null ? theme.ink : theme.lede, fontSize: fs })
         : text(pos + 4, inner.y + inner.h + 6 + swW, s, { fill: theme.lede, fontSize: fs, transform: `rotate(90 ${(pos + 4).toFixed(2)} ${(inner.y + inner.h + 6 + swW).toFixed(2)})` }));
-      if (sub !== null) parts.push(text(inner.x + inner.w + 6 + swW, pos + 12, truncate(sub, labW - 6 - swW, fsSub), { fill: theme.lede, fontSize: fsSub }));
+      sl.forEach((line, j) => parts.push(text(inner.x + inner.w + 6 + swW, nameY + 14 + j * SUB_LH, truncate(line, labW - 6 - swW, fsSub), { fill: theme.lede, fontSize: fsSub })));
     }
     if (barMax && w !== null) {
       const x0 = inner.x + inner.w + labW + 4, bw = Math.max(w > 0 ? 1 : 0, (barMax * w) / maxWt), bh = Math.min(8, gap * 0.45);
@@ -10969,7 +11258,7 @@ function rail(spec, theme) {
   const ref = Math.max(2, Math.min(8, my - 1));
   const sizes = {
     ref, median: Math.max(1.5, Math.min(6, ref - 2)), band: Math.max(1.5, Math.min(4, ref / 2)),
-    dot: spec.dotRadius ?? Math.max(2, Math.min(4.5, my - 1.5)), rail: Math.max(1, Math.min(2, H / 9)),
+    dot: spec.dotRadius ?? Math.max(2, Math.min(4.5, my - 1.5)), rail: F(+spec.railWidth) && +spec.railWidth > 0 ? +spec.railWidth : Math.max(1, Math.min(2, H / 9)),
   };
   const inset = Math.max(Math.ceil(sizes.dot + 1), 6);
   const x0 = inset, w = Math.max(4, W - inset * 2);
@@ -10986,7 +11275,8 @@ function rail(spec, theme) {
   else if (hasRange) { a = Math.min(...all); b = Math.max(...all); }
 
   const body = [];
-  let desc;
+  const bare = !!spec.bare;
+  let desc, root = null;
   if (a === undefined) {
     if (spec.fallback !== 'none' && s) {
       const size = Math.max(9, Math.min(12.5, H * 0.72));
@@ -10994,25 +11284,27 @@ function rail(spec, theme) {
     }
     desc = s ? `${label}: ${s}` : '';
   } else {
-    const colors = { rail: spec.colors?.rail, band: spec.colors?.band, median: spec.colors?.median, ref: spec.colors?.ref };
+    const colors = { rail: spec.colors?.rail, band: spec.colors?.band, median: spec.colors?.median, ref: spec.colors?.ref, bandStroke: spec.colors?.bandStroke };
     const dot = spec.colors?.value ?? (typeof spec.color === 'string' && spec.color ? spec.color : theme.categorical[0]);
-    const marks = railMarks({ v, vals, a, b, x0, w, my, clipped, track: !hasRange, theme, colors, dot, sizes });
+    const marks = railMarks({ v, vals, a, b, x0, w, my, clipped, track: !hasRange, theme, colors, dot, sizes, halo: spec.halo !== false, compact: bare });
     body.push(...marks.out);
     const tipText = railTip({ en, label, s: s || '—', fr: fmt, vals, row, past: marks.past, scale: clipped ? [a, b] : null,
-      labels: { band: spec.bandLabel, median: spec.medianLabel, min: spec.minLabel, max: spec.maxLabel, domain: spec.domainLabel } });
+      labels: { band: spec.bandLabel, median: spec.medianLabel, min: spec.minLabel, max: spec.maxLabel, domain: spec.domainLabel, outside: spec.outsideLabel } });
     desc = tipText.split('\n').join('; ') + '.';
     const head = spec.title ?? '';
-    body.push(g({ class: 'pa-m', 'data-tip': TT(data.length ? [row] : null, head, ...tipText.split('\n')) }, [
+    const dt = TT(data.length ? [row] : null, head, ...tipText.split('\n'));
+    if (bare) root = dt ? { 'data-tip': dt } : null;
+    else body.push(g({ class: 'pa-m', 'data-tip': dt }, [
       el('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent' }),
     ]));
   }
-  return frame.finish(body, { desc, type: 'rail' });
+  return frame.finish(body, { desc, type: 'rail', root });
 }
 
 return { "rail": rail };
 });
 __def("src/rail.js", function () {
-const { el } = __req("src/svg.js");
+const { el, r2 } = __req("src/svg.js");
 const { num } = __req("src/data.js");
 
 const F = Number.isFinite;
@@ -11075,28 +11367,42 @@ const railExtent = (v, vals) => [v, vals.min, vals.max, vals.lo, vals.hi, vals.m
  * Las marcas del riel. `x0` y `w`: dónde va la pista; `my`: su línea media;
  * `[a, b]`: la escala; `clipped`: lo de fuera se marca con un chevrón.
  * `track`: dibujar la pista entera de a a b cuando no hay mínimo y máximo.
+ * `compact` (modo `bare`): el mismo dibujo con menos bytes: cada trazo recto es
+ * un <path> «M x y H x2» y las referencias seguidas del mismo color, uno solo.
  * Devuelve { out: [svg], past: -1 | 0 | 1 } (por dónde se sale el valor).
  */
-function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, theme, colors = {}, dot, muted, sizes = {} }) {
+function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, theme, colors = {}, dot, muted, sizes = {}, halo = true, compact = false }) {
   const span = b - a || 1;
   const X = (t) => x0 + ((t - a) / span) * w;
   const C = (t) => (clipped ? Math.min(b, Math.max(a, t)) : t);
   const out = [];
   const S = { rail: 2, band: 4, median: 6, ref: 8, dot: 4.5, ...sizes };
   const railC = colors.rail ?? theme.axis, bandC = colors.band ?? theme.tint2, medC = colors.median ?? theme.lede;
-  if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(C(vals.min)), x2: X(C(vals.max)), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
-  else if (track) out.push(el('line', { x1: X(a), x2: X(b), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  const seg = (x1, y1, x2, y2, at) => (compact
+    ? el('path', { d: `M${r2(x1)} ${r2(y1)}${y1 === y2 ? 'H' + r2(x2) : 'V' + r2(y2)}`, ...at })
+    : el('line', { x1, x2, y1, y2, ...at }));
+  if (F(vals.min) && F(vals.max)) out.push(seg(X(C(vals.min)), my, X(C(vals.max)), my, { stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  else if (track) out.push(seg(X(a), my, X(b), my, { stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
   if (F(vals.lo) && F(vals.hi)) {
     const l = C(Math.min(vals.lo, vals.hi)), h = C(Math.max(vals.lo, vals.hi));
-    if (!(clipped && l === h && (l === a || l === b))) out.push(el('rect', { x: X(l), y: my - S.band, width: Math.max(1.5, Math.abs(X(h) - X(l))), height: S.band * 2, rx: 2, fill: bandC }));
+    const bs = colors.bandStroke, k = bs ? 0.5 : 0;
+    if (!(clipped && l === h && (l === a || l === b))) out.push(el('rect', { x: X(l) + k, y: my - S.band + k, width: Math.max(1.5, Math.abs(X(h) - X(l))) - 2 * k, height: S.band * 2 - 2 * k, rx: 2, fill: bandC, stroke: bs, strokeWidth: bs ? 1 : null }));
   }
   const inside = (t) => !clipped || (t >= a && t <= b);
-  if (F(vals.median) && inside(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - S.median, y2: my + S.median, stroke: medC, strokeWidth: 1.5 }));
+  if (F(vals.median) && inside(vals.median)) out.push(seg(X(vals.median), my - S.median, X(vals.median), my + S.median, { stroke: medC, strokeWidth: 1.5 }));
+  let last = null; // compact: la última referencia dibujada, para sumarle la siguiente del mismo color
   for (const ref of vals.refs) {
     if (!F(ref.v)) continue;
     const rc = ref.color ?? colors.ref ?? theme.ink;
-    if (inside(ref.v)) out.push(el('line', { x1: X(ref.v), x2: X(ref.v), y1: my - S.ref, y2: my + S.ref, stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }));
-    else {
+    if (inside(ref.v)) {
+      const d = `M${r2(X(ref.v))} ${r2(my - S.ref)}V${r2(my + S.ref)}`;
+      if (compact && last && last.rc === rc && last.i === out.length - 1) { last.d += d; out[last.i] = el('path', { d: last.d, stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }); }
+      else {
+        out.push(seg(X(ref.v), my - S.ref, X(ref.v), my + S.ref, { stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }));
+        last = { rc, d, i: out.length - 1 };
+      }
+    } else {
+      last = null;
       const e = ref.v > b ? x0 + w + 2 : x0 - 2, k = ref.v > b ? -1 : 1;
       out.push(el('path', { d: `M${r1(e + k * 5)},${r1(my - S.ref + 2)}L${r1(e)},${r1(my)}L${r1(e + k * 5)},${r1(my + S.ref - 2)}`, fill: 'none', stroke: rc, strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
@@ -11104,12 +11410,12 @@ function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, t
   let past = 0;
   if (F(v)) {
     const fill = dot;
-    if (inside(v)) out.push(el('circle', { cx: X(v), cy: my, r: S.dot, fill, stroke: theme.surface, strokeWidth: 1.5 }));
+    if (inside(v)) out.push(el('circle', { cx: X(v), cy: my, r: S.dot, fill, stroke: halo ? theme.surface : null, strokeWidth: halo ? 1.5 : null }));
     else {
       past = v > b ? 1 : -1;
       const e = past > 0 ? x0 + w + 2 : x0 - 2, k = -past;
       const hh = Math.min(5, S.dot + 0.5);
-      out.push(el('path', { d: `M${r1(e)},${r1(my)}L${r1(e + k * 7)},${r1(my - hh)}L${r1(e + k * 7)},${r1(my + hh)}Z`, fill, stroke: theme.surface, strokeWidth: 1, strokeLinejoin: 'round' }));
+      out.push(el('path', { d: `M${r1(e)},${r1(my)}L${r1(e + k * 7)},${r1(my - hh)}L${r1(e + k * 7)},${r1(my + hh)}Z`, fill, stroke: halo ? theme.surface : null, strokeWidth: halo ? 1 : null, strokeLinejoin: halo ? 'round' : null }));
     }
   }
   return { out, past, muted };
@@ -11123,7 +11429,7 @@ const r1 = (n) => Math.round(n * 10) / 10;
  * escala. Lo que cae fuera de ella lo dice.
  */
 function railTip({ en, label, s, fr, vals, labels = {}, past = 0, scale = null, row }) {
-  const off = en ? 'beyond the scale' : 'fuera de la escala';
+  const off = textOf(labels.outside, row) ?? (en ? 'beyond the scale' : 'fuera de la escala');
   const parts = [`${label}: ${s}${past ? ` (${off})` : ''}`];
   const minL = textOf(labels.min, row), maxL = textOf(labels.max, row);
   if (F(vals.min) && F(vals.max)) {
@@ -11214,7 +11520,7 @@ const { makeFormat } = __req("src/format.js");
 const { ramp, textOn, colorMap, themeFor } = __req("src/theme.js");
 const { resolve } = __req("src/base.js");
 const { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } = __req("src/data.js");
-const { createFrame, hash } = __req("src/frame.js");
+const { createFrame, hash, domId } = __req("src/frame.js");
 const { niceStep } = __req("src/scale.js");
 const { getGeo } = __req("src/geo/registry.js");
 const { ISO2, microstateFeatures } = __req("src/geo/iso.js");
@@ -11296,6 +11602,29 @@ function niceRound(v, range) {
   return Math.round(v / step) * step;
 }
 
+/** Dos cifras significativas del propio corte (0,00034 → 0,00034; 123.456 → 120.000). */
+function sigRound(v) {
+  if (!v || !Number.isFinite(v)) return v;
+  const step = 10 ** (Math.floor(Math.log10(Math.abs(v))) - 1);
+  return +(Math.round(v / step) * step).toPrecision(12);
+}
+
+/**
+ * Cortes redondeados sin perder clases. Primero, a dos cifras del rango (lo de
+ * siempre); si eso funde clases (datos sesgados: de US$ 100 mil a 27.000
+ * millones, todo corte bajo 1.000 millones daba 0 y el mapa salía de un color),
+ * cada corte a dos cifras de su propia magnitud; si aún se funden, sin redondear.
+ */
+function roundBreaks(raw, range, min, max) {
+  const clean = (bs) => [...new Set(bs)].filter((b) => b > min && b <= max);
+  const want = clean(raw).length;
+  for (const r of [(b) => niceRound(b, range), sigRound]) {
+    const bs = clean(raw.map(r));
+    if (bs.length >= want) return bs;
+  }
+  return clean(raw);
+}
+
 function quantile(sorted, p) {
   const h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
@@ -11328,9 +11657,8 @@ function colorScale(values, spec, theme) {
   if (mode === 'thresholds') breaks = [...(Array.isArray(spec.scale) ? spec.scale : spec.thresholds)].map(Number).sort((a, b) => a - b);
   else {
     const n = Math.max(2, Math.min(9, spec.classes ?? Math.min(5, v.length)));
-    if (mode === 'equal') breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(min + (range * (k + 1)) / n, range));
-    else breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(quantile(v, (k + 1) / n), range));
-    breaks = [...new Set(breaks)].filter((b) => b > min && b <= max);
+    const raw = Array.from({ length: n - 1 }, (_, k) => (mode === 'equal' ? min + (range * (k + 1)) / n : quantile(v, (k + 1) / n)));
+    breaks = roundBreaks(raw, range, min, max);
   }
   const n = breaks.length + 1;
   const t0 = theme.cmap ? 0 : theme.mode === 'dark' ? 0.26 : 0.16;
@@ -11519,7 +11847,12 @@ function regionKey(m, f, locale) {
 }
 
 
-/** `links`: [{ from, to, value }] o { data, from, to, value, color, curveness, width: [min, max], opacity }. */
+/**
+ * `links`: [{ from, to, value }] o { data, from, to, value, color, curveness,
+ * width: [min, max], widthScale ("linear" | "sqrt"), opacity, label,
+ * fromLabel / toLabel (campos con el nombre de un extremo), format (el de la
+ * tarjeta de la línea), ends (un punto en cada extremo) }.
+ */
 function linkList(spec, m, theme, locale) {
   const lk = spec.links;
   if (!lk) return null;
@@ -11530,15 +11863,24 @@ function linkList(spec, m, theme, locale) {
   const toF = o.to ?? pickF(fields, ['to', 'target', 'destino', 'hasta']);
   const valF = o.value ?? pickF(fields, ['value', 'valor', 'weight', 'peso']);
   if (!fromF || !toF) throw new PlotError(T(locale, 'Las líneas (`links`) necesitan un origen y un destino.', 'Lines (`links`) need an origin and a destination.'), 'links: [{ from: "CHL", to: "CHN", value: 120 }]');
-  const end = (v) => {
-    if (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(num(x)))) return { lonlat: [num(v[0]), num(v[1])], name: `${num(v[1])}, ${num(v[0])}`, key: `${num(v[0])},${num(v[1])}` };
-    const f = v === undefined || v === null ? null : m.idx.get(normKey(v));
-    return f ? { f, name: nameOf(f, locale), key: String(v) } : null;
+  const flat = !!m.raw0?.flat;
+  const end = (v, label) => {
+    let e = null;
+    if (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(num(x)))) {
+      const [x, y] = [num(v[0]), num(v[1])];
+      e = { lonlat: [x, y], name: flat ? `${x}, ${y}` : `${y}, ${x}`, key: `${x},${y}` };
+    } else {
+      const f = v === undefined || v === null ? null : m.idx.get(normKey(v));
+      e = f ? { f, name: nameOf(f, locale), key: String(v) } : null;
+    }
+    if (e && label !== undefined && label !== null && label !== '') e.name = String(label);
+    return e;
   };
+  const labelOf = (r, F) => (typeof F === 'string' && fields.includes(F) ? r[F] : undefined);
   const items = [];
   const unmatched = [];
   for (const r of rows) {
-    const a = end(r[fromF]), b = end(r[toF]);
+    const a = end(r[fromF], labelOf(r, o.fromLabel)), b = end(r[toF], labelOf(r, o.toLabel));
     if (!a || !b) { unmatched.push(String(!a ? r[fromF] : r[toF])); continue; }
     const v = valF ? num(r[valF]) : 1;
     if (valF && !(Number.isFinite(v) && v > 0)) continue;
@@ -11547,11 +11889,16 @@ function linkList(spec, m, theme, locale) {
   const w = Array.isArray(o.width) && o.width.length === 2 ? o.width.map(Number) : [0.75, 6];
   const color = (typeof o.color === 'string' && !fields.includes(o.color) && o.color) || theme.categorical[0];
   const colorF = typeof o.color === 'string' && fields.includes(o.color) ? o.color : null;
-  return { items, unmatched: [...new Set(unmatched)], valF, width: w, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null };
+  const ws = o.widthScale ?? 'linear';
+  if (ws !== 'linear' && ws !== 'sqrt') throw new PlotError(T(locale, `\`links.widthScale\` es "linear" o "sqrt": "${ws}".`, `\`links.widthScale\` is "linear" or "sqrt": "${ws}".`), 'widthScale: "sqrt"');
+  const fmt = o.format === undefined || o.format === null ? null : makeFormat(o.format, locale, items.map((i) => i.v));
+  const ends = o.ends === true ? { r: 2.5 } : o.ends && typeof o.ends === 'object' ? { r: Number.isFinite(+o.ends.radius) ? +o.ends.radius : 2.5 } : null;
+  return { items, unmatched: [...new Set(unmatched)], valF, width: w, widthScale: ws, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null, fmt, ends };
 }
 
-function drawLinks(L, proj, theme, fmt, locale) {
+function drawLinks(L, proj, theme, fmt0, locale) {
   if (!L || !L.items.length) return '';
+  const fmt = L.fmt || fmt0;
   const at = (e) => {
     if (e.lonlat) return proj(e.lonlat);
     const p = e.f.properties || {};
@@ -11562,17 +11909,21 @@ function drawLinks(L, proj, theme, fmt, locale) {
   const maxV = Math.max(...L.items.map((i) => i.v), 1e-9);
   const f1 = (v) => Math.round(v * 10) / 10;
   const out = [];
+  const dots = new Map(); // extremo → [x, y, color]: un punto por lugar
   for (const it of [...L.items].sort((p, q) => q.v - p.v || (p.b.key < q.b.key ? -1 : 1))) {
     const [x0, y0] = at(it.a), [x1, y1] = at(it.b);
     const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
     if (!(len > 0.5)) continue;
     const mx = (x0 + x1) / 2 - dy * L.curveness, my = (y0 + y1) / 2 + dx * L.curveness;
-    const sw = L.valF ? Math.max(L.width[0], L.width[1] * (it.v / maxV)) : L.width[0] + 0.75;
+    const t = it.v / maxV;
+    const sw = L.valF ? Math.max(L.width[0], L.width[1] * (L.widthScale === 'sqrt' ? Math.sqrt(t) : t)) : L.width[0] + 0.75;
     const c = (L.colorF && it.row[L.colorF]) || L.color;
     const tip = `${it.a.name} → ${it.b.name}` + (L.valF ? `\n${fmt(it.v)}` : '');
     out.push(el('path', { class: 'pa-m pa-link', d: `M${f1(x0)},${f1(y0)}Q${f1(mx)},${f1(my)} ${f1(x1)},${f1(y1)}`, fill: 'none', stroke: c, strokeWidth: Math.round(sw * 100) / 100, strokeLinecap: 'round', strokeOpacity: L.opacity, 'data-tip': tip, 'data-color': c, 'data-key': `${it.a.key}→${it.b.key}`, 'data-from': it.a.key, 'data-to': it.b.key }));
+    if (L.ends) for (const [e, x, y] of [[it.a, x0, y0], [it.b, x1, y1]]) if (!dots.has(e.key)) dots.set(e.key, [x, y, c]);
   }
-  return g({ class: 'pa-links' }, out);
+  const endDots = L.ends && dots.size ? g({ class: 'pa-link-ends', stroke: theme.surface, strokeWidth: 1, 'pointer-events': 'none' }, [...dots].map(([k, [x, y, c]]) => el('circle', { cx: f1(x), cy: f1(y), r: L.ends.r, fill: c, 'data-key': k }))) : '';
+  return g({ class: 'pa-links' }, endDots ? [...out, endDots] : out);
 }
 
 const pickF = (fields, names) => names.find((n) => fields.includes(n));
@@ -11734,6 +12085,7 @@ function chooseLabeled(m, spec, locale, defaultN) {
   const hl = spec.highlight === undefined ? [] : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl.length && featureIndexHas(f, hl);
   if (Array.isArray(spec.labels)) { const want = spec.labels.map(normKey); return m.features.filter((f) => featureIndexHas(f, want)); }
+  if (spec.labels === false) return [];
   const n = typeof spec.labels === 'number' ? spec.labels : spec.labels === false ? 0 : defaultN;
   const top = m.ranked.slice(0, n).map(([f]) => f);
   return [...new Set([...m.features.filter(isHl), ...top])];
@@ -11826,6 +12178,7 @@ function baseChart(spec, theme, kind, views = null) {
   const layers = layerList(spec, theme);
   const markers = markerList(spec, theme);
   let fitFeats = m.features;
+  const fitPad = fitPadding(spec, locale);
   if (spec.fitTo !== undefined && spec.fitTo !== null) {
     const ft = spec.fitTo;
     if (Array.isArray(ft) && ft.length === 4 && ft.every((v) => typeof v === 'number')) {
@@ -11844,7 +12197,8 @@ function baseChart(spec, theme, kind, views = null) {
     if (fitFeats !== m.features) {
       let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
       for (const f of fitFeats) for (const r of rings(f.geometry)) for (const p of r) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); }
-      const px = (c - a) * 0.06 || 0.5, py = (d - b) * 0.06 || 0.5;
+      const k = fitPad.frac;
+      const px = (c - a) * k || (c - a ? 0 : 0.5), py = (d - b) * k || (d - b ? 0 : 0.5);
       fitFeats = [{ type: 'Feature', properties: {}, geometry: { type: 'MultiPoint', coordinates: [[a - px, b - py], [c + px, d + py], [a - px, d + py], [c + px, b - py]] } }];
     }
   }
@@ -11853,7 +12207,7 @@ function baseChart(spec, theme, kind, views = null) {
   const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
   let area = frame.layout([]);
-  const gid = 'pa-map-' + Math.abs(hash(String(spec.title) + kind + W)).toString(36);
+  const gid = mapId(spec, kind, W, m, views);
   const missingOf = (sp, mv) => sp.missing !== 'plain' && sp.missing !== 'context' && m.features.some((f) => !mv.values.has(f));
   const missingAny = missingOf(spec, m);
   const body = [];
@@ -11963,9 +12317,40 @@ function baseChart(spec, theme, kind, views = null) {
   const pts = m.features.some((f) => isPointGeom(f.geometry) && !f.properties?.dot);
   const inset = pts ? (spec.pointRadius ?? 5) + 18 : markers?.items.length ? 12 : 0;
   if (inset) box = [box[0] + inset * (tall ? 0 : 1), box[1] + inset + (pts ? 12 : 0), box[2] - inset, box[3] - Math.min(inset, 10)];
+  if (fitPad.px && fitFeats !== m.features) { const q = Math.min(fitPad.px, (box[2] - box[0]) / 2 - 1, (box[3] - box[1]) / 2 - 1); if (q > 0) box = [box[0] + q, box[1] + q, box[2] - q, box[3] - q]; }
   const proj = fit(fitFeats, m.raw, box, { align: tall ? 'left' : 'center' });
   const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
   return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax, layers, markers, views };
+}
+
+/**
+ * `fitPadding`: el margen alrededor de lo encuadrado con `fitTo`. Un número es
+ * una fracción del largo de lo encuadrado, a cada lado (0.06 por omisión; 0 =
+ * a ras); "12px", píxeles dentro de la caja del mapa.
+ */
+function fitPadding(spec, locale) {
+  const v = spec.fitPadding;
+  if (v === undefined || v === null) return { frac: 0.06, px: 0 };
+  const m = typeof v === 'string' ? /^\s*(\d+(?:\.\d+)?)\s*px\s*$/i.exec(v) : null;
+  if (m) return { frac: 0, px: +m[1] };
+  const n = typeof v === 'number' ? v : NaN;
+  if (!(Number.isFinite(n) && n >= 0 && n <= 1)) throw new PlotError(T(locale, `\`fitPadding\` es una fracción entre 0 y 1 (0.06) o píxeles ("12px"): "${v}".`, `\`fitPadding\` is a fraction from 0 to 1 (0.06) or pixels ("12px"): "${v}".`), 'fitPadding: 0.02');
+  return { frac: n, px: 0 };
+}
+
+/**
+ * Base de los ids internos (recorte, patrón sin dato, degradados): `idPrefix`
+ * si viene; si no, un hash de lo que distingue un mapa de otro del mismo ancho
+ * en la misma página —título, tipo, ancho, alto, encuadre, sprite, las vistas y
+ * qué valor tiene cada región—. Nada de colores: las pieles dibujan el mismo
+ * mapa con otros y tienen que dar el mismo id.
+ */
+function mapId(spec, kind, W, m, views) {
+  if (spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '') return domId(spec.idPrefix) + '-map';
+  const vals = [];
+  for (const f of m.features) if (m.values.has(f)) vals.push(normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, 'es')) + '=' + m.values.get(f));
+  const sig = [spec.title, kind, W, spec.height, JSON.stringify(spec.fitTo ?? null), spec.sprite, m.turn, m.features.length, views ? views.map((V) => V.id + ':' + V.m.valueF + ':' + V.m.values.size).join(',') : '', vals.join(';')].join('|');
+  return 'pa-map-' + Math.abs(hash(sig)).toString(36);
 }
 
 /**
@@ -12083,6 +12468,14 @@ function mapSprite(spec0) {
 
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
+/** `highlightWidth`: el ancho del anillo de lo destacado, en píxeles (1,5 por omisión). */
+function ringWidth(v, locale) {
+  if (v === undefined || v === null) return 1.5;
+  const n = +v;
+  if (!(Number.isFinite(n) && n > 0)) throw new PlotError(T(locale, `\`highlightWidth\` es un ancho en píxeles mayor que 0: "${v}".`, `\`highlightWidth\` is a width in pixels above 0: "${v}".`), 'highlightWidth: 3');
+  return n;
+}
+
 /** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
 function zoomLayer(B, children) {
   const { area, gid } = B;
@@ -12105,6 +12498,10 @@ function choropleth(spec0, theme0) {
   const compact = compactOf(spec);
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl && featureIndexHas(f, hl);
+  const hlMode = spec.highlightMode ?? 'dim';
+  if (hlMode !== 'dim' && hlMode !== 'outline') throw new PlotError(T(locale, `\`highlightMode\` es "dim" u "outline": "${hlMode}".`, `\`highlightMode\` is "dim" or "outline": "${hlMode}".`), 'highlightMode: "outline"');
+  const ringOf = (sp, th) => ({ stroke: sp.highlightColor ?? th.ink, width: ringWidth(sp.highlightWidth, locale) });
+  const ring0 = ringOf(spec, theme);
   const N = m.values.size;
   const regions = [], dashedRegions = [], outlines = [];
   const items = [];
@@ -12126,7 +12523,7 @@ function choropleth(spec0, theme0) {
     const d = viaSprite(f) ? undefined : pathD(f.geometry, proj, { r: f.properties?.dot && f.properties.r ? f.properties.r : ptR, compact });
     const isLine = isLineGeom(f.geometry);
     const quiet = !has && spec.missing === 'context';
-    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': quiet ? undefined : TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name), 'data-key': regionKey(m, f, locale) };
+    const common = { class: 'pa-m', d, opacity: hl && hlMode === 'dim' && !isHl(f) ? 0.5 : null, 'data-tip': quiet ? undefined : TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-key': regionKey(m, f, locale) };
     if (views) {
       const cls = [];
       const shape = isDashed ? 'd' : isLine ? 's' : '';
@@ -12162,12 +12559,13 @@ function choropleth(spec0, theme0) {
       RD.push(wrap(shape(f, { ...common, ...a })));
     } else if (isDashed) {
       stroke = theme.muted;
-      RD.push(wrap(shape(f, { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill })));
+      RD.push(wrap(shape(f, { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1' })));
     } else if (isLine) R.push(wrap(shape(f, { ...common, fill: 'none', stroke: has ? base : theme.muted, strokeWidth: spec.lineWidth ?? 2.5, strokeLinecap: 'round', 'data-color': has ? base : fill })));
-    else R.push(wrap(shape(f, { ...common, fill, stroke: isPointGeom(f.geometry) ? theme.surface : borderC, strokeWidth: isPointGeom(f.geometry) ? 1.2 : borderW, 'data-color': fill })));
-    const ring = (stroke2) => shape(f, { d, fill: 'none', stroke: stroke2, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' });
-    if (isHl(f)) (viaSprite(f) ? spriteOutlines : outlines).push(ring(theme.ink));
-    if (views) views.forEach((V) => { if (V.hl && featureIndexHas(f, V.hl)) (viaSprite(f) ? V.spriteOutlines ??= [] : V.outlines).push(ring(V.theme.ink)); });
+    else if (isPointGeom(f.geometry)) R.push(wrap(shape(f, { ...common, fill, stroke: theme.surface, strokeWidth: 1.2 })));
+    else R.push(wrap(shape(f, { ...common, fill })));
+    const ring = () => shape(f, { d });
+    if (isHl(f)) (viaSprite(f) ? spriteOutlines : outlines).push(ring());
+    if (views) views.forEach((V) => { if (V.hl && featureIndexHas(f, V.hl)) (viaSprite(f) ? V.spriteOutlines ??= [] : V.outlines).push(ring()); });
     const c = centroidOf(f);
     items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
@@ -12178,9 +12576,11 @@ function choropleth(spec0, theme0) {
   }
   const viaT = (list) => (list.length ? g({ transform: sprite.matrix }, list) : '');
   if (sprite) { regions.unshift(viaT(spriteRegions)); dashedRegions.unshift(viaT(spriteDashed)); outlines.unshift(viaT(spriteOutlines)); }
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.some(Boolean) ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
+  const shared = { stroke: borderC, strokeWidth: borderW, strokeLinejoin: 'round' };
+  const ringG = (R0) => ({ fill: 'none', stroke: R0.stroke, strokeWidth: R0.width, strokeLinejoin: 'round', 'pointer-events': 'none' });
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions', ...shared }, regions), dashedRegions.some(Boolean) ? g({ class: 'pa-regions pa-dashed', ...shared }, dashedRegions) : '', g({ class: 'pa-outlines', ...(outlines.some(Boolean) ? ringG(ring0) : {}) }, outlines), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
-  if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}` }, o)); });
+  if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}`, ...ringG(ringOf(V.spec, V.theme)) }, o)); });
   const links = linkList(views && views.some((V) => V.hasLinks) ? { ...spec, links: views[0].hasLinks ? views[0].links : spec.links } : spec, m, theme, locale);
   if (views && views.some((V) => V.hasLinks)) {
     views.forEach((V, i) => {
@@ -12228,13 +12628,20 @@ function choropleth(spec0, theme0) {
   const names = views.map((V) => V.label ?? V.id);
   desc += T(locale, ` ${views.length} vistas: ${names.join(', ')}.`, ` ${views.length} views: ${names.join(', ')}.`);
   const scope = 'pa-v' + Math.abs(hash(gid + '|' + views.map((V) => `${V.id}:${V.m.valueF}:${[...V.m.values.values()].slice(0, 16).join(',')}`).join('|') + '|' + m.features.length)).toString(36);
-  const css = views.map((V, i) => `.${scope}:not([data-view="${V.id}"]) .pv${i}{display:none}`).join('')
-    + views.slice(1).map((V) => [...V.rules].map(([k, decl]) => `.${scope}[data-view="${V.id}"] .${k}{${decl}}`).join('')).join('');
+  const sel = viewSelectorOf(spec0, locale);
+  const css = !sel
+    ? views.map((V, i) => `.${scope}:not([data-view="${V.id}"]) .pv${i}{display:none}`).join('')
+      + views.slice(1).map((V) => [...V.rules].map(([k, decl]) => `.${scope}[data-view="${V.id}"] .${k}{${decl}}`).join('')).join('')
+    : views.slice(1).map((_, j) => `.${scope} .pv${j + 1}`).join(',') + '{display:none}'
+      + views.slice(1).map((V, j) => {
+        const a = `${sel(V.id, j + 1)} .${scope}`;
+        return `${a} .pv0{display:none}${a} .pv${j + 1}{display:inline}` + [...V.rules].map(([k, decl]) => `${a} .${k}{${decl}}`).join('');
+      }).join('');
   return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs(), css, root: { class: `pa-views ${scope}`, 'data-view': views[0].id, 'data-views': views.map((V) => V.id).join(' ') } });
 }
 
 
-const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories'];
+const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories', 'viewSelector', 'highlightMode', 'fitPadding', 'idPrefix', 'ariaLabel'];
 const VIEW_ID = /^[a-z0-9][a-z0-9_-]*$/;
 
 /** `views` → [{ id, label, spec, theme, hl, links, hasLinks }]; la vista 0 sin su highlight/links (van aparte). */
@@ -12256,6 +12663,24 @@ function viewStates(spec) {
     const si = resolve(raw);
     return { id, label: label === undefined || label === null ? null : String(label), spec: si, theme: themeFor(si), hl: highlight === undefined ? null : [].concat(highlight).map(normKey), hasLinks: 'links' in v, links, outlines: [] };
   });
+}
+
+/**
+ * `viewSelector`: el selector CSS de un ancestro bajo el que se ve cada vista.
+ * Un texto con {id} ("#mapa:has(input[value={id}]:checked)") o, desde JS, una
+ * función (id, i) => selector. Devuelve null si no viene.
+ */
+function viewSelectorOf(spec, locale = 'es') {
+  const v = spec.viewSelector;
+  if (v === undefined || v === null || v === false) return null;
+  const bad = (msg) => new PlotError(T(locale, `\`viewSelector\` ${msg[0]}`, `\`viewSelector\` ${msg[1]}`), 'viewSelector: "#mapa:has(input[value={id}]:checked)"');
+  if (typeof v === 'string' && !v.includes('{id}')) throw bad(['necesita {id}: si no, todas las vistas tendrían el mismo selector.', 'needs {id}: otherwise every view would get the same selector.']);
+  if (typeof v !== 'string' && typeof v !== 'function') throw bad(['es un texto con {id} o una función (id) => selector.', 'is a string with {id} or a function (id) => selector.']);
+  return (id, i) => {
+    const s = String(typeof v === 'function' ? v(id, i) : v.split('{id}').join(id)).trim();
+    if (!s || /[<&{};]|\/\*/.test(s)) throw bad([`no sirve como selector: "${s}".`, `is not a usable selector: "${s}".`]);
+    return /,/.test(s) ? `:is(${s})` : s;
+  };
 }
 
 /** Valores de una vista sobre las formas de la base (misma lista, mismo orden). */
@@ -12292,7 +12717,7 @@ function symbolMap(spec, theme) {
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5, compact: compactOf(spec) }), fill: isLineGeom(f.geometry) ? 'none' : theme.tint, stroke: isLineGeom(f.geometry) ? theme.axis : spec.borderColor ?? theme.surface, strokeWidth: isLineGeom(f.geometry) ? 1.5 : spec.borderWidth ?? 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)), 'data-key': regionKey(m, f, locale) }))), insetFrames(m.features, proj, theme),
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base', fill: theme.tint, stroke: spec.borderColor ?? theme.surface, strokeWidth: spec.borderWidth ?? 0.75, strokeLinejoin: 'round' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5, compact: compactOf(spec) }), ...(isLineGeom(f.geometry) ? { fill: 'none', stroke: theme.axis, strokeWidth: 1.5 } : {}), 'data-key': regionKey(m, f, locale) }))), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);
@@ -12361,7 +12786,7 @@ function describeMap(m, fmt, locale, what) {
   return s;
 }
 
-return { "normKey": normKey, "colorScale": colorScale, "mapTurn": mapTurn, "rotated": rotated, "mainlandBox": mainlandBox, "mapSprite": mapSprite, "choropleth": choropleth, "viewStates": viewStates, "symbolMap": symbolMap, "spriteId": spriteId };
+return { "normKey": normKey, "colorScale": colorScale, "mapTurn": mapTurn, "rotated": rotated, "mainlandBox": mainlandBox, "mapSprite": mapSprite, "choropleth": choropleth, "viewStates": viewStates, "viewSelectorOf": viewSelectorOf, "symbolMap": symbolMap, "spriteId": spriteId };
 });
 __def("src/geo/registry.js", function () {
 const { PlotError } = __req("src/data.js");
@@ -12767,8 +13192,8 @@ function equirectangular() {
  * píxeles o dibujado a mano. `identity` deja el eje y hacia abajo (como
  * SVG); `planar` lo invierte (y hacia arriba, como un plano cartesiano o UTM).
  */
-function identity() { const f = ([x, y]) => [x, y]; f.continuous = true; return f; }
-function planar() { const f = ([x, y]) => [x, -y]; f.continuous = true; return f; }
+function identity() { const f = ([x, y]) => [x, y]; f.continuous = true; f.flat = true; return f; }
+function planar() { const f = ([x, y]) => [x, -y]; f.continuous = true; f.flat = true; return f; }
 
 /** Cónica de áreas iguales con paralelos y meridiano central propios. */
 function conicEqualArea({ parallels = [29.5, 45.5], rotate, center = [0, 0] } = {}) {
@@ -14187,11 +14612,11 @@ function table(spec, theme) {
           const own = railExtent(n, vals);
           a = Math.min(...own); b = Math.max(...own);
         }
-        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
+        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent, halo: c.halo !== false });
         out.push(...rail.out);
         const en = String(locale).startsWith('en');
         const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
-          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
+          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel, outside: c.outsideLabel } });
         return { out, tip: tipText };
       }
       case 'sparkline': {
@@ -14498,7 +14923,7 @@ const { themeFor, themes, palettes, ramps, isColor } = __req("src/theme.js");
 const { resolveColorScale, colorScaleNames, RAINBOW } = __req("src/colorscales.js");
 const { schema } = __req("src/schema.js");
 const { parseDate } = __req("src/format.js");
-const { binnedScale } = __req("src/colorscales.js");
+const { binnedScale, withMidClass } = __req("src/colorscales.js");
 const { autoLocale } = __req("src/i18n.js");
 const { COLUMN_TYPES, columnType } = __req("src/charts/table.js");
 
@@ -14546,9 +14971,9 @@ function lintSpec(spec = {}) {
     check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
   } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
-  if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
-  else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
-  if (!spec.source) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
+  if (!spec.bare && !spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
+  else if (!spec.bare && typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
+  if (!spec.source && !spec.bare) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
 
   const series = spec.series ?? spec.color;
   const nSeries = series && fields.includes(series) ? uniq(data.map((r) => String(r[series]))).length : Array.isArray(spec.y) ? spec.y.length : 1;
@@ -14642,6 +15067,7 @@ function lintSpec(spec = {}) {
     const small = [...counts].filter(([, n]) => n < 5).map(([k]) => k);
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
+  if (spec.fixedRadius && ['strip', 'box', 'violin', 'point'].includes(type)) sug('fixedradius-swarm', L('`fixedRadius` es del enjambre (swarm): en strip el radio ya es fijo.', '`fixedRadius` belongs to swarm: in strip the radius is already fixed.'), L('Quita `fixedRadius`, o usa `type: "swarm"`.', 'Drop `fixedRadius`, or use `type: "swarm"`.'));
   if (type === 'heatmap' && data.length) {
     for (const k of ['rowHref', 'colHref', 'rowTip', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
     if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
@@ -14658,6 +15084,7 @@ function lintSpec(spec = {}) {
         if (stray.length) sug('groupcolors-unknown', L(`\`groupColors\` nombra grupos que no están en los datos: ${stray.slice(0, 4).join(', ')}.`, `\`groupColors\` names groups that are not in the data: ${stray.slice(0, 4).join(', ')}.`), L('Usa los valores del campo de grupo, tal cual.', 'Use the values of the group field, exactly.'));
       }
     }
+    if (spec.groupStripe !== undefined && !(spec.groupColors && typeof spec.groupColors === 'object')) sug('groupstripe-no-colors', L('`groupStripe` ubica la franja de `groupColors`, y no hay `groupColors`: no hace nada.', '`groupStripe` places the stripe of `groupColors`, and there is no `groupColors`: it does nothing.'), 'groupColors: { "Minería": "#b5651d" }');
     if (spec.midClass && typeof spec.midClass === 'object' && !isColor(spec.midClass.color)) warn('midclass-color', L('`midClass.color` no es un color: la clase del medio va en el tinte del tema.', '`midClass.color` is not a color: the middle class takes the theme tint.'), 'midClass: { color: "#f3ece0" }');
     if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
   }
@@ -14913,7 +15340,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
       near ? L(`¿Quisiste decir \`${near}\`?`, `Did you mean \`${near}\`?`) : L('Revisa el nombre en el schema (`plotagents --schema`).', 'Check the name in the schema (`plotagents --schema`).'));
   }
 
-  try { binnedScale(spec); } catch (e) {
+  try { binnedScale(withMidClass(spec, '#000')); } catch (e) {
     err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
   }
   if (spec.clamp && !(Array.isArray(spec.xDomain) || Array.isArray(spec.yDomain) || Array.isArray(spec.valueDomain))) {
@@ -14935,6 +15362,9 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   for (const k of ['xScale', 'yScale']) if (spec[k] !== undefined) enumCheck(k, spec[k], SCALES, '"linear", "log"');
   if (spec.curve !== undefined) enumCheck('curve', spec.curve, CURVES);
+  if (spec.groupStripe !== undefined) enumCheck('groupStripe', spec.groupStripe, ['grid', 'labels'], '"grid", "labels"');
+  if (typeof spec.rowLine === 'string') enumCheck('rowLine', spec.rowLine, ['dashed'], 'true, false, "dashed"');
+  if (typeof spec.clamp === 'string') enumCheck('clamp', spec.clamp, ['always'], 'true, false, "always"');
   if (spec.tileLabels !== undefined) enumCheck('tileLabels', spec.tileLabels, ['auto', 'wrap'], '"auto", "wrap"');
   if (spec.shareOf !== undefined) enumCheck('shareOf', spec.shareOf, ['group', 'total', 'both'], '"group", "total", "both"');
   if (spec.lineWidths !== undefined && (typeof spec.lineWidths !== 'object' || Array.isArray(spec.lineWidths) || Object.values(spec.lineWidths).some((v) => !(+v > 0)))) {
@@ -14979,6 +15409,24 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   if (spec.simplify !== undefined && !(+spec.simplify >= 0)) err('simplify', L('`simplify` es una tolerancia en píxeles: un número ≥ 0.', '`simplify` is a tolerance in pixels: a number ≥ 0.'), 'simplify: 0.5');
   else if (+spec.simplify > 2) warn('simplify-coarse', L(`\`simplify: ${spec.simplify}\` borra detalles que se ven: las costas y las comunas chicas pierden su forma.`, `\`simplify: ${spec.simplify}\` removes visible detail: coastlines and small regions lose their shape.`), L('Entre 0,3 y 1 px no se nota en la página.', '0.3 to 1 px is invisible on a page.'));
   if (spec.microstates !== undefined && typeof spec.microstates !== 'boolean' && spec.microstates !== 'all') err('enum-microstates', L(`\`microstates: ${q(spec.microstates)}\` no es válido.`, `\`microstates: ${q(spec.microstates)}\` is not valid.`), 'microstates: true | "all"');
+  if (spec.highlightMode !== undefined) { if (typeof spec.highlightMode !== 'string') err('enum-highlightMode', L('`highlightMode` es "dim" u "outline".', '`highlightMode` is "dim" or "outline".'), 'highlightMode: "outline"'); else enumCheck('highlightMode', spec.highlightMode, ['dim', 'outline']); }
+  if (spec.highlightWidth !== undefined && !(+spec.highlightWidth > 0)) err('highlight-width', L('`highlightWidth` es un ancho en píxeles mayor que 0.', '`highlightWidth` is a width in pixels above 0.'), 'highlightWidth: 3');
+  if (MAPS.has(type) && spec.highlight === undefined && !(Array.isArray(spec.views) && spec.views.some((v) => v && v.highlight !== undefined)) && ['highlightMode', 'highlightColor', 'highlightWidth'].some((k) => spec[k] !== undefined)) warn('highlight-none', L('`highlightMode`, `highlightColor` y `highlightWidth` dibujan lo destacado, y no hay `highlight`: no hacen nada.', '`highlightMode`, `highlightColor` and `highlightWidth` draw what is highlighted, and there is no `highlight`: they do nothing.'), 'highlight: "Biobío"');
+  if (spec.fitPadding !== undefined && spec.fitPadding !== null) {
+    const fp = spec.fitPadding;
+    if (!((typeof fp === 'number' && fp >= 0 && fp <= 1) || (typeof fp === 'string' && /^\s*\d+(\.\d+)?\s*px\s*$/i.test(fp)))) err('fit-padding', L(`\`fitPadding: ${q(fp)}\` es una fracción entre 0 y 1 (0.06) o píxeles ("12px").`, `\`fitPadding: ${q(fp)}\` is a fraction from 0 to 1 (0.06) or pixels ("12px").`), 'fitPadding: 0.02');
+    else if (spec.fitTo === undefined || spec.fitTo === null) warn('fit-padding-alone', L('`fitPadding` es el margen de lo encuadrado con `fitTo`, y no hay `fitTo`: no hace nada.', '`fitPadding` is the margin of what `fitTo` frames, and there is no `fitTo`: it does nothing.'), 'fitTo: ["Biobío"]');
+  }
+  if (spec.viewSelector !== undefined && spec.viewSelector !== null) {
+    const vs = spec.viewSelector;
+    if (typeof vs === 'string' && !vs.includes('{id}')) err('view-selector', L('`viewSelector` necesita {id}: si no, todas las vistas tendrían el mismo selector.', '`viewSelector` needs {id}: otherwise every view would get the same selector.'), 'viewSelector: "#mapa:has(input[value={id}]:checked)"');
+    else if (typeof vs === 'string' && /[<&{};]|\/\*/.test(vs.split('{id}').join('x'))) err('view-selector', L('`viewSelector` no sirve como selector: sin llaves, punto y coma, comentarios, "<" ni "&".', '`viewSelector` is not a usable selector: no braces, semicolons, comments, "<" or "&".'), 'viewSelector: ".mostrar-{id}"');
+    else if (typeof vs !== 'string' && typeof vs !== 'function') err('view-selector', L('`viewSelector` es un texto con {id}.', '`viewSelector` is a string with {id}.'), 'viewSelector: ".mostrar-{id}"');
+    else if (!Array.isArray(spec.views)) warn('view-selector-alone', L('`viewSelector` cambia de vista, y no hay `views`: no hace nada.', '`viewSelector` switches views, and there are no `views`: it does nothing.'), 'views: [{ id: "a", value: "a" }, { id: "b", value: "b" }]');
+  }
+  for (const lk of [spec.links, ...(Array.isArray(spec.views) ? spec.views.map((v) => v && v.links) : [])]) {
+    if (lk && typeof lk === 'object' && !Array.isArray(lk) && lk.widthScale !== undefined) enumCheck('widthScale', lk.widthScale, ['linear', 'sqrt']);
+  }
   if (MAPS.has(type) && spec.fitTo === 'mainland' && spec.geo === 'world') warn('fit-mainland-world', L('`fitTo: "mainland"` busca islas lejanas de un país; en el mundo deja fuera continentes.', '`fitTo: "mainland"` looks for one country\'s far islands; on the world it leaves out continents.'), L('Quita `fitTo`, o encuadra con una caja [lon0, lat0, lon1, lat1].', 'Drop `fitTo`, or frame with a box [lon0, lat0, lon1, lat1].'));
   const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);
   if (token !== undefined && token !== null && String(token).trim().startsWith('sk.')) err('tiles-secret', L('El token de Mapbox es secreto (empieza con "sk."): quedaría a la vista de cualquiera en el SVG.', 'The Mapbox token is secret (it starts with "sk."): anyone could read it in the SVG.'), L('Usa un token público ("pk.…") restringido a tu dominio, de account.mapbox.com.', 'Use a public token ("pk.…") restricted to your domain, from account.mapbox.com.'));
@@ -15098,7 +15546,7 @@ const colorScaleSpec = (d) => ({
   anyOf: [
     { type: 'string' },
     { type: 'array', items: { type: 'string' }, minItems: 2 },
-    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' }, breaks: { type: 'array', items: { type: 'number' }, description: 'Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped.' }, closed: { type: 'string', enum: ['left', 'right'], description: 'With `breaks`: which end of a class includes its break. "left" (default): breaks[i−1] ≤ v < breaks[i], a value equal to a break goes to the class above; "right": breaks[i−1] < v ≤ breaks[i], to the class below.' } } },
+    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' }, breaks: { type: 'array', items: { type: 'number' }, description: 'Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key. Repeated breaks (quantiles of tied data) are merged, with the color of the empty class between them dropped. `breaks: []` with one color is a single class.' }, closed: { type: 'string', enum: ['left', 'right'], description: 'With `breaks`: which end of a class includes its break. "left" (default): breaks[i−1] ≤ v < breaks[i], a value equal to a break goes to the class above; "right": breaks[i−1] < v ≤ breaks[i], to the class below.' } } },
   ],
 });
 
@@ -15123,6 +15571,8 @@ const schema = {
     title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
     subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
     source: { type: 'string', description: 'Data source, shown at the bottom right.' },
+    ariaLabel: { type: 'string', description: 'Accessible name of the chart (the SVG <title> a screen reader reads) without drawing a title; default `title`, or the chart type when there is none.' },
+    idPrefix: { type: 'string', description: 'Base of the SVG\'s internal ids (aria ids, map clip path, no-data pattern). Set it when the same chart appears twice on a page or ids must be stable across builds; letters, digits, - and _.' },
     locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'], description: 'Language and number format. Default "es" (1.234,5); "en" for 1,234.5; also "pt", "fr", "de". "auto" recognizes the language from the title, subtitle, column names and categories (tables do this when `locale` is omitted).' },
     x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
     y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
@@ -15134,7 +15584,7 @@ const schema = {
     group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value.'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
     size: field('Bubble size field (area-proportional). network: field of `nodes` with each node\'s weight. dendrogram (rows input): each leaf\'s weight, drawn as a bar with its figure beside the name (horizontal); joins add up their leaves.'),
-    sub: field('dendrogram (rows input): a second line under each leaf name (horizontal); rows grow to fit it.'),
+    sub: field('dendrogram (rows input): a second line under each leaf name (horizontal); "\\n" splits it into several lines. Rows grow to fit.'),
     from: field('Sankey source field.'),
     to: field('Sankey target field.'),
     axis: field('radar: field with the axis names (long format).'),
@@ -15191,16 +15641,21 @@ const schema = {
     featureKey: field('choropleth: feature property to match `key` against. Default tries code, id, ISO-3, name and aliases, then any property whose values match the data (e.g. "CUT_REG", "GEOID").'),
     nameKey: field('choropleth: feature property with the display name (default: name, NOMBRE, NAME_1, ADMIN…).'),
     fitTo: { description: 'Map framing: zoom to some regions (names or codes), a bounding box [lonMin, latMin, lonMax, latMax] (in the geometry\'s own coordinates), "markers", or "mainland" (leave out far islands and claims found by the sea gap that separates them: Rapa Nui, Juan Fernández, Antarctica). The rest of the map stays as context, clipped.', anyOf: [{ type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] } }] },
-    links: { description: 'choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), opacity, label }. Ends are region keys (same matching as `key`) or [lon, lat]. A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key "from→to".', anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }] },
+    links: { description: 'choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), widthScale ("linear" default, or "sqrt": width by the square root of value/max), opacity, label, fromLabel / toLabel (fields naming each end in the line\'s tooltip), format (number format of the line\'s tooltip, default the map\'s), ends (true or { radius }: a dot at each place a line joins) }. Ends are region keys (same matching as `key`) or [lon, lat] (named "lat, lon"; on already-projected geometry, "x, y"). A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key "from→to".', anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }] },
     rotate: { type: 'number', enum: [90, -90, 180, 270], description: 'Maps: turn the projected map a quarter (or half) turn clockwise, after projection and fitting; labels stay upright and hit areas follow. -90 puts north on the left.' },
     orientation: { type: 'string', enum: ['landscape', 'portrait', 'horizontal', 'vertical'], description: 'Maps: "landscape" lays a taller-than-wide territory on its side with north on the left (Chile, Norway, Vietnam, a river); "portrait" stands a wide one up. bar: "horizontal" / "vertical".' },
     markers: { description: 'Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color, legend, maxRadius, labels }. With a size field, circles are area-proportional.', anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }] },
     layers: { type: 'array', description: 'Map: extra GeoJSON drawn over (or `below: true` under) the regions: rivers, roads, routes, borders, points. Each { geo, label?, stroke?, width?, fill?, dash?, opacity?, below? }; a `label` adds a legend key.', items: { type: 'object' } },
+    highlightMode: { type: 'string', enum: ['dim', 'outline'], description: 'Maps with `highlight`: "dim" (default) outlines the highlighted regions and draws the rest at half opacity; "outline" only outlines them.' },
+    highlightColor: { type: 'string', description: 'Maps: color of the outline around highlighted regions (default the theme ink). A CSS variable with a fallback works, and a skin or a view can set its own.' },
+    highlightWidth: { type: 'number', exclusiveMinimum: 0, description: 'Maps: width in pixels of the outline around highlighted regions (default 1.5).' },
+    fitPadding: { description: 'Maps with `fitTo`: the margin around what is framed. A number is a fraction of the framed extent on each side (default 0.06; 0 = flush); "12px" is pixels inside the map box.', anyOf: [{ type: 'number', minimum: 0, maximum: 1 }, { type: 'string', pattern: '^\\s*\\d+(\\.\\d+)?\\s*px\\s*$' }] },
+    viewSelector: { type: 'string', description: 'choropleth with `views`: switch views with CSS from outside the SVG. A selector for an ANCESTOR of the <svg> with "{id}" in it, e.g. "#map-block:has(input[value={id}]:checked)" or ".show-{id}"; from JS also a function (id, index) => selector. The emitted rules follow it instead of `data-view`: the first view shows when no selector matches. Tooltips are attributes and still need setView/bindViews (plotagents/views) to swap.' },
     borderColor: { type: 'string', description: 'Map: color of the borders between regions.' },
     borderWidth: { type: 'number', description: 'Map: width of the borders between regions.' },
     pointRadius: { type: 'number', description: 'Map: radius of Point features in your own GeoJSON (default 5).' },
     missing: { type: 'string', enum: ['hatch', 'plain', 'context', 'tint', 'gap'], description: 'Cells/regions without data. choropleth: "hatch" (default), "plain" (flat tint) or "context" (flat tint, no tooltip and no "no data" key: regions drawn only as surroundings). heatmap: "tint" (default), "plain" (outline only), "hatch" or "gap" (nothing drawn).' },
-    views: { type: 'array', description: 'choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view\'s lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root\'s data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView). Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, value: { type: 'string' }, data: { type: 'array', items: { type: 'object' } } } } },
+    views: { type: 'array', description: 'choropleth: several readings (indicators, years) of ONE geometry in one SVG. Each view is a patch of the spec: { id (lowercase, digits, - or _), label?, value?, data?, format?, colorScale?, scale?, classes?, thresholds?, midpoint?, colors?, legendTitle?, tooltip?, highlight? (outlined in that view only), links? (that view\'s lines) }. The first view is drawn as usual; every other view is baked as one class per region and a <style> keyed by the root\'s data-view attribute, with its legend, labels, lines and tooltips (data-vtip-<id>). Switching views is setting data-view (plotagents/views: setView), or a selector outside the SVG with `viewSelector`. Views cannot change the shapes, framing or frame (geo, key, fitTo, orientation, width, title…).', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, value: { type: 'string' }, data: { type: 'array', items: { type: 'object' } } } } },
     pathPrecision: { type: 'integer', minimum: 0, maximum: 3, description: 'sankey: decimals of the link paths (default 2). Maps: decimals of the drawn path coordinates, in pixels. Setting it (or `simplify`) writes compact paths: relative commands, rounded to this grid (default 1). About half the bytes of the default paths.' },
     simplify: { type: 'number', minimum: 0, description: 'Maps: simplify each outline on screen (Douglas–Peucker) with this tolerance in pixels (0.3–1 is invisible on a page and cuts a detailed map to a third). Implies compact paths (`pathPrecision`).' },
     sprite: { type: 'string', description: 'choropleth: path of an outlines file written once with mapSprite(spec) (e.g. "/maps/chile.svg"). Each region becomes a <use href="file#id"> through one transform that frames and turns it, so one cached file serves every page, width and framing; colors, classes, tooltips and links stay on the <use>. Points are still drawn inline. Paths and http(s) only, no #.' },
@@ -15263,6 +15718,7 @@ const schema = {
           clip: { type: 'boolean', description: 'range: the scale is min–max (the column\'s, or the row\'s with scale: "row"); what falls past an end is a chevron.' },
           domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'range: each row\'s scale, [from, to] as numbers or fields (e.g. p5–p95); past an end, a chevron.' },
           minLabel: { type: 'string' }, maxLabel: { type: 'string' }, medianLabel: { type: 'string' }, domainLabel: { type: 'string' },
+          halo: { type: 'boolean', description: 'range: false drops the ring around the dot.' }, outsideLabel: { type: 'string', description: 'range: how the tooltip says a value falls past a clipped end.' },
           scale: { type: 'string', enum: ['shared', 'row'], description: 'range: one scale for the column (default) or one per row (indicators in different units).' },
           formatBy: { type: 'string', description: 'number/bar/heat/delta/range: one format per row (indicators in different units). A field whose value is a format ("percent", { suffix: " yrs" }); from JS also a function (value, row) => text. Range rails go per row; no total.' },
           total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
@@ -15301,6 +15757,9 @@ const schema = {
     domainLabel: { type: 'string', description: 'rail: with `domain`, a tooltip line naming the scale (e.g. "Middle 90% of communes").' },
     domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'rail: the scale, [from, to] as numbers or fields (e.g. ["p5", "p95"]). Anything past an end is drawn as a chevron at that end instead of stretching the scale; without min/max the rail spans the whole domain.' },
     clip: bool('rail: the scale is [min, max]; a value or reference past an end is a chevron at that end (it does not stretch the scale).'),
+    railWidth: number('rail: thickness of the min–max line in px (default: 2 at 18 px tall, thinner on shorter rails).'),
+    halo: bool('rail (and table `range` columns): false drops the ring in the background colour around the dot and the value chevron.'),
+    outsideLabel: { type: 'string', description: 'rail (and table `range` columns): how the tooltip says a value or reference falls past a clipped end (default "fuera de la escala" / "beyond the scale"), e.g. "más allá de la comuna más alta". Text or a field of the row.' },
     fallback: { type: 'string', enum: ['value', 'none'], description: 'rail: what a row without min/max (and no `domain`) shows: the figure alone (default) or nothing. Never a lone dot.' },
     dot: bool('spark: false hides the end dot.'),
     dotRadius: number('spark: end dot radius in px. rail: the dot radius (default 4.5 at 18 px tall). dotplot: dot radius in px, not capped by the pixel width of a bin (a fine bin in a narrow box keeps readable dots; neighbours may touch). With an explicit `height` it still shrinks so the tallest stack fits.'),
@@ -15379,8 +15838,8 @@ const schema = {
     relax: { description: 'sankey: separate the node labels of each column so none overprints its neighbor. true keeps 31 px between label centers (name plus second line); a number sets that distance (below 28 px each label is one line). Labels move as little as possible, every node is named, and a moved label gets a leader line to its node. Without `height` the chart grows until the labels fit.', anyOf: [{ type: 'boolean' }, { type: 'number', exclusiveMinimum: 0 }] },
     linkColor: { description: 'sankey: flows take the color of their "source" or their "target"; a list sets it per stage (["source", "target"]). `colors["from→to"]` pins one flow.', anyOf: [{ type: 'string', enum: ['source', 'target'] }, { type: 'array', items: { type: 'string', enum: ['source', 'target'] } }] },
     tooltip: {
-      description: 'What each mark says on hover, beyond its value. true keeps the default lines (on a dendrogram it also gives every join a card: height, leaves, weight, and the fields of its own row). A list of fields ("Field: value" lines from the mark\'s rows), or { title: field, fields: [field | { field, label, format }], text: field (pre-written text, may hold line breaks), replace: true (drop the default lines) }, or false. From JavaScript, also a function (d) => text | { title, lines }. A mark made of several rows shows a field only when they agree.',
-      anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } }, { type: 'object', properties: { title: { type: 'string' }, fields: { type: 'array' }, text: { type: 'string' }, replace: { type: 'boolean' } } }],
+      description: 'What each mark says on hover, beyond its value. true keeps the default lines (on a dendrogram it also gives every join a card: height, leaves, weight, and the fields of its own row). A list of fields ("Field: value" lines from the mark\'s rows), or { title: field, fields: [field | { field, label, format }], text: field (pre-written text, may hold line breaks), replace: true (drop the default lines), omit: ["Name"] (drop only the default lines with that name) }, or false. Without a `title` the first line is the first in `data-tip`, and a host that reads "heading\nlines" (one reading `data-tip` itself) shows it as the heading. From JavaScript, also a function (d) => text | { title, lines }. A mark made of several rows shows a field only when they agree.',
+      anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } }, { type: 'object', properties: { title: { type: 'string' }, fields: { type: 'array' }, text: { type: 'string' }, replace: { type: 'boolean' }, omit: { type: 'array', items: { type: 'string' }, description: 'Default lines to drop, by name: "Escala" drops "Escala: 0–40" (the text before the colon, or the whole line); the rest stay. From JS also a RegExp.' } } }],
     },
     crosshair: bool('line/area: false writes one tooltip column per x (with `data-tip`) instead of the browser crosshair: for pages that bring their own tooltip layer. Implied by `tooltip`.'),
     band: { anyOf: [{ type: 'object', properties: { lower: { type: 'string' }, upper: { type: 'string' }, label: { type: 'string' } }, required: ['lower', 'upper'] }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2 }], description: 'line/area: an interval that comes already computed (a model\'s 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`. rail: [lo, hi] fields (or numbers) of the shaded band, e.g. the quartiles.' },
@@ -15407,7 +15866,10 @@ const schema = {
     cumulative: bool('hist/kde: cumulative distribution.'),
     rug: bool('kde: tick marks for each observation.'),
     complementary: bool('ecdf: show 1 − F(x) (share above each value).'),
-    radius: number('Point radius in px (scatter, regplot, strip, swarm).'),
+    radius: number('Point radius in px (scatter, regplot, strip, swarm). swarm: a starting value that shrinks until the widest cluster fits its band, unless `fixedRadius`.'),
+    fixedRadius: bool('swarm: keep `radius` as given. Horizontal without `rowHeight` or `height`, the rows grow until the widest cluster fits; otherwise the dots that do not fit are pressed against the edge of their band and overlap.'),
+    rowHeight: number('gantt: row height in px. Horizontal box/violin/strip/swarm/point: px per category row, the exact pitch between rows (default 46; with hue and dodge, 22 per group + 12). Sets the chart height when `height` is not given.'),
+    rowLine: { description: 'box/violin/strip/swarm/point: a guide line along each category, across the value axis, behind the marks. true: solid; "dashed": dashed (2 3). Theme grid color.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['dashed'] }] },
     split: { type: 'boolean', description: 'violin: with two hue levels, one half each.' },
     points: { description: 'box: overlay the observations. line: markers on every point; a list of series names (or { series: true }) puts them only on those series.', anyOf: [{ type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', additionalProperties: { type: 'boolean' } }] },
     lineWidths: { type: 'object', additionalProperties: { type: 'number' }, description: 'line: stroke width per series in px, e.g. { "1991–2020 mean": 3.5 }. Series not named keep the default; legend and end labels are unchanged.' },
@@ -15423,17 +15885,19 @@ const schema = {
     cellHeight: number('heatmap: maximum cell height in px.'),
     floor: number('heatmap: values below are drawn as plain empty cells (not "no data"; the tooltip keeps the value) and do not count for the color scale.'),
     ceiling: number('heatmap: values above are drawn as plain empty cells and do not count for the color scale.'),
-    midClass: { description: 'heatmap with binned `colorScale.breaks` around 0: "neutral" draws the class that contains 0 in the theme\'s neutral tint, so near-zero cells are not painted; { color } gives that class this color instead (a skin patch can set it without replacing the theme).', anyOf: [{ type: 'string', enum: ['neutral'] }, { type: 'object', properties: { color: { type: 'string' } } }] },
+    midClass: { description: 'heatmap with binned `colorScale.breaks` around 0: "neutral" draws the class that contains 0 in the theme\'s neutral tint, so near-zero cells are not painted; { color } gives that class this color instead (a skin patch can set it without replacing the theme). `colorScale.colors` may then list one color per break (one fewer than the classes): the diverging colors without the middle one; the mid color is inserted at position k = the number of negative breaks (counted from the top with `reverse`). Needs 0 strictly inside the breaks and not a break itself.', anyOf: [{ type: 'string', enum: ['neutral'] }, { type: 'object', properties: { color: { type: 'string' } } }] },
     cornerLabel: { type: 'string', description: 'heatmap: a title in the empty corner where the row labels meet the column labels, e.g. "born in ↓ / lives in →". "\\n" breaks it into lines; the row-label column widens to fit (same cap). What does not fit is truncated, with the full text in its tooltip.' },
-    groupColors: { type: 'object', additionalProperties: { type: 'string' }, description: 'heatmap with `xGroup` / `yGroup`: a color per group name. Each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid, instead of the alternate tint.' },
+    groupColors: { type: 'object', additionalProperties: { type: 'string' }, description: 'heatmap with `xGroup` / `yGroup`: a color per group name. Each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid, instead of the alternate tint (see `groupStripe`).' },
+    groupStripe: { type: 'string', enum: ['grid', 'labels'], description: 'heatmap with `groupColors`: where the stripe goes. "grid" (default): on the group band, at its edge facing the grid. "labels": on the grid edge on the labels side, between the labels and the cells (over the grid with `xLabelPosition: "top"`; left of it for rows); the group band keeps only the names.' },
     emptyRow: { type: 'string', description: 'heatmap: a row with no values at all is written across with this text (e.g. "no data") instead of empty cells.' },
     rowTip: field('heatmap: tooltip of each row label, from this field (first row of that label that has it): what belongs to the whole row and need not repeat in every cell. From JS, also a function (label) => text.'),
     rowHref: field('heatmap: row labels link to the URL in this field (first row of that label that has one; paths and http(s) only). From JS, also a function (label) => url.'),
     colHref: field('heatmap: column labels link to the URL in this field. From JS, also a function (label) => url.'),
     xLabelAngle: { type: 'number', minimum: -90, maximum: 90, description: 'heatmap: rotate the column labels (-90 upright, -45 slanted). The label strip grows to fit (long labels are cut, full name in the tooltip); labels are thinned only when they would touch.' },
     xLabelPosition: { type: 'string', enum: ['top', 'bottom'], description: 'heatmap: column labels under the grid (default) or over it.' },
-    yLabelPosition: { type: 'string', enum: ['left', 'above'], description: 'Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or "above" each row, so the value axis keeps the full width (a phone).' },
-    clamp: bool('strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0,01%", "≥ 100%") when some value lies beyond. On a log axis it also lets 0 sit on the low edge.'),
+    yLabelPosition: { type: 'string', enum: ['left', 'above'], description: 'Horizontal box/violin/strip/swarm/point: row names to the left of the axis (default) or "above" each row, so the value axis keeps the full width (a phone). In strip/swarm each row is a strip of `rowHeight` with its name on top and the dots under it, the name right above its highest dot.' },
+    clamp: { description: 'strip/swarm/box/violin/point with a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0,01%", "≥ 100%") when some value lies beyond; "always" marks both edge ticks even when nothing lies beyond. On a log axis it also lets 0 sit on the low edge.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['always'] }] },
+    tickFormat: formatSpec('dendrogram: format of the height-axis ticks, apart from `format` (tooltips). Also read as `xFormat` (horizontal) or `yFormat` (vertical). Default: `format`.'),
     labelWidth: number('network: widest node label in px before it is truncated (default 150). dendrogram: widest names column in px (default 30% of the width horizontal, 120 px vertical).'),
     treeWidth: number('dendrogram (horizontal): width of the tree in px; the names column takes the rest (e.g. 250 of 1236).'),
     edgeTip: bool('network: false writes no tooltip on edges (also with `tooltip: false`). Hundreds of edges each with its own text weigh more than the drawing.'),
@@ -15459,6 +15923,10 @@ const schema = {
     diverging: bool('heatmap/choropleth: diverging color scale around 0 (or `midpoint`).'),
 
     colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }. Any color may be a CSS variable with a fallback, "var(--accent, #3A47B8)": the page decides it, the fallback is used for contrast and tints.' },
+    bare: {
+      description: 'A light SVG for tiny chrome-less marks repeated in an HTML page that already says what they are (rail, spark; any type works): no <style> block (a type\'s own functional CSS stays), aria-hidden="true" with no role, <title> or <desc>, no empty groups, no background unless `background: true`, no data-pa-* attributes (no runtime), no inline max-width, font-family only when there is text. Colours that are CSS variables are written once, as style="fill:var(--x, #fallback)", without the presentation attribute. With `skins`, a var() of the page in every skin needs no skin rules; colours that change between skins become content-named variables on the class "pa-skins", whose rules go in a <style> of each SVG or, with { skinCSS: false }, once in the page from skinCSS(specs). For HTML pages: SVG files and rasterizers that ignore CSS should not use it.',
+      anyOf: [{ type: 'boolean' }, { type: 'object', properties: { skinCSS: { type: 'boolean', description: 'false: no skin rules inside the SVG; write skinCSS(specs) once in the page.' } } }],
+    },
     skins: {
       type: 'array',
       description: 'Several color sets in one SVG; page CSS picks which one shows. Each item patches the colors of the spec (theme, palette, ramp, colorScale, colors). The first is the default (written in the attributes); every other one needs `when`, the CSS selector of an ancestor under which it applies (e.g. "html.dark"). Geometry and text must not change between skins.',
@@ -15938,7 +16406,7 @@ function mapZoom(root, svg, z, { dark, hide }) {
     if (!(ev.target.closest && ev.target.closest('.pa-zoom'))) return;
     const m = ev.target.closest && ev.target.closest('.pa-m');
     if (!m || !m.getBBox) return;
-    const key = m.getAttribute('data-k') || m.getAttribute('d') || m.getAttribute('cx');
+    const key = m.getAttribute('data-key') || m.getAttribute('d') || m.getAttribute('cx');
     if (st.key === key) { reset(); return; }
     const b = m.getBBox();
     const k = Math.max(1.4, Math.min(MAX, 0.62 * Math.min(bw / Math.max(b.width, 4), bh / Math.max(b.height, 4))));
@@ -16189,13 +16657,13 @@ function render(target, spec, opts = {}) {
   };
   const regionFills = () => {
     const m = new Map();
-    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-k'), f); }
+    for (const n of chart.querySelectorAll('.pa-regions [data-key]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-key'), f); }
     return m;
   };
   const tweenFills = (before) => {
     if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
-    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) {
-      const old = before.get(n.getAttribute('data-k')), now = n.getAttribute('fill');
+    for (const n of chart.querySelectorAll('.pa-regions [data-key]')) {
+      const old = before.get(n.getAttribute('data-key')), now = n.getAttribute('fill');
       if (old && /^#/.test(now || '') && old.toLowerCase() !== now.toLowerCase()) n.animate([{ fill: old }, { fill: now }], { duration: 420, easing: 'ease-out' });
     }
   };
