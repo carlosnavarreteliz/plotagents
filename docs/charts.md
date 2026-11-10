@@ -14,13 +14,13 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `series` / `hue` | Field that splits the data into colored groups. |
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. From JavaScript, also a function `(value) => string`: your own number rules for labels, tooltips and axis ticks. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. From JavaScript, also a function `(value) => string`: your own number rules for labels, tooltips and axis ticks. In `line`, `area` and `bar`, `yFormat` writes only the value-axis ticks and `format` the labels and tooltips (`yFormat` defaults to `format`). |
 | `locale` | `"es"` (default: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"`, or `"auto"`: recognized from the title, subtitle, column names and categories. Tables use `"auto"` when `locale` is omitted. |
 | `xLabel`, `yLabel` | Axis titles (horizontal, never rotated). |
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name; an annotation with `panel` goes only to that panel. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, and the same plot size in pixels (axis margins and end-label room are matched across panels), so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name, and every panel reserves the room it needs, so panels never overlap and keep equal plot heights; an annotation with `panel` goes only to that panel; `legend: false` hides the shared legend. |
 | `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
@@ -56,7 +56,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `labels` | `true`, `false` or `"auto"`. |
 | `barWidth` | Max bar thickness in px. |
 | `xGroup` / `yGroup` | Field that groups consecutive categories (either name works, in both orientations): a tinted band with the group name runs along the category axis, with a thin line between groups. Nothing is reordered, so set `sort: "none"` to keep your order. |
-| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). A shown label is cut to the room of N categories, not of one. Date categories thin to calendar steps (months 1, 2, 3, 4, 6, 12…; years 1, 2, 5, 10…), measured on the label widths. |
 
 The value axis always ends on the first round value at or above the largest bar, and that last tick is always labeled, also on a phone: the number of ticks follows the width of their labels.
 
@@ -76,7 +76,8 @@ The value axis always ends on the first round value at or above the largest bar,
 | `ci`, `errorbar`, `estimator` | seaborn `lineplot`: mean and confidence band when there are several rows per x. |
 | `curve` | `"linear"` (default), `"smooth"` (monotone, never invents peaks), `"step"`. |
 | `zero` | Force the y axis to include zero (on by default for areas and when it costs little). |
-| `points` | Markers on every point (automatic for short series). |
+| `points` | Markers on every point (automatic for short series); a list of series names (or `{ series: true }`) puts them only on those. |
+| `lineWidths` | Stroke width per series, e.g. `{ "1991–2020 mean": 3.5 }`; the rest keep the default. |
 | `stack` | Areas: `true` (default with series), `"percent"`, or `false` to overlap. |
 | `fill` | Single line: `false` removes the soft gradient. |
 | `xRange` | Visible range `[from, to]`; this is what the range slider sets (`slider: true`). |
@@ -275,6 +276,8 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group or its legend key does it (the category fills the whole plot) and breadcrumbs or Esc go back. |
 | `exclude` | Level-1 groups to leave out; the rest fill the plane and shares are recomputed. Shift + click on a legend key does it in the browser. |
 | `showValues` | Append values to the labels. |
+| `tileLabels` | `"wrap"`: a long name goes on two or three lines even when its share no longer fits, and as a last resort is cut with "…". Default `"auto"`: a name only when it fits whole. A share under 0.05% prints as "<0.1%", never "0%". |
+| `shareOf` | With `focus`: what share each tile prints, `"group"` (default), `"total"` or `"both"` ("53% · 11% of total"). |
 | `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
 | `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
 | `compareData` | Rows of an earlier period to compute changes without `time`. |

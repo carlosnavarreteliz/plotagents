@@ -108,6 +108,8 @@ export function assignColors(displayRoot, theme, spec, { single = false } = {}) 
 export function shareFmt(locale) {
   return (v, total) => {
     const p = total > 0 ? (v / total) * 100 : 0;
+    // Una parte que no es cero no se escribe «0 %»: se dice que es menos de 0,1 %.
+    if (p > 0 && p < 0.05) return '<' + formatNumber(0.1, 1, locale) + '%';
     return formatNumber(p, p < 1 ? 1 : p < 10 ? 1 : 0, locale, true) + '%';
   };
 }

@@ -4,7 +4,7 @@
 // aparecen si caben. Drill-down: data-drill + spec.focus.
 import { tipper } from '../tooltip.js';
 import { el, g, text, tip, esc, linkWrap } from '../svg.js';
-import { measure, wrap } from '../text.js';
+import { measure, wrap, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
@@ -143,6 +143,19 @@ export function treemap(spec, theme) {
     return r ? r[spec.href] : undefined;
   };
 
+  // `shareOf`: dentro de un grupo (`focus`), la participación que escribe cada
+  // tesela: la del grupo (por defecto), la del total, o las dos.
+  const shareOf = spec.shareOf ?? 'group';
+  const ofTotal = en ? 'of total' : 'del total';
+  const shareText = (n) => {
+    if (!focus.path.length || shareOf === 'group') return share(n.value, total);
+    if (shareOf === 'total') return `${share(n.value, grand)} ${ofTotal}`;
+    return `${share(n.value, total)} · ${share(n.value, grand)} ${ofTotal}`;
+  };
+  // `tileLabels: "wrap"`: el nombre en dos o tres líneas aunque la cifra no
+  // quepa, y si ni así, recortado con «…»; por defecto, sólo si cabe entero.
+  const wrapMode = spec.tileLabels === 'wrap';
+
   function drawLeaf(n, x, y, w, h, relDepth) {
     if (w < 0.6 || h < 0.6) return '';
     const ch = showChange ? changeOf(n) : null;
@@ -150,7 +163,7 @@ export function treemap(spec, theme) {
     const rx = Math.max(0, Math.min(R - 1, w / 6, h / 6));
     const parts = [el('rect', { x, y, width: w, height: h, rx, fill })];
     const extra = [spec.showValues ? fmt(n.value) : null, ch !== null ? pctTxt(ch) : null].filter(Boolean).join(' · ');
-    parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), extra || null, relDepth));
+    parts.push(...tileLabel(n.name, shareText(n), x, y, w, h, textOn(fill, theme), extra || null, relDepth, wrapMode));
     const drill = relDepth === 1 && n.children.length ? JSON.stringify(n.path) : undefined;
     return linkWrap(hrefOf(n), g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts));
   }
@@ -185,7 +198,7 @@ export function treemap(spec, theme) {
 }
 
 /** Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. */
-function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
+function tileLabel(name, pct, x, y, w, h, fill, value, depth, wrapMode = false) {
   const out = [];
   const pad = w < 60 || h < 40 ? 5 : 8;
   const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
@@ -207,6 +220,21 @@ function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
       out.push(text(x + pad, y + pad + size * X * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
       return out;
     }
+    // Sólo el nombre, en las líneas que quepan a lo alto (sin la cifra).
+    if (wrapMode && fitsW && pad + lines.length * lh <= h) {
+      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+      return out;
+    }
   }
+  if (!wrapMode) return out;
+  // Ni entero cabe: al tamaño mínimo, en las líneas que quepan, la última
+  // (o una palabra más ancha que la tesela) recortada con «…».
+  const size = 9.5, X = ctx.textScale, lh = size * X * 1.14;
+  const room = w - pad * 2;
+  const rows = Math.min(3, Math.floor((h - pad) / lh));
+  if (rows < 1 || room < measure('Abc…', size, 600)) return out;
+  const lines = wrap(name, room, size, 600, rows).map((l) => truncate(l, room, size, 600));
+  if (lines.every((l) => l === '…' || l.length < 2)) return out;
+  lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
   return out;
 }

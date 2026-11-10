@@ -52,6 +52,9 @@ export function createFrame(spec, theme, defaults = {}) {
   });
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
+  // Paneles de un facet: el encabezado de todos mide lo que el más alto, para
+  // que el trazado empiece a la misma altura en cada uno.
+  if (spec._headerMin > y) y = spec._headerMin;
 
   const srcText = chrome && spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   // Una fuente larga salta a una segunda línea en vez de salirse por la izquierda.

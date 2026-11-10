@@ -9,7 +9,7 @@ import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError } from '../data.js';
-import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
+import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
@@ -218,7 +218,7 @@ export function line(spec, theme, variant = 'line') {
   const capacity = Math.max(1, Math.floor((area.h - yChrome + 8 - lh / 2) / lh) + 1);
   if (labeled.length > capacity) labeled = labeled.slice(0, capacity);
 
-  const endW = labeled.length
+  let endW = labeled.length
     ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) * 1.04 + 6 * ctx.textScale : 0) : 0; })) + 22
     : 10;
 
@@ -227,10 +227,18 @@ export function line(spec, theme, variant = 'line') {
   const intY = !pct && !spec.index && rawY.length > 0 && rawY.every(Number.isInteger);
   const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)), { integer: intY });
   const yTicksArr = (yLog ? log(nd.min, nd.max, 0, 1) : linear(nd.min, nd.max, 0, 1)).ticks(nd.step);
-  const tickF = yLog ? (v) => fmt.tick(v, v)(v) : fmt.tick(nd.step, yTicksArr);
-  const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
-  const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
-  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
+  // `yFormat`: las marcas del eje y, aparte de `format` (rótulos finales y tooltip).
+  const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, rawY) : fmt;
+  const tickF = yLog ? (v) => axisFmt.tick(v, v)(v) : axisFmt.tick(nd.step, yTicksArr);
+  let leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
+  let yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
+  let padB = 24 * ctx.textScale + (spec.xLabel ? 16 * ctx.textScale : 0);
+  // Facet con `sharey: "span"`: lo reservado alrededor del trazado se iguala al
+  // del panel que más pide, para que todos tengan los mismos píxeles por unidad.
+  if (spec._domains) { spec._domains.pad = [yTop - area.y, padB]; spec._domains.padX = [leftM, endW]; }
+  if (spec._pad) { yTop = Math.max(yTop, area.y + spec._pad[0]); padB = Math.max(padB, spec._pad[1]); }
+  if (spec._padX) { leftM = Math.max(leftM, spec._padX[0]); endW = Math.max(endW, spec._padX[1]); }
+  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: spec._pad ? area.y + area.h - yTop - padB : area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
   const yS = (yLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
 
   // Escala x
@@ -244,6 +252,14 @@ export function line(spec, theme, variant = 'line') {
   const xLog = spec.xScale === 'log' && x0 > 0;
   // Con el eje y por dentro, si el primer punto choca con una etiqueta de marca,
   // el trazado arranca pasado la etiqueta más ancha.
+  // Puntos: `points` sí/no para todas, o sólo para algunas series (una lista
+  // de nombres o { serie: true }). `lineWidths: { serie: px }`: el grosor de
+  // cada una (una media de período más gruesa que la serie anual).
+  const autoDots = m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea;
+  const pointsOpt = spec.points ?? spec.markers;
+  const dotsOf = (k) => (Array.isArray(pointsOpt) ? pointsOpt.map(String).includes(k)
+    : pointsOpt && typeof pointsOpt === 'object' ? !!pointsOpt[k] : pointsOpt ?? autoDots);
+  const widthOf = (k, w) => { const v = spec.lineWidths && typeof spec.lineWidths === 'object' ? +spec.lineWidths[k] : NaN; return Number.isFinite(v) && v > 0 ? v : w; };
   let xPad = 0;
   if (isInside(theme, inside) && !singleX && !spec.xDomain) {
     const axisSize = theme.type?.axis ?? 12;
@@ -251,9 +267,8 @@ export function line(spec, theme, variant = 'line') {
     // Caja de cada etiqueta: su ancho real, de la altura de las mayúsculas a la línea base.
     const boxes = yTicksArr.map((t) => { const base = Math.round(yS(t)) + 0.5 - k; return { w: measure(tickF(t), axisSize), y0: base - axisSize * 0.75 * ctx.textScale, y1: base + 1 }; });
     const xS0 = (xLog ? log : linear)(x0, x1, inner.x, inner.x + inner.w);
-    const dots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
-    const r = dots ? (M.pointRadius ?? 4) : (M.lineWidth ?? 2.25) / 2 + 0.5;
     for (const l of m.lines) {
+      const r = dotsOf(l.key) ? (M.pointRadius ?? 4) : widthOf(l.key, M.lineWidth ?? 2.25) / 2 + 0.5;
       const p = l.points.find((q) => Number.isFinite(q.y));
       if (!p) continue;
       const px = xS0(p.x), py = yS(p.y);
@@ -269,11 +284,13 @@ export function line(spec, theme, variant = 'line') {
     if (m.kind === 'year') return String(xv);
     return xNumFmt(xv);
   };
-  let xItems;
+  let xItems, xSteps;
   if (singleX) {
     xItems = [{ pos: xS(xsAll[0]), label: xFmt(xsAll[0]) }];
   } else if (m.kind === 'date') {
-    xItems = timeTicks(x0, x1, Math.max(2, Math.floor(inner.w / 86)), locale).ticks.map((t) => ({ pos: xS(t.value), label: t.label }));
+    const tt = timeTicks(x0, x1, Math.max(2, Math.floor(inner.w / 86)), locale);
+    xItems = tt.ticks.map((t) => ({ pos: xS(t.value), label: t.label }));
+    xSteps = calendarSteps(tt.unit, tt.every);
   } else if (m.kind === 'category') {
     xItems = m.cats.map((c, i) => ({ pos: xS(i), label: c })).filter((it, i) => xsAll.includes(i));
   } else if (xLog) {
@@ -293,7 +310,7 @@ export function line(spec, theme, variant = 'line') {
   const yTicks = yS.ticks(nd.step);
   body.push(yGrid(yTicks, yS, inner, theme, { baseline: zero ? 0 : NaN }));
   if (spec.yLabel) body.push(text(area.x, area.y + 10, spec.yLabel, { fill: theme.lede, fontSize: theme.type?.axis ?? 12, fontWeight: 500 }));
-  body.push(xLabels(xItems, inner, theme, { y: inner.y + inner.h + 18, size: theme.type?.axis }));
+  body.push(xLabels(xItems, inner, theme, { y: inner.y + inner.h + 18, size: theme.type?.axis, steps: xSteps }));
   if (spec.xLabel) body.push(text(inner.x + inner.w, inner.y + inner.h + 36, spec.xLabel, { fill: theme.lede, fontSize: theme.type?.axis ?? 12, fontWeight: 500, textAnchor: 'end' }));
 
   // Anotaciones verticales (eventos). Los rótulos que chocarían bajan a la
@@ -362,7 +379,6 @@ export function line(spec, theme, variant = 'line') {
   // Orden de dibujo: atenuadas, luego las grises de desborde (9.ª en adelante), luego las de color.
   const rank = (l) => (!focus(l.key) ? 0 : multi && cmap.get(l.key) === theme.other && !spec.colors?.[l.key] ? 1 : 2);
   const ordered = [...m.lines].sort((a, b) => rank(a) - rank(b));
-  const showDots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
   const curve = spec.curve === 'smooth' ? monotonePath : spec.curve === 'step' ? stepPath : linearPath;
   const drawOrder = stack ? [...m.lines].reverse() : ordered;
   const lw = M.lineWidth ?? 2.25;
@@ -408,7 +424,7 @@ export function line(spec, theme, variant = 'line') {
         else parts.push(el('path', areaAttrs));
       }
     }
-    const sw = focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5;
+    const sw = focus(l.key) ? (hl ? widthOf(l.key, lw) + 0.75 : widthOf(l.key, lw)) : 1.5;
     const lineAttrs = { fill: 'none', stroke: c, strokeWidth: sw, strokeLinejoin: 'round', strokeLinecap: 'round' };
     const dashAttrs = { ...lineAttrs, strokeDasharray: DASH.line };
     if (!stack) for (const sgm of segs) {
@@ -427,7 +443,7 @@ export function line(spec, theme, variant = 'line') {
     const hollow = (p) => dashedSeries(l.key) || (fromT && fromT(p.x));
     const dot = ([a, b, p], r) => el('circle', { cx: a, cy: b, r, ...(hollow(p) ? { fill: theme.surface, stroke: c, strokeWidth: 1.75 } : { fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }) });
     if (focus(l.key) && !stack) {
-      if (showDots) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+      if (dotsOf(l.key)) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
       // Punto aislado entre vacíos: sin marcador sería un trazo de largo cero (invisible).
       else for (const sg of segs) if (sg.length === 1 && sg[0] !== pts[pts.length - 1]) parts.push(dot(sg[0], (M.pointRadius ?? 4) - 0.5));
     }

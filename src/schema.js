@@ -209,9 +209,9 @@ export const schema = {
     bars: { type: 'boolean', description: 'table: false turns off the automatic data bar on the main numeric column.' },
     sortable: { type: 'boolean', description: 'table: false disables click-to-sort on headers in the browser.' },
     sharex: bool('facet: same x scale in every panel (default true).'),
-    panelHeight: number('facet: height of each panel in px.'),
-    sharey: { description: 'facet: same y scale in every panel (default true). "span": the same span in every panel, each with its own floor, so a slope means the same change everywhere.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['span'] }] },
-    panelNote: field('facet: a field whose value is written under each panel name (e.g. the latest value and its change).'),
+    panelHeight: number('facet: height of each panel in px (a `panelNote` adds its own lines on top).'),
+    sharey: { description: 'facet: same y scale in every panel (default true). "span": the same span in every panel, each with its own floor, and the same plot size in pixels, so a slope means the same change everywhere.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['span'] }] },
+    panelNote: field('facet: a field whose value is written under each panel name (e.g. the latest value and its change). Space is reserved for it in every panel, so panels never overlap and keep the same plot height.'),
     time: field('Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods.'),
     timeValue: { description: 'Period to show when `time` is set.' },
     slider: { description: 'Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. "buttons" or "slider" force one.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['buttons', 'slider'] }] },
@@ -241,7 +241,7 @@ export const schema = {
     yLabel: { type: 'string', description: 'y-axis title (drawn horizontally above the axis).' },
     format: formatSpec('Value format: "number" | "compact" | "percent" | "currency" | "integer", or { type, prefix, suffix, decimals (0–20), currency }.'),
     xFormat: formatSpec('Format of x values when x is a measure (scatter, regplot, hist).'),
-    yFormat: formatSpec('Format of y values (overrides `format` on the y axis).'),
+    yFormat: formatSpec('Format of the y-axis ticks (line, area, bar: the value axis), apart from `format`, which writes labels and tooltips. Default: `format`.'),
 
     // Emphasis and annotation
     highlight: { description: 'Emphasize one or more categories/series and mute the rest. table: the rows whose label matches.', ...strOrList },
@@ -306,7 +306,10 @@ export const schema = {
     complementary: bool('ecdf: show 1 − F(x) (share above each value).'),
     radius: number('Point radius in px (scatter, regplot, strip, swarm).'),
     split: { type: 'boolean', description: 'violin: with two hue levels, one half each.' },
-    points: { type: 'boolean', description: 'box: overlay the observations. line: markers on every point.' },
+    points: { description: 'box: overlay the observations. line: markers on every point; a list of series names (or { series: true }) puts them only on those series.', anyOf: [{ type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', additionalProperties: { type: 'boolean' } }] },
+    lineWidths: { type: 'object', additionalProperties: { type: 'number' }, description: 'line: stroke width per series in px, e.g. { "1991–2020 mean": 3.5 }. Series not named keep the default; legend and end labels are unchanged.' },
+    tileLabels: { type: 'string', enum: ['auto', 'wrap'], description: 'treemap: "auto" (default) writes a name only when it fits whole with its share; "wrap" also writes it on two or three lines without the share, and as a last resort truncated with "…".' },
+    shareOf: { type: 'string', enum: ['group', 'total', 'both'], description: 'treemap with `focus`: what share each tile prints: of the group (default), of the whole, or both ("53% · 11% of total").' },
     normalize: { type: 'boolean', description: 'radar: scale each axis 0–1 by its own maximum.' },
 
     // Part-to-whole

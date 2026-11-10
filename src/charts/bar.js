@@ -9,7 +9,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
-import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
+import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
@@ -125,6 +125,8 @@ export function bar(spec, theme) {
   const allInt = !pct && all.length > 0 && all.every((v) => Number.isInteger(v));
   // Una función de formato manda también al 100 % (recibe la fracción, 0–1).
   const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
+  // `yFormat`: las marcas del eje de valores, aparte de `format` (rótulos y tooltip).
+  const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, all) : fmt;
   const missingLabel = spec.missingLabel ?? (String(locale).startsWith('en') ? 'no data' : 'sin dato');
   const vf = (c, i, v) => (m.isMissing(c, i) ? missingLabel : fmt(v));
 
@@ -196,16 +198,25 @@ export function bar(spec, theme) {
     const ticksCount = Math.max(3, Math.round(area.h / 64));
     const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], ticksCount) } : niceDomain(vmin, vmax, ticksCount, { integer: allInt });
     const dom = hideAxis && !spec.yDomain ? { min: vmin, max: vmax || 1 } : nd;
-    if (spec._domains) spec._domains.y = [dom.min, dom.max];
-    const leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), fmt.tick(nd.step, linear(nd.min, nd.max, 0, 1).ticks(nd.step))) + 10;
+    let leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), axisFmt.tick(nd.step, linear(nd.min, nd.max, 0, 1).ticks(nd.step))) + 10;
     const top = showLabels ? 16 : 6;
     // Etiquetas bajo barras negativas: reserva espacio para que no pisen las categorías.
-    const negPad = showLabels && vmin < 0 ? 16 : 0;
+    let negPad = showLabels && vmin < 0 ? 16 : 0;
     const gH = runs ? GROUP_BAND : 0;
-    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale - negPad - gH };
+    // Facet con `sharey: "span"`: lo reservado arriba, abajo y a la izquierda
+    // se iguala al del panel que más pide (mismos píxeles por unidad en todos).
+    let padT = top * ctx.textScale, padB = 26 * ctx.textScale + negPad + gH;
+    if (spec._domains) { spec._domains.y = [dom.min, dom.max]; spec._domains.pad = [padT, padB]; spec._domains.padX = [leftM, 0]; }
+    if (spec._pad) { padT = Math.max(padT, spec._pad[0]); padB = Math.max(padB, spec._pad[1]); }
+    if (spec._padX) leftM = Math.max(leftM, spec._padX[0]);
+    // Las categorías van a la misma altura en todos los paneles de la fila.
+    if (spec._pad) negPad = padB - 26 * ctx.textScale - gH;
+    const inner = spec._pad
+      ? { x: area.x + leftM, y: area.y + padT, w: area.w - leftM, h: area.h - padT - padB }
+      : { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale - negPad - gH };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
-    if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step, yS.ticks(nd.step))));
+    if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, axisFmt.tick(nd.step, yS.ticks(nd.step))));
     const y0 = yS(0);
     // `xBands: [{ from, to, label }]`: tramos de categorías sombreados detrás.
     const xbands = [];
@@ -283,8 +294,9 @@ export function bar(spec, theme) {
     body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: Math.round(y0) + 0.5, y2: Math.round(y0) + 0.5, stroke: theme.axis, strokeWidth: 1 }));
     // Categorías
     const dUnit = m.kind === 'date' ? dateUnit(cats.map((c) => parseDate(c))) : null;
-    const items = cats.map((c) => ({ pos: xb.center(c), label: m.nominal ? truncate(c, Math.max(xb.step - 6, 40), 12) : dUnit ? formatDate(parseDate(c), dUnit, locale) : c }));
-    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18 + negPad, size: 12, color: theme.lede, every: tickEvery }));
+    // `full`: el nombre entero, para cuando se muestra uno de cada k (cabe en k pasos).
+    const items = cats.map((c) => ({ pos: xb.center(c), label: m.nominal ? truncate(c, Math.max(xb.step - 6, 40), 12) : dUnit ? formatDate(parseDate(c), dUnit, locale) : c, full: m.nominal ? c : undefined }));
+    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18 + negPad, size: 12, color: theme.lede, every: tickEvery, step: xb.step, steps: calendarSteps(dUnit) }));
     if (runs) body.push(groupBandX(runs, (i) => [xb.center(cats[i]) - xb.step / 2 + 1, xb.center(cats[i]) + xb.step / 2 - 1], inner.y + inner.h + 26 * ctx.textScale + negPad, theme, inner.y));
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
@@ -304,14 +316,14 @@ export function bar(spec, theme) {
     if (hasNeg && showLabels) inner.x += valueLabelW + 10;
     // Cuántas marcas caben según el ancho real de sus rótulos (en un teléfono,
     // «7.500.000» no entra cada 50 px): así no hay que ralearlas después.
-    const tickW = measure(fmt(Math.max(Math.abs(vmin), Math.abs(vmax))), SIZES.axis) + 18;
+    const tickW = measure(axisFmt(Math.max(Math.abs(vmin), Math.abs(vmax))), SIZES.axis) + 18;
     const nTicks = Math.max(2, Math.min(Math.round(inner.w / 110), Math.floor(inner.w / tickW)));
     const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], Math.max(2, nTicks)) } : niceDomain(vmin, vmax, nTicks, { integer: allInt });
     const dom = hideAxis && !spec.yDomain ? { min: vmin, max: vmax || 1 } : nd;
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const xS = linear(dom.min, dom.max, inner.x, inner.x + inner.w);
     const yb = band(cats, inner.y, inner.y + inner.h, { inner: 0.32, outer: 0.1 });
-    if (!hideAxis) body.push(gridX(xS.ticks(nd.step), xS, inner, theme, fmt.tick(nd.step, xS.ticks(nd.step))));
+    if (!hideAxis) body.push(gridX(xS.ticks(nd.step), xS, inner, theme, axisFmt.tick(nd.step, xS.ticks(nd.step))));
     const x0 = xS(0);
     cats.forEach((c) => {
       const by = yb(c);

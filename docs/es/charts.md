@@ -14,13 +14,13 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `series` / `hue` | Campo que divide los datos en grupos de color. |
 | `highlight` | Un nombre o una lista: destaca esos y atenúa el resto. |
 | `colors` | `{ "name": "#hex" }` para fijar el color de una entidad. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. Desde JavaScript, también una función `(valor) => texto`: tus propias reglas para escribir cifras en etiquetas, tooltips y marcas del eje. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. Desde JavaScript, también una función `(valor) => texto`: tus propias reglas para escribir cifras en etiquetas, tooltips y marcas del eje. En `line`, `area` y `bar`, `yFormat` escribe sólo las marcas del eje de valores y `format` los rótulos y el tooltip (`yFormat` toma `format` si falta). |
 | `locale` | `"es"` (por defecto: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"` o `"auto"`: se reconoce a partir del título, el subtítulo, los nombres de columna y las categorías. Las tablas usan `"auto"` cuando omites `locale`. |
 | `xLabel`, `yLabel` | Títulos de los ejes (horizontales, nunca rotados). |
 | `xScale`, `yScale` | `"log"` donde tenga sentido. |
 | `xDomain`, `yDomain` | `[min, max]` fijo. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (o `x`, o `value` para barras). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel; una anotación con `panel` va sólo a ese panel. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, y el mismo tamaño de trazado en píxeles (márgenes de eje y espacio de rótulos finales igualados), así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel, y cada panel reserva su espacio, así ninguno se monta sobre otro y todos conservan el mismo alto de trazado; una anotación con `panel` va sólo a ese panel; `legend: false` oculta la leyenda común. |
 | `time`, `timeValue` | Un período a la vez: el más reciente por defecto, o `timeValue`. El período se agrega al subtítulo. |
 | `slider`, `play` | Controles de tiempo en el navegador, **desactivados por defecto**. `slider: true` agrega botones de período cuando hay pocos períodos (≤ 8) y un deslizador mínimo cuando hay muchos; los gráficos de líneas y de áreas reciben un rango con dos tiradores. `"buttons"` o `"slider"` fuerzan uno; `play: false` oculta el botón de reproducir. |
 | `compare` | Con `time`: compara contra `"previous"` (por defecto), `"first"`, un período dado o `false`. |
@@ -56,7 +56,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `labels` | `true`, `false` o `"auto"`. |
 | `barWidth` | Grosor máximo de la barra en px. |
 | `xGroup` / `yGroup` | Campo que agrupa categorías consecutivas (sirve cualquiera de los dos, en ambas orientaciones): una banda teñida con el nombre del grupo corre junto al eje de categorías, con una línea fina entre grupos. No se reordena nada: usa `sort: "none"` para conservar tu orden. |
-| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N categorías (y ralea más sólo si los rótulos aún chocan). |
+| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N categorías (y ralea más sólo si los rótulos aún chocan). Un rótulo visible se recorta al espacio de N categorías, no al de una. Las categorías de fecha se ralean en pasos del calendario (meses 1, 2, 3, 4, 6, 12…; años 1, 2, 5, 10…), medidos sobre el ancho de los rótulos. |
 
 El eje de valores siempre termina en el primer valor redondo igual o mayor que la barra más larga, y esa última marca siempre va rotulada, también en un teléfono: cuántas marcas caben depende del ancho de sus rótulos.
 
@@ -76,7 +76,8 @@ El eje de valores siempre termina en el primer valor redondo igual o mayor que l
 | `ci`, `errorbar`, `estimator` | `lineplot` de seaborn: media y banda de confianza cuando hay varias filas por x. |
 | `curve` | `"linear"` (por defecto), `"smooth"` (monótona, nunca inventa picos), `"step"`. |
 | `zero` | Fuerza el eje y a incluir el cero (activado por defecto en áreas y cuando cuesta poco). |
-| `points` | Marcadores en cada punto (automático en series cortas). |
+| `points` | Marcadores en cada punto (automático en series cortas); una lista de series (o `{ serie: true }`) los pone sólo en esas. |
+| `lineWidths` | Grosor de trazo por serie, p. ej. `{ "media 1991–2020": 3.5 }`; las demás conservan el de siempre. |
 | `stack` | Áreas: `true` (por defecto con series), `"percent"` o `false` para superponerlas. |
 | `fill` | Línea única: `false` quita el degradado suave. |
 | `xRange` | Rango visible `[from, to]`; es lo que fija el deslizador de rango (`slider: true`). |
@@ -276,6 +277,8 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `exclude` | Grupos del nivel 1 que se dejan fuera; el resto llena el plano y las proporciones se recalculan. En el navegador lo hace Shift + clic en una clave de la leyenda. |
 | `showValues` | Agrega los valores a las etiquetas. |
 | `colorBy` | `"change"` colorea los rectángulos según el % de cambio respecto del período de comparación (crecimiento en tonos fríos, caída en cálidos); `"label"` colorea por elemento un treemap de un solo nivel. |
+| `tileLabels` | `"wrap"`: un nombre largo va en dos o tres líneas aunque ya no quepa su participación, y como último recurso se recorta con «…». Por defecto `"auto"`: el nombre sólo si cabe entero. Una participación bajo 0,05 % se escribe «<0,1%», nunca «0%». |
+| `shareOf` | Con `focus`: qué participación escribe cada tesela, `"group"` (por defecto), `"total"` o `"both"` («53% · 11% del total»). |
 | `shade` | Pasos sutiles de luminosidad dentro de cada categoría. Desactivado por defecto: un color sólido por categoría. |
 | `compareData` | Filas de un período anterior para calcular cambios sin `time`. |
 | `hole`, `centerValue`, `centerLabel` | Centro del sunburst. |

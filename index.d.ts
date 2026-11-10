@@ -167,6 +167,7 @@ export interface Spec {
   items?: KpiItem[];
   format?: Format;
   xFormat?: Format;
+  /** Axis ticks of the value axis (line, area, bar), apart from `format` (labels, tooltips). Default: `format`. */
   yFormat?: Format;
   stack?: boolean | 'percent';
   horizontal?: boolean;
@@ -186,7 +187,14 @@ export interface Spec {
   index?: boolean;
   curve?: 'linear' | 'smooth' | 'step';
   zero?: boolean;
-  points?: boolean;
+  /** box: overlay observations. line: markers on every point, or only on the series named (list or { series: true }). */
+  points?: boolean | string[] | Record<string, boolean>;
+  /** line: stroke width per series, in px. Legend and end labels are unchanged. */
+  lineWidths?: Record<string, number>;
+  /** treemap: "wrap" writes long names on 2–3 lines (without the share if needed), then truncates with "…". */
+  tileLabels?: 'auto' | 'wrap';
+  /** treemap with `focus`: the share each tile prints — of the group (default), of the whole, or both. */
+  shareOf?: 'group' | 'total' | 'both';
   xScale?: 'linear' | 'log';
   yScale?: 'linear' | 'log';
   trend?: boolean;
@@ -213,7 +221,7 @@ export interface Spec {
   stages?: string[];
   /** sankey: flows take the source's or the target's color, or one per stage. */
   linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
-  /** facet: a field written under each panel name. */
+  /** facet: a field written under each panel name; every panel reserves room for it. */
   panelNote?: string | ((key: string, rows: Row[]) => string);
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
@@ -228,7 +236,7 @@ export interface Spec {
   hue?: string;
   facet?: string;
   col?: string;
-  /** facet: shared y scale; "span" = same span, own floor. */
+  /** facet: shared y scale; "span" = same span, own floor, same plot size in px. */
   sharey?: boolean | 'span';
   sharex?: boolean;
   panelHeight?: number;
