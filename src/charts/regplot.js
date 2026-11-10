@@ -56,7 +56,7 @@ function fitGroup(gp, spec, { xLog, xMin, xMax, steps = 90 }) {
     const pts = lw.map(([t, v]) => [spec.logx ? 10 ** t : t, v]);
     return { line: pts, band: null, r2: null, n: gp.length };
   }
-  const fit = polyfit(xs, ys, { order: spec.order ?? 1, level: (spec.ci ?? 95) / 100 });
+  const fit = polyfit(xs, ys, { order: spec.order ?? 1, level: typeof spec.ci === 'number' ? (spec.ci > 1 ? spec.ci / 100 : spec.ci) : 0.95 });
   const line = grid.map((v) => [v, fit.predict(fx(v))]);
   const band = spec.ci === false || spec.ci === null || gp.length < (spec.order ?? 1) + 3 ? null : grid.map((v) => [v, ...fit.band(fx(v))]);
   return { line, band, r2: fit.r2, n: fit.n, fit };
@@ -123,7 +123,7 @@ export function regplot(spec, theme) {
   });
   if (spec.scatter !== false) {
     const order = [...pts].sort((a, b) => (focusKey(a.k) ? 1 : 0) - (focusKey(b.k) ? 1 : 0));
-    const dots = order.map((p) => ({
+    const dots = order.filter((p) => visible(p, xS, yS, inner)).map((p) => ({
       class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: K === 1 ? (M.dotOpacity ?? 0.85) * 0.75 : M.dotOpacity ?? 0.85,
       stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25,
       'data-tip': tip(p.name || p.k || '', `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : ''),
@@ -351,7 +351,7 @@ export function jointplot(spec, theme) {
       body.push(el('path', { d: L(f.line), fill: 'none', stroke: K === 1 ? theme.ink : colorOf(k), strokeWidth: M.lineWidth ?? 2, opacity: 0.9 }));
     });
   }
-  body.push(g({}, dotLayer(pts.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') })))));
+  body.push(g({}, dotLayer(pts.filter((p) => visible(p, xS, yS, inner)).map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r, fill: colorOf(p.k), fillOpacity: M.dotOpacity ?? 0.85, stroke: pts.length > 400 ? 'none' : theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name || p.k, `${humanize(P.x)}: ${fx(p.x)}`, `${humanize(P.y)}: ${fy(p.y)}`, p.name && p.k ? p.k : '') })))));
   body.push(pointLabels(pts, spec, xS, yS, r, inner, theme, P));
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(yAx.ticks, yS, inner, theme, yt));
@@ -361,6 +361,12 @@ export function jointplot(spec, theme) {
     ? `Joint plot of ${humanize(P.y)} vs ${humanize(P.x)} with marginal distributions (${pts.length} points, R² ${dec(fit.r2, locale)}).`
     : `Gráfico conjunto de ${humanize(P.y).toLowerCase()} versus ${humanize(P.x).toLowerCase()} con distribuciones marginales (${formatNumber(pts.length, 0, locale)} puntos, R² ${dec(fit.r2, locale)}).`;
   return frame.finish(body, { desc, type: 'jointplot' });
+}
+
+/** Con xDomain/yDomain, los puntos fuera del rango no se dibujan fuera del área. */
+function visible(p, xS, yS, inner) {
+  const cx = xS(p.x), cy = yS(p.y);
+  return cx >= inner.x - 1 && cx <= inner.x + inner.w + 1 && cy >= inner.y - 1 && cy <= inner.y + inner.h + 1;
 }
 
 function hashStr(s) {

@@ -24,7 +24,8 @@ export function normKey(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/^\s*(region|provincia|comuna)\s+(metropolitana\s+de\s+)?(de\s+la\s+|del\s+|de\s+los\s+|de\s+las\s+|de\s+)?/, (m, a, metro) => (metro ? 'metropolitana' : ''))
-    .replace(/[^a-z0-9]/g, '');
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/^0+(?=\d)/, ''); // códigos con cero a la izquierda: "08" = 8, "004" = 4
 }
 
 function featureIndex(features, featureKey) {
@@ -218,6 +219,7 @@ function prepare(spec, locale) {
   const categorical = spec.scale === 'categorical' || (data.length > 0 && fieldKind(data, valueF) === 'category');
   let features = fc.features.filter((f) => f && f.geometry && rings(f.geometry).length);
   if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
+  if (!features.length) throw new PlotError(T(locale, 'El `geo` no tiene geometrías para dibujar.', 'The `geo` has no geometries to draw.'), T(locale, 'Pasa un GeoJSON con al menos un Feature con geometría.', 'Pass a GeoJSON with at least one Feature that has a geometry.'));
   // Nombres: `nameKey` o la primera propiedad conocida (NOMBRE, NAME_1, ADMIN…).
   const hasName = (f) => { const p = f.properties || {}; return primitive(p.name) || primitive(p.nameEn) || primitive(p.NAME) || primitive(p.nombre); };
   const firstText = () => { for (const f of features.slice(0, 20)) for (const [k, v] of Object.entries(f.properties || {})) if (typeof v === 'string' && v.trim()) return k; return null; };

@@ -8,6 +8,8 @@ import { plot, toHTML, lint, schema, toolDefinition, describe, dashboard, lintDa
 // `plotagents … | head` closes the pipe early: exit quietly instead of crashing.
 for (const stream of [process.stdout, process.stderr]) {
   stream.on('error', (e) => { if (e && e.code === 'EPIPE') process.exit(0); throw e; });
+  // Escritura bloqueante: process.exit() no corta una salida larga (> 64 KB) en un pipe.
+  stream._handle?.setBlocking?.(true);
 }
 
 const args = process.argv.slice(2);
@@ -47,7 +49,7 @@ try { raw = input ? readFileSync(input, 'utf8') : readFileSync(0, 'utf8'); } cat
 let spec;
 try { spec = JSON.parse(raw); } catch (e) { console.error('El spec no es JSON válido:', e.message); process.exit(2); }
 
-const isDashboard = (s) => !!s && typeof s === 'object' && !Array.isArray(s) && Array.isArray(s.charts);
+const isDashboard = (s) => !!s && typeof s === 'object' && !Array.isArray(s) && (Array.isArray(s.charts) || (Array.isArray(s.kpis) && s.type === undefined));
 
 if (flag('--lint')) {
   const list = Array.isArray(spec) ? spec : [spec];

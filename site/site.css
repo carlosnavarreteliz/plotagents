@@ -378,3 +378,28 @@ figure.pa svg{width:100%;height:auto;display:block}
 .cs{display:flex;flex-direction:column;gap:4px;min-width:0}
 .cs-bar{display:block;height:22px;border-radius:5px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 10%,transparent)}
 .cs code{font-size:12.5px;color:var(--lede);background:none;padding:0}
+
+/* ── Agent Skill: banda con el botón grande de instalación ───────────────── */
+.skill{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(28px,5vw,80px);align-items:center;margin-top:clamp(64px,9vw,120px);padding:clamp(28px,4vw,56px);background:var(--tint);border-radius:18px;box-shadow:inset 0 0 0 1px var(--line);scroll-margin-top:calc(var(--top) + 24px)}
+.skill .num{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line2);padding-bottom:12px}
+.skill .num span:first-child{color:var(--accent)}
+.skill h2{font-size:clamp(32px,4.4vw,62px);line-height:1;letter-spacing:-.04em;font-weight:600;margin:clamp(18px,2.4vw,28px) 0 18px;text-wrap:balance}
+.skill h2 em{font-family:var(--serif);font-style:italic;font-weight:400;letter-spacing:-.02em;color:var(--accent)}
+.skill-copy p{font-size:clamp(17px,1.5vw,19.5px);line-height:1.5;color:var(--lede);margin:0;max-width:46ch;text-wrap:pretty}
+.skill-act{display:flex;flex-direction:column;align-items:flex-start;gap:22px;min-width:0}
+.skill-act .install{font-size:14px;overflow-x:auto;white-space:nowrap}
+.btn svg{width:20px;height:20px;flex:none}
+.btn.xl{font-size:clamp(20px,2vw,25px);padding:22px 34px 22px 28px;gap:16px;background:var(--accent);color:#fff;box-shadow:0 10px 30px -12px var(--accent);line-height:1.15}
+.btn.xl:hover{background:var(--accent-ink)}
+.btn.xl svg{width:30px;height:30px}
+.btn.xl span{display:flex;flex-direction:column;align-items:flex-start}
+.btn.xl small{font:500 12px var(--mono);letter-spacing:.04em;opacity:.85;margin-top:5px;text-transform:none}
+.skill-how{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:15px;line-height:1.45;color:var(--lede);counter-reset:s}
+.skill-how li{counter-increment:s;padding-left:30px;position:relative}
+.skill-how li::before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:2px;font:500 11.5px var(--mono);color:var(--src)}
+.skill-how b{color:var(--ink);font-weight:600;margin-right:4px}
+@media (max-width:900px){.skill{grid-template-columns:minmax(0,1fr)}.btn.xl{width:100%;justify-content:center}}
+.topnav .nav-skill{color:var(--accent)}
+.lang-btn{display:inline-flex !important;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px !important;letter-spacing:.06em}
+.lang-btn svg{width:15px;height:15px}
+.skill .copy{background:transparent}

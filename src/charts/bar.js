@@ -129,13 +129,18 @@ export function bar(spec, theme) {
   // Color: identidad por serie; una sola serie → un solo color (o highlight).
   const cmap = colorMap(seriesKeys, theme, spec.colors);
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hlSeries = hl && seriesKeys.some((s) => hl.has(s));
   const colorFor = (c, si) => {
-    if (multi) return cmap.get(seriesKeys[si]);
+    if (multi) {
+      // highlight sobre series: se atenúan las demás; si nombra categorías, las otras categorías.
+      if (hl && (hlSeries ? !hl.has(seriesKeys[si]) : !hl.has(c))) return theme.dim;
+      return cmap.get(seriesKeys[si]);
+    }
     if (spec.colors && spec.colors[c]) return spec.colors[c];
     if (hl) return hl.has(c) ? theme.categorical[0] : theme.dim;
     return c === 'Otros' || c === 'Other' ? theme.other : theme.categorical[0];
   };
-  const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: cmap.get(s), shape: 'square' })) : [];
+  const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: hlSeries && !hl.has(s) ? theme.dim : cmap.get(s), shape: 'square' })) : [];
 
   // Barras punteadas (estimaciones, cifras provisorias): relleno rayado + borde discontinuo.
   const H = hatcher(theme, 'pa-b' + Math.abs(hash(String(spec.title) + theme.mode + frame.width)).toString(36));
@@ -171,7 +176,9 @@ export function bar(spec, theme) {
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const leftM = hideAxis ? 0 : ticksWidth(linear(nd.min, nd.max, 0, 1).ticks(nd.step), fmt.tick(nd.step, linear(nd.min, nd.max, 0, 1).ticks(nd.step))) + 10;
     const top = showLabels ? 16 : 6;
-    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale };
+    // Etiquetas bajo barras negativas: reserva espacio para que no pisen las categorías.
+    const negPad = showLabels && vmin < 0 ? 16 : 0;
+    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale - negPad };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step, yS.ticks(nd.step))));
@@ -238,7 +245,7 @@ export function bar(spec, theme) {
     // Categorías
     const dUnit = m.kind === 'date' ? dateUnit(cats.map((c) => parseDate(c))) : null;
     const items = cats.map((c) => ({ pos: xb.center(c), label: m.nominal ? truncate(c, Math.max(xb.step - 6, 40), 12) : dUnit ? formatDate(parseDate(c), dUnit, locale) : c }));
-    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: 12, color: theme.lede }));
+    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18 + negPad, size: 12, color: theme.lede }));
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
     // ── Barras horizontales
@@ -273,12 +280,13 @@ export function bar(spec, theme) {
         const y0b = by + (bh - h) / 2;
         const sg = segs.get(c);
         const lastPos = sg.map((s, i) => (s.vv > 0 ? i : -1)).filter((i) => i >= 0).pop();
+        const lastNeg = sg.map((s, i) => (s.vv < 0 ? i : -1)).filter((i) => i >= 0).pop();
         sg.forEach((s, i) => {
           if (!s.vv) return;
           const xa = xS(s.from), xb2 = xS(s.to);
           let left = Math.min(xa, xb2), w = Math.abs(xb2 - xa);
           if (s.from !== 0) { if (s.vv > 0) left += 2; w -= 2; }
-          const d = barPath(left, y0b, Math.max(0, w), h, s.vv > 0 ? 'right' : 'left', i === lastPos || s.vv < 0 ? RAD : 0);
+          const d = barPath(left, y0b, Math.max(0, w), h, s.vv > 0 ? 'right' : 'left', i === lastPos || i === lastNeg ? RAD : 0);
           const fill = colorFor(c, i);
           const lab = pct ? fmt(s.vv) : '';
           const fits = lab && measure(lab, 11, 600) + 10 < w;

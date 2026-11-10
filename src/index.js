@@ -31,8 +31,11 @@ import './geo/chile.js';
 import './geo/world.js';
 import './geo/usa.js';
 import { heatmap } from './charts/heatmap.js';
+import { corr, pairplot, correlations } from './charts/corr.js';
 import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';
+import { table } from './charts/table.js';
+import { autoLocale, detectLocale } from './i18n.js';
 import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
@@ -59,8 +62,11 @@ const RENDERERS = {
   donut: (s, t) => donut(s, t),
   pie: (s, t) => pie(s, t),
   heatmap: (s, t) => heatmap(s, t),
+  corr: (s, t) => corr(s, t),
+  pairplot: (s, t) => pairplot(s, t),
   sankey: (s, t) => sankey(s, t),
   kpi: (s, t) => kpi(s, t),
+  table: (s, t) => table(s, t),
   hist: (s, t) => hist(s, t),
   kde: (s, t) => kde(s, t),
   ecdf: (s, t) => ecdf(s, t),
@@ -93,7 +99,7 @@ export function resolve(spec = {}) {
   // refLines / annotations: un objeto suelto vale como lista de uno.
   for (const k of ['refLines', 'annotations']) if (s[k] != null && !Array.isArray(s[k]) && typeof s[k] === 'object') s[k] = [s[k]];
   if (s.color && !s.series && typeof s.color === 'string' && !s.color.startsWith('#')) s.series = s.color;
-  let type = s.type && s.type !== 'auto' ? String(s.type).toLowerCase() : null;
+  let type = s.type && s.type !== 'auto' ? String(s.type).trim().toLowerCase() : null;
   if (type) {
     const [t, extra] = normalizeType(type);
     type = t;
@@ -105,6 +111,10 @@ export function resolve(spec = {}) {
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   s.type = type;
+  // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.
+  if (s.locale === 'auto' || (s.locale === undefined && type === 'table')) {
+    s.locale = autoLocale(s, Array.isArray(s.data) ? s.data : []);
+  }
   // Colormap divergente (RdBu, coolwarm…): centrada en 0 si los datos lo cruzan; si no, en el medio.
   const cs = resolveColorScale(s.colorScale ?? s.cmap ?? s.colormap);
   if (cs && cs.kind === 'diverging' && s.midpoint === undefined && s.diverging === undefined) {
@@ -260,7 +270,7 @@ export function safePlot(spec) {
     // Se dibujó (con valores de respaldo), pero los errores de lint igual se devuelven: ok = sin errores.
     return { ok: report.errors.length === 0, svg, type: report.type, description: describeSvg(svg), errors: report.errors, warnings: report.warnings, suggestions: report.suggestions };
   } catch (e) {
-    const errors = report.errors.length ? report.errors : [{ code: 'render', message: e.message.split('\n')[0], fix: e.hint }];
+    const errors = report.errors.length ? report.errors : [{ code: 'render', message: e.message.split('\n')[0], fix: e.hint || 'Revisa los campos del spec contra el schema (`toolDefinition()`): textos donde van textos, listas donde van listas.' }];
     return { ok: false, svg: null, type: report.type, description: '', errors, warnings: report.warnings, suggestions: report.suggestions };
   }
 }
@@ -299,7 +309,7 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
 ${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.import).filter(Boolean)])].map((u) => `<link rel="stylesheet" href="${esc(u)}">`).join('\n')}
 <style>
 :root{color-scheme:${dark ? 'dark' : 'light'}}
-body{margin:0;background:${bg};font-family:${esc(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
+body{margin:0;background:${cssText(bg)};font-family:${cssText(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
 figure.pa svg{width:100%;height:auto;display:block}
@@ -310,6 +320,9 @@ ${charts}
 ${boot}
 </body></html>`;
 }
+
+/** Texto dentro de <style>: las entidades HTML no se decodifican ahí (esc() rompería las comillas), así que se quitan los caracteres que cierran la regla o la etiqueta. */
+const cssText = (v) => String(v ?? '').replace(/[<>{};\\&]/g, '');
 
 /** Código de la biblioteca en un archivo (para incrustar en HTML). */
 export function bundleSource(file = 'plotagents.js') {
@@ -327,7 +340,7 @@ _bindDashboard({ plot, resolve, lint, bundleSource, resolveDefaults: withDefault
 _setProbe((s) => plot(s));
 export { render };
 
-export { countWords, dashboardSchema };
+export { countWords, dashboardSchema, detectLocale, correlations };
 export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALITATIVE };
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };

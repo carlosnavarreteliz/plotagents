@@ -111,11 +111,13 @@ export function histogram(vs, { bins, binWidth, domain } = {}) {
     }
     step = bins ? (hi - lo) / bins : niceBinStep(hi - lo, n);
   }
-  const start = bins ? lo : Math.floor(lo / step + 1e-9) * step;
+  const start = bins ? lo : +(Math.floor(lo / step + 1e-9) * step).toPrecision(15);
   const count = Math.max(1, Math.ceil((hi - start) / step - 1e-9));
-  const out = Array.from({ length: count }, (_, i) => ({ x0: start + i * step, x1: start + (i + 1) * step, count: 0 }));
+  const out = Array.from({ length: count }, (_, i) => ({ x0: +(start + i * step).toPrecision(15), x1: +(start + (i + 1) * step).toPrecision(15), count: 0 }));
   for (const v of s) {
-    let i = Math.floor((v - start) / step);
+    // Con `domain`, lo que cae fuera no se cuenta (antes se apilaba en la última barra).
+    if (domain && (v < domain[0] || v > domain[1])) continue;
+    let i = Math.floor((v - start) / step + 1e-9);
     if (i >= count) i = count - 1;
     if (i >= 0) out[i].count++;
   }

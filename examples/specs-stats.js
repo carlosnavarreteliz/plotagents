@@ -2,6 +2,7 @@
 // generados con semilla fija: los títulos se calculan desde los propios datos.
 import { quantile, mean, median, polyfit } from '../src/stats.js';
 import { formatNumber } from '../src/format.js';
+import { correlations } from '../src/charts/corr.js';
 
 const SRC = 'datos ilustrativos';
 
@@ -77,6 +78,31 @@ export const deptos = Array.from({ length: 260 }, () => {
 });
 const fitDep = polyfit(deptos.map((r) => r.m2), deptos.map((r) => r.uf));
 
+// 8 · Indicadores de 120 barrios: dos factores latentes (nivel socioeconómico y densidad urbana)
+const R8 = rng(88);
+const zonas8 = [['Centro', 0.5, 0.9], ['Oriente', 1.0, 0.1], ['Periferia', -0.9, -0.6]];
+export const barrios = Array.from({ length: 120 }, (_, i) => {
+  const [zona, s0, u0] = zonas8[i % 3];
+  const S = s0 + 0.7 * R8.n(), U = u0 + 0.6 * R8.n();
+  return {
+    zona,
+    ingreso: Math.round(Math.exp(6.6 + 0.32 * S + 0.12 * R8.n())),
+    escolaridad: r1(12 + 1.7 * S + 0.8 * R8.n(), 1),
+    pobreza: r1(Math.max(0.8, 11 - 4.2 * S + 2.6 * R8.n()), 1),
+    hacinamiento: r1(Math.max(0.4, 7 - 2.2 * S + 1.4 * U + 1.4 * R8.n()), 1),
+    areas_verdes: r1(Math.max(0.3, 4.5 + 1.8 * S - 1.3 * U + 1.1 * R8.n()), 1),
+    densidad: Math.round(Math.exp(8.4 + 0.55 * U + 0.25 * R8.n())),
+    tiempo_viaje: Math.round(Math.max(12, 42 - 7 * U - 3 * S + 6 * R8.n())),
+    edad_media: r1(36 + 1.6 * S - 1.2 * U + 1.8 * R8.n(), 1),
+  };
+});
+const VARS8 = ['ingreso', 'escolaridad', 'pobreza', 'hacinamiento', 'areas_verdes', 'densidad', 'tiempo_viaje', 'edad_media'];
+const LBL8 = { ingreso: 'Ingreso', escolaridad: 'Escolaridad', pobreza: 'Pobreza', hacinamiento: 'Hacinamiento', areas_verdes: 'Áreas verdes', densidad: 'Densidad', tiempo_viaje: 'Tiempo de viaje', edad_media: 'Edad media' };
+const C8 = correlations(barrios, VARS8);
+const rIE = C8.r[0][1], rEP = C8.r[1][2], rDT = C8.r[5][6];
+const rr = (v) => formatNumber(v, 2, 'es');
+const PV8 = ['ingreso', 'escolaridad', 'pobreza', 'tiempo_viaje'];
+
 export const statsGallery = [
   {
     id: 'histograma',
@@ -125,5 +151,23 @@ export const statsGallery = [
     name: 'Residuos',
     note: 'Para revisar el ajuste: los residuos deben repartirse sin patrón alrededor de cero. `lowess` muestra la tendencia.',
     spec: { type: 'residplot', title: 'Los residuos no muestran patrón: el ajuste lineal es adecuado', subtitle: 'Residuos de la nota sobre las horas de estudio', source: SRC, data: estudio, x: 'horas', y: 'nota', lowess: true, xLabel: 'Horas de estudio por semana' },
+  },
+  {
+    id: 'correlacion',
+    name: 'Matriz de correlación',
+    note: 'Cada par una sola vez, bajo la diagonal, en una escala divergente fija de −1 a 1. `alpha: 0.05` apaga las correlaciones no significativas; `method: "spearman"` usa rangos.',
+    spec: { type: 'corr', title: `En los barrios con más escolaridad el ingreso es mayor (r = ${rr(rIE)}) y la pobreza menor (r = ${rr(rEP)})`, subtitle: 'Correlación de Pearson entre ocho indicadores de 120 barrios', source: SRC, data: barrios, vars: VARS8, labelsFor: LBL8, alpha: 0.05 },
+  },
+  {
+    id: 'clustermap',
+    name: 'Matriz agrupada (clustermap)',
+    note: '`cluster: true` (o `type: "clustermap"`) reordena las variables por agrupamiento jerárquico y dibuja el dendrograma: los bloques que se mueven juntos saltan a la vista.',
+    spec: { type: 'clustermap', title: 'Ingreso, escolaridad y áreas verdes se mueven juntos; pobreza y hacinamiento, en sentido contrario', subtitle: `Correlación de Pearson, variables ordenadas por agrupamiento jerárquico. Densidad y tiempo de viaje: r = ${rr(rDT)}`, source: SRC, data: barrios, vars: VARS8, labelsFor: LBL8 },
+  },
+  {
+    id: 'pares',
+    name: 'Matriz de dispersión (pairplot)',
+    note: 'Dispersión de cada par bajo la diagonal, la distribución de cada variable en ella y el r de Pearson arriba (por grupo si hay `hue`). `corner: true` deja solo el triángulo inferior.',
+    spec: { type: 'pairplot', title: 'La periferia concentra menos ingreso, más pobreza y viajes más largos', subtitle: 'Cuatro indicadores de 120 barrios, por zona. Ingreso en miles de pesos, pobreza en %, viaje en minutos', source: SRC, data: barrios, vars: PV8, hue: 'zona', labelsFor: LBL8 },
   },
 ];

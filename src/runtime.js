@@ -7,6 +7,7 @@ import { ensureData, fieldKind, uniq, num, PlotError } from './data.js';
 import { parseDate, formatDate } from './format.js';
 import { dateUnit } from './scale.js';
 import { isGeoUrl } from './geo/registry.js';
+import { words } from './i18n.js';
 
 let plotFn = null;
 let resolveFn = null;
@@ -56,7 +57,12 @@ function ensureAssets() {
 .pa-live .pa-chev{opacity:1!important}
 .pa-chart .pa-gh:hover .pa-hit{fill:var(--pa-tint,#ECEEF8);fill-opacity:.5}
 .pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
-@media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
+.pa-search{position:absolute;z-index:2;box-sizing:border-box;margin:0;font:inherit;font-size:13px;color:var(--pa-ink);background-color:var(--pa-surface);background-repeat:no-repeat;background-position:10px center;border:1px solid var(--pa-line);border-radius:8px;padding:0 10px 0 32px;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.pa-search::placeholder{color:var(--pa-muted);opacity:1}
+.pa-search:hover{border-color:var(--pa-muted)}
+.pa-search:focus-visible,.pa-search:focus{border-color:var(--pa-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--pa-accent) 22%,transparent)}
+.pa-chart .pa-th[data-sort]:focus-visible,.pa-chart .pa-pg:focus-visible{outline:2px solid var(--pa-accent);outline-offset:-2px}
+@media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}.pa-search{transition:none}}`;
   document.head.appendChild(st);
 }
 
@@ -117,6 +123,39 @@ export function render(target, spec, opts = {}) {
   let timer = null, ro = null, raf = 0;
 
   const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  // Tabla: caja de búsqueda (sobre 20 filas, o `search: true`), pegada a la franja que la tabla reserva.
+  let search = null, searchTimer = 0;
+  if (state.type === 'table' && state.search !== false) {
+    let n = 0;
+    try { n = ensureData(state).length; } catch { n = 0; }
+    if (state.search === true || n > 20) {
+      const th = themeFor(state);
+      const W = words(state.locale);
+      search = document.createElement('input');
+      search.type = 'search'; search.className = 'pa-search';
+      search.placeholder = W.search + '…'; search.setAttribute('aria-label', W.search);
+      search.autocomplete = 'off'; search.spellcheck = false;
+      if (state.query) search.value = state.query;
+      const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.25" fill="none" stroke="${th.muted}" stroke-width="1.5"/><path d="M9.2 9.2l3.3 3.3" stroke="${th.muted}" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+      search.style.cssText = `--pa-accent:${th.categorical[0]};--pa-surface:${th.surface};--pa-ink:${th.ink};--pa-muted:${th.muted};--pa-line:${th.axis};font-family:${(th.font?.family || 'system-ui').replace(/"/g, "'")};background-image:url("data:image/svg+xml,${encodeURIComponent(icon)}")`;
+      search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { state = { ...state, query: search.value.trim() || undefined, page: 1 }; draw(); }, 120);
+      });
+      search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; state = { ...state, query: undefined, page: 1 }; draw(); } });
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(search);
+    }
+  }
+  const placeSearch = () => {
+    if (!search) return;
+    const slot = chart.querySelector('.pa-search-slot');
+    if (!slot) { search.hidden = true; return; }
+    search.hidden = false;
+    const r = slot.getBoundingClientRect(), h = host.getBoundingClientRect();
+    search.style.left = r.left - h.left + 'px'; search.style.top = r.top - h.top + 'px';
+    search.style.width = r.width + 'px'; search.style.height = r.height + 'px';
+  };
   // Posiciones anteriores de los nodos (para animar el cambio de foco).
   const nodePos = () => {
     const m = new Map();
@@ -183,7 +222,7 @@ export function render(target, spec, opts = {}) {
   const draw = () => {
     const before = nodePos();
     const fills = regionFills();
-    chart.innerHTML = plotFn({ ...state, width: width() });
+    chart.innerHTML = plotFn({ ...state, width: width(), _search: !!search });
     animateFrom(before);
     tweenFills(fills);
     chart.__pa = false;
@@ -228,6 +267,53 @@ export function render(target, spec, opts = {}) {
         draw();
         const again = [...chart.querySelectorAll('[data-group]')].find((m) => m.getAttribute('data-group') === name);
         if (again && e && e.type === 'keydown') again.focus();
+      };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
+    }
+    // Tabla: paso de página y orden por columna (clic o Enter/Espacio; ←/→ en el paginador).
+    placeSearch();
+    const refocus = (sel) => { const m = chart.querySelector(sel); if (m) m.focus(); return !!m; };
+    // Las flechas ‹ › llevan data-arrow; tras el cambio se busca la misma flecha.
+    const refocusSame = (arrow, p) => (arrow ? refocus(`[data-arrow="${arrow}"][data-page]`) : refocus(`[data-page="${p}"]:not([data-arrow])`));
+    for (const n of chart.querySelectorAll('[data-page]')) {
+      const p = +n.getAttribute('data-page');
+      const arrow = n.getAttribute('data-arrow');
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('role', 'button');
+      const go = (e) => {
+        state = { ...state, page: p };
+        draw();
+        // Con teclado el foco sigue en el mismo botón (o en la página actual si esa flecha se apagó).
+        if (e && e.type === 'keydown' && !refocusSame(arrow, p)) refocus('.pa-pg-on');
+      };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); return; }
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        const pages = [...chart.querySelectorAll('[data-page]')];
+        const k = pages.indexOf(n) + d;
+        if (pages[k]) { e.preventDefault(); pages[k].focus(); }
+      });
+    }
+    for (const n of chart.querySelectorAll('.pa-th[data-sort]')) {
+      const f = n.getAttribute('data-sort');
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('aria-label', `${words(state.locale).sort} ${n.textContent}`);
+      // Primer clic: el orden natural (cifras de mayor a menor, texto A→Z); segundo: al revés; tercero: el orden original.
+      const go = (e) => {
+        const cur = n.getAttribute('aria-sort');
+        const numeric = n.getAttribute('data-num') === '1';
+        const first = numeric ? 'desc' : 'asc';
+        const firstAria = first === 'desc' ? 'descending' : 'ascending';
+        let next;
+        if (cur === 'none' || !cur) next = { sortBy: f, sort: first };
+        else if (cur === firstAria) next = { sortBy: f, sort: first === 'desc' ? 'asc' : 'desc' };
+        else next = { sortBy: undefined, sort: undefined };
+        state = { ...state, ...next, sortOrder: undefined, page: 1 };
+        draw();
+        if (e && e.type === 'keydown') refocus(`.pa-th[data-sort="${CSS.escape ? CSS.escape(f) : f}"]`);
       };
       n.addEventListener('click', go);
       n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
@@ -346,13 +432,15 @@ export function render(target, spec, opts = {}) {
     set();
   }
 
-  host.addEventListener('keydown', (e) => {
+  // El oyente se guarda para quitarlo en update()/destroy(): si no, cada redibujo (filtros de un dashboard) suma uno más.
+  const onEsc = (e) => {
     if (e.key !== 'Escape') return;
     if (state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); return; }
     // Treemap/sunburst: Esc sube un nivel; en la raíz, vuelve a sumar lo excluido.
     if (Array.isArray(state.focus) && state.focus.length) { state = { ...state, focus: state.focus.slice(0, -1) }; draw(); return; }
     if (state.exclude && [].concat(state.exclude).length) { state = { ...state, exclude: undefined }; draw(); }
-  });
+  };
+  host.addEventListener('keydown', onEsc);
 
   draw();
   if (state.width === undefined && typeof ResizeObserver !== 'undefined') {
@@ -363,8 +451,8 @@ export function render(target, spec, opts = {}) {
   return {
     get svg() { return chart.querySelector('svg'); },
     get spec() { return state; },
-    update(next) { clearInterval(timer); ro && ro.disconnect(); return render(host, next, opts); },
-    destroy() { clearInterval(timer); ro && ro.disconnect(); host.innerHTML = ''; },
+    update(next) { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.removeEventListener('keydown', onEsc); return render(host, next, opts); },
+    destroy() { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.removeEventListener('keydown', onEsc); host.innerHTML = ''; },
   };
 }
 

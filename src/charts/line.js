@@ -118,6 +118,14 @@ export function line(spec, theme, variant = 'line') {
     }
   }
 
+  // Escala log: un valor ≤ 0 no tiene posición; es un hueco, no razón para volver a lineal.
+  if (spec.yScale === 'log' && !stack && m.lines.some((l) => l.points.some((p) => p.y > 0))) {
+    for (const l of m.lines) for (const p of l.points) {
+      if (!(p.y > 0)) p.y = NaN;
+      if (!(p.lo > 0)) p.lo = NaN;
+      if (!(p.hi > 0)) p.hi = NaN;
+    }
+  }
   const allY = [], rawY = [];
   for (const l of m.lines) for (const p of l.points) {
     if (Number.isFinite(p.y)) allY.push(p.y);
@@ -197,7 +205,7 @@ export function line(spec, theme, variant = 'line') {
   const intY = !pct && !spec.index && rawY.length > 0 && rawY.every(Number.isInteger);
   const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)), { integer: intY });
   const yTicksArr = (yLog ? log(nd.min, nd.max, 0, 1) : linear(nd.min, nd.max, 0, 1)).ticks(nd.step);
-  const tickF = yLog ? (v) => fmt.tick(v)(v) : fmt.tick(nd.step, yTicksArr);
+  const tickF = yLog ? (v) => fmt.tick(v, v)(v) : fmt.tick(nd.step, yTicksArr);
   const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
   const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
   const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
@@ -248,7 +256,7 @@ export function line(spec, theme, variant = 'line') {
     xItems = m.cats.map((c, i) => ({ pos: xS(i), label: c })).filter((it, i) => xsAll.includes(i));
   } else if (xLog) {
     const lf = makeFormat(spec.xFormat, locale, xsAll);
-    xItems = xS.ticks().map((t) => ({ pos: xS(t), label: lf.tick(t)(t) }));
+    xItems = xS.ticks().map((t) => ({ pos: xS(t), label: lf.tick(t, t)(t) }));
   } else {
     let st = niceStep(x1 - x0, Math.max(2, Math.floor(inner.w / 78)));
     const ints = xsAll.every(Number.isInteger);
@@ -307,6 +315,8 @@ export function line(spec, theme, variant = 'line') {
       if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
     }
   }
+  // Con xDomain/yDomain los datos fuera del rango no se salen del área de trazado.
+  const clipD = spec.xDomain || spec.yDomain ? 'pa-clip-' + Math.abs(hash(String(spec.title) + m.y + inner.w + inner.h)).toString(36) : null;
   const gidD = 'pa-dash-' + Math.abs(hash(String(spec.title) + m.y + inner.w + theme.mode)).toString(36);
   const H = hatcher(theme, gidD);
   // Recortes para pintar áreas: firme a la izquierda de cutX, rayado a la derecha.
@@ -386,7 +396,7 @@ export function line(spec, theme, variant = 'line') {
       else for (const sg of segs) if (sg.length === 1 && sg[0] !== pts[pts.length - 1]) parts.push(dot(sg[0], (M.pointRadius ?? 4) - 0.5));
     }
     if (focus(l.key) && !stack) parts.push(dot(pts[pts.length - 1], (M.pointRadius ?? 4) + 0.5));
-    body.push(g({ class: 'pa-m', 'data-series': l.key, ...(dashedSeries(l.key) ? { 'data-dashed': '1' } : {}) }, parts));
+    body.push(g({ class: 'pa-m', 'data-series': l.key, ...(clipD ? { 'clip-path': `url(#${clipD})` } : {}), ...(dashedSeries(l.key) ? { 'data-dashed': '1' } : {}) }, parts));
   }
 
   body.push(refLinesY(refs, yS, inner, theme, fmt));
@@ -397,7 +407,8 @@ export function line(spec, theme, variant = 'line') {
     let labs = labeled.map((l) => {
       const last = lastOf(l);
       const t = endText(l);
-      const yy = stack ? yS((last.y + last.y0) / 2) : yS(last.y);
+      const yy0 = stack ? yS((last.y + last.y0) / 2) : yS(last.y);
+      const yy = Math.min(inner.y + inner.h, Math.max(inner.y, yy0)); // fuera del dominio y: pegada al borde
       // Un solo x en área: la guía parte del borde derecho de la columna, no la cruza.
       const px = xS(last.x) + (singleX && isArea ? Math.min(inner.w * 0.2, 40) : 0);
       return { ...t, key: l.key, y: yy, y0: yy, px, color: colorOf(l.key) };
@@ -428,10 +439,10 @@ export function line(spec, theme, variant = 'line') {
 
   // Capa de interacción: crosshair con todos los valores en ese x.
   // Con más x que píxeles, una entrada por columna de píxel (la última).
-  let crossXs = xsAll;
-  if (xsAll.length > inner.w) {
+  let crossXs = xsAll.filter((xv) => xv >= x0 && xv <= x1);
+  if (crossXs.length > inner.w) {
     const byCol = new Map();
-    for (const xv of xsAll) byCol.set(Math.round(xS(xv)), xv);
+    for (const xv of crossXs) byCol.set(Math.round(xS(xv)), xv);
     crossXs = [...byCol.values()];
   }
   const focusLines = m.lines.filter((l) => focus(l.key)).map((l) => ({ l, at: new Map(l.points.map((q) => [q.x, q])) }));
@@ -448,6 +459,7 @@ export function line(spec, theme, variant = 'line') {
   body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
 
   const desc = describeLine(m, fmt, xFmt, locale);
+  if (clipD) defs += el('clipPath', { id: clipD }, el('rect', { x: inner.x - 6, y: inner.y - 6, width: inner.w + 12, height: inner.h + 12 }));
   if (cutX !== null) defs += el('clipPath', { id: clipL }, el('rect', { x: 0, y: 0, width: cutX, height: frame.height })) + el('clipPath', { id: clipR }, el('rect', { x: cutX, y: 0, width: frame.width, height: frame.height }));
   return frame.finish(body, { desc, type: isArea ? 'area' : 'line', defs: defs + H.defs() });
 }

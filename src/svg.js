@@ -3,7 +3,10 @@
 import { ctx } from './context.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
+// Además de escapar, quita los caracteres que XML 1.0 prohíbe (controles y
+// sustitutos sueltos): un solo \x00 en un dato invalida todo el SVG.
+const BAD_XML = /[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+export const esc = (s) => String(s ?? '').replace(BAD_XML, '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 /** Redondea a 2 decimales para SVG compactos. */
 export const r2 = (n) => Math.round(n * 100) / 100;

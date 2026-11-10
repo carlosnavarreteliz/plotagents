@@ -141,6 +141,17 @@ const LOWER = new Map();
 for (const k of [...Object.keys(COLORMAPS), ...Object.keys(QUALITATIVE)]) LOWER.set(k.toLowerCase(), k);
 const unpack = (s) => s.match(/.{6}/g).map((h) => '#' + h);
 const isHex = (c) => typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c.trim());
+// Nombres CSS comunes en listas de colores (["white", "steelblue"]): antes se
+// descartaban en silencio y la escala caía a la por defecto.
+const NAMED = {
+  black: '#000000', white: '#ffffff', gray: '#808080', grey: '#808080', lightgray: '#d3d3d3', lightgrey: '#d3d3d3', darkgray: '#a9a9a9', darkgrey: '#a9a9a9', silver: '#c0c0c0',
+  red: '#ff0000', darkred: '#8b0000', crimson: '#dc143c', tomato: '#ff6347', salmon: '#fa8072', pink: '#ffc0cb', maroon: '#800000',
+  orange: '#ffa500', darkorange: '#ff8c00', gold: '#ffd700', yellow: '#ffff00', khaki: '#f0e68c', beige: '#f5f5dc', ivory: '#fffff0', wheat: '#f5deb3', brown: '#a52a2a',
+  green: '#008000', darkgreen: '#006400', lime: '#00ff00', limegreen: '#32cd32', olive: '#808000', seagreen: '#2e8b57', forestgreen: '#228b22', teal: '#008080',
+  cyan: '#00ffff', aqua: '#00ffff', turquoise: '#40e0d0', lightblue: '#add8e6', skyblue: '#87ceeb', steelblue: '#4682b4', blue: '#0000ff', darkblue: '#00008b', navy: '#000080', royalblue: '#4169e1', cornflowerblue: '#6495ed', dodgerblue: '#1e90ff',
+  purple: '#800080', indigo: '#4b0082', violet: '#ee82ee', magenta: '#ff00ff', fuchsia: '#ff00ff', orchid: '#da70d6', lavender: '#e6e6fa', plum: '#dda0dd',
+};
+const toHex = (c) => (isHex(c) ? c.trim() : typeof c === 'string' ? NAMED[c.trim().toLowerCase()] : undefined);
 
 /** Nombres disponibles, por tipo. */
 export function colorScaleNames() {
@@ -161,7 +172,7 @@ export function colorScaleNames() {
 export function resolveColorScale(v) {
   if (!v) return null;
   if (Array.isArray(v)) {
-    const stops = v.filter(isHex);
+    const stops = v.map(toHex).filter(Boolean);
     return stops.length >= 2 ? { name: 'custom', stops, kind: 'sequential' } : null;
   }
   if (typeof v === 'object') {

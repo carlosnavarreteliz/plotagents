@@ -7,7 +7,7 @@ import { makeFormat } from '../format.js';
 import { textOn } from '../theme.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
-import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
 const TAU = Math.PI * 2;
 const f = (n) => n.toFixed(2);
@@ -24,7 +24,7 @@ export function sunburst(spec, theme) {
   const locale = spec.locale || 'es';
   const en = String(locale).startsWith('en');
   const { root, fields, valueField } = buildHierarchy(spec);
-  const focus = findNode(root, spec.focus);
+  const focus = focusNode(root, spec.focus);
   const levels = Math.max(1, height(focus));
   assignColors(root, theme, spec); // colores estables al navegar
   const vals = [];

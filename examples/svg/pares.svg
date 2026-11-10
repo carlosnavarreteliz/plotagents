@@ -1,0 +1,1453 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 881.06" width="720" height="881.06" role="img" aria-labelledby="pa1jgvb8-t pa1jgvb8-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="pairplot" data-pa-mode="light" data-pa-lang="es" data-pa-top="138" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><title id="pa1jgvb8-t">La periferia concentra menos ingreso, más pobreza y viajes más largos</title><desc id="pa1jgvb8-d">Matriz de dispersión de 4 variables (120 filas) por zona: dispersión bajo la diagonal y distribuciones en ella. Correlación más fuerte: Ingreso y Escolaridad (r = 0,85).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid #3A47B8;outline-offset:2px}</style><rect width="720" height="881.06" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">La periferia concentra menos ingreso, más pobreza y viajes</text><text x="24" y="72.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">más largos</text><text x="24" y="98.5" fill="#4A5070" font-size="14.5">Cuatro indicadores de 120 barrios, por zona. Ingreso en miles de pesos, pobreza en %, viaje en</text><text x="24" y="119.5" fill="#4A5070" font-size="14.5">minutos</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" data-value="Centro" style="cursor:pointer"><rect x="21" y="135" width="65.11" height="19" rx="4" fill="transparent"/><circle cx="29" cy="144.5" r="5" fill="#3A47B8"/><text x="40" y="149" fill="#4A5070" font-size="12.5">Centro</text></g><g class="pa-key" data-color="#D42A5E" data-value="Oriente" style="cursor:pointer"><rect x="96.11" y="135" width="68.39" height="19" rx="4" fill="transparent"/><circle cx="104.11" cy="144.5" r="5" fill="#D42A5E"/><text x="115.11" y="149" fill="#4A5070" font-size="12.5">Oriente</text></g><g class="pa-key" data-color="#E8A33D" data-value="Periferia" style="cursor:pointer"><rect x="174.51" y="135" width="76.4" height="19" rx="4" fill="transparent"/><circle cx="182.51" cy="144.5" r="5" fill="#E8A33D"/><text x="193.51" y="149" fill="#4A5070" font-size="12.5">Periferia</text></g></g></g><g class="pa-body"><g><path d="M48.94,318.68L50.61,318.61L52.28,318.49L53.95,318.31L55.62,318.04L57.29,317.62L58.97,317.02L60.64,316.18L62.31,315.03L63.98,313.51L65.65,311.57L67.32,309.16L68.99,306.27L70.67,302.89L72.34,299.09L74.01,294.92L75.68,290.51L77.35,285.98L79.02,281.47L80.70,277.13L82.37,273.04L84.04,269.31L85.71,265.96L87.38,262.99L89.05,260.36L90.72,258.01L92.40,255.86L94.07,253.85L95.74,251.89L97.41,249.93L99.08,247.95L100.75,245.92L102.42,243.84L104.10,241.74L105.77,239.65L107.44,237.66L109.11,235.86L110.78,234.37L112.45,233.34L114.13,232.92L115.80,233.22L117.47,234.36L119.14,236.41L120.81,239.37L122.48,243.20L124.15,247.83L125.83,253.12L127.50,258.93L129.17,265.07L130.84,271.36L132.51,277.60L134.18,283.63L135.86,289.27L137.53,294.39L139.20,298.89L140.87,302.72L142.54,305.84L144.21,308.28L145.88,310.09L147.56,311.36L149.23,312.19L150.90,312.70L152.57,313.00L154.24,313.20L155.91,313.39L157.59,313.62L159.26,313.94L160.93,314.35L162.60,314.84L164.27,315.38L165.94,315.94L167.61,316.49L169.29,316.99L170.96,317.43L172.63,317.79L174.30,318.08L175.97,318.30L177.64,318.46L179.32,318.57L180.99,318.65L182.66,318.70L184.33,318.73L186.00,318.74L187.67,318.75L189.34,318.76L191.02,318.76L192.69,318.76L194.36,318.77L196.03,318.77L197.70,318.77L197.70,318.76599999999996L48.94,318.76599999999996Z" fill="#3A47B8" fill-opacity="0.19"/><path d="M48.94,318.68L50.61,318.61L52.28,318.49L53.95,318.31L55.62,318.04L57.29,317.62L58.97,317.02L60.64,316.18L62.31,315.03L63.98,313.51L65.65,311.57L67.32,309.16L68.99,306.27L70.67,302.89L72.34,299.09L74.01,294.92L75.68,290.51L77.35,285.98L79.02,281.47L80.70,277.13L82.37,273.04L84.04,269.31L85.71,265.96L87.38,262.99L89.05,260.36L90.72,258.01L92.40,255.86L94.07,253.85L95.74,251.89L97.41,249.93L99.08,247.95L100.75,245.92L102.42,243.84L104.10,241.74L105.77,239.65L107.44,237.66L109.11,235.86L110.78,234.37L112.45,233.34L114.13,232.92L115.80,233.22L117.47,234.36L119.14,236.41L120.81,239.37L122.48,243.20L124.15,247.83L125.83,253.12L127.50,258.93L129.17,265.07L130.84,271.36L132.51,277.60L134.18,283.63L135.86,289.27L137.53,294.39L139.20,298.89L140.87,302.72L142.54,305.84L144.21,308.28L145.88,310.09L147.56,311.36L149.23,312.19L150.90,312.70L152.57,313.00L154.24,313.20L155.91,313.39L157.59,313.62L159.26,313.94L160.93,314.35L162.60,314.84L164.27,315.38L165.94,315.94L167.61,316.49L169.29,316.99L170.96,317.43L172.63,317.79L174.30,318.08L175.97,318.30L177.64,318.46L179.32,318.57L180.99,318.65L182.66,318.70L184.33,318.73L186.00,318.74L187.67,318.75L189.34,318.76L191.02,318.76L192.69,318.76L194.36,318.77L196.03,318.77L197.70,318.77" fill="none" stroke="#3A47B8" stroke-width="1.6"/><path d="M48.94,317.92L50.61,317.66L52.28,317.34L53.95,316.95L55.62,316.48L57.29,315.92L58.97,315.26L60.64,314.49L62.31,313.60L63.98,312.60L65.65,311.46L67.32,310.20L68.99,308.82L70.67,307.31L72.34,305.68L74.01,303.94L75.68,302.09L77.35,300.15L79.02,298.13L80.70,296.03L82.37,293.88L84.04,291.68L85.71,289.46L87.38,287.21L89.05,284.97L90.72,282.75L92.40,280.58L94.07,278.47L95.74,276.46L97.41,274.56L99.08,272.83L100.75,271.27L102.42,269.92L104.10,268.81L105.77,267.96L107.44,267.37L109.11,267.07L110.78,267.05L112.45,267.29L114.13,267.79L115.80,268.51L117.47,269.41L119.14,270.46L120.81,271.60L122.48,272.79L124.15,273.98L125.83,275.14L127.50,276.21L129.17,277.17L130.84,278.00L132.51,278.68L134.18,279.21L135.86,279.60L137.53,279.86L139.20,280.01L140.87,280.08L142.54,280.10L144.21,280.10L145.88,280.11L147.56,280.17L149.23,280.29L150.90,280.51L152.57,280.84L154.24,281.30L155.91,281.90L157.59,282.64L159.26,283.53L160.93,284.55L162.60,285.71L164.27,286.98L165.94,288.35L167.61,289.82L169.29,291.34L170.96,292.91L172.63,294.51L174.30,296.11L175.97,297.70L177.64,299.25L179.32,300.76L180.99,302.22L182.66,303.60L184.33,304.92L186.00,306.16L187.67,307.32L189.34,308.40L191.02,309.41L192.69,310.35L194.36,311.22L196.03,312.03L197.70,312.78L197.70,318.76599999999996L48.94,318.76599999999996Z" fill="#D42A5E" fill-opacity="0.19"/><path d="M48.94,317.92L50.61,317.66L52.28,317.34L53.95,316.95L55.62,316.48L57.29,315.92L58.97,315.26L60.64,314.49L62.31,313.60L63.98,312.60L65.65,311.46L67.32,310.20L68.99,308.82L70.67,307.31L72.34,305.68L74.01,303.94L75.68,302.09L77.35,300.15L79.02,298.13L80.70,296.03L82.37,293.88L84.04,291.68L85.71,289.46L87.38,287.21L89.05,284.97L90.72,282.75L92.40,280.58L94.07,278.47L95.74,276.46L97.41,274.56L99.08,272.83L100.75,271.27L102.42,269.92L104.10,268.81L105.77,267.96L107.44,267.37L109.11,267.07L110.78,267.05L112.45,267.29L114.13,267.79L115.80,268.51L117.47,269.41L119.14,270.46L120.81,271.60L122.48,272.79L124.15,273.98L125.83,275.14L127.50,276.21L129.17,277.17L130.84,278.00L132.51,278.68L134.18,279.21L135.86,279.60L137.53,279.86L139.20,280.01L140.87,280.08L142.54,280.10L144.21,280.10L145.88,280.11L147.56,280.17L149.23,280.29L150.90,280.51L152.57,280.84L154.24,281.30L155.91,281.90L157.59,282.64L159.26,283.53L160.93,284.55L162.60,285.71L164.27,286.98L165.94,288.35L167.61,289.82L169.29,291.34L170.96,292.91L172.63,294.51L174.30,296.11L175.97,297.70L177.64,299.25L179.32,300.76L180.99,302.22L182.66,303.60L184.33,304.92L186.00,306.16L187.67,307.32L189.34,308.40L191.02,309.41L192.69,310.35L194.36,311.22L196.03,312.03L197.70,312.78" fill="none" stroke="#D42A5E" stroke-width="1.6"/><path d="M48.94,305.16L50.61,297.99L52.28,289.37L53.95,279.94L55.62,270.44L57.29,261.41L58.97,252.96L60.64,244.81L62.31,236.49L63.98,227.71L65.65,218.59L67.32,209.64L68.99,201.50L70.67,194.64L72.34,189.31L74.01,185.66L75.68,184.00L77.35,184.89L79.02,188.84L80.70,195.86L82.37,205.30L84.04,215.95L85.71,226.61L87.38,236.53L89.05,245.60L90.72,254.14L92.40,262.59L94.07,271.24L95.74,280.03L97.41,288.63L99.08,296.57L100.75,303.34L102.42,308.62L104.10,312.25L105.77,314.29L107.44,314.93L109.11,314.49L110.78,313.35L112.45,311.98L114.13,310.87L115.80,310.40L117.47,310.76L119.14,311.85L120.81,313.39L122.48,314.99L124.15,316.38L125.83,317.41L127.50,318.07L129.17,318.44L130.84,318.63L132.51,318.72L134.18,318.75L135.86,318.76L137.53,318.76L139.20,318.77L140.87,318.77L142.54,318.77L144.21,318.77L145.88,318.77L147.56,318.77L149.23,318.77L150.90,318.77L152.57,318.77L154.24,318.77L155.91,318.77L157.59,318.77L159.26,318.77L160.93,318.77L162.60,318.77L164.27,318.77L165.94,318.77L167.61,318.77L169.29,318.77L170.96,318.77L172.63,318.77L174.30,318.77L175.97,318.77L177.64,318.77L179.32,318.77L180.99,318.77L182.66,318.77L184.33,318.77L186.00,318.77L187.67,318.77L189.34,318.77L191.02,318.77L192.69,318.77L194.36,318.77L196.03,318.77L197.70,318.77L197.70,318.76599999999996L48.94,318.76599999999996Z" fill="#E8A33D" fill-opacity="0.19"/><path d="M48.94,305.16L50.61,297.99L52.28,289.37L53.95,279.94L55.62,270.44L57.29,261.41L58.97,252.96L60.64,244.81L62.31,236.49L63.98,227.71L65.65,218.59L67.32,209.64L68.99,201.50L70.67,194.64L72.34,189.31L74.01,185.66L75.68,184.00L77.35,184.89L79.02,188.84L80.70,195.86L82.37,205.30L84.04,215.95L85.71,226.61L87.38,236.53L89.05,245.60L90.72,254.14L92.40,262.59L94.07,271.24L95.74,280.03L97.41,288.63L99.08,296.57L100.75,303.34L102.42,308.62L104.10,312.25L105.77,314.29L107.44,314.93L109.11,314.49L110.78,313.35L112.45,311.98L114.13,310.87L115.80,310.40L117.47,310.76L119.14,311.85L120.81,313.39L122.48,314.99L124.15,316.38L125.83,317.41L127.50,318.07L129.17,318.44L130.84,318.63L132.51,318.72L134.18,318.75L135.86,318.76L137.53,318.76L139.20,318.77L140.87,318.77L142.54,318.77L144.21,318.77L145.88,318.77L147.56,318.77L149.23,318.77L150.90,318.77L152.57,318.77L154.24,318.77L155.91,318.77L157.59,318.77L159.26,318.77L160.93,318.77L162.60,318.77L164.27,318.77L165.94,318.77L167.61,318.77L169.29,318.77L170.96,318.77L172.63,318.77L174.30,318.77L175.97,318.77L177.64,318.77L179.32,318.77L180.99,318.77L182.66,318.77L184.33,318.77L186.00,318.77L187.67,318.77L189.34,318.77L191.02,318.77L192.69,318.77L194.36,318.77L196.03,318.77L197.70,318.77" fill="none" stroke="#E8A33D" stroke-width="1.6"/><line x1="44.94" x2="201.7" y1="318.27" y2="318.27" stroke="#C9CDE0"/><text x="50.94" y="176" fill="#141A3F" font-size="12" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Ingreso</text><rect x="44.94" y="162" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Ingreso · Escolaridad
+r = 0,85
+n = 120"><rect x="209.7" y="162" width="156.77" height="156.77" fill="#BC3E64" fill-opacity="0.35"/><text x="288.08" y="221.38" fill="#BC3E64" font-size="25.69" font-weight="600" text-anchor="middle">0,85</text><text x="288.08" y="239.38" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: 0,67</text><text x="288.08" y="253.38" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: 0,67</text><text x="288.08" y="267.38" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: 0,75</text></g><rect x="209.7" y="162" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Ingreso · Pobreza
+r = −0,80
+n = 120"><rect x="374.47" y="162" width="156.77" height="156.77" fill="#4A55AE" fill-opacity="0.34"/><text x="452.85" y="221.38" fill="#4A55AE" font-size="25.06" font-weight="600" text-anchor="middle">−0,80</text><text x="452.85" y="239.38" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: −0,61</text><text x="452.85" y="253.38" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: −0,63</text><text x="452.85" y="267.38" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: −0,68</text></g><rect x="374.47" y="162" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Ingreso · Tiempo de viaje
+r = −0,40
+n = 120"><rect x="539.23" y="162" width="156.77" height="156.77" fill="#9EA5DD" fill-opacity="0.21"/><text x="617.62" y="221.38" fill="#676D9E" font-size="18.93" font-weight="600" text-anchor="middle">−0,40</text><text x="617.62" y="239.38" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: −0,15</text><text x="617.62" y="253.38" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: −0,02</text><text x="617.62" y="267.38" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: −0,07</text></g><rect x="539.23" y="162" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="119.83" x2="119.83" y1="326.77" y2="483.53" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="435.04" y2="435.04" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="370.06" y2="370.06" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="107.7" cy="409.05" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 875
+Escolaridad: 12"/><circle class="pa-m" cx="192.19" cy="354.47" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.746
+Escolaridad: 16,2"/><circle class="pa-m" cx="77.05" cy="412.95" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Escolaridad: 11,7"/><circle class="pa-m" cx="82.29" cy="419.44" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 613
+Escolaridad: 11,2"/><circle class="pa-m" cx="94.41" cy="402.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 738
+Escolaridad: 12,5"/><circle class="pa-m" cx="62.59" cy="464.93" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 410
+Escolaridad: 7,7"/><circle class="pa-m" cx="115.85" cy="380.46" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 959
+Escolaridad: 14,2"/><circle class="pa-m" cx="88.3" cy="394.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 675
+Escolaridad: 13,1"/><circle class="pa-m" cx="80.73" cy="418.14" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 597
+Escolaridad: 11,3"/><circle class="pa-m" cx="123.71" cy="392.15" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.040
+Escolaridad: 13,3"/><circle class="pa-m" cx="145.34" cy="381.76" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.263
+Escolaridad: 14,1"/><circle class="pa-m" cx="78.99" cy="437.64" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 579
+Escolaridad: 9,8"/><circle class="pa-m" cx="75.11" cy="410.35" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 539
+Escolaridad: 11,9"/><circle class="pa-m" cx="150.29" cy="350.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.314
+Escolaridad: 16,5"/><circle class="pa-m" cx="58.52" cy="462.33" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Escolaridad: 7,9"/><circle class="pa-m" cx="98" cy="414.25" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 775
+Escolaridad: 11,6"/><circle class="pa-m" cx="113.91" cy="389.56" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 939
+Escolaridad: 13,5"/><circle class="pa-m" cx="54.45" cy="474.02" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 326
+Escolaridad: 7"/><circle class="pa-m" cx="87.23" cy="420.74" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 664
+Escolaridad: 11,1"/><circle class="pa-m" cx="117.6" cy="367.46" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 977
+Escolaridad: 15,2"/><circle class="pa-m" cx="80.54" cy="429.84" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 595
+Escolaridad: 10,4"/><circle class="pa-m" cx="82.58" cy="419.44" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 616
+Escolaridad: 11,2"/><circle class="pa-m" cx="115.17" cy="402.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 952
+Escolaridad: 12,5"/><circle class="pa-m" cx="77.05" cy="441.53" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Escolaridad: 9,5"/><circle class="pa-m" cx="113.23" cy="388.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 932
+Escolaridad: 13,6"/><circle class="pa-m" cx="181.91" cy="354.47" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.640
+Escolaridad: 16,2"/><circle class="pa-m" cx="84.03" cy="423.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 631
+Escolaridad: 10,9"/><circle class="pa-m" cx="104.31" cy="409.05" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 840
+Escolaridad: 12"/><circle class="pa-m" cx="81.8" cy="410.35" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 608
+Escolaridad: 11,9"/><circle class="pa-m" cx="74.04" cy="431.14" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Escolaridad: 10,3"/><circle class="pa-m" cx="81.51" cy="422.04" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 605
+Escolaridad: 11"/><circle class="pa-m" cx="111.19" cy="397.35" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 911
+Escolaridad: 12,9"/><circle class="pa-m" cx="85.97" cy="411.65" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 651
+Escolaridad: 11,8"/><circle class="pa-m" cx="92.08" cy="402.55" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 714
+Escolaridad: 12,5"/><circle class="pa-m" cx="141.46" cy="368.76" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.223
+Escolaridad: 15,1"/><circle class="pa-m" cx="93.54" cy="414.25" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 729
+Escolaridad: 11,6"/><circle class="pa-m" cx="156.59" cy="360.97" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.379
+Escolaridad: 15,7"/><circle class="pa-m" cx="140.59" cy="393.45" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.214
+Escolaridad: 13,2"/><circle class="pa-m" cx="81.12" cy="418.14" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 601
+Escolaridad: 11,3"/><circle class="pa-m" cx="105.86" cy="409.05" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 856
+Escolaridad: 12"/><circle class="pa-m" cx="82.19" cy="399.95" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 612
+Escolaridad: 12,7"/><circle class="pa-m" cx="69.19" cy="428.54" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 478
+Escolaridad: 10,5"/><circle class="pa-m" cx="100.52" cy="399.95" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 801
+Escolaridad: 12,7"/><circle class="pa-m" cx="164.25" cy="340.17" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.458
+Escolaridad: 17,3"/><circle class="pa-m" cx="65.02" cy="454.53" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 435
+Escolaridad: 8,5"/><circle class="pa-m" cx="91.5" cy="420.74" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 708
+Escolaridad: 11,1"/><circle class="pa-m" cx="147.38" cy="342.77" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.284
+Escolaridad: 17,1"/><circle class="pa-m" cx="78.41" cy="429.84" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 573
+Escolaridad: 10,4"/><circle class="pa-m" cx="90.92" cy="401.25" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 702
+Escolaridad: 12,6"/><circle class="pa-m" cx="83.84" cy="422.04" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 629
+Escolaridad: 11"/><circle class="pa-m" cx="115.95" cy="407.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 960
+Escolaridad: 12,1"/><circle class="pa-m" cx="102.08" cy="399.95" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 817
+Escolaridad: 12,7"/><circle class="pa-m" cx="152.23" cy="371.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.334
+Escolaridad: 14,9"/><circle class="pa-m" cx="70.65" cy="412.95" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 493
+Escolaridad: 11,7"/><circle class="pa-m" cx="102.46" cy="406.45" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 821
+Escolaridad: 12,2"/><circle class="pa-m" cx="107.41" cy="397.35" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 872
+Escolaridad: 12,9"/><circle class="pa-m" cx="71.32" cy="436.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 500
+Escolaridad: 9,9"/><circle class="pa-m" cx="118.66" cy="402.55" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 988
+Escolaridad: 12,5"/><circle class="pa-m" cx="136.12" cy="379.16" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.168
+Escolaridad: 14,3"/><circle class="pa-m" cx="74.04" cy="440.24" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Escolaridad: 9,6"/><circle class="pa-m" cx="112.55" cy="405.15" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 925
+Escolaridad: 12,3"/><circle class="pa-m" cx="167.17" cy="393.45" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.488
+Escolaridad: 13,2"/><circle class="pa-m" cx="80.25" cy="423.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 592
+Escolaridad: 10,9"/><circle class="pa-m" cx="115.66" cy="403.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 957
+Escolaridad: 12,4"/><circle class="pa-m" cx="105.86" cy="383.06" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 856
+Escolaridad: 14"/><circle class="pa-m" cx="70.74" cy="423.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 494
+Escolaridad: 10,9"/><circle class="pa-m" cx="114.3" cy="411.65" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 943
+Escolaridad: 11,8"/><circle class="pa-m" cx="163.19" cy="354.47" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.447
+Escolaridad: 16,2"/><circle class="pa-m" cx="68.22" cy="442.83" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 468
+Escolaridad: 9,4"/><circle class="pa-m" cx="120.02" cy="388.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.002
+Escolaridad: 13,6"/><circle class="pa-m" cx="109.35" cy="385.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 892
+Escolaridad: 13,8"/><circle class="pa-m" cx="85.78" cy="415.54" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 649
+Escolaridad: 11,5"/><circle class="pa-m" cx="124.48" cy="359.67" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.048
+Escolaridad: 15,8"/><circle class="pa-m" cx="105.18" cy="377.86" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 849
+Escolaridad: 14,4"/><circle class="pa-m" cx="59.01" cy="440.24" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 373
+Escolaridad: 9,6"/><circle class="pa-m" cx="87.43" cy="414.25" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 666
+Escolaridad: 11,6"/><circle class="pa-m" cx="111" cy="376.56" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 909
+Escolaridad: 14,5"/><circle class="pa-m" cx="77.82" cy="420.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 567
+Escolaridad: 11,1"/><circle class="pa-m" cx="122.64" cy="370.06" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.029
+Escolaridad: 15"/><circle class="pa-m" cx="150.67" cy="371.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.318
+Escolaridad: 14,9"/><circle class="pa-m" cx="89.95" cy="422.04" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 692
+Escolaridad: 11"/><circle class="pa-m" cx="81.8" cy="409.05" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 608
+Escolaridad: 12"/><circle class="pa-m" cx="166.87" cy="353.17" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.485
+Escolaridad: 16,3"/><circle class="pa-m" cx="87.82" cy="419.44" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 670
+Escolaridad: 11,2"/><circle class="pa-m" cx="113.81" cy="384.36" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 938
+Escolaridad: 13,9"/><circle class="pa-m" cx="145.14" cy="367.46" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.261
+Escolaridad: 15,2"/><circle class="pa-m" cx="70.94" cy="425.94" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 496
+Escolaridad: 10,7"/><circle class="pa-m" cx="114.88" cy="375.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 949
+Escolaridad: 14,6"/><circle class="pa-m" cx="99.07" cy="367.46" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 786
+Escolaridad: 15,2"/><circle class="pa-m" cx="70.35" cy="433.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 490
+Escolaridad: 10,1"/><circle class="pa-m" cx="127.78" cy="411.65" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.082
+Escolaridad: 11,8"/><circle class="pa-m" cx="119.63" cy="364.86" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 998
+Escolaridad: 15,4"/><circle class="pa-m" cx="79.18" cy="436.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 581
+Escolaridad: 9,9"/><circle class="pa-m" cx="94.61" cy="380.46" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 740
+Escolaridad: 14,2"/><circle class="pa-m" cx="129.33" cy="363.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.098
+Escolaridad: 15,5"/><circle class="pa-m" cx="55.22" cy="459.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 334
+Escolaridad: 8,1"/><circle class="pa-m" cx="127.98" cy="406.45" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.084
+Escolaridad: 12,2"/><circle class="pa-m" cx="92.86" cy="372.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 722
+Escolaridad: 14,8"/><circle class="pa-m" cx="58.52" cy="454.53" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Escolaridad: 8,5"/><circle class="pa-m" cx="131.08" cy="388.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.116
+Escolaridad: 13,6"/><circle class="pa-m" cx="160.86" cy="336.28" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.423
+Escolaridad: 17,6"/><circle class="pa-m" cx="63.86" cy="458.43" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 423
+Escolaridad: 8,2"/><circle class="pa-m" cx="104.6" cy="397.35" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 843
+Escolaridad: 12,9"/><circle class="pa-m" cx="103.92" cy="403.85" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 836
+Escolaridad: 12,4"/><circle class="pa-m" cx="93.34" cy="448.03" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 727
+Escolaridad: 9"/><circle class="pa-m" cx="114.2" cy="379.16" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 942
+Escolaridad: 14,3"/><circle class="pa-m" cx="115.95" cy="389.56" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 960
+Escolaridad: 13,5"/><circle class="pa-m" cx="67.54" cy="435.04" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 461
+Escolaridad: 10"/><circle class="pa-m" cx="120.12" cy="363.57" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.003
+Escolaridad: 15,5"/><circle class="pa-m" cx="102.95" cy="396.05" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 826
+Escolaridad: 13"/><circle class="pa-m" cx="97.13" cy="397.35" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 766
+Escolaridad: 12,9"/><circle class="pa-m" cx="99.16" cy="405.15" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 787
+Escolaridad: 12,3"/><circle class="pa-m" cx="113.62" cy="385.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 936
+Escolaridad: 13,8"/><circle class="pa-m" cx="65.21" cy="433.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 437
+Escolaridad: 10,1"/><circle class="pa-m" cx="126.52" cy="390.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.069
+Escolaridad: 13,4"/><circle class="pa-m" cx="122.54" cy="372.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.028
+Escolaridad: 14,8"/><circle class="pa-m" cx="75.88" cy="427.24" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 547
+Escolaridad: 10,6"/><circle class="pa-m" cx="135.15" cy="388.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.158
+Escolaridad: 13,6"/><circle class="pa-m" cx="165.22" cy="394.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.468
+Escolaridad: 13,1"/><circle class="pa-m" cx="89.85" cy="412.95" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 691
+Escolaridad: 11,7"/></g><rect x="44.94" y="326.77" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><path d="M213.70,483.53L215.37,483.53L217.05,483.53L218.72,483.53L220.39,483.53L222.06,483.53L223.73,483.53L225.40,483.53L227.07,483.53L228.75,483.53L230.42,483.53L232.09,483.53L233.76,483.53L235.43,483.53L237.10,483.53L238.77,483.53L240.45,483.52L242.12,483.51L243.79,483.48L245.46,483.42L247.13,483.31L248.80,483.11L250.48,482.76L252.15,482.16L253.82,481.21L255.49,479.74L257.16,477.59L258.83,474.57L260.50,470.51L262.18,465.28L263.85,458.83L265.52,451.17L267.19,442.40L268.86,432.71L270.53,422.31L272.21,411.47L273.88,400.48L275.55,389.64L277.22,379.30L278.89,369.83L280.56,361.66L282.23,355.19L283.91,350.81L285.58,348.77L287.25,349.14L288.92,351.79L290.59,356.34L292.26,362.25L293.94,368.88L295.61,375.61L297.28,381.93L298.95,387.51L300.62,392.25L302.29,396.25L303.96,399.75L305.64,403.05L307.31,406.43L308.98,410.11L310.65,414.18L312.32,418.60L313.99,423.26L315.67,427.98L317.34,432.53L319.01,436.72L320.68,440.39L322.35,443.50L324.02,446.04L325.69,448.15L327.37,449.99L329.04,451.79L330.71,453.74L332.38,455.99L334.05,458.61L335.72,461.57L337.40,464.75L339.07,468.01L340.74,471.15L342.41,474.02L344.08,476.51L345.75,478.55L347.42,480.14L349.10,481.31L350.77,482.14L352.44,482.70L354.11,483.05L355.78,483.27L357.45,483.39L359.12,483.46L360.80,483.50L362.47,483.52L362.47,483.5319999999999L213.70,483.5319999999999Z" fill="#3A47B8" fill-opacity="0.19"/><path d="M213.70,483.53L215.37,483.53L217.05,483.53L218.72,483.53L220.39,483.53L222.06,483.53L223.73,483.53L225.40,483.53L227.07,483.53L228.75,483.53L230.42,483.53L232.09,483.53L233.76,483.53L235.43,483.53L237.10,483.53L238.77,483.53L240.45,483.52L242.12,483.51L243.79,483.48L245.46,483.42L247.13,483.31L248.80,483.11L250.48,482.76L252.15,482.16L253.82,481.21L255.49,479.74L257.16,477.59L258.83,474.57L260.50,470.51L262.18,465.28L263.85,458.83L265.52,451.17L267.19,442.40L268.86,432.71L270.53,422.31L272.21,411.47L273.88,400.48L275.55,389.64L277.22,379.30L278.89,369.83L280.56,361.66L282.23,355.19L283.91,350.81L285.58,348.77L287.25,349.14L288.92,351.79L290.59,356.34L292.26,362.25L293.94,368.88L295.61,375.61L297.28,381.93L298.95,387.51L300.62,392.25L302.29,396.25L303.96,399.75L305.64,403.05L307.31,406.43L308.98,410.11L310.65,414.18L312.32,418.60L313.99,423.26L315.67,427.98L317.34,432.53L319.01,436.72L320.68,440.39L322.35,443.50L324.02,446.04L325.69,448.15L327.37,449.99L329.04,451.79L330.71,453.74L332.38,455.99L334.05,458.61L335.72,461.57L337.40,464.75L339.07,468.01L340.74,471.15L342.41,474.02L344.08,476.51L345.75,478.55L347.42,480.14L349.10,481.31L350.77,482.14L352.44,482.70L354.11,483.05L355.78,483.27L357.45,483.39L359.12,483.46L360.80,483.50L362.47,483.52" fill="none" stroke="#3A47B8" stroke-width="1.6"/><path d="M213.70,483.53L215.37,483.53L217.05,483.53L218.72,483.53L220.39,483.53L222.06,483.53L223.73,483.53L225.40,483.53L227.07,483.53L228.75,483.53L230.42,483.53L232.09,483.53L233.76,483.52L235.43,483.52L237.10,483.51L238.77,483.49L240.45,483.46L242.12,483.42L243.79,483.36L245.46,483.27L247.13,483.14L248.80,482.97L250.48,482.73L252.15,482.42L253.82,482.03L255.49,481.54L257.16,480.94L258.83,480.23L260.50,479.38L262.18,478.41L263.85,477.28L265.52,475.98L267.19,474.49L268.86,472.77L270.53,470.77L272.21,468.44L273.88,465.72L275.55,462.55L277.22,458.90L278.89,454.72L280.56,450.03L282.23,444.86L283.91,439.29L285.58,433.44L287.25,427.45L288.92,421.50L290.59,415.79L292.26,410.49L293.94,405.75L295.61,401.69L297.28,398.39L298.95,395.85L300.62,394.03L302.29,392.85L303.96,392.19L305.64,391.91L307.31,391.89L308.98,392.00L310.65,392.18L312.32,392.38L313.99,392.62L315.67,392.93L317.34,393.40L319.01,394.10L320.68,395.11L322.35,396.51L324.02,398.34L325.69,400.59L327.37,403.24L329.04,406.22L330.71,409.47L332.38,412.89L334.05,416.41L335.72,419.95L337.40,423.47L339.07,426.93L340.74,430.32L342.41,433.64L344.08,436.89L345.75,440.08L347.42,443.24L349.10,446.37L350.77,449.47L352.44,452.54L354.11,455.58L355.78,458.57L357.45,461.49L359.12,464.31L360.80,467.01L362.47,469.54L362.47,483.5319999999999L213.70,483.5319999999999Z" fill="#D42A5E" fill-opacity="0.19"/><path d="M213.70,483.53L215.37,483.53L217.05,483.53L218.72,483.53L220.39,483.53L222.06,483.53L223.73,483.53L225.40,483.53L227.07,483.53L228.75,483.53L230.42,483.53L232.09,483.53L233.76,483.52L235.43,483.52L237.10,483.51L238.77,483.49L240.45,483.46L242.12,483.42L243.79,483.36L245.46,483.27L247.13,483.14L248.80,482.97L250.48,482.73L252.15,482.42L253.82,482.03L255.49,481.54L257.16,480.94L258.83,480.23L260.50,479.38L262.18,478.41L263.85,477.28L265.52,475.98L267.19,474.49L268.86,472.77L270.53,470.77L272.21,468.44L273.88,465.72L275.55,462.55L277.22,458.90L278.89,454.72L280.56,450.03L282.23,444.86L283.91,439.29L285.58,433.44L287.25,427.45L288.92,421.50L290.59,415.79L292.26,410.49L293.94,405.75L295.61,401.69L297.28,398.39L298.95,395.85L300.62,394.03L302.29,392.85L303.96,392.19L305.64,391.91L307.31,391.89L308.98,392.00L310.65,392.18L312.32,392.38L313.99,392.62L315.67,392.93L317.34,393.40L319.01,394.10L320.68,395.11L322.35,396.51L324.02,398.34L325.69,400.59L327.37,403.24L329.04,406.22L330.71,409.47L332.38,412.89L334.05,416.41L335.72,419.95L337.40,423.47L339.07,426.93L340.74,430.32L342.41,433.64L344.08,436.89L345.75,440.08L347.42,443.24L349.10,446.37L350.77,449.47L352.44,452.54L354.11,455.58L355.78,458.57L357.45,461.49L359.12,464.31L360.80,467.01L362.47,469.54" fill="none" stroke="#D42A5E" stroke-width="1.6"/><path d="M213.70,475.13L215.37,472.96L217.05,470.50L218.72,467.72L220.39,464.65L222.06,461.29L223.73,457.70L225.40,453.99L227.07,450.28L228.75,446.73L230.42,443.52L232.09,440.76L233.76,438.50L235.43,436.70L237.10,435.19L238.77,433.71L240.45,431.95L242.12,429.56L243.79,426.27L245.46,421.92L247.13,416.48L248.80,410.08L250.48,403.00L252.15,395.59L253.82,388.25L255.49,381.35L257.16,375.17L258.83,369.92L260.50,365.67L262.18,362.43L263.85,360.15L265.52,358.80L267.19,358.33L268.86,358.79L270.53,360.23L272.21,362.77L273.88,366.53L275.55,371.61L277.22,378.01L278.89,385.68L280.56,394.41L282.23,403.91L283.91,413.79L285.58,423.64L287.25,433.03L288.92,441.65L290.59,449.26L292.26,455.77L293.94,461.20L295.61,465.63L297.28,469.23L298.95,472.16L300.62,474.55L302.29,476.53L303.96,478.17L305.64,479.51L307.31,480.60L308.98,481.47L310.65,482.12L312.32,482.60L313.99,482.94L315.67,483.17L317.34,483.32L319.01,483.42L320.68,483.47L322.35,483.50L324.02,483.52L325.69,483.52L327.37,483.53L329.04,483.53L330.71,483.53L332.38,483.53L334.05,483.53L335.72,483.53L337.40,483.53L339.07,483.53L340.74,483.53L342.41,483.53L344.08,483.53L345.75,483.53L347.42,483.53L349.10,483.53L350.77,483.53L352.44,483.53L354.11,483.53L355.78,483.53L357.45,483.53L359.12,483.53L360.80,483.53L362.47,483.53L362.47,483.5319999999999L213.70,483.5319999999999Z" fill="#E8A33D" fill-opacity="0.19"/><path d="M213.70,475.13L215.37,472.96L217.05,470.50L218.72,467.72L220.39,464.65L222.06,461.29L223.73,457.70L225.40,453.99L227.07,450.28L228.75,446.73L230.42,443.52L232.09,440.76L233.76,438.50L235.43,436.70L237.10,435.19L238.77,433.71L240.45,431.95L242.12,429.56L243.79,426.27L245.46,421.92L247.13,416.48L248.80,410.08L250.48,403.00L252.15,395.59L253.82,388.25L255.49,381.35L257.16,375.17L258.83,369.92L260.50,365.67L262.18,362.43L263.85,360.15L265.52,358.80L267.19,358.33L268.86,358.79L270.53,360.23L272.21,362.77L273.88,366.53L275.55,371.61L277.22,378.01L278.89,385.68L280.56,394.41L282.23,403.91L283.91,413.79L285.58,423.64L287.25,433.03L288.92,441.65L290.59,449.26L292.26,455.77L293.94,461.20L295.61,465.63L297.28,469.23L298.95,472.16L300.62,474.55L302.29,476.53L303.96,478.17L305.64,479.51L307.31,480.60L308.98,481.47L310.65,482.12L312.32,482.60L313.99,482.94L315.67,483.17L317.34,483.32L319.01,483.42L320.68,483.47L322.35,483.50L324.02,483.52L325.69,483.52L327.37,483.53L329.04,483.53L330.71,483.53L332.38,483.53L334.05,483.53L335.72,483.53L337.40,483.53L339.07,483.53L340.74,483.53L342.41,483.53L344.08,483.53L345.75,483.53L347.42,483.53L349.10,483.53L350.77,483.53L352.44,483.53L354.11,483.53L355.78,483.53L357.45,483.53L359.12,483.53L360.80,483.53L362.47,483.53" fill="none" stroke="#E8A33D" stroke-width="1.6"/><line x1="209.7" x2="366.47" y1="483.03" y2="483.03" stroke="#C9CDE0"/><text x="215.7" y="340.77" fill="#141A3F" font-size="12" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Escolaridad</text><rect x="209.7" y="326.77" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Escolaridad · Pobreza
+r = −0,81
+n = 120"><rect x="374.47" y="326.77" width="156.77" height="156.77" fill="#4954AD" fill-opacity="0.34"/><text x="452.85" y="386.15" fill="#4954AD" font-size="25.1" font-weight="600" text-anchor="middle">−0,81</text><text x="452.85" y="404.15" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: −0,39</text><text x="452.85" y="418.15" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: −0,61</text><text x="452.85" y="432.15" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: −0,69</text></g><rect x="374.47" y="326.77" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Escolaridad · Tiempo de viaje
+r = −0,42
+n = 120"><rect x="539.23" y="326.77" width="156.77" height="156.77" fill="#99A0DB" fill-opacity="0.22"/><text x="617.62" y="386.15" fill="#6A71A4" font-size="19.35" font-weight="600" text-anchor="middle">−0,42</text><text x="617.62" y="404.15" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: 0,02</text><text x="617.62" y="418.15" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: −0,13</text><text x="617.62" y="432.15" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: −0,05</text></g><rect x="539.23" y="326.77" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="119.83" x2="119.83" y1="491.53" y2="648.3" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="643.77" y2="643.77" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="581.45" y2="581.45" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="519.12" y2="519.12" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="107.7" cy="590.17" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 875
+Pobreza: 8,6"/><circle class="pa-m" cx="192.19" cy="631.93" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.746
+Pobreza: 1,9"/><circle class="pa-m" cx="77.05" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Pobreza: 11,3"/><circle class="pa-m" cx="82.29" cy="580.82" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 613
+Pobreza: 10,1"/><circle class="pa-m" cx="94.41" cy="590.8" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 738
+Pobreza: 8,5"/><circle class="pa-m" cx="62.59" cy="517.25" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 410
+Pobreza: 20,3"/><circle class="pa-m" cx="115.85" cy="569.6" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 959
+Pobreza: 11,9"/><circle class="pa-m" cx="88.3" cy="560.25" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 675
+Pobreza: 13,4"/><circle class="pa-m" cx="80.73" cy="562.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 597
+Pobreza: 13"/><circle class="pa-m" cx="123.71" cy="615.73" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.040
+Pobreza: 4,5"/><circle class="pa-m" cx="145.34" cy="589.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.263
+Pobreza: 8,7"/><circle class="pa-m" cx="78.99" cy="598.9" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 579
+Pobreza: 7,2"/><circle class="pa-m" cx="75.11" cy="574.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 539
+Pobreza: 11,1"/><circle class="pa-m" cx="150.29" cy="627.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.314
+Pobreza: 2,6"/><circle class="pa-m" cx="58.52" cy="501.04" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Pobreza: 22,9"/><circle class="pa-m" cx="98" cy="609.49" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 775
+Pobreza: 5,5"/><circle class="pa-m" cx="113.91" cy="611.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 939
+Pobreza: 5,2"/><circle class="pa-m" cx="54.45" cy="509.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 326
+Pobreza: 21,5"/><circle class="pa-m" cx="87.23" cy="580.82" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 664
+Pobreza: 10,1"/><circle class="pa-m" cx="117.6" cy="613.23" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 977
+Pobreza: 4,9"/><circle class="pa-m" cx="80.54" cy="554.64" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 595
+Pobreza: 14,3"/><circle class="pa-m" cx="82.58" cy="550.28" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 616
+Pobreza: 15"/><circle class="pa-m" cx="115.17" cy="577.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 952
+Pobreza: 10,6"/><circle class="pa-m" cx="77.05" cy="542.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Pobreza: 16,2"/><circle class="pa-m" cx="113.23" cy="597.03" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 932
+Pobreza: 7,5"/><circle class="pa-m" cx="181.91" cy="616.35" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.640
+Pobreza: 4,4"/><circle class="pa-m" cx="84.03" cy="582.07" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 631
+Pobreza: 9,9"/><circle class="pa-m" cx="104.31" cy="559.01" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 840
+Pobreza: 13,6"/><circle class="pa-m" cx="81.8" cy="564.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 608
+Pobreza: 12,7"/><circle class="pa-m" cx="74.04" cy="572.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Pobreza: 11,4"/><circle class="pa-m" cx="81.51" cy="571.47" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 605
+Pobreza: 11,6"/><circle class="pa-m" cx="111.19" cy="566.49" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 911
+Pobreza: 12,4"/><circle class="pa-m" cx="85.97" cy="556.51" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 651
+Pobreza: 14"/><circle class="pa-m" cx="92.08" cy="595.78" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 714
+Pobreza: 7,7"/><circle class="pa-m" cx="141.46" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.223
+Pobreza: 0,8"/><circle class="pa-m" cx="93.54" cy="570.85" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 729
+Pobreza: 11,7"/><circle class="pa-m" cx="156.59" cy="638.79" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.379
+Pobreza: 0,8"/><circle class="pa-m" cx="140.59" cy="623.83" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.214
+Pobreza: 3,2"/><circle class="pa-m" cx="81.12" cy="540.93" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 601
+Pobreza: 16,5"/><circle class="pa-m" cx="105.86" cy="597.03" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 856
+Pobreza: 7,5"/><circle class="pa-m" cx="82.19" cy="578.33" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 612
+Pobreza: 10,5"/><circle class="pa-m" cx="69.19" cy="555.89" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 478
+Pobreza: 14,1"/><circle class="pa-m" cx="100.52" cy="595.16" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 801
+Pobreza: 7,8"/><circle class="pa-m" cx="164.25" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.458
+Pobreza: 0,8"/><circle class="pa-m" cx="65.02" cy="525.97" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 435
+Pobreza: 18,9"/><circle class="pa-m" cx="91.5" cy="591.42" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 708
+Pobreza: 8,4"/><circle class="pa-m" cx="147.38" cy="625.08" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.284
+Pobreza: 3"/><circle class="pa-m" cx="78.41" cy="559.01" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 573
+Pobreza: 13,6"/><circle class="pa-m" cx="90.92" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 702
+Pobreza: 11,7"/><circle class="pa-m" cx="83.84" cy="569.6" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 629
+Pobreza: 11,9"/><circle class="pa-m" cx="115.95" cy="573.97" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 960
+Pobreza: 11,2"/><circle class="pa-m" cx="102.08" cy="555.89" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 817
+Pobreza: 14,1"/><circle class="pa-m" cx="152.23" cy="610.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.334
+Pobreza: 5,3"/><circle class="pa-m" cx="70.65" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 493
+Pobreza: 11,3"/><circle class="pa-m" cx="102.46" cy="578.33" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 821
+Pobreza: 10,5"/><circle class="pa-m" cx="107.41" cy="595.78" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 872
+Pobreza: 7,7"/><circle class="pa-m" cx="71.32" cy="537.82" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 500
+Pobreza: 17"/><circle class="pa-m" cx="118.66" cy="610.12" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 988
+Pobreza: 5,4"/><circle class="pa-m" cx="136.12" cy="623.83" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.168
+Pobreza: 3,2"/><circle class="pa-m" cx="74.04" cy="547.17" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Pobreza: 15,5"/><circle class="pa-m" cx="112.55" cy="585.19" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 925
+Pobreza: 9,4"/><circle class="pa-m" cx="167.17" cy="602.64" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.488
+Pobreza: 6,6"/><circle class="pa-m" cx="80.25" cy="558.38" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 592
+Pobreza: 13,7"/><circle class="pa-m" cx="115.66" cy="582.07" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 957
+Pobreza: 9,9"/><circle class="pa-m" cx="105.86" cy="602.64" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 856
+Pobreza: 6,6"/><circle class="pa-m" cx="70.74" cy="540.31" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 494
+Pobreza: 16,6"/><circle class="pa-m" cx="114.3" cy="602.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 943
+Pobreza: 6,6"/><circle class="pa-m" cx="163.19" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.447
+Pobreza: 0,8"/><circle class="pa-m" cx="68.22" cy="542.18" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 468
+Pobreza: 16,3"/><circle class="pa-m" cx="120.02" cy="599.52" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.002
+Pobreza: 7,1"/><circle class="pa-m" cx="109.35" cy="633.8" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 892
+Pobreza: 1,6"/><circle class="pa-m" cx="85.78" cy="544.67" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 649
+Pobreza: 15,9"/><circle class="pa-m" cx="124.48" cy="581.45" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.048
+Pobreza: 10"/><circle class="pa-m" cx="105.18" cy="604.51" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 849
+Pobreza: 6,3"/><circle class="pa-m" cx="59.01" cy="535.32" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 373
+Pobreza: 17,4"/><circle class="pa-m" cx="87.43" cy="577.08" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 666
+Pobreza: 10,7"/><circle class="pa-m" cx="111" cy="613.86" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 909
+Pobreza: 4,8"/><circle class="pa-m" cx="77.82" cy="560.25" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 567
+Pobreza: 13,4"/><circle class="pa-m" cx="122.64" cy="608.87" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.029
+Pobreza: 5,6"/><circle class="pa-m" cx="150.67" cy="637.54" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.318
+Pobreza: 1"/><circle class="pa-m" cx="89.95" cy="543.43" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 692
+Pobreza: 16,1"/><circle class="pa-m" cx="81.8" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 608
+Pobreza: 11,7"/><circle class="pa-m" cx="166.87" cy="625.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.485
+Pobreza: 2,9"/><circle class="pa-m" cx="87.82" cy="529.09" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 670
+Pobreza: 18,4"/><circle class="pa-m" cx="113.81" cy="638.79" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 938
+Pobreza: 0,8"/><circle class="pa-m" cx="145.14" cy="593.29" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.261
+Pobreza: 8,1"/><circle class="pa-m" cx="70.94" cy="562.12" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 496
+Pobreza: 13,1"/><circle class="pa-m" cx="114.88" cy="622.58" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 949
+Pobreza: 3,4"/><circle class="pa-m" cx="99.07" cy="580.82" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 786
+Pobreza: 10,1"/><circle class="pa-m" cx="70.35" cy="548.41" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 490
+Pobreza: 15,3"/><circle class="pa-m" cx="127.78" cy="603.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.082
+Pobreza: 6,5"/><circle class="pa-m" cx="119.63" cy="622.58" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 998
+Pobreza: 3,4"/><circle class="pa-m" cx="79.18" cy="577.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 581
+Pobreza: 10,6"/><circle class="pa-m" cx="94.61" cy="563.37" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 740
+Pobreza: 12,9"/><circle class="pa-m" cx="129.33" cy="611.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.098
+Pobreza: 5,2"/><circle class="pa-m" cx="55.22" cy="512.26" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 334
+Pobreza: 21,1"/><circle class="pa-m" cx="127.98" cy="600.77" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.084
+Pobreza: 6,9"/><circle class="pa-m" cx="92.86" cy="564.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 722
+Pobreza: 12,7"/><circle class="pa-m" cx="58.52" cy="521.61" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Pobreza: 19,6"/><circle class="pa-m" cx="131.08" cy="603.88" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.116
+Pobreza: 6,4"/><circle class="pa-m" cx="160.86" cy="638.16" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.423
+Pobreza: 0,9"/><circle class="pa-m" cx="63.86" cy="531.58" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 423
+Pobreza: 18"/><circle class="pa-m" cx="104.6" cy="582.07" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 843
+Pobreza: 9,9"/><circle class="pa-m" cx="103.92" cy="607.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 836
+Pobreza: 5,8"/><circle class="pa-m" cx="93.34" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 727
+Pobreza: 11,3"/><circle class="pa-m" cx="114.2" cy="559.63" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 942
+Pobreza: 13,5"/><circle class="pa-m" cx="115.95" cy="588.3" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 960
+Pobreza: 8,9"/><circle class="pa-m" cx="67.54" cy="534.08" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 461
+Pobreza: 17,6"/><circle class="pa-m" cx="120.12" cy="615.1" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.003
+Pobreza: 4,6"/><circle class="pa-m" cx="102.95" cy="633.18" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 826
+Pobreza: 1,7"/><circle class="pa-m" cx="97.13" cy="605.13" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 766
+Pobreza: 6,2"/><circle class="pa-m" cx="99.16" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 787
+Pobreza: 11,7"/><circle class="pa-m" cx="113.62" cy="627.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 936
+Pobreza: 2,6"/><circle class="pa-m" cx="65.21" cy="539.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 437
+Pobreza: 16,7"/><circle class="pa-m" cx="126.52" cy="596.4" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.069
+Pobreza: 7,6"/><circle class="pa-m" cx="122.54" cy="588.3" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.028
+Pobreza: 8,9"/><circle class="pa-m" cx="75.88" cy="534.7" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 547
+Pobreza: 17,5"/><circle class="pa-m" cx="135.15" cy="593.91" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.158
+Pobreza: 8"/><circle class="pa-m" cx="165.22" cy="606.38" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.468
+Pobreza: 6"/><circle class="pa-m" cx="89.85" cy="587.06" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 691
+Pobreza: 9,1"/></g><rect x="44.94" y="491.53" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="258.2" x2="258.2" y1="491.53" y2="648.3" stroke="#E9EBF3" stroke-width="0.75"/><line x1="323.17" x2="323.17" y1="491.53" y2="648.3" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="643.77" y2="643.77" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="581.45" y2="581.45" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="519.12" y2="519.12" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="284.19" cy="590.17" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Pobreza: 8,6"/><circle class="pa-m" cx="338.77" cy="631.93" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Pobreza: 1,9"/><circle class="pa-m" cx="280.29" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Pobreza: 11,3"/><circle class="pa-m" cx="273.79" cy="580.82" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,2
+Pobreza: 10,1"/><circle class="pa-m" cx="290.68" cy="590.8" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,5
+Pobreza: 8,5"/><circle class="pa-m" cx="228.31" cy="517.25" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7,7
+Pobreza: 20,3"/><circle class="pa-m" cx="312.78" cy="569.6" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,2
+Pobreza: 11,9"/><circle class="pa-m" cx="298.48" cy="560.25" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,1
+Pobreza: 13,4"/><circle class="pa-m" cx="275.09" cy="562.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,3
+Pobreza: 13"/><circle class="pa-m" cx="301.08" cy="615.73" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,3
+Pobreza: 4,5"/><circle class="pa-m" cx="311.48" cy="589.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,1
+Pobreza: 8,7"/><circle class="pa-m" cx="255.6" cy="598.9" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,8
+Pobreza: 7,2"/><circle class="pa-m" cx="282.89" cy="574.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,9
+Pobreza: 11,1"/><circle class="pa-m" cx="342.66" cy="627.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,5
+Pobreza: 2,6"/><circle class="pa-m" cx="230.91" cy="501.04" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7,9
+Pobreza: 22,9"/><circle class="pa-m" cx="278.99" cy="609.49" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,6
+Pobreza: 5,5"/><circle class="pa-m" cx="303.68" cy="611.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,5
+Pobreza: 5,2"/><circle class="pa-m" cx="219.21" cy="509.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7
+Pobreza: 21,5"/><circle class="pa-m" cx="272.49" cy="580.82" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,1
+Pobreza: 10,1"/><circle class="pa-m" cx="325.77" cy="613.23" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Pobreza: 4,9"/><circle class="pa-m" cx="263.39" cy="554.64" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,4
+Pobreza: 14,3"/><circle class="pa-m" cx="273.79" cy="550.28" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,2
+Pobreza: 15"/><circle class="pa-m" cx="290.68" cy="577.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,5
+Pobreza: 10,6"/><circle class="pa-m" cx="251.7" cy="542.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,5
+Pobreza: 16,2"/><circle class="pa-m" cx="304.98" cy="597.03" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Pobreza: 7,5"/><circle class="pa-m" cx="338.77" cy="616.35" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Pobreza: 4,4"/><circle class="pa-m" cx="269.89" cy="582.07" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Pobreza: 9,9"/><circle class="pa-m" cx="284.19" cy="559.01" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Pobreza: 13,6"/><circle class="pa-m" cx="282.89" cy="564.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 11,9
+Pobreza: 12,7"/><circle class="pa-m" cx="262.1" cy="572.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,3
+Pobreza: 11,4"/><circle class="pa-m" cx="271.19" cy="571.47" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11
+Pobreza: 11,6"/><circle class="pa-m" cx="295.88" cy="566.49" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,9
+Pobreza: 12,4"/><circle class="pa-m" cx="281.59" cy="556.51" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,8
+Pobreza: 14"/><circle class="pa-m" cx="290.68" cy="595.78" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,5
+Pobreza: 7,7"/><circle class="pa-m" cx="324.47" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,1
+Pobreza: 0,8"/><circle class="pa-m" cx="278.99" cy="570.85" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,6
+Pobreza: 11,7"/><circle class="pa-m" cx="332.27" cy="638.79" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,7
+Pobreza: 0,8"/><circle class="pa-m" cx="299.78" cy="623.83" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,2
+Pobreza: 3,2"/><circle class="pa-m" cx="275.09" cy="540.93" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,3
+Pobreza: 16,5"/><circle class="pa-m" cx="284.19" cy="597.03" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Pobreza: 7,5"/><circle class="pa-m" cx="293.28" cy="578.33" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,7
+Pobreza: 10,5"/><circle class="pa-m" cx="264.69" cy="555.89" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,5
+Pobreza: 14,1"/><circle class="pa-m" cx="293.28" cy="595.16" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,7
+Pobreza: 7,8"/><circle class="pa-m" cx="353.06" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,3
+Pobreza: 0,8"/><circle class="pa-m" cx="238.7" cy="525.97" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,5
+Pobreza: 18,9"/><circle class="pa-m" cx="272.49" cy="591.42" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,1
+Pobreza: 8,4"/><circle class="pa-m" cx="350.46" cy="625.08" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,1
+Pobreza: 3"/><circle class="pa-m" cx="263.39" cy="559.01" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,4
+Pobreza: 13,6"/><circle class="pa-m" cx="291.98" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,6
+Pobreza: 11,7"/><circle class="pa-m" cx="271.19" cy="569.6" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 11
+Pobreza: 11,9"/><circle class="pa-m" cx="285.49" cy="573.97" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 12,1
+Pobreza: 11,2"/><circle class="pa-m" cx="293.28" cy="555.89" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,7
+Pobreza: 14,1"/><circle class="pa-m" cx="321.87" cy="610.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,9
+Pobreza: 5,3"/><circle class="pa-m" cx="280.29" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Pobreza: 11,3"/><circle class="pa-m" cx="286.79" cy="578.33" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,2
+Pobreza: 10,5"/><circle class="pa-m" cx="295.88" cy="595.78" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,9
+Pobreza: 7,7"/><circle class="pa-m" cx="256.9" cy="537.82" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,9
+Pobreza: 17"/><circle class="pa-m" cx="290.68" cy="610.12" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,5
+Pobreza: 5,4"/><circle class="pa-m" cx="314.07" cy="623.83" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,3
+Pobreza: 3,2"/><circle class="pa-m" cx="253" cy="547.17" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,6
+Pobreza: 15,5"/><circle class="pa-m" cx="288.08" cy="585.19" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,3
+Pobreza: 9,4"/><circle class="pa-m" cx="299.78" cy="602.64" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,2
+Pobreza: 6,6"/><circle class="pa-m" cx="269.89" cy="558.38" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Pobreza: 13,7"/><circle class="pa-m" cx="289.38" cy="582.07" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,4
+Pobreza: 9,9"/><circle class="pa-m" cx="310.18" cy="602.64" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14
+Pobreza: 6,6"/><circle class="pa-m" cx="269.89" cy="540.31" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Pobreza: 16,6"/><circle class="pa-m" cx="281.59" cy="602.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,8
+Pobreza: 6,6"/><circle class="pa-m" cx="338.77" cy="638.79" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Pobreza: 0,8"/><circle class="pa-m" cx="250.4" cy="542.18" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,4
+Pobreza: 16,3"/><circle class="pa-m" cx="304.98" cy="599.52" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Pobreza: 7,1"/><circle class="pa-m" cx="307.58" cy="633.8" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,8
+Pobreza: 1,6"/><circle class="pa-m" cx="277.69" cy="544.67" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,5
+Pobreza: 15,9"/><circle class="pa-m" cx="333.57" cy="581.45" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,8
+Pobreza: 10"/><circle class="pa-m" cx="315.37" cy="604.51" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,4
+Pobreza: 6,3"/><circle class="pa-m" cx="253" cy="535.32" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,6
+Pobreza: 17,4"/><circle class="pa-m" cx="278.99" cy="577.08" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,6
+Pobreza: 10,7"/><circle class="pa-m" cx="316.67" cy="613.86" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,5
+Pobreza: 4,8"/><circle class="pa-m" cx="272.49" cy="560.25" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,1
+Pobreza: 13,4"/><circle class="pa-m" cx="323.17" cy="608.87" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15
+Pobreza: 5,6"/><circle class="pa-m" cx="321.87" cy="637.54" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,9
+Pobreza: 1"/><circle class="pa-m" cx="271.19" cy="543.43" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11
+Pobreza: 16,1"/><circle class="pa-m" cx="284.19" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Pobreza: 11,7"/><circle class="pa-m" cx="340.06" cy="625.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,3
+Pobreza: 2,9"/><circle class="pa-m" cx="273.79" cy="529.09" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,2
+Pobreza: 18,4"/><circle class="pa-m" cx="308.88" cy="638.79" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,9
+Pobreza: 0,8"/><circle class="pa-m" cx="325.77" cy="593.29" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Pobreza: 8,1"/><circle class="pa-m" cx="267.29" cy="562.12" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,7
+Pobreza: 13,1"/><circle class="pa-m" cx="317.97" cy="622.58" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,6
+Pobreza: 3,4"/><circle class="pa-m" cx="325.77" cy="580.82" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Pobreza: 10,1"/><circle class="pa-m" cx="259.5" cy="548.41" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,1
+Pobreza: 15,3"/><circle class="pa-m" cx="281.59" cy="603.26" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,8
+Pobreza: 6,5"/><circle class="pa-m" cx="328.37" cy="622.58" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,4
+Pobreza: 3,4"/><circle class="pa-m" cx="256.9" cy="577.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,9
+Pobreza: 10,6"/><circle class="pa-m" cx="312.78" cy="563.37" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,2
+Pobreza: 12,9"/><circle class="pa-m" cx="329.67" cy="611.36" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,5
+Pobreza: 5,2"/><circle class="pa-m" cx="233.51" cy="512.26" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,1
+Pobreza: 21,1"/><circle class="pa-m" cx="286.79" cy="600.77" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,2
+Pobreza: 6,9"/><circle class="pa-m" cx="320.57" cy="564.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,8
+Pobreza: 12,7"/><circle class="pa-m" cx="238.7" cy="521.61" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,5
+Pobreza: 19,6"/><circle class="pa-m" cx="304.98" cy="603.88" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Pobreza: 6,4"/><circle class="pa-m" cx="356.96" cy="638.16" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,6
+Pobreza: 0,9"/><circle class="pa-m" cx="234.81" cy="531.58" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,2
+Pobreza: 18"/><circle class="pa-m" cx="295.88" cy="582.07" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,9
+Pobreza: 9,9"/><circle class="pa-m" cx="289.38" cy="607.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,4
+Pobreza: 5,8"/><circle class="pa-m" cx="245.2" cy="573.34" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9
+Pobreza: 11,3"/><circle class="pa-m" cx="314.07" cy="559.63" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,3
+Pobreza: 13,5"/><circle class="pa-m" cx="303.68" cy="588.3" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,5
+Pobreza: 8,9"/><circle class="pa-m" cx="258.2" cy="534.08" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10
+Pobreza: 17,6"/><circle class="pa-m" cx="329.67" cy="615.1" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,5
+Pobreza: 4,6"/><circle class="pa-m" cx="297.18" cy="633.18" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13
+Pobreza: 1,7"/><circle class="pa-m" cx="295.88" cy="605.13" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 12,9
+Pobreza: 6,2"/><circle class="pa-m" cx="288.08" cy="570.85" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,3
+Pobreza: 11,7"/><circle class="pa-m" cx="307.58" cy="627.57" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,8
+Pobreza: 2,6"/><circle class="pa-m" cx="259.5" cy="539.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,1
+Pobreza: 16,7"/><circle class="pa-m" cx="302.38" cy="596.4" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,4
+Pobreza: 7,6"/><circle class="pa-m" cx="320.57" cy="588.3" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,8
+Pobreza: 8,9"/><circle class="pa-m" cx="265.99" cy="534.7" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,6
+Pobreza: 17,5"/><circle class="pa-m" cx="304.98" cy="593.91" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Pobreza: 8"/><circle class="pa-m" cx="298.48" cy="606.38" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,1
+Pobreza: 6"/><circle class="pa-m" cx="280.29" cy="587.06" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Pobreza: 9,1"/></g><rect x="209.7" y="491.53" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><path d="M378.47,633.29L380.14,631.69L381.81,630.18L383.48,628.77L385.15,627.41L386.83,626.05L388.50,624.61L390.17,622.99L391.84,621.08L393.51,618.77L395.18,615.96L396.85,612.57L398.53,608.55L400.20,603.89L401.87,598.59L403.54,592.71L405.21,586.30L406.88,579.48L408.56,572.36L410.23,565.08L411.90,557.80L413.57,550.68L415.24,543.89L416.91,537.57L418.58,531.87L420.26,526.90L421.93,522.73L423.60,519.40L425.27,516.90L426.94,515.16L428.61,514.10L430.29,513.60L431.96,513.53L433.63,513.80L435.30,514.33L436.97,515.07L438.64,516.02L440.31,517.23L441.99,518.76L443.66,520.69L445.33,523.11L447.00,526.08L448.67,529.64L450.34,533.79L452.02,538.51L453.69,543.74L455.36,549.38L457.03,555.36L458.70,561.56L460.37,567.89L462.04,574.27L463.72,580.63L465.39,586.90L467.06,593.04L468.73,598.99L470.40,604.73L472.07,610.19L473.75,615.35L475.42,620.17L477.09,624.60L478.76,628.62L480.43,632.20L482.10,635.34L483.77,638.04L485.45,640.32L487.12,642.21L488.79,643.73L490.46,644.94L492.13,645.88L493.80,646.59L495.47,647.11L497.15,647.49L498.82,647.76L500.49,647.95L502.16,648.08L503.83,648.16L505.50,648.21L507.18,648.25L508.85,648.27L510.52,648.28L512.19,648.29L513.86,648.29L515.53,648.30L517.20,648.30L518.88,648.30L520.55,648.30L522.22,648.30L523.89,648.30L525.56,648.30L527.23,648.30L527.23,648.298L378.47,648.298Z" fill="#3A47B8" fill-opacity="0.19"/><path d="M378.47,633.29L380.14,631.69L381.81,630.18L383.48,628.77L385.15,627.41L386.83,626.05L388.50,624.61L390.17,622.99L391.84,621.08L393.51,618.77L395.18,615.96L396.85,612.57L398.53,608.55L400.20,603.89L401.87,598.59L403.54,592.71L405.21,586.30L406.88,579.48L408.56,572.36L410.23,565.08L411.90,557.80L413.57,550.68L415.24,543.89L416.91,537.57L418.58,531.87L420.26,526.90L421.93,522.73L423.60,519.40L425.27,516.90L426.94,515.16L428.61,514.10L430.29,513.60L431.96,513.53L433.63,513.80L435.30,514.33L436.97,515.07L438.64,516.02L440.31,517.23L441.99,518.76L443.66,520.69L445.33,523.11L447.00,526.08L448.67,529.64L450.34,533.79L452.02,538.51L453.69,543.74L455.36,549.38L457.03,555.36L458.70,561.56L460.37,567.89L462.04,574.27L463.72,580.63L465.39,586.90L467.06,593.04L468.73,598.99L470.40,604.73L472.07,610.19L473.75,615.35L475.42,620.17L477.09,624.60L478.76,628.62L480.43,632.20L482.10,635.34L483.77,638.04L485.45,640.32L487.12,642.21L488.79,643.73L490.46,644.94L492.13,645.88L493.80,646.59L495.47,647.11L497.15,647.49L498.82,647.76L500.49,647.95L502.16,648.08L503.83,648.16L505.50,648.21L507.18,648.25L508.85,648.27L510.52,648.28L512.19,648.29L513.86,648.29L515.53,648.30L517.20,648.30L518.88,648.30L520.55,648.30L522.22,648.30L523.89,648.30L525.56,648.30L527.23,648.30" fill="none" stroke="#3A47B8" stroke-width="1.6"/><path d="M378.47,589.36L380.14,582.07L381.81,574.85L383.48,567.86L385.15,561.25L386.83,555.16L388.50,549.68L390.17,544.89L391.84,540.84L393.51,537.54L395.18,534.95L396.85,533.06L398.53,531.79L400.20,531.07L401.87,530.86L403.54,531.07L405.21,531.65L406.88,532.56L408.56,533.75L410.23,535.20L411.90,536.89L413.57,538.77L415.24,540.85L416.91,543.07L418.58,545.42L420.26,547.87L421.93,550.37L423.60,552.91L425.27,555.45L426.94,557.98L428.61,560.47L430.29,562.91L431.96,565.30L433.63,567.63L435.30,569.91L436.97,572.12L438.64,574.28L440.31,576.38L441.99,578.44L443.66,580.46L445.33,582.47L447.00,584.50L448.67,586.56L450.34,588.71L452.02,590.99L453.69,593.42L455.36,596.05L457.03,598.89L458.70,601.94L460.37,605.20L462.04,608.64L463.72,612.21L465.39,615.85L467.06,619.50L468.73,623.09L470.40,626.54L472.07,629.79L473.75,632.79L475.42,635.51L477.09,637.92L478.76,640.01L480.43,641.79L482.10,643.27L483.77,644.48L485.45,645.45L487.12,646.21L488.79,646.79L490.46,647.23L492.13,647.55L493.80,647.79L495.47,647.96L497.15,648.07L498.82,648.15L500.49,648.20L502.16,648.24L503.83,648.26L505.50,648.28L507.18,648.29L508.85,648.29L510.52,648.29L512.19,648.30L513.86,648.30L515.53,648.30L517.20,648.30L518.88,648.30L520.55,648.30L522.22,648.30L523.89,648.30L525.56,648.30L527.23,648.30L527.23,648.298L378.47,648.298Z" fill="#D42A5E" fill-opacity="0.19"/><path d="M378.47,589.36L380.14,582.07L381.81,574.85L383.48,567.86L385.15,561.25L386.83,555.16L388.50,549.68L390.17,544.89L391.84,540.84L393.51,537.54L395.18,534.95L396.85,533.06L398.53,531.79L400.20,531.07L401.87,530.86L403.54,531.07L405.21,531.65L406.88,532.56L408.56,533.75L410.23,535.20L411.90,536.89L413.57,538.77L415.24,540.85L416.91,543.07L418.58,545.42L420.26,547.87L421.93,550.37L423.60,552.91L425.27,555.45L426.94,557.98L428.61,560.47L430.29,562.91L431.96,565.30L433.63,567.63L435.30,569.91L436.97,572.12L438.64,574.28L440.31,576.38L441.99,578.44L443.66,580.46L445.33,582.47L447.00,584.50L448.67,586.56L450.34,588.71L452.02,590.99L453.69,593.42L455.36,596.05L457.03,598.89L458.70,601.94L460.37,605.20L462.04,608.64L463.72,612.21L465.39,615.85L467.06,619.50L468.73,623.09L470.40,626.54L472.07,629.79L473.75,632.79L475.42,635.51L477.09,637.92L478.76,640.01L480.43,641.79L482.10,643.27L483.77,644.48L485.45,645.45L487.12,646.21L488.79,646.79L490.46,647.23L492.13,647.55L493.80,647.79L495.47,647.96L497.15,648.07L498.82,648.15L500.49,648.20L502.16,648.24L503.83,648.26L505.50,648.28L507.18,648.29L508.85,648.29L510.52,648.29L512.19,648.30L513.86,648.30L515.53,648.30L517.20,648.30L518.88,648.30L520.55,648.30L522.22,648.30L523.89,648.30L525.56,648.30L527.23,648.30" fill="none" stroke="#D42A5E" stroke-width="1.6"/><path d="M378.47,648.25L380.14,648.23L381.81,648.19L383.48,648.14L385.15,648.06L386.83,647.96L388.50,647.81L390.17,647.62L391.84,647.37L393.51,647.04L395.18,646.62L396.85,646.10L398.53,645.47L400.20,644.73L401.87,643.85L403.54,642.85L405.21,641.73L406.88,640.49L408.56,639.14L410.23,637.70L411.90,636.17L413.57,634.58L415.24,632.91L416.91,631.18L418.58,629.36L420.26,627.45L421.93,625.40L423.60,623.19L425.27,620.76L426.94,618.09L428.61,615.13L430.29,611.85L431.96,608.24L433.63,604.31L435.30,600.08L436.97,595.59L438.64,590.91L440.31,586.12L441.99,581.30L443.66,576.54L445.33,571.92L447.00,567.51L448.67,563.38L450.34,559.54L452.02,556.03L453.69,552.84L455.36,549.95L457.03,547.31L458.70,544.90L460.37,542.66L462.04,540.54L463.72,538.52L465.39,536.57L467.06,534.69L468.73,532.89L470.40,531.22L472.07,529.72L473.75,528.48L475.42,527.59L477.09,527.13L478.76,527.20L480.43,527.87L482.10,529.20L483.77,531.23L485.45,533.96L487.12,537.36L488.79,541.37L490.46,545.90L492.13,550.84L493.80,556.06L495.47,561.46L497.15,566.90L498.82,572.29L500.49,577.53L502.16,582.57L503.83,587.37L505.50,591.90L507.18,596.16L508.85,600.18L510.52,603.96L512.19,607.55L513.86,610.96L515.53,614.21L517.20,617.34L518.88,620.34L520.55,623.22L522.22,625.98L523.89,628.61L525.56,631.09L527.23,633.41L527.23,648.298L378.47,648.298Z" fill="#E8A33D" fill-opacity="0.19"/><path d="M378.47,648.25L380.14,648.23L381.81,648.19L383.48,648.14L385.15,648.06L386.83,647.96L388.50,647.81L390.17,647.62L391.84,647.37L393.51,647.04L395.18,646.62L396.85,646.10L398.53,645.47L400.20,644.73L401.87,643.85L403.54,642.85L405.21,641.73L406.88,640.49L408.56,639.14L410.23,637.70L411.90,636.17L413.57,634.58L415.24,632.91L416.91,631.18L418.58,629.36L420.26,627.45L421.93,625.40L423.60,623.19L425.27,620.76L426.94,618.09L428.61,615.13L430.29,611.85L431.96,608.24L433.63,604.31L435.30,600.08L436.97,595.59L438.64,590.91L440.31,586.12L441.99,581.30L443.66,576.54L445.33,571.92L447.00,567.51L448.67,563.38L450.34,559.54L452.02,556.03L453.69,552.84L455.36,549.95L457.03,547.31L458.70,544.90L460.37,542.66L462.04,540.54L463.72,538.52L465.39,536.57L467.06,534.69L468.73,532.89L470.40,531.22L472.07,529.72L473.75,528.48L475.42,527.59L477.09,527.13L478.76,527.20L480.43,527.87L482.10,529.20L483.77,531.23L485.45,533.96L487.12,537.36L488.79,541.37L490.46,545.90L492.13,550.84L493.80,556.06L495.47,561.46L497.15,566.90L498.82,572.29L500.49,577.53L502.16,582.57L503.83,587.37L505.50,591.90L507.18,596.16L508.85,600.18L510.52,603.96L512.19,607.55L513.86,610.96L515.53,614.21L517.20,617.34L518.88,620.34L520.55,623.22L522.22,625.98L523.89,628.61L525.56,631.09L527.23,633.41" fill="none" stroke="#E8A33D" stroke-width="1.6"/><line x1="374.47" x2="531.23" y1="647.8" y2="647.8" stroke="#C9CDE0"/><text x="380.47" y="505.53" fill="#141A3F" font-size="12" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Pobreza</text><rect x="374.47" y="491.53" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><g class="pa-m" data-tip="Pobreza · Tiempo de viaje
+r = 0,46
+n = 120"><rect x="539.23" y="491.53" width="156.77" height="156.77" fill="#E791AA" fill-opacity="0.23"/><text x="617.62" y="550.92" fill="#93617F" font-size="19.83" font-weight="600" text-anchor="middle">0,46</text><text x="617.62" y="568.92" fill="#3A47B8" font-size="10.5" text-anchor="middle">Centro: 0,16</text><text x="617.62" y="582.92" fill="#D42A5E" font-size="10.5" text-anchor="middle">Oriente: 0,08</text><text x="617.62" y="596.92" fill="#B3813E" font-size="10.5" text-anchor="middle">Periferia: 0,18</text></g><rect x="539.23" y="491.53" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="119.83" x2="119.83" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="791.58" y2="791.58" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="731.69" y2="731.69" stroke="#E9EBF3" stroke-width="0.75"/><line x1="44.94" x2="201.7" y1="671.8" y2="671.8" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="107.7" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 875
+Tiempo de viaje: 31"/><circle class="pa-m" cx="192.19" cy="764.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.746
+Tiempo de viaje: 29"/><circle class="pa-m" cx="77.05" cy="671.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Tiempo de viaje: 60"/><circle class="pa-m" cx="82.29" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 613
+Tiempo de viaje: 39"/><circle class="pa-m" cx="94.41" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 738
+Tiempo de viaje: 47"/><circle class="pa-m" cx="62.59" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 410
+Tiempo de viaje: 52"/><circle class="pa-m" cx="115.85" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 959
+Tiempo de viaje: 42"/><circle class="pa-m" cx="88.3" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 675
+Tiempo de viaje: 40"/><circle class="pa-m" cx="80.73" cy="701.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 597
+Tiempo de viaje: 50"/><circle class="pa-m" cx="123.71" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.040
+Tiempo de viaje: 31"/><circle class="pa-m" cx="145.34" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.263
+Tiempo de viaje: 35"/><circle class="pa-m" cx="78.99" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 579
+Tiempo de viaje: 45"/><circle class="pa-m" cx="75.11" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 539
+Tiempo de viaje: 42"/><circle class="pa-m" cx="150.29" cy="803.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.314
+Tiempo de viaje: 16"/><circle class="pa-m" cx="58.52" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Tiempo de viaje: 49"/><circle class="pa-m" cx="98" cy="707.73" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 775
+Tiempo de viaje: 48"/><circle class="pa-m" cx="113.91" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 939
+Tiempo de viaje: 36"/><circle class="pa-m" cx="54.45" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 326
+Tiempo de viaje: 54"/><circle class="pa-m" cx="87.23" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 664
+Tiempo de viaje: 27"/><circle class="pa-m" cx="117.6" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 977
+Tiempo de viaje: 42"/><circle class="pa-m" cx="80.54" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 595
+Tiempo de viaje: 48"/><circle class="pa-m" cx="82.58" cy="716.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 616
+Tiempo de viaje: 45"/><circle class="pa-m" cx="115.17" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 952
+Tiempo de viaje: 40"/><circle class="pa-m" cx="77.05" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 559
+Tiempo de viaje: 46"/><circle class="pa-m" cx="113.23" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 932
+Tiempo de viaje: 32"/><circle class="pa-m" cx="181.91" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.640
+Tiempo de viaje: 40"/><circle class="pa-m" cx="84.03" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 631
+Tiempo de viaje: 48"/><circle class="pa-m" cx="104.31" cy="731.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 840
+Tiempo de viaje: 40"/><circle class="pa-m" cx="81.8" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 608
+Tiempo de viaje: 41"/><circle class="pa-m" cx="74.04" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Tiempo de viaje: 41"/><circle class="pa-m" cx="81.51" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 605
+Tiempo de viaje: 38"/><circle class="pa-m" cx="111.19" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 911
+Tiempo de viaje: 47"/><circle class="pa-m" cx="85.97" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 651
+Tiempo de viaje: 55"/><circle class="pa-m" cx="92.08" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 714
+Tiempo de viaje: 31"/><circle class="pa-m" cx="141.46" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.223
+Tiempo de viaje: 45"/><circle class="pa-m" cx="93.54" cy="665.81" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 729
+Tiempo de viaje: 62"/><circle class="pa-m" cx="156.59" cy="788.58" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.379
+Tiempo de viaje: 21"/><circle class="pa-m" cx="140.59" cy="722.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.214
+Tiempo de viaje: 43"/><circle class="pa-m" cx="81.12" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 601
+Tiempo de viaje: 53"/><circle class="pa-m" cx="105.86" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 856
+Tiempo de viaje: 32"/><circle class="pa-m" cx="82.19" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 612
+Tiempo de viaje: 40"/><circle class="pa-m" cx="69.19" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 478
+Tiempo de viaje: 61"/><circle class="pa-m" cx="100.52" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 801
+Tiempo de viaje: 39"/><circle class="pa-m" cx="164.25" cy="698.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.458
+Tiempo de viaje: 51"/><circle class="pa-m" cx="65.02" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 435
+Tiempo de viaje: 54"/><circle class="pa-m" cx="91.5" cy="722.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 708
+Tiempo de viaje: 43"/><circle class="pa-m" cx="147.38" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.284
+Tiempo de viaje: 40"/><circle class="pa-m" cx="78.41" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 573
+Tiempo de viaje: 40"/><circle class="pa-m" cx="90.92" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 702
+Tiempo de viaje: 36"/><circle class="pa-m" cx="83.84" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 629
+Tiempo de viaje: 45"/><circle class="pa-m" cx="115.95" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 960
+Tiempo de viaje: 49"/><circle class="pa-m" cx="102.08" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 817
+Tiempo de viaje: 28"/><circle class="pa-m" cx="152.23" cy="707.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.334
+Tiempo de viaje: 48"/><circle class="pa-m" cx="70.65" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 493
+Tiempo de viaje: 35"/><circle class="pa-m" cx="102.46" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 821
+Tiempo de viaje: 27"/><circle class="pa-m" cx="107.41" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 872
+Tiempo de viaje: 40"/><circle class="pa-m" cx="71.32" cy="740.67" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 500
+Tiempo de viaje: 37"/><circle class="pa-m" cx="118.66" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 988
+Tiempo de viaje: 36"/><circle class="pa-m" cx="136.12" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.168
+Tiempo de viaje: 41"/><circle class="pa-m" cx="74.04" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 528
+Tiempo de viaje: 56"/><circle class="pa-m" cx="112.55" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 925
+Tiempo de viaje: 46"/><circle class="pa-m" cx="167.17" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.488
+Tiempo de viaje: 39"/><circle class="pa-m" cx="80.25" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 592
+Tiempo de viaje: 53"/><circle class="pa-m" cx="115.66" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 957
+Tiempo de viaje: 28"/><circle class="pa-m" cx="105.86" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 856
+Tiempo de viaje: 37"/><circle class="pa-m" cx="70.74" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 494
+Tiempo de viaje: 53"/><circle class="pa-m" cx="114.3" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 943
+Tiempo de viaje: 38"/><circle class="pa-m" cx="163.19" cy="701.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.447
+Tiempo de viaje: 50"/><circle class="pa-m" cx="68.22" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 468
+Tiempo de viaje: 53"/><circle class="pa-m" cx="120.02" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.002
+Tiempo de viaje: 32"/><circle class="pa-m" cx="109.35" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 892
+Tiempo de viaje: 35"/><circle class="pa-m" cx="85.78" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 649
+Tiempo de viaje: 35"/><circle class="pa-m" cx="124.48" cy="719.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.048
+Tiempo de viaje: 44"/><circle class="pa-m" cx="105.18" cy="695.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 849
+Tiempo de viaje: 52"/><circle class="pa-m" cx="59.01" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 373
+Tiempo de viaje: 44"/><circle class="pa-m" cx="87.43" cy="785.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 666
+Tiempo de viaje: 22"/><circle class="pa-m" cx="111" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 909
+Tiempo de viaje: 27"/><circle class="pa-m" cx="77.82" cy="722.7" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 567
+Tiempo de viaje: 43"/><circle class="pa-m" cx="122.64" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.029
+Tiempo de viaje: 36"/><circle class="pa-m" cx="150.67" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.318
+Tiempo de viaje: 42"/><circle class="pa-m" cx="89.95" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 692
+Tiempo de viaje: 46"/><circle class="pa-m" cx="81.8" cy="728.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 608
+Tiempo de viaje: 41"/><circle class="pa-m" cx="166.87" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.485
+Tiempo de viaje: 37"/><circle class="pa-m" cx="87.82" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 670
+Tiempo de viaje: 55"/><circle class="pa-m" cx="113.81" cy="782.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 938
+Tiempo de viaje: 23"/><circle class="pa-m" cx="145.14" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.261
+Tiempo de viaje: 42"/><circle class="pa-m" cx="70.94" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 496
+Tiempo de viaje: 52"/><circle class="pa-m" cx="114.88" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 949
+Tiempo de viaje: 38"/><circle class="pa-m" cx="99.07" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 786
+Tiempo de viaje: 35"/><circle class="pa-m" cx="70.35" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 490
+Tiempo de viaje: 40"/><circle class="pa-m" cx="127.78" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.082
+Tiempo de viaje: 36"/><circle class="pa-m" cx="119.63" cy="704.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 998
+Tiempo de viaje: 49"/><circle class="pa-m" cx="79.18" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 581
+Tiempo de viaje: 48"/><circle class="pa-m" cx="94.61" cy="740.67" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 740
+Tiempo de viaje: 37"/><circle class="pa-m" cx="129.33" cy="761.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.098
+Tiempo de viaje: 30"/><circle class="pa-m" cx="55.22" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 334
+Tiempo de viaje: 61"/><circle class="pa-m" cx="127.98" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.084
+Tiempo de viaje: 28"/><circle class="pa-m" cx="92.86" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 722
+Tiempo de viaje: 36"/><circle class="pa-m" cx="58.52" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 368
+Tiempo de viaje: 52"/><circle class="pa-m" cx="131.08" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.116
+Tiempo de viaje: 46"/><circle class="pa-m" cx="160.86" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.423
+Tiempo de viaje: 39"/><circle class="pa-m" cx="63.86" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 423
+Tiempo de viaje: 41"/><circle class="pa-m" cx="104.6" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 843
+Tiempo de viaje: 32"/><circle class="pa-m" cx="103.92" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 836
+Tiempo de viaje: 39"/><circle class="pa-m" cx="93.34" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 727
+Tiempo de viaje: 44"/><circle class="pa-m" cx="114.2" cy="746.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 942
+Tiempo de viaje: 35"/><circle class="pa-m" cx="115.95" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 960
+Tiempo de viaje: 45"/><circle class="pa-m" cx="67.54" cy="698.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 461
+Tiempo de viaje: 51"/><circle class="pa-m" cx="120.12" cy="698.75" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.003
+Tiempo de viaje: 51"/><circle class="pa-m" cx="102.95" cy="749.65" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 826
+Tiempo de viaje: 34"/><circle class="pa-m" cx="97.13" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 766
+Tiempo de viaje: 45"/><circle class="pa-m" cx="99.16" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 787
+Tiempo de viaje: 31"/><circle class="pa-m" cx="113.62" cy="767.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 936
+Tiempo de viaje: 28"/><circle class="pa-m" cx="65.21" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 437
+Tiempo de viaje: 52"/><circle class="pa-m" cx="126.52" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.069
+Tiempo de viaje: 42"/><circle class="pa-m" cx="122.54" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.028
+Tiempo de viaje: 27"/><circle class="pa-m" cx="75.88" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 547
+Tiempo de viaje: 55"/><circle class="pa-m" cx="135.15" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Ingreso: 1.158
+Tiempo de viaje: 32"/><circle class="pa-m" cx="165.22" cy="719.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Ingreso: 1.468
+Tiempo de viaje: 44"/><circle class="pa-m" cx="89.85" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Ingreso: 691
+Tiempo de viaje: 56"/></g><rect x="44.94" y="656.3" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="258.2" x2="258.2" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="323.17" x2="323.17" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="791.58" y2="791.58" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="731.69" y2="731.69" stroke="#E9EBF3" stroke-width="0.75"/><line x1="209.7" x2="366.47" y1="671.8" y2="671.8" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="284.19" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Tiempo de viaje: 31"/><circle class="pa-m" cx="338.77" cy="764.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Tiempo de viaje: 29"/><circle class="pa-m" cx="280.29" cy="671.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Tiempo de viaje: 60"/><circle class="pa-m" cx="273.79" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,2
+Tiempo de viaje: 39"/><circle class="pa-m" cx="290.68" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,5
+Tiempo de viaje: 47"/><circle class="pa-m" cx="228.31" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7,7
+Tiempo de viaje: 52"/><circle class="pa-m" cx="312.78" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,2
+Tiempo de viaje: 42"/><circle class="pa-m" cx="298.48" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,1
+Tiempo de viaje: 40"/><circle class="pa-m" cx="275.09" cy="701.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,3
+Tiempo de viaje: 50"/><circle class="pa-m" cx="301.08" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,3
+Tiempo de viaje: 31"/><circle class="pa-m" cx="311.48" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,1
+Tiempo de viaje: 35"/><circle class="pa-m" cx="255.6" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,8
+Tiempo de viaje: 45"/><circle class="pa-m" cx="282.89" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,9
+Tiempo de viaje: 42"/><circle class="pa-m" cx="342.66" cy="803.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,5
+Tiempo de viaje: 16"/><circle class="pa-m" cx="230.91" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7,9
+Tiempo de viaje: 49"/><circle class="pa-m" cx="278.99" cy="707.73" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,6
+Tiempo de viaje: 48"/><circle class="pa-m" cx="303.68" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,5
+Tiempo de viaje: 36"/><circle class="pa-m" cx="219.21" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 7
+Tiempo de viaje: 54"/><circle class="pa-m" cx="272.49" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,1
+Tiempo de viaje: 27"/><circle class="pa-m" cx="325.77" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Tiempo de viaje: 42"/><circle class="pa-m" cx="263.39" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,4
+Tiempo de viaje: 48"/><circle class="pa-m" cx="273.79" cy="716.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,2
+Tiempo de viaje: 45"/><circle class="pa-m" cx="290.68" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,5
+Tiempo de viaje: 40"/><circle class="pa-m" cx="251.7" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,5
+Tiempo de viaje: 46"/><circle class="pa-m" cx="304.98" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Tiempo de viaje: 32"/><circle class="pa-m" cx="338.77" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Tiempo de viaje: 40"/><circle class="pa-m" cx="269.89" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Tiempo de viaje: 48"/><circle class="pa-m" cx="284.19" cy="731.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Tiempo de viaje: 40"/><circle class="pa-m" cx="282.89" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 11,9
+Tiempo de viaje: 41"/><circle class="pa-m" cx="262.1" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,3
+Tiempo de viaje: 41"/><circle class="pa-m" cx="271.19" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11
+Tiempo de viaje: 38"/><circle class="pa-m" cx="295.88" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,9
+Tiempo de viaje: 47"/><circle class="pa-m" cx="281.59" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,8
+Tiempo de viaje: 55"/><circle class="pa-m" cx="290.68" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,5
+Tiempo de viaje: 31"/><circle class="pa-m" cx="324.47" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,1
+Tiempo de viaje: 45"/><circle class="pa-m" cx="278.99" cy="665.81" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,6
+Tiempo de viaje: 62"/><circle class="pa-m" cx="332.27" cy="788.58" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,7
+Tiempo de viaje: 21"/><circle class="pa-m" cx="299.78" cy="722.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,2
+Tiempo de viaje: 43"/><circle class="pa-m" cx="275.09" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,3
+Tiempo de viaje: 53"/><circle class="pa-m" cx="284.19" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Tiempo de viaje: 32"/><circle class="pa-m" cx="293.28" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,7
+Tiempo de viaje: 40"/><circle class="pa-m" cx="264.69" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,5
+Tiempo de viaje: 61"/><circle class="pa-m" cx="293.28" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,7
+Tiempo de viaje: 39"/><circle class="pa-m" cx="353.06" cy="698.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,3
+Tiempo de viaje: 51"/><circle class="pa-m" cx="238.7" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,5
+Tiempo de viaje: 54"/><circle class="pa-m" cx="272.49" cy="722.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,1
+Tiempo de viaje: 43"/><circle class="pa-m" cx="350.46" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,1
+Tiempo de viaje: 40"/><circle class="pa-m" cx="263.39" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,4
+Tiempo de viaje: 40"/><circle class="pa-m" cx="291.98" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,6
+Tiempo de viaje: 36"/><circle class="pa-m" cx="271.19" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 11
+Tiempo de viaje: 45"/><circle class="pa-m" cx="285.49" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 12,1
+Tiempo de viaje: 49"/><circle class="pa-m" cx="293.28" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,7
+Tiempo de viaje: 28"/><circle class="pa-m" cx="321.87" cy="707.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,9
+Tiempo de viaje: 48"/><circle class="pa-m" cx="280.29" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Tiempo de viaje: 35"/><circle class="pa-m" cx="286.79" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,2
+Tiempo de viaje: 27"/><circle class="pa-m" cx="295.88" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,9
+Tiempo de viaje: 40"/><circle class="pa-m" cx="256.9" cy="740.67" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,9
+Tiempo de viaje: 37"/><circle class="pa-m" cx="290.68" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,5
+Tiempo de viaje: 36"/><circle class="pa-m" cx="314.07" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,3
+Tiempo de viaje: 41"/><circle class="pa-m" cx="253" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,6
+Tiempo de viaje: 56"/><circle class="pa-m" cx="288.08" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,3
+Tiempo de viaje: 46"/><circle class="pa-m" cx="299.78" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,2
+Tiempo de viaje: 39"/><circle class="pa-m" cx="269.89" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Tiempo de viaje: 53"/><circle class="pa-m" cx="289.38" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,4
+Tiempo de viaje: 28"/><circle class="pa-m" cx="310.18" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14
+Tiempo de viaje: 37"/><circle class="pa-m" cx="269.89" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,9
+Tiempo de viaje: 53"/><circle class="pa-m" cx="281.59" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,8
+Tiempo de viaje: 38"/><circle class="pa-m" cx="338.77" cy="701.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,2
+Tiempo de viaje: 50"/><circle class="pa-m" cx="250.4" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,4
+Tiempo de viaje: 53"/><circle class="pa-m" cx="304.98" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Tiempo de viaje: 32"/><circle class="pa-m" cx="307.58" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,8
+Tiempo de viaje: 35"/><circle class="pa-m" cx="277.69" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,5
+Tiempo de viaje: 35"/><circle class="pa-m" cx="333.57" cy="719.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,8
+Tiempo de viaje: 44"/><circle class="pa-m" cx="315.37" cy="695.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,4
+Tiempo de viaje: 52"/><circle class="pa-m" cx="253" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,6
+Tiempo de viaje: 44"/><circle class="pa-m" cx="278.99" cy="785.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,6
+Tiempo de viaje: 22"/><circle class="pa-m" cx="316.67" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,5
+Tiempo de viaje: 27"/><circle class="pa-m" cx="272.49" cy="722.7" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,1
+Tiempo de viaje: 43"/><circle class="pa-m" cx="323.17" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15
+Tiempo de viaje: 36"/><circle class="pa-m" cx="321.87" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,9
+Tiempo de viaje: 42"/><circle class="pa-m" cx="271.19" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11
+Tiempo de viaje: 46"/><circle class="pa-m" cx="284.19" cy="728.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12
+Tiempo de viaje: 41"/><circle class="pa-m" cx="340.06" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 16,3
+Tiempo de viaje: 37"/><circle class="pa-m" cx="273.79" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,2
+Tiempo de viaje: 55"/><circle class="pa-m" cx="308.88" cy="782.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,9
+Tiempo de viaje: 23"/><circle class="pa-m" cx="325.77" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Tiempo de viaje: 42"/><circle class="pa-m" cx="267.29" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,7
+Tiempo de viaje: 52"/><circle class="pa-m" cx="317.97" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,6
+Tiempo de viaje: 38"/><circle class="pa-m" cx="325.77" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,2
+Tiempo de viaje: 35"/><circle class="pa-m" cx="259.5" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,1
+Tiempo de viaje: 40"/><circle class="pa-m" cx="281.59" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 11,8
+Tiempo de viaje: 36"/><circle class="pa-m" cx="328.37" cy="704.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,4
+Tiempo de viaje: 49"/><circle class="pa-m" cx="256.9" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9,9
+Tiempo de viaje: 48"/><circle class="pa-m" cx="312.78" cy="740.67" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,2
+Tiempo de viaje: 37"/><circle class="pa-m" cx="329.67" cy="761.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 15,5
+Tiempo de viaje: 30"/><circle class="pa-m" cx="233.51" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,1
+Tiempo de viaje: 61"/><circle class="pa-m" cx="286.79" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,2
+Tiempo de viaje: 28"/><circle class="pa-m" cx="320.57" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,8
+Tiempo de viaje: 36"/><circle class="pa-m" cx="238.7" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,5
+Tiempo de viaje: 52"/><circle class="pa-m" cx="304.98" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Tiempo de viaje: 46"/><circle class="pa-m" cx="356.96" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 17,6
+Tiempo de viaje: 39"/><circle class="pa-m" cx="234.81" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 8,2
+Tiempo de viaje: 41"/><circle class="pa-m" cx="295.88" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,9
+Tiempo de viaje: 32"/><circle class="pa-m" cx="289.38" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 12,4
+Tiempo de viaje: 39"/><circle class="pa-m" cx="245.2" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 9
+Tiempo de viaje: 44"/><circle class="pa-m" cx="314.07" cy="746.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 14,3
+Tiempo de viaje: 35"/><circle class="pa-m" cx="303.68" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,5
+Tiempo de viaje: 45"/><circle class="pa-m" cx="258.2" cy="698.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10
+Tiempo de viaje: 51"/><circle class="pa-m" cx="329.67" cy="698.75" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 15,5
+Tiempo de viaje: 51"/><circle class="pa-m" cx="297.18" cy="749.65" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13
+Tiempo de viaje: 34"/><circle class="pa-m" cx="295.88" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 12,9
+Tiempo de viaje: 45"/><circle class="pa-m" cx="288.08" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 12,3
+Tiempo de viaje: 31"/><circle class="pa-m" cx="307.58" cy="767.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,8
+Tiempo de viaje: 28"/><circle class="pa-m" cx="259.5" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,1
+Tiempo de viaje: 52"/><circle class="pa-m" cx="302.38" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,4
+Tiempo de viaje: 42"/><circle class="pa-m" cx="320.57" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 14,8
+Tiempo de viaje: 27"/><circle class="pa-m" cx="265.99" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 10,6
+Tiempo de viaje: 55"/><circle class="pa-m" cx="304.98" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Escolaridad: 13,6
+Tiempo de viaje: 32"/><circle class="pa-m" cx="298.48" cy="719.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Escolaridad: 13,1
+Tiempo de viaje: 44"/><circle class="pa-m" cx="280.29" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Escolaridad: 11,7
+Tiempo de viaje: 56"/></g><rect x="209.7" y="656.3" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><line x1="378.99" x2="378.99" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="441.32" x2="441.32" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="503.65" x2="503.65" y1="656.3" y2="813.06" stroke="#E9EBF3" stroke-width="0.75"/><line x1="374.47" x2="531.23" y1="791.58" y2="791.58" stroke="#E9EBF3" stroke-width="0.75"/><line x1="374.47" x2="531.23" y1="731.69" y2="731.69" stroke="#E9EBF3" stroke-width="0.75"/><line x1="374.47" x2="531.23" y1="671.8" y2="671.8" stroke="#E9EBF3" stroke-width="0.75"/><g><circle class="pa-m" cx="432.59" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 8,6
+Tiempo de viaje: 31"/><circle class="pa-m" cx="390.83" cy="764.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 1,9
+Tiempo de viaje: 29"/><circle class="pa-m" cx="449.42" cy="671.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,3
+Tiempo de viaje: 60"/><circle class="pa-m" cx="441.94" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 10,1
+Tiempo de viaje: 39"/><circle class="pa-m" cx="431.97" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 8,5
+Tiempo de viaje: 47"/><circle class="pa-m" cx="505.52" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 20,3
+Tiempo de viaje: 52"/><circle class="pa-m" cx="453.16" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,9
+Tiempo de viaje: 42"/><circle class="pa-m" cx="462.51" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 13,4
+Tiempo de viaje: 40"/><circle class="pa-m" cx="460.02" cy="701.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 13
+Tiempo de viaje: 50"/><circle class="pa-m" cx="407.04" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 4,5
+Tiempo de viaje: 31"/><circle class="pa-m" cx="433.22" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 8,7
+Tiempo de viaje: 35"/><circle class="pa-m" cx="423.87" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 7,2
+Tiempo de viaje: 45"/><circle class="pa-m" cx="448.18" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,1
+Tiempo de viaje: 42"/><circle class="pa-m" cx="395.2" cy="803.55" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 2,6
+Tiempo de viaje: 16"/><circle class="pa-m" cx="521.72" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 22,9
+Tiempo de viaje: 49"/><circle class="pa-m" cx="413.27" cy="707.73" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 5,5
+Tiempo de viaje: 48"/><circle class="pa-m" cx="411.4" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 5,2
+Tiempo de viaje: 36"/><circle class="pa-m" cx="513" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 21,5
+Tiempo de viaje: 54"/><circle class="pa-m" cx="441.94" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 10,1
+Tiempo de viaje: 27"/><circle class="pa-m" cx="409.53" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 4,9
+Tiempo de viaje: 42"/><circle class="pa-m" cx="468.12" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 14,3
+Tiempo de viaje: 48"/><circle class="pa-m" cx="472.48" cy="716.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 15
+Tiempo de viaje: 45"/><circle class="pa-m" cx="445.06" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 10,6
+Tiempo de viaje: 40"/><circle class="pa-m" cx="479.96" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,2
+Tiempo de viaje: 46"/><circle class="pa-m" cx="425.74" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,5
+Tiempo de viaje: 32"/><circle class="pa-m" cx="406.42" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 4,4
+Tiempo de viaje: 40"/><circle class="pa-m" cx="440.7" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 9,9
+Tiempo de viaje: 48"/><circle class="pa-m" cx="463.76" cy="731.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 13,6
+Tiempo de viaje: 40"/><circle class="pa-m" cx="458.15" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 12,7
+Tiempo de viaje: 41"/><circle class="pa-m" cx="450.05" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,4
+Tiempo de viaje: 41"/><circle class="pa-m" cx="451.29" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,6
+Tiempo de viaje: 38"/><circle class="pa-m" cx="456.28" cy="710.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 12,4
+Tiempo de viaje: 47"/><circle class="pa-m" cx="466.25" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 14
+Tiempo de viaje: 55"/><circle class="pa-m" cx="426.98" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,7
+Tiempo de viaje: 31"/><circle class="pa-m" cx="383.98" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 0,8
+Tiempo de viaje: 45"/><circle class="pa-m" cx="451.92" cy="665.81" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,7
+Tiempo de viaje: 62"/><circle class="pa-m" cx="383.98" cy="788.58" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 0,8
+Tiempo de viaje: 21"/><circle class="pa-m" cx="398.94" cy="722.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 3,2
+Tiempo de viaje: 43"/><circle class="pa-m" cx="481.83" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,5
+Tiempo de viaje: 53"/><circle class="pa-m" cx="425.74" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,5
+Tiempo de viaje: 32"/><circle class="pa-m" cx="444.44" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 10,5
+Tiempo de viaje: 40"/><circle class="pa-m" cx="466.87" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 14,1
+Tiempo de viaje: 61"/><circle class="pa-m" cx="427.61" cy="734.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,8
+Tiempo de viaje: 39"/><circle class="pa-m" cx="383.98" cy="698.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 0,8
+Tiempo de viaje: 51"/><circle class="pa-m" cx="496.79" cy="689.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 18,9
+Tiempo de viaje: 54"/><circle class="pa-m" cx="431.35" cy="722.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 8,4
+Tiempo de viaje: 43"/><circle class="pa-m" cx="397.69" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 3
+Tiempo de viaje: 40"/><circle class="pa-m" cx="463.76" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 13,6
+Tiempo de viaje: 40"/><circle class="pa-m" cx="451.92" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,7
+Tiempo de viaje: 36"/><circle class="pa-m" cx="453.16" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 11,9
+Tiempo de viaje: 45"/><circle class="pa-m" cx="448.8" cy="704.74" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,2
+Tiempo de viaje: 49"/><circle class="pa-m" cx="466.87" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 14,1
+Tiempo de viaje: 28"/><circle class="pa-m" cx="412.03" cy="707.73" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 5,3
+Tiempo de viaje: 48"/><circle class="pa-m" cx="449.42" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,3
+Tiempo de viaje: 35"/><circle class="pa-m" cx="444.44" cy="770.61" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 10,5
+Tiempo de viaje: 27"/><circle class="pa-m" cx="426.98" cy="731.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 7,7
+Tiempo de viaje: 40"/><circle class="pa-m" cx="484.95" cy="740.67" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 17
+Tiempo de viaje: 37"/><circle class="pa-m" cx="412.65" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 5,4
+Tiempo de viaje: 36"/><circle class="pa-m" cx="398.94" cy="728.69" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 3,2
+Tiempo de viaje: 41"/><circle class="pa-m" cx="475.6" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 15,5
+Tiempo de viaje: 56"/><circle class="pa-m" cx="437.58" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 9,4
+Tiempo de viaje: 46"/><circle class="pa-m" cx="420.13" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 6,6
+Tiempo de viaje: 39"/><circle class="pa-m" cx="464.38" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 13,7
+Tiempo de viaje: 53"/><circle class="pa-m" cx="440.7" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 9,9
+Tiempo de viaje: 28"/><circle class="pa-m" cx="420.13" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 6,6
+Tiempo de viaje: 37"/><circle class="pa-m" cx="482.46" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,6
+Tiempo de viaje: 53"/><circle class="pa-m" cx="420.13" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 6,6
+Tiempo de viaje: 38"/><circle class="pa-m" cx="383.98" cy="701.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 0,8
+Tiempo de viaje: 50"/><circle class="pa-m" cx="480.59" cy="692.76" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,3
+Tiempo de viaje: 53"/><circle class="pa-m" cx="423.24" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,1
+Tiempo de viaje: 32"/><circle class="pa-m" cx="388.96" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 1,6
+Tiempo de viaje: 35"/><circle class="pa-m" cx="478.09" cy="746.66" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 15,9
+Tiempo de viaje: 35"/><circle class="pa-m" cx="441.32" cy="719.71" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 10
+Tiempo de viaje: 44"/><circle class="pa-m" cx="418.26" cy="695.75" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 6,3
+Tiempo de viaje: 52"/><circle class="pa-m" cx="487.44" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 17,4
+Tiempo de viaje: 44"/><circle class="pa-m" cx="445.68" cy="785.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 10,7
+Tiempo de viaje: 22"/><circle class="pa-m" cx="408.91" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 4,8
+Tiempo de viaje: 27"/><circle class="pa-m" cx="462.51" cy="722.7" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 13,4
+Tiempo de viaje: 43"/><circle class="pa-m" cx="413.9" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 5,6
+Tiempo de viaje: 36"/><circle class="pa-m" cx="385.22" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 1
+Tiempo de viaje: 42"/><circle class="pa-m" cx="479.34" cy="713.72" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,1
+Tiempo de viaje: 46"/><circle class="pa-m" cx="451.92" cy="728.69" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,7
+Tiempo de viaje: 41"/><circle class="pa-m" cx="397.07" cy="740.67" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 2,9
+Tiempo de viaje: 37"/><circle class="pa-m" cx="493.68" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 18,4
+Tiempo de viaje: 55"/><circle class="pa-m" cx="383.98" cy="782.59" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 0,8
+Tiempo de viaje: 23"/><circle class="pa-m" cx="429.48" cy="725.7" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 8,1
+Tiempo de viaje: 42"/><circle class="pa-m" cx="460.64" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 13,1
+Tiempo de viaje: 52"/><circle class="pa-m" cx="400.18" cy="737.68" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 3,4
+Tiempo de viaje: 38"/><circle class="pa-m" cx="441.94" cy="746.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 10,1
+Tiempo de viaje: 35"/><circle class="pa-m" cx="474.35" cy="731.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 15,3
+Tiempo de viaje: 40"/><circle class="pa-m" cx="419.51" cy="743.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 6,5
+Tiempo de viaje: 36"/><circle class="pa-m" cx="400.18" cy="704.74" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 3,4
+Tiempo de viaje: 49"/><circle class="pa-m" cx="445.06" cy="707.73" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 10,6
+Tiempo de viaje: 48"/><circle class="pa-m" cx="459.4" cy="740.67" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 12,9
+Tiempo de viaje: 37"/><circle class="pa-m" cx="411.4" cy="761.63" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 5,2
+Tiempo de viaje: 30"/><circle class="pa-m" cx="510.5" cy="668.8" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 21,1
+Tiempo de viaje: 61"/><circle class="pa-m" cx="422" cy="767.62" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 6,9
+Tiempo de viaje: 28"/><circle class="pa-m" cx="458.15" cy="743.66" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 12,7
+Tiempo de viaje: 36"/><circle class="pa-m" cx="501.16" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 19,6
+Tiempo de viaje: 52"/><circle class="pa-m" cx="418.88" cy="713.72" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 6,4
+Tiempo de viaje: 46"/><circle class="pa-m" cx="384.6" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 0,9
+Tiempo de viaje: 39"/><circle class="pa-m" cx="491.18" cy="728.69" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 18
+Tiempo de viaje: 41"/><circle class="pa-m" cx="440.7" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 9,9
+Tiempo de viaje: 32"/><circle class="pa-m" cx="415.14" cy="734.68" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 5,8
+Tiempo de viaje: 39"/><circle class="pa-m" cx="449.42" cy="719.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 11,3
+Tiempo de viaje: 44"/><circle class="pa-m" cx="463.14" cy="746.66" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 13,5
+Tiempo de viaje: 35"/><circle class="pa-m" cx="434.46" cy="716.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 8,9
+Tiempo de viaje: 45"/><circle class="pa-m" cx="488.69" cy="698.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 17,6
+Tiempo de viaje: 51"/><circle class="pa-m" cx="407.66" cy="698.75" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 4,6
+Tiempo de viaje: 51"/><circle class="pa-m" cx="389.59" cy="749.65" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 1,7
+Tiempo de viaje: 34"/><circle class="pa-m" cx="417.64" cy="716.71" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 6,2
+Tiempo de viaje: 45"/><circle class="pa-m" cx="451.92" cy="758.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 11,7
+Tiempo de viaje: 31"/><circle class="pa-m" cx="395.2" cy="767.62" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 2,6
+Tiempo de viaje: 28"/><circle class="pa-m" cx="483.08" cy="695.75" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 16,7
+Tiempo de viaje: 52"/><circle class="pa-m" cx="426.36" cy="725.7" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 7,6
+Tiempo de viaje: 42"/><circle class="pa-m" cx="434.46" cy="770.61" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 8,9
+Tiempo de viaje: 27"/><circle class="pa-m" cx="488.07" cy="686.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 17,5
+Tiempo de viaje: 55"/><circle class="pa-m" cx="428.85" cy="755.64" r="2.6" fill="#3A47B8" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro
+Pobreza: 8
+Tiempo de viaje: 32"/><circle class="pa-m" cx="416.39" cy="719.71" r="2.6" fill="#D42A5E" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oriente
+Pobreza: 6
+Tiempo de viaje: 44"/><circle class="pa-m" cx="435.71" cy="683.77" r="2.6" fill="#E8A33D" fill-opacity="0.85" stroke="#FCFBF9" stroke-width="0.75" data-tip="Periferia
+Pobreza: 9,1
+Tiempo de viaje: 56"/></g><rect x="374.47" y="656.3" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><g><path d="M543.23,810.90L544.91,810.14L546.58,809.18L548.25,808.03L549.92,806.65L551.59,805.04L553.26,803.22L554.93,801.20L556.61,798.98L558.28,796.61L559.95,794.10L561.62,791.47L563.29,788.72L564.96,785.87L566.64,782.89L568.31,779.75L569.98,776.43L571.65,772.88L573.32,769.07L574.99,765.00L576.66,760.65L578.34,756.04L580.01,751.25L581.68,746.32L583.35,741.37L585.02,736.51L586.69,731.83L588.37,727.46L590.04,723.48L591.71,719.97L593.38,716.96L595.05,714.45L596.72,712.45L598.39,710.89L600.07,709.73L601.74,708.90L603.41,708.34L605.08,708.02L606.75,707.91L608.42,708.01L610.10,708.32L611.77,708.87L613.44,709.68L615.11,710.81L616.78,712.25L618.45,714.04L620.12,716.18L621.80,718.66L623.47,721.47L625.14,724.59L626.81,727.99L628.48,731.65L630.15,735.54L631.82,739.62L633.50,743.87L635.17,748.25L636.84,752.71L638.51,757.22L640.18,761.73L641.85,766.19L643.53,770.56L645.20,774.79L646.87,778.85L648.54,782.70L650.21,786.32L651.88,789.69L653.55,792.80L655.23,795.65L656.90,798.23L658.57,800.56L660.24,802.63L661.91,804.46L663.58,806.05L665.26,807.43L666.93,808.60L668.60,809.58L670.27,810.39L671.94,811.04L673.61,811.56L675.28,811.97L676.96,812.28L678.63,812.52L680.30,812.69L681.97,812.81L683.64,812.90L685.31,812.96L686.99,813.00L688.66,813.02L690.33,813.04L692.00,813.05L692.00,813.064L543.23,813.064Z" fill="#3A47B8" fill-opacity="0.19"/><path d="M543.23,810.90L544.91,810.14L546.58,809.18L548.25,808.03L549.92,806.65L551.59,805.04L553.26,803.22L554.93,801.20L556.61,798.98L558.28,796.61L559.95,794.10L561.62,791.47L563.29,788.72L564.96,785.87L566.64,782.89L568.31,779.75L569.98,776.43L571.65,772.88L573.32,769.07L574.99,765.00L576.66,760.65L578.34,756.04L580.01,751.25L581.68,746.32L583.35,741.37L585.02,736.51L586.69,731.83L588.37,727.46L590.04,723.48L591.71,719.97L593.38,716.96L595.05,714.45L596.72,712.45L598.39,710.89L600.07,709.73L601.74,708.90L603.41,708.34L605.08,708.02L606.75,707.91L608.42,708.01L610.10,708.32L611.77,708.87L613.44,709.68L615.11,710.81L616.78,712.25L618.45,714.04L620.12,716.18L621.80,718.66L623.47,721.47L625.14,724.59L626.81,727.99L628.48,731.65L630.15,735.54L631.82,739.62L633.50,743.87L635.17,748.25L636.84,752.71L638.51,757.22L640.18,761.73L641.85,766.19L643.53,770.56L645.20,774.79L646.87,778.85L648.54,782.70L650.21,786.32L651.88,789.69L653.55,792.80L655.23,795.65L656.90,798.23L658.57,800.56L660.24,802.63L661.91,804.46L663.58,806.05L665.26,807.43L666.93,808.60L668.60,809.58L670.27,810.39L671.94,811.04L673.61,811.56L675.28,811.97L676.96,812.28L678.63,812.52L680.30,812.69L681.97,812.81L683.64,812.90L685.31,812.96L686.99,813.00L688.66,813.02L690.33,813.04L692.00,813.05" fill="none" stroke="#3A47B8" stroke-width="1.6"/><path d="M543.23,806.96L544.91,806.41L546.58,806.02L548.25,805.83L549.92,805.84L551.59,806.05L553.26,806.40L554.93,806.85L556.61,807.32L558.28,807.71L559.95,807.94L561.62,807.92L563.29,807.54L564.96,806.74L566.64,805.46L568.31,803.67L569.98,801.39L571.65,798.64L573.32,795.52L574.99,792.15L576.66,788.68L578.34,785.27L580.01,782.08L581.68,779.23L583.35,776.80L585.02,774.79L586.69,773.13L588.37,771.67L590.04,770.22L591.71,768.53L593.38,766.38L595.05,763.55L596.72,759.90L598.39,755.36L600.07,749.92L601.74,743.68L603.41,736.76L605.08,729.36L606.75,721.68L608.42,713.96L610.10,706.43L611.77,699.33L613.44,692.90L615.11,687.39L616.78,683.01L618.45,679.95L620.12,678.36L621.80,678.30L623.47,679.74L625.14,682.57L626.81,686.60L628.48,691.58L630.15,697.23L631.82,703.25L633.50,709.41L635.17,715.48L636.84,721.35L638.51,726.91L640.18,732.17L641.85,737.15L643.53,741.91L645.20,746.52L646.87,751.07L648.54,755.63L650.21,760.25L651.88,764.94L653.55,769.71L655.23,774.51L656.90,779.28L658.57,783.95L660.24,788.42L661.91,792.60L663.58,796.41L665.26,799.81L666.93,802.75L668.60,805.23L670.27,807.25L671.94,808.86L673.61,810.10L675.28,811.03L676.96,811.70L678.63,812.18L680.30,812.50L681.97,812.72L683.64,812.86L685.31,812.94L686.99,813.00L688.66,813.03L690.33,813.04L692.00,813.05L692.00,813.064L543.23,813.064Z" fill="#D42A5E" fill-opacity="0.19"/><path d="M543.23,806.96L544.91,806.41L546.58,806.02L548.25,805.83L549.92,805.84L551.59,806.05L553.26,806.40L554.93,806.85L556.61,807.32L558.28,807.71L559.95,807.94L561.62,807.92L563.29,807.54L564.96,806.74L566.64,805.46L568.31,803.67L569.98,801.39L571.65,798.64L573.32,795.52L574.99,792.15L576.66,788.68L578.34,785.27L580.01,782.08L581.68,779.23L583.35,776.80L585.02,774.79L586.69,773.13L588.37,771.67L590.04,770.22L591.71,768.53L593.38,766.38L595.05,763.55L596.72,759.90L598.39,755.36L600.07,749.92L601.74,743.68L603.41,736.76L605.08,729.36L606.75,721.68L608.42,713.96L610.10,706.43L611.77,699.33L613.44,692.90L615.11,687.39L616.78,683.01L618.45,679.95L620.12,678.36L621.80,678.30L623.47,679.74L625.14,682.57L626.81,686.60L628.48,691.58L630.15,697.23L631.82,703.25L633.50,709.41L635.17,715.48L636.84,721.35L638.51,726.91L640.18,732.17L641.85,737.15L643.53,741.91L645.20,746.52L646.87,751.07L648.54,755.63L650.21,760.25L651.88,764.94L653.55,769.71L655.23,774.51L656.90,779.28L658.57,783.95L660.24,788.42L661.91,792.60L663.58,796.41L665.26,799.81L666.93,802.75L668.60,805.23L670.27,807.25L671.94,808.86L673.61,810.10L675.28,811.03L676.96,811.70L678.63,812.18L680.30,812.50L681.97,812.72L683.64,812.86L685.31,812.94L686.99,813.00L688.66,813.03L690.33,813.04L692.00,813.05" fill="none" stroke="#D42A5E" stroke-width="1.6"/><path d="M543.23,813.06L544.91,813.06L546.58,813.06L548.25,813.06L549.92,813.06L551.59,813.06L553.26,813.06L554.93,813.06L556.61,813.06L558.28,813.06L559.95,813.06L561.62,813.06L563.29,813.06L564.96,813.06L566.64,813.05L568.31,813.04L569.98,813.02L571.65,813.00L573.32,812.95L574.99,812.88L576.66,812.76L578.34,812.60L580.01,812.35L581.68,812.01L583.35,811.53L585.02,810.90L586.69,810.07L588.37,809.02L590.04,807.73L591.71,806.18L593.38,804.37L595.05,802.30L596.72,800.00L598.39,797.50L600.07,794.84L601.74,792.05L603.41,789.18L605.08,786.26L606.75,783.30L608.42,780.31L610.10,777.28L611.77,774.21L613.44,771.07L615.11,767.85L616.78,764.55L618.45,761.16L620.12,757.69L621.80,754.17L623.47,750.61L625.14,747.05L626.81,743.52L628.48,740.04L630.15,736.63L631.82,733.29L633.50,730.03L635.17,726.82L636.84,723.64L638.51,720.46L640.18,717.24L641.85,713.95L643.53,710.59L645.20,707.17L646.87,703.75L648.54,700.42L650.21,697.33L651.88,694.66L653.55,692.60L655.23,691.36L656.90,691.13L658.57,692.05L660.24,694.21L661.91,697.62L663.58,702.19L665.26,707.78L666.93,714.15L668.60,721.04L670.27,728.17L671.94,735.27L673.61,742.12L675.28,748.57L676.96,754.52L678.63,759.94L680.30,764.87L681.97,769.38L683.64,773.56L685.31,777.50L686.99,781.28L688.66,784.93L690.33,788.47L692.00,791.88L692.00,813.064L543.23,813.064Z" fill="#E8A33D" fill-opacity="0.19"/><path d="M543.23,813.06L544.91,813.06L546.58,813.06L548.25,813.06L549.92,813.06L551.59,813.06L553.26,813.06L554.93,813.06L556.61,813.06L558.28,813.06L559.95,813.06L561.62,813.06L563.29,813.06L564.96,813.06L566.64,813.05L568.31,813.04L569.98,813.02L571.65,813.00L573.32,812.95L574.99,812.88L576.66,812.76L578.34,812.60L580.01,812.35L581.68,812.01L583.35,811.53L585.02,810.90L586.69,810.07L588.37,809.02L590.04,807.73L591.71,806.18L593.38,804.37L595.05,802.30L596.72,800.00L598.39,797.50L600.07,794.84L601.74,792.05L603.41,789.18L605.08,786.26L606.75,783.30L608.42,780.31L610.10,777.28L611.77,774.21L613.44,771.07L615.11,767.85L616.78,764.55L618.45,761.16L620.12,757.69L621.80,754.17L623.47,750.61L625.14,747.05L626.81,743.52L628.48,740.04L630.15,736.63L631.82,733.29L633.50,730.03L635.17,726.82L636.84,723.64L638.51,720.46L640.18,717.24L641.85,713.95L643.53,710.59L645.20,707.17L646.87,703.75L648.54,700.42L650.21,697.33L651.88,694.66L653.55,692.60L655.23,691.36L656.90,691.13L658.57,692.05L660.24,694.21L661.91,697.62L663.58,702.19L665.26,707.78L666.93,714.15L668.60,721.04L670.27,728.17L671.94,735.27L673.61,742.12L675.28,748.57L676.96,754.52L678.63,759.94L680.30,764.87L681.97,769.38L683.64,773.56L685.31,777.50L686.99,781.28L688.66,784.93L690.33,788.47L692.00,791.88" fill="none" stroke="#E8A33D" stroke-width="1.6"/><line x1="539.23" x2="696" y1="812.56" y2="812.56" stroke="#C9CDE0"/><text x="545.23" y="670.3" fill="#141A3F" font-size="12" font-weight="600" stroke="#FCFBF9" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Tiempo de viaje</text><rect x="539.23" y="656.3" width="156.77" height="156.77" fill="none" stroke="#E9EBF3" stroke-width="1"/></g><text x="119.83" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">1.000</text><text x="258.2" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">10</text><text x="323.17" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">15</text><text x="378.99" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">0</text><text x="441.32" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">10</text><text x="503.65" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">20</text><text x="560.72" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">20</text><text x="620.61" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">40</text><text x="680.5" y="827.06" fill="#7C819C" font-size="11" text-anchor="middle">60</text><text x="38.94" y="439.04" fill="#7C819C" font-size="11" text-anchor="end">10</text><text x="38.94" y="374.06" fill="#7C819C" font-size="11" text-anchor="end">15</text><text x="38.94" y="647.77" fill="#7C819C" font-size="11" text-anchor="end">0</text><text x="38.94" y="585.45" fill="#7C819C" font-size="11" text-anchor="end">10</text><text x="38.94" y="523.12" fill="#7C819C" font-size="11" text-anchor="end">20</text><text x="38.94" y="795.58" fill="#7C819C" font-size="11" text-anchor="end">20</text><text x="38.94" y="735.69" fill="#7C819C" font-size="11" text-anchor="end">40</text><text x="38.94" y="675.8" fill="#7C819C" font-size="11" text-anchor="end">60</text></g><text x="696" y="855.06" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

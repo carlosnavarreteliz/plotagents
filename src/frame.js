@@ -4,6 +4,7 @@ import { el, esc, g, text, r2 } from './svg.js';
 import { measure, wrap, truncate } from './text.js';
 import { FONT, FONT_CSS } from './theme.js';
 import { ctx } from './context.js';
+import { words } from './i18n.js';
 
 export const SIZES = {
   title: 22,
@@ -49,7 +50,7 @@ export function createFrame(spec, theme, defaults = {}) {
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
 
-  const srcText = spec.source ? (/^fuente|^source/i.test(spec.source) ? spec.source : (String(spec.locale || 'es').startsWith('en') ? 'Source: ' : 'Fuente: ') + spec.source) : '';
+  const srcText = spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   // Una fuente larga salta a una segunda línea en vez de salirse por la izquierda.
   const srcLines = srcText ? wrap(srcText, innerW, T.source, 400, 2) : [];
   const srcLH = Math.round(T.source * X * 1.35);
@@ -97,7 +98,7 @@ export function createFrame(spec, theme, defaults = {}) {
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
-    finish(body, { desc = '', type = 'chart', defs = '' } = {}) {
+    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '' } = {}) {
       if (legendBottom) {
         const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
@@ -108,7 +109,8 @@ export function createFrame(spec, theme, defaults = {}) {
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
-        + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '');
+        + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '')
+        + css;
       return el(
         'svg',
         {
@@ -116,8 +118,9 @@ export function createFrame(spec, theme, defaults = {}) {
           viewBox: `0 0 ${width} ${r2(height)}`,
           width,
           height: r2(height),
-          role: 'img',
-          'aria-labelledby': `${id}-t ${id}-d`,
+          role,
+          'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
+          'aria-describedby': role === 'img' ? null : `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
           class: 'pa-chart',
           'data-pa-type': type,

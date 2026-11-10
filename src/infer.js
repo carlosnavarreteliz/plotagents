@@ -1,7 +1,7 @@
 // Elige el tipo de gráfico cuando el agente no lo indica (type: "auto").
 import { fieldsOf, fieldKind } from './data.js';
 
-export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap'];
+export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot'];
 
 // Nombres de seaborn, d3plus y otros: el agente puede usar el que conozca.
 export const ALIASES = {
@@ -16,6 +16,11 @@ export const ALIASES = {
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
   words: 'wordcloud', 'word-cloud': 'wordcloud', wordclouds: 'wordcloud', tagcloud: 'wordcloud', 'tag-cloud': 'wordcloud', nube: 'wordcloud', 'nube-de-palabras': 'wordcloud', cloud: 'wordcloud',
   timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',
+  tabla: 'table', tables: 'table', datatable: 'table', 'data-table': 'table', grid: 'table', tableau: 'table', tabelle: 'table', tabela: 'table', spreadsheet: 'table', planilla: 'table',
+  correlation: 'corr', correlations: 'corr', corrplot: 'corr', corrmatrix: 'corr', 'corr-matrix': 'corr', 'correlation-matrix': 'corr', correlogram: 'corr', correlograma: 'corr',
+  correlacion: 'corr', 'correlación': 'corr', 'matriz-correlacion': 'corr', 'matriz-de-correlacion': 'corr', 'matriz-de-correlación': 'corr',
+  clustermap: ['corr', { cluster: true }], 'cluster-map': ['corr', { cluster: true }],
+  pairs: 'pairplot', pairgrid: 'pairplot', splom: 'pairplot', scattermatrix: 'pairplot', 'scatter-matrix': 'pairplot', 'scatterplot-matrix': 'pairplot', 'matriz-de-dispersion': 'pairplot', 'matriz-de-dispersión': 'pairplot',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -29,6 +34,7 @@ export function normalizeType(t) {
 
 export function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
+  if (Array.isArray(spec.columns) || spec.pageSize !== undefined) return 'table';
   if (spec.geo) return 'choropleth';
   if (spec.lat || spec.lon || spec.tiles !== undefined) return 'pointmap';
   { const f = fieldsOf(data); if (f.some((k) => /^(lat|latitude|latitud)$/i.test(k)) && f.some((k) => /^(lon|lng|long|longitude|longitud)$/i.test(k))) return 'pointmap'; }
@@ -39,6 +45,8 @@ export function inferType(spec, data = []) {
   if (spec.matrix) return 'chord';
   if (spec.from || spec.to) return 'sankey';
   if (spec.path || spec.group) return 'treemap';
+  if (spec.triangle !== undefined || spec.cluster !== undefined || spec.method !== undefined) return 'corr';
+  if (spec.diag !== undefined || spec.corner !== undefined || spec.upper !== undefined) return 'pairplot';
   if (spec.size) return 'bubble';
   const fields = fieldsOf(data);
   if ((fields.includes('source') && fields.includes('target')) || (fields.includes('from') && fields.includes('to'))) return 'sankey';

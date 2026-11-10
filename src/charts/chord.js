@@ -134,7 +134,9 @@ export function chord(spec, theme) {
   const P = (ang, r) => [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r];
   const f = (v) => v.toFixed(2);
 
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  // Un `highlight` que no existe entre los grupos se ignora (si no, todo quedaría atenuado).
+  const hlNames = spec.highlight === undefined || spec.highlight === null ? [] : [].concat(spec.highlight).map(String).filter((k) => names.includes(k));
+  const hl = hlNames.length ? new Set(hlNames) : null;
   const isOn = (rb) => !hl || hl.has(names[rb.i]) || hl.has(names[rb.j]);
 
   // Cintas: de un arco al otro, curvas por el centro.

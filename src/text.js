@@ -24,6 +24,11 @@ set('—', 0.9);
 set('▲▼■●', 0.9);
 set('·', 0.3);
 set('→', 0.9);
+set('\u202F', 0.17); // espacio fino (miles en francés)
+set('\u00A0', 0.27);
+set('✓✗', 0.7);
+set('‹›', 0.32);
+set('#', 0.6);
 
 export function measure(str, size = 12, weight = 400) {
   let w = 0;

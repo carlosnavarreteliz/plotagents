@@ -38,7 +38,7 @@ export const schema = {
       type: 'string',
       enum: [...new Set(['auto', ...TYPES, 'pointmap', ...Object.keys(ALIASES)])],
       description:
-        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -47,7 +47,7 @@ export const schema = {
     title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
     subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
     source: { type: 'string', description: 'Data source, shown at the bottom right.' },
-    locale: { type: 'string', enum: ['es', 'en'], description: 'Language and number format. Default "es" (1.234,5); use "en" for 1,234.5.' },
+    locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'], description: 'Language and number format. Default "es" (1.234,5); "en" for 1,234.5; also "pt", "fr", "de". "auto" recognizes the language from the title, subtitle, column names and categories (tables do this when `locale` is omitted).' },
     x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
     y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
     series: field('Field that splits the data into colored series. Alias: hue.'),
@@ -55,7 +55,7 @@ export const schema = {
     hue: field('Alias of series (seaborn naming).'),
     value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
-    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value.'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
     size: field('Bubble size field (area-proportional).'),
     from: field('Sankey source field.'),
@@ -158,7 +158,33 @@ export const schema = {
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     col: field('Alias of facet (seaborn naming).'),
     facetOrder: { type: 'array', items: { type: 'string' }, description: 'facet: panel order (values of the facet field; the rest follow).' },
-    columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens. kpi: tiles per row.' },
+    columns: {
+      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank. Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.',
+      anyOf: [
+        { type: 'integer' },
+        { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+          field: { type: 'string' }, label: { type: 'string' },
+          type: { type: 'string', enum: ['text', 'number', 'bar', 'heat', 'delta', 'sparkline', 'progress', 'badge', 'check', 'date', 'link', 'rank'] },
+          format: { anyOf: [{ type: 'string' }, { type: 'object' }] }, align: { type: 'string', enum: ['left', 'right', 'center'] }, width: { type: 'number' },
+          good: { type: 'string', enum: ['up', 'down'] }, target: { anyOf: [{ type: 'string' }, { type: 'number' }] }, colorScale: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }, { type: 'object' }] },
+          total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
+        } }] } },
+      ],
+    },
+    sortBy: field('table: column to sort by (field or label). Numbers sort high→low by default, text A→Z. In the browser a click on a header sorts.'),
+    sortOrder: { type: 'string', enum: ['asc', 'desc'], description: 'table: sort direction (same as `sort: "asc" | "desc"`).' },
+    pageSize: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'boolean', enum: [false] }], description: 'table: rows per page. Default: all rows up to 15, then pages of 10. false shows every row.' },
+    page: { type: 'integer', minimum: 1, description: 'table: page to show (1-based). In the browser the pager changes it.' },
+    query: { type: 'string', description: 'table: show only rows that contain these words (accent- and case-insensitive).' },
+    search: { type: 'boolean', description: 'table: search box in the browser (default: on above 20 rows).' },
+    total: { description: 'table: totals row. true sums numbers (and averages percents and progress); "mean"/"sum"; or { field: "sum" | "mean" | false, label }.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max'] }, { type: 'object' }] },
+    totalLabel: { type: 'string', description: 'table: label of the totals row (default "Total"/"Gesamt").' },
+    rank: { type: 'boolean', description: 'table: add a "#" column with the position under the current sort.' },
+    cards: { description: 'table: one card per row. "auto" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['auto'] }] },
+    density: { type: 'string', enum: ['compact', 'normal', 'comfortable'], description: 'table: row height.' },
+    striped: { type: 'boolean', description: 'table: tint every other row (helps on very wide tables).' },
+    bars: { type: 'boolean', description: 'table: false turns off the automatic data bar on the main numeric column.' },
+    sortable: { type: 'boolean', description: 'table: false disables click-to-sort on headers in the browser.' },
     sharex: bool('facet: same x scale in every panel (default true).'),
     panelHeight: number('facet: height of each panel in px.'),
     sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
@@ -194,7 +220,7 @@ export const schema = {
     yFormat: formatSpec('Format of y values (overrides `format` on the y axis).'),
 
     // Emphasis and annotation
-    highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    highlight: { description: 'Emphasize one or more categories/series and mute the rest. table: the rows whose label matches.', ...strOrList },
     dashed: { description: 'Draw some shapes dashed (hatched fill + dashed outline; dashed stroke for lines) to mark estimates, projections or provisional figures. A category/series/region name or a list of them, a data field whose truthy rows are dashed, { field, equals }, or true for all.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', properties: { field: { type: 'string' }, equals: {} } }] },
     dashedFrom: { description: 'line/area/bar on a time axis: x value from which marks are dashed (a projection). Lines turn dashed from the last firm point, over a soft labeled band.', anyOf: [{ type: 'string' }, { type: 'number' }] },
     dashedLabel: { description: 'What the dashed shapes mean ("Projection", "Preliminary"): legend entry, band label and tooltip line. false hides the band label.', anyOf: [{ type: 'string' }, { type: 'boolean' }] },
@@ -205,7 +231,7 @@ export const schema = {
     // Bars and lines
     stack: { description: 'bar/area: true stacks; "percent" stacks to 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
     horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
-    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other". table: keep the first N rows after sorting.' },
     endLabels: bool('line/regplot: false removes the series names at the end of each line (a legend is drawn instead).'),
     labelsFor: { type: 'object', additionalProperties: { type: 'string' }, description: 'Wide table (y as a list): display names per column, e.g. { "rev": "Revenue" }.' },
     index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
@@ -222,12 +248,12 @@ export const schema = {
     kde: { type: 'boolean', description: 'hist: overlay a density curve.' },
     multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde with hue: how groups are combined.' },
     fill: { type: 'boolean', description: 'kde: fill the area. line: false removes the gradient under a single line.' },
-    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
+    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list). corr: variable order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
     lowess: { type: 'boolean', description: 'regplot: local regression instead of a straight line.' },
     logx: { type: 'boolean', description: 'regplot: fit y ~ log(x) with a log x axis.' },
     trend: { type: 'boolean', description: 'scatter: add a least-squares line and R².' },
     annotate: { type: 'boolean', description: 'regplot: show R² and n.' },
-    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot.' },
+    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot. pairplot: "reg" adds a least-squares line to every scatter panel.' },
     marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: marginal plots.' },
     inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'stick', 'none'], description: 'violin: what goes inside.' },
     bandwidth: number('violin: KDE bandwidth (default Scott\'s rule).'),
@@ -252,6 +278,17 @@ export const schema = {
     centerValue: { type: 'string', description: 'donut/sunburst: text in the center (default: the total).' },
     centerLabel: { type: 'string', description: 'donut/sunburst: caption under the center value.' },
     cellHeight: number('heatmap: maximum cell height in px.'),
+    vars: { type: 'array', items: { type: 'string' }, description: 'corr/pairplot: the numeric fields to relate, in order (seaborn `vars`). Default: every numeric field (pairplot: the first 6). `y: [...]` works too.' },
+    method: { type: 'string', enum: ['pearson', 'spearman'], description: 'corr: correlation coefficient. "pearson" (default, linear) or "spearman" (ranks: monotonic relations, robust to outliers).' },
+    triangle: { anyOf: [{ type: 'string', enum: ['lower', 'full'] }, { type: 'boolean' }], description: 'corr: "lower" (default) shows each pair once, below the diagonal; "full" shows the whole symmetric matrix (default with `cluster`).' },
+    cluster: bool('corr: reorder variables by hierarchical clustering (average linkage on 1 − r) and draw the dendrogram on top, like sns.clustermap. `type: "clustermap"` sets it.'),
+    dendrogram: bool('corr with `cluster`: false hides the dendrogram but keeps the clustered order.'),
+    alpha: { type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1, description: 'corr: significance level (e.g. 0.05). Cells with p ≥ alpha are greyed out and a legend key explains it. p-values use Fisher\'s z.' },
+    cellSize: number('corr: maximum cell size in px (cells are square).'),
+    diag: { type: 'string', enum: ['hist', 'kde'], description: 'pairplot: what goes on the diagonal. Default "hist", or "kde" when `hue` is set.' },
+    upper: { anyOf: [{ type: 'string', enum: ['corr', 'scatter'] }, { type: 'boolean', enum: [false] }], description: 'pairplot: above the diagonal, "corr" (default: Pearson r, tinted by strength, per `hue` group when there is room), "scatter" (mirror), or false (empty).' },
+    corner: bool('pairplot: draw only the lower triangle and the diagonal (seaborn corner=True).'),
+    panelSize: number('pairplot: maximum panel size in px.'),
     diverging: bool('heatmap/choropleth: diverging color scale around 0 (or `midpoint`).'),
 
     // Appearance
@@ -293,13 +330,12 @@ export const dashboardSchema = {
   title: 'plotagents dashboard',
   description: 'A dashboard with best-practice defaults: KPIs on top, the main chart wide, the rest in balanced full rows of a 12-column grid, one color per entity across charts, shared filters, one source line.',
   type: 'object',
-  required: ['charts'],
   properties: {
     title: { type: 'string', description: 'The question the dashboard answers, e.g. "How are southern sales doing?"' },
     subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
     source: { type: 'string', description: 'Data source, shown once at the bottom.' },
     updated: { type: 'string', description: 'Last update, e.g. "2026-01-05".' },
-    locale: { type: 'string', enum: ['es', 'en'] },
+    locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'] },
     theme: { description: 'One theme for every chart: "papel" (light) or "noche" (dark), or a theme object.', anyOf: [{ type: 'string' }, { type: 'object' }] },
     data: { type: 'array', items: { type: 'object' }, description: 'Shared rows: charts without their own `data` use these, and computed KPIs and filters work on them.' },
     kpis: {
@@ -310,6 +346,7 @@ export const dashboardSchema = {
         scale: { type: 'number', description: 'Multiply the computed value (e.g. 1000 to show thousands).' },
         compare: { type: 'object', description: 'Current vs previous period: { field: "year", current: 2025, previous: 2024 }.', properties: { field: { type: 'string' }, current: {}, previous: {} } },
         trendBy: { type: 'string', description: 'Field to draw a sparkline by (e.g. "month").' },
+        previous: { type: 'number', description: 'Previous value: the change is computed from it.' }, display: { type: 'string', description: 'Text shown instead of the formatted value.' },
         format: {}, good: { type: 'string', enum: ['up', 'down'] }, trend: { type: 'array', items: { type: 'number' } },
       } },
     },
@@ -317,6 +354,12 @@ export const dashboardSchema = {
     filters: { type: 'array', description: 'Fields to filter every chart and computed KPI by: "region" or { field, label, control: "buttons" | "select", value }.', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } },
     layout: { type: 'string', enum: ['auto', 'executive', 'grid'], description: 'auto (default): balanced rows by chart type. executive: main chart full width, the rest in pairs. grid: equal panels.' },
     colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities across every chart.' },
+    order: { type: 'string', enum: ['given'], description: '"given" keeps the charts in the order you wrote them (otherwise the main time series goes first).' },
+    note: { type: 'string', description: 'Short note next to the source, at the bottom.' },
+    font: { description: 'Font for every chart: a Google Fonts name, a CSS stack or { family, import }.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    palette: { description: 'Categorical palette for every chart: a name ("tab10", "okabe-ito") or a list of colors.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    ramp: { description: 'Sequential ramp for every chart.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    textScale: { type: 'number', description: 'Multiplies every text (1.5 for presentations).' },
   },
 };
 
@@ -330,7 +373,7 @@ export function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = 
   }
   name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

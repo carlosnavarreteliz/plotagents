@@ -14,7 +14,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 3. **Always set `source`.** If the data is made up, use `source: "illustrative data"`.
 4. `data` is a list of rows (`[{ region: "Biobío", sales: 1240 }]`). For a wide table, pass `y: ["revenue", "costs"]`.
 5. Call `safePlot(spec)` as your tool: it never throws and returns `errors`, `warnings` and `suggestions`, each with a `fix`. If `ok` is `false`, fix the spec and call again.
-6. Set `locale: "en"` for English number formats (default is Spanish: `1.234,5`).
+6. Set `locale: "en"` for English number formats (default is Spanish: `1.234,5`); also `"pt"`, `"fr"`, `"de"`, or `"auto"` to recognize it from the text. Tables recognize it on their own.
 
 ## Which type
 
@@ -30,6 +30,8 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Exponential growth | `line` + `yScale: "log"` | |
 | Relationship between two measures | `regplot` (fit + CI) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
 | Relationship + marginals | `jointplot` | `x`, `y` |
+| Which measures move together | `corr` (`correlation`) | `vars?` (default: every numeric field), `method?` (`"spearman"`), `alpha?: 0.05`; `cluster: true` or `type: "clustermap"` groups them with a dendrogram |
+| Every pair of measures at once | `pairplot` (`splom`) | `vars` (3–6), `hue?`, `corner?`, `kind?: "reg"` |
 | Distribution of one measure | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
 | Distribution by category | `box`, `violin`, `strip`, `swarm` | `x` category, `y` measure, `hue?` |
 | Multi-dimensional profile | `radar` | `axis`, `value`, `series` (≤ 4 series) |
@@ -44,6 +46,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | A process with decisions | `flowchart` | `nodes` (`type`, `lane`), `edges` (`label`) |
 | Flows between stages | `sankey` | `from`, `to`, `value` |
 | One or more numbers | `kpi` | `items: [{ label, value, delta, period, trend, target, good }]` |
+| Exact values to look up | `table` | `columns?: [field \| { field, type, label, format, good, target }]`, `sortBy?`, `total?`, `group?`; types `bar`, `delta`, `heat`, `sparkline`, `progress`, `badge`, `check` are inferred when omitted |
 | What comes up most in text | `wordcloud` | `text` (field or raw text), `value?`, `series?`; prefer `bar` + `top` to compare exactly |
 
 seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `stripplot`, `swarmplot`, `pointplot`), and `hue` is an alias of `series`. Leave `type` out to infer it from the data.
@@ -59,6 +62,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `refLines: [{ y: 600, label: "Target" }]` and `annotations: [{ x: "2024-01", label: "New branch" }]`.
 - `format: "percent" | "currency" | "compact" | "integer"` or `{ prefix, suffix, decimals }`.
 - `xScale` / `yScale: "log"`.
+- `table`: give a title that states the finding like any chart. More than 15 rows paginate in tens (`pageSize`), phones get one card per row, and the browser adds sort, search and paging. Use `good: "down"` on costs so ▲ turns red, `progress` with `target: "budget"` for spent vs budget, and `total: true` for a totals row. Keep 4–7 columns.
 - `theme: "noche"` or a JSON object (`{ extends, categorical, type, marks, font }`); `palette: [...]` for your own colors.
 - `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
 - `network` + `focus: "node id"`: center a node and highlight its neighbors.

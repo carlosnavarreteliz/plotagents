@@ -8,14 +8,27 @@ import { themeFor, themes, palettes, ramps } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
+import { autoLocale } from './i18n.js';
+import { COLUMN_TYPES, columnType } from './charts/table.js';
 
 /** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
 let RENDER_PROBE = null;
 export const _setProbe = (fn) => { RENDER_PROBE = fn; };
 
+/** Nunca lanza: si la revisión misma falla con un spec raro, lo dice como aviso y sigue. */
 export function lint(spec = {}) {
+  try { return lintSpec(spec); }
+  catch (e) {
+    const type = spec && typeof spec === 'object' && typeof spec.type === 'string' ? spec.type : 'auto';
+    return { ok: true, type, errors: [], warnings: [{ code: 'lint-failed', message: `No se pudo revisar el spec por completo: ${String(e && e.message).split('\n')[0]}`, fix: 'Revisa que cada opción tenga el tipo del schema (`toolDefinition()`): textos donde van textos, listas donde van listas.' }], suggestions: [] };
+  }
+}
+
+function lintSpec(spec = {}) {
   if (!spec || typeof spec !== 'object') spec = {};
-  const en = String(spec.locale || '').toLowerCase().startsWith('en');
+  // Idioma de los mensajes: el del gráfico (con `locale: "auto"`, y en tablas sin locale, el reconocido del texto).
+  const autoLang = spec.locale === 'auto' || (spec.locale === undefined && /^(table|tabla|tables|datatable|data-table|grid)$/i.test(String(spec.type || '')));
+  const en = (autoLang ? autoLocale(spec, Array.isArray(spec.data) ? spec.data : []) : String(spec.locale || '')).toLowerCase().startsWith('en');
   /** Mensajes nuevos: se escriben directo en ambos idiomas. */
   const L = (es, english) => (en ? english : es);
   const errors = [];
@@ -28,7 +41,7 @@ export function lint(spec = {}) {
   let data = [];
   const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
   try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
-  const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
+  const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
   const check = (f, role) => {
@@ -41,7 +54,7 @@ export function lint(spec = {}) {
   } else if (type !== 'kpi' && !rawWords && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
-  else if (!/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
+  else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
   if (!spec.source) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
 
   const series = spec.series ?? spec.color;
@@ -112,6 +125,26 @@ export function lint(spec = {}) {
     for (const f of [spec.x, spec.y]) if (f && fields.includes(f) && !numericIn(f)) err('numeric', `"${f}" no es numérico: la regresión necesita dos medidas.`, 'Usa `type: "box"` para comparar una medida entre categorías.');
     if (data.length < 8) warn('few-obs', `Solo ${data.length} puntos: la recta y su intervalo son poco confiables.`, 'Muestra los puntos con `type: "scatter"`.');
   }
+  if ((type === 'corr' || type === 'pairplot') && data.length) {
+    const longForm = type === 'corr' && typeof spec.x === 'string' && typeof spec.y === 'string' && typeof spec.value === 'string';
+    if (!longForm) {
+      const list = spec.vars ?? (Array.isArray(spec.y) ? spec.y : null);
+      if (spec.vars !== undefined && !Array.isArray(spec.vars)) err('corr-vars', L('`vars` debe ser una lista de campos.', '`vars` must be a list of fields.'), 'vars: ["precio", "superficie", "antiguedad"]');
+      if (Array.isArray(spec.vars)) check(spec.vars, 'vars');
+      const hueF = spec.hue ?? spec.series;
+      const nums = (Array.isArray(list) ? list : fields.filter((f) => f !== hueF && f !== spec.label && fieldKind(data, f) === 'number')).filter((f) => fields.includes(f));
+      if (Array.isArray(list)) for (const f of list) if (fields.includes(f) && fieldKind(data, f) !== 'number') err('corr-numeric', L(`"${f}" no es numérico: una correlación necesita medidas.`, `"${f}" is not numeric: a correlation needs measures.`), L('Quítalo de `vars`; para comparar una medida entre categorías usa `type: "box"`.', 'Drop it from `vars`; to compare a measure across categories use `type: "box"`.'));
+      if (nums.length < 2) err('corr-vars', L(`Hay ${nums.length} campo(s) numérico(s): se necesitan al menos dos.`, `There are ${nums.length} numeric field(s): at least two are needed.`), L('Entrega filas con dos o más medidas, o indícalas en `vars: [...]`.', 'Pass rows with two or more measures, or list them in `vars: [...]`.'));
+      const constant = nums.filter((f) => { const vs = data.map((r) => num(r[f])).filter(Number.isFinite); return vs.length > 1 && vs.every((v) => v === vs[0]); });
+      if (constant.length) warn('corr-constant', L(`Sin variación: ${constant.join(', ')}. Su correlación no está definida (celda vacía).`, `No variation: ${constant.join(', ')}. Its correlation is undefined (empty cell).`), L('Quítalos de `vars`.', 'Drop them from `vars`.'));
+      if (data.length < 10) warn('corr-few-rows', L(`Solo ${data.length} filas: una correlación con tan pocos casos es inestable.`, `Only ${data.length} rows: a correlation from so few cases is unstable.`), L('Muestra los puntos con `type: "scatter"`, o agrega `alpha: 0.05` para apagar lo no significativo.', 'Show the points with `type: "scatter"`, or add `alpha: 0.05` to grey out what is not significant.'));
+      if (type === 'corr' && nums.length > 12 && !spec.cluster) sug('corr-many', L(`${nums.length} variables: el orden de los datos esconde los grupos que se mueven juntos.`, `${nums.length} variables: data order hides the groups that move together.`), L('Agrega `cluster: true` (o usa `type: "clustermap"`).', 'Add `cluster: true` (or use `type: "clustermap"`).'));
+      if (type === 'corr' && nums.length > 30) warn('corr-too-many', L(`${nums.length} variables: las celdas quedan demasiado chicas para leerse.`, `${nums.length} variables: cells get too small to read.`), L('Elige las que importan con `vars: [...]`.', 'Pick the ones that matter with `vars: [...]`.'));
+      if (type === 'pairplot' && !Array.isArray(list) && nums.length > 6) warn('pairplot-many', L(`${nums.length} campos numéricos: se dibujan solo los 6 primeros (${nums.slice(0, 6).join(', ')}).`, `${nums.length} numeric fields: only the first 6 are drawn (${nums.slice(0, 6).join(', ')}).`), L('Elige con `vars: [...]`, o usa `type: "corr"` para verlos todos.', 'Choose with `vars: [...]`, or use `type: "corr"` to see them all.'));
+      if (type === 'pairplot' && Array.isArray(list) && list.length > 7) warn('pairplot-many', L(`${list.length} variables son ${list.length * list.length} paneles diminutos.`, `${list.length} variables make ${list.length * list.length} tiny panels.`), L('Deja 3–6 en `vars`, o usa `type: "corr"`.', 'Keep 3–6 in `vars`, or use `type: "corr"`.'));
+      if (type === 'pairplot' && data.length > 3000) sug('pairplot-dense', L(`${data.length} filas: los puntos se tapan en cada panel.`, `${data.length} rows: points hide each other in every panel.`), L('Usa `type: "corr"`, o `radius: 1` con una muestra.', 'Use `type: "corr"`, or `radius: 1` with a sample.'));
+    }
+  }
   if (['box', 'violin'].includes(type) && data.length && spec.x && fields.includes(spec.x)) {
     const counts = new Map();
     for (const r of data) counts.set(String(r[spec.x]), (counts.get(String(r[spec.x])) || 0) + 1);
@@ -164,6 +197,29 @@ export function lint(spec = {}) {
       }
       if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
     }
+  }
+  if (type === 'table' && data.length) {
+    const cols = Array.isArray(spec.columns) ? spec.columns : [];
+    for (const c of cols) {
+      const f = typeof c === 'string' ? c : c && typeof c === 'object' ? c.field ?? c.key ?? c.name : undefined;
+      if (c && typeof c === 'object' && c.type !== undefined && !columnType(c.type)) {
+        const near = didYouMean(String(c.type), COLUMN_TYPES);
+        err('table-column-type', L(`Tipo de columna "${c.type}" desconocido${f ? ` (columna "${f}")` : ''}.`, `Unknown column type "${c.type}"${f ? ` (column "${f}")` : ''}.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Tipos: ${COLUMN_TYPES.join(', ')}.`, `Types: ${COLUMN_TYPES.join(', ')}.`));
+      }
+      if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
+      else if (f !== undefined) check(f, 'columns');
+      if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+    }
+    const by = spec.sortBy ?? spec.orderBy;
+    if (by !== undefined && !fields.includes(by) && !cols.some((c) => c && typeof c === 'object' && String(c.label) === String(by)) && !['#', 'rank'].includes(String(by))) {
+      const near = didYouMean(String(by), fields);
+      err('table-sort', L(`\`sortBy: "${by}"\` no es una columna.`, `\`sortBy: "${by}"\` is not a column.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Campos: ${fields.join(', ')}.`, `Fields: ${fields.join(', ')}.`));
+    }
+    if (spec.pageSize !== undefined && spec.pageSize !== false && !(Number.isFinite(+spec.pageSize) && +spec.pageSize >= 1)) err('table-page-size', L('`pageSize` debe ser un entero positivo (o false).', '`pageSize` must be a positive integer (or false).'), 'pageSize: 10');
+    const nCols = cols.length || fields.length;
+    if (nCols > 8) warn('table-wide', L(`${nCols} columnas: en pantallas angostas la tabla pasa a tarjetas largas y en escritorio se aprieta.`, `${nCols} columns: on narrow screens the table turns into long cards, and it gets cramped on desktop.`), L('Deja las 4–7 columnas que responden la pregunta del título con `columns: [...]`.', 'Keep the 4–7 columns that answer the title\'s question with `columns: [...]`.'));
+    if (data.length > 15 && spec.pageSize === false) sug('table-long', L(`${data.length} filas sin paginar hacen una imagen muy alta.`, `${data.length} unpaginated rows make a very tall image.`), L('Quita `pageSize: false` (páginas de 10), o usa `top: 15` con un orden.', 'Drop `pageSize: false` (pages of 10), or use `top: 15` with a sort.'));
+    if (data.length > 0 && data.length <= 3 && nCols <= 2) sug('table-tiny', L('Una tabla de pocas cifras dice más como indicadores.', 'A table with so few numbers works better as indicators.'), L('Usa `type: "kpi"` con `items`.', 'Use `type: "kpi"` with `items`.'));
   }
   if (type === 'kpi' && ![].concat(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
@@ -254,6 +310,7 @@ const EXTRA_OPTIONS = `
   tileOpacity tileStyle tiles tilesKey todayColor truncate unit valueDomain valueFormat valueScale weekends word
   xFormat yFormat yTicks zoom curveness exclude colorScale filters kpis charts updated primary layout
   after area good minLength sizeKey x2
+  orderBy perPage paginate stacked totalLabel
   id name description notes meta alt $schema comment
 `.trim().split(/\s+/);
 
@@ -341,6 +398,11 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
   if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid"');
+  if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
+  if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);
+  if (type === 'corr' && spec.alpha !== undefined && !(+spec.alpha > 0 && +spec.alpha < 1)) err('corr-alpha', L('`alpha` es un nivel de significancia entre 0 y 1.', '`alpha` is a significance level between 0 and 1.'), 'alpha: 0.05');
+  if (type === 'pairplot' && spec.diag !== undefined) enumCheck('diag', spec.diag, ['hist', 'kde']);
+  if (type === 'pairplot' && typeof spec.upper === 'string') enumCheck('upper', spec.upper, ['corr', 'scatter']);
   if (type === 'pointmap') {
     if (typeof spec.tiles === 'string') enumCheck('tiles', spec.tiles.toLowerCase(), TILES, '"osm", "esri-gray", "esri-dark", "carto-light", "carto-dark", "mapbox-light", "mapbox-dark", { url, attribution } o false');
     if (spec.tileStyle !== undefined) enumCheck('tileStyle', spec.tileStyle, ['muted', 'original']);
@@ -361,7 +423,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
         const base = String(nameOf).replace(/_r$/i, '');
         const near = didYouMean(base, all);
         err('colorscale-unknown', L(`La escala de color "${nameOf}" no existe.`, `The color scale "${nameOf}" does not exist.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Usa un nombre de matplotlib ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` invierte) o una lista de colores hex.', 'Use a matplotlib name ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` reverses) or a list of hex colors.'));
-      } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores hex (["#FFF", "#123"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two hex colors (["#FFF", "#123"]) or { name, reverse, mid }.'));
+      } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores (["#FFF", "steelblue"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two colors (["#FFF", "steelblue"]) or { name, reverse, mid }.'));
     } else if (cs.kind === 'qualitative') {
       err('colorscale-qualitative', L(`"${cs.name}" es una paleta cualitativa: no sirve para una escala continua.`, `"${cs.name}" is a qualitative palette: it cannot be a continuous scale.`), L(`Usa \`palette: "${cs.name}"\` para categorías, o una escala como "viridis" o "Blues".`, `Use \`palette: "${cs.name}"\` for categories, or a scale such as "viridis" or "Blues".`));
     } else if (RAINBOW.has(cs.name.replace(/_r$/, ''))) {

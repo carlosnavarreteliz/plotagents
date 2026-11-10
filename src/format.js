@@ -4,19 +4,29 @@
 const SEP = {
   es: { group: '.', dec: ',' },
   en: { group: ',', dec: '.' },
+  pt: { group: '.', dec: ',' },
+  de: { group: '.', dec: ',' },
+  fr: { group: '\u202F', dec: ',' }, // espacio fino: 1 234,5
 };
 
 const COMPACT = {
   es: [[1e12, ' B'], [1e6, ' M'], [1e3, ' mil']],
   en: [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']],
+  pt: [[1e12, ' tri'], [1e9, ' bi'], [1e6, ' mi'], [1e3, ' mil']],
+  fr: [[1e12, ' Bn'], [1e9, ' Md'], [1e6, ' M'], [1e3, ' k']],
+  de: [[1e12, ' Bio.'], [1e9, ' Mrd.'], [1e6, ' Mio.'], [1e3, ' Tsd.']],
 };
 
 export const MONTHS = {
   es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  pt: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+  fr: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+  de: ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'],
 };
 
-const loc = (l) => (l && String(l).toLowerCase().startsWith('en') ? 'en' : 'es');
+/** Idioma de formato: es, en, pt, fr o de ("pt-BR" → pt); cualquier otro, es. */
+const loc = (l) => { const k = String(l || 'es').toLowerCase().slice(0, 2); return k in SEP ? k : 'es'; };
 
 /** Número con separadores. `decimals` fijo; `trim` quita ceros finales. */
 export function formatNumber(v, decimals = 0, locale = 'es', trim = false) {
@@ -24,7 +34,8 @@ export function formatNumber(v, decimals = 0, locale = 'es', trim = false) {
   if (!Number.isFinite(v)) return v > 0 ? '∞' : '-∞';
   const { group, dec } = SEP[loc(locale)];
   const neg = v < 0;
-  let [int, frac = ''] = Math.abs(v).toFixed(Math.max(0, Math.min(20, Math.round(+decimals) || 0))).split('.');
+  const fixed = Math.abs(v) >= 1e21 ? BigInt(Math.abs(v)).toString() : Math.abs(v).toFixed(Math.max(0, Math.min(20, Math.round(+decimals) || 0))); // toFixed pasa a "1e+21"
+  let [int, frac = ''] = fixed.split('.');
   int = int.replace(/\B(?=(\d{3})+(?!\d))/g, group);
   if (trim) frac = frac.replace(/0+$/, '');
   const out = frac ? int + dec + frac : int;
@@ -44,10 +55,16 @@ export function smartDecimals(v) {
 export function formatCompact(v, locale = 'es', decimals) {
   const l = loc(locale);
   const a = Math.abs(v);
-  for (const [n, suf] of COMPACT[l]) {
+  const tbl = COMPACT[l];
+  for (let i = 0; i < tbl.length; i++) {
+    let [n, suf] = tbl[i];
     if (a >= n) {
-      const s = v / n;
-      const d = decimals ?? (Math.abs(s) < 10 ? 1 : 0);
+      let s = v / n;
+      let d = decimals ?? (Math.abs(s) < 10 ? 1 : 0);
+      // 999.999 → "1.000 mil" no: al redondear llega a 1000, sube a la unidad siguiente (1 M).
+      if (i > 0 && tbl[i - 1][0] / n === 1000 && Math.abs(+Math.abs(s).toFixed(d)) >= 1000) {
+        [n, suf] = tbl[i - 1]; s = v / n; d = decimals ?? (Math.abs(s) < 10 ? 1 : 0);
+      }
       return formatNumber(s, d, l, decimals === undefined) + suf;
     }
   }
@@ -109,7 +126,7 @@ export function makeFormat(fmt, locale = 'es', values = []) {
   return f;
 }
 
-function currencyPrefix(cur, l) {
+export function currencyPrefix(cur, l) {
   if (!cur) return '$';
   const c = String(cur).toUpperCase();
   return { USD: 'US$', CLP: '$', EUR: '€', UF: 'UF ', GBP: '£', PEN: 'S/ ', MXN: 'MX$', BRL: 'R$' }[c] || c + ' ';
@@ -121,8 +138,8 @@ function tickFormat(step, o, type, l, pre, suf, max, dFixed, ticks) {
   const decFor = (s) => {
     const a = Math.abs(s) || 1;
     let d = Math.max(0, -Math.floor(Math.log10(a) + 1e-9));
-    while (d < 6 && Math.abs(Math.round(a * 10 ** d) - a * 10 ** d) > 1e-6 * 10 ** d) d++;
-    return Math.min(6, d);
+    while (d < 12 && Math.abs(Math.round(a * 10 ** d) - a * 10 ** d) > 1e-6 * 10 ** d) d++;
+    return Math.min(12, d);
   };
   let core;
   if (type === 'year') core = (v) => String(Math.round(v));
@@ -141,9 +158,12 @@ function tickFormat(step, o, type, l, pre, suf, max, dFixed, ticks) {
       ? (v) => formatNumber(v, decFor(step), l)
       : (v) => formatNumber(v / unit, decFor(step / unit), l, true) + sufx;
   } else core = (v) => formatNumber(v, dFixed ?? decFor(step), l);
+  // Una marca entera se escribe sin ",0" (600, no 600,0); las fraccionarias
+  // conservan sus decimales (0 · 0,5 · 1 · 1,5).
+  const zeroFrac = new RegExp('\\' + SEP[l].dec + '0+(?!\\d)');
   return (v) => {
     if (v === 0 && dFixed === undefined && type !== 'year') return pre + '0' + (type === 'percent' ? '%' : '') + suf;
-    const s = core(v);
+    const s = core(v).replace(zeroFrac, '');
     if (pre && s.startsWith('−')) return '−' + pre + s.slice(1) + suf;
     return pre + s + suf;
   };
@@ -163,7 +183,8 @@ export function parseDate(v) {
   if (v instanceof Date) return v.getTime();
   if (typeof v === 'string') {
     const m = ISO.exec(v.trim());
-    if (m) {
+    // Rangos válidos: "2020-21" (temporada) o "2024-13" no son fechas.
+    if (m && +m[2] >= 1 && +m[2] <= 12 && +(m[3] || 1) >= 1 && +(m[3] || 1) <= new Date(Date.UTC(+m[1], +m[2], 0)).getUTCDate() && +(m[4] || 0) < 24 && +(m[5] || 0) < 60 && +(m[6] || 0) < 60) {
       const ms = m[7] ? Math.round(+('0.' + m[7]) * 1000) : 0;
       let t = Date.UTC(+m[1], +m[2] - 1, +(m[3] || 1), +(m[4] || 0), +(m[5] || 0), +(m[6] || 0), ms);
       const z = m[8];
@@ -178,7 +199,7 @@ export function parseDate(v) {
   return NaN;
 }
 
-export const isDateLike = (v) => v instanceof Date || (typeof v === 'string' && ISO.test(v.trim()));
+export const isDateLike = (v) => v instanceof Date || (typeof v === 'string' && Number.isFinite(parseDate(v)));
 
 /**
  * Fecha legible. `unit`: 'year' | 'quarter' | 'month' | 'day' | 'hour' | 'minute'.
@@ -196,8 +217,10 @@ export function formatDate(ms, unit, locale = 'es', withYear = true) {
     return formatDate(ms, 'day', l, withYear !== 'day') + ' ' + hm;
   }
   if (unit === 'year') return String(y);
-  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' ? 'Q' : 'T');
+  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' || l === 'de' ? 'Q' : 'T');
   if (unit === 'month') return withYear ? `${m} ${y}` : m;
   const day = d.getUTCDate();
-  return l === 'en' ? `${m} ${day}${withYear ? ', ' + y : ''}` : `${day} ${m}${withYear ? ' ' + y : ''}`;
+  if (l === 'en') return `${m} ${day}${withYear ? ', ' + y : ''}`;
+  if (l === 'de') return `${day}. ${m}${withYear ? ' ' + y : ''}`;
+  return `${day} ${m}${withYear ? ' ' + y : ''}`;
 }

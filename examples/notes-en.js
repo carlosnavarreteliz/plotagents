@@ -2,6 +2,7 @@
 // (locale "es") to show the default number format; the page is in English.
 export const SECTIONS_EN = {
   Comparar: 'Compare',
+  Tablas: 'Tables',
   Tiempo: 'Time',
   Proyectos: 'Projects',
   'Partes de un todo': 'Part-to-whole',
@@ -43,6 +44,9 @@ export const NOTES_EN = {
   regresion: ['Regression with confidence band', 'Points, fitted line and a 95% band for the mean. `annotate` adds R² and n.'],
   'regresion-log': ['Regression on a log axis', '`logx: true` fits y ~ log(x) and draws a log x axis. With `hue`, one fit per group named at its end.'],
   conjunto: ['Joint plot', 'Scatter with marginal histograms on top and right, on the same scales. `kind: "reg"` adds the fit.'],
+  correlacion: ['Correlation matrix', 'Each pair once, below the diagonal, on a fixed diverging scale from −1 to 1. `alpha: 0.05` greys out correlations that are not significant; `method: "spearman"` uses ranks.'],
+  clustermap: ['Clustered matrix (clustermap)', '`cluster: true` (or `type: "clustermap"`) reorders the variables by hierarchical clustering and draws the dendrogram, so the blocks that move together stand out.'],
+  pares: ['Pair plot', 'Each pair as a scatter below the diagonal, each variable\'s distribution on it, and Pearson r above (per group with `hue`). `corner: true` keeps only the lower triangle.'],
   residuos: ['Residuals', 'To check a fit: residuals should scatter around zero with no pattern. `lowess` shows the trend.'],
   caja: ['Box plot', 'Median, quartiles and whiskers at 1.5 × IQR; outliers as hollow dots. Long labels switch to horizontal.'],
   violin: ['Split violin', 'Mirrored density (KDE) per group. With two `hue` levels and `split: true`, each half is a group; inside, the IQR and median.'],

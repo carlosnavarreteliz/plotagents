@@ -138,7 +138,9 @@ export function scatter(spec, theme) {
   // Tooltips: la capa densa guarda a lo más MAX_TIPS; no se arman los que se descartan.
   const MAX_TIPS = 20000;
   const hx = humanize(x), hy = humanize(y), hs = size ? humanize(size) : '';
-  const circles = sorted.map((p, i) => {
+  // Con xDomain/yDomain, los puntos fuera del rango no se dibujan fuera del área.
+  const vis = (p) => { const cx = xS(p.x), cy = yS(p.y); return cx >= inner.x - 1 && cx <= inner.x + inner.w + 1 && cy >= inner.y - 1 && cy <= inner.y + inner.h + 1; };
+  const circles = sorted.filter(vis).map((p, i) => {
     let t = '';
     if (i < MAX_TIPS || sorted.length <= 1500) {
       const lines = [p.name || '', `${hx}: ${fx(p.x)}`, `${hy}: ${fy(p.y)}`];
@@ -195,7 +197,7 @@ export function scatter(spec, theme) {
     }
     const placed = [];
     for (const p of chosen) {
-      if (!p.name) continue;
+      if (!p.name || !vis(p)) continue;
       const w = measure(p.name, 12, 500);
       const r = rOf(p);
       let lx = xS(p.x) + r + 4, ly = yS(p.y) + 4, anchor = 'start';

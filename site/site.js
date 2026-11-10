@@ -57,12 +57,16 @@
   }
   onTheme(function () { mounted.forEach(draw); });
 
+  // Idioma de la página: los textos que escribe este script siguen al <html lang>.
+  var ES = root.lang === 'es';
+  function t(en, es) { return ES ? es : en; }
+
   // Copiar al portapapeles.
   function copyText(text, btn) {
     var done = function () {
       if (!btn) return;
       var old = btn.textContent;
-      btn.textContent = 'Copied';
+      btn.textContent = t('Copied', 'Copiado');
       btn.classList.add('done');
       setTimeout(function () { btn.textContent = old; btn.classList.remove('done'); }, 1400);
     };
@@ -80,7 +84,7 @@
     (scope || document).querySelectorAll('.code').forEach(function (box) {
       if (box.querySelector('.copy')) return;
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'copy'; b.textContent = 'Copy';
+      b.type = 'button'; b.className = 'copy'; b.textContent = t('Copy', 'Copiar');
       b.addEventListener('click', function () { copyText(box.querySelector('code').textContent, b); });
       box.appendChild(b);
     });
@@ -96,7 +100,11 @@
       var order = ['auto', 'light', 'dark'];
       var next = order[(order.indexOf(getPref()) + 1) % 3];
       setPref(next);
-      tb.setAttribute('aria-label', 'Theme: ' + next);
+      tb.setAttribute('aria-label', t('Theme: ', 'Tema: ') + next);
+    });
+    // Elegir idioma a mano queda guardado (y desactiva el cambio automático).
+    document.querySelectorAll('[data-lang]').forEach(function (a) {
+      a.addEventListener('click', function () { try { localStorage.setItem('pa-lang', a.getAttribute('data-lang')); } catch (e) {} });
     });
     var mb = document.querySelector('.menu-btn');
     if (mb) mb.addEventListener('click', function () {
@@ -123,5 +131,5 @@
   });
 
   apply(getPref());
-  window.site = { isDark: isDark, onTheme: onTheme, mount: mount, unmount: unmount, redraw: draw, copyText: copyText, addCopyButtons: addCopyButtons };
+  window.site = { isDark: isDark, onTheme: onTheme, mount: mount, unmount: unmount, redraw: draw, copyText: copyText, addCopyButtons: addCopyButtons, t: t, es: ES };
 })();

@@ -116,7 +116,8 @@ export function hist(spec, theme) {
   const locale = spec.locale || 'es';
   const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
   const tr = T(isLog);
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
+  // Sin valores > 0 en log, un grupo queda vacío: fuera (leyenda fantasma y 0/0 al normalizar).
+  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
   const all = groups.flatMap((gr) => gr.values);
   if (!all.length) throw noNumbers(field, en, isLog);
   const N = all.length;

@@ -15,6 +15,8 @@ export function num(v) {
   if (typeof v === 'number') return v;
   if (v === null || v === undefined || v === '' || typeof v === 'boolean') return NaN;
   let s = String(v).trim().replace(/[\s$€£%]|US\$|CLP|UF/g, '').replace('−', '-');
+  // Solo símbolos ("%", "$", " ") no es el 0; y nada de "0x10" ni "Infinity".
+  if (!/^[+-]?(\d[\d.,]*|[.,]\d[\d.,]*)(e[+-]?\d+)?$/i.test(s)) return NaN;
   const hasC = s.includes(','), hasD = s.includes('.');
   if (hasC && hasD) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (hasC) s = /,\d{3}(?!\d)/.test(s) && !/,\d{1,2}$/.test(s) ? s.replace(/,/g, '') : s.replace(',', '.');
