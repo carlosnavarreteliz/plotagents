@@ -47,6 +47,7 @@ import { render, _bind, loadGeo } from './runtime.js';
 import { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } from './dashboard.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
+import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
 import { resolveColorScale, colorScaleNames, interpolate as interpolateColor, COLORMAPS, QUALITATIVE } from './colorscales.js';
 
 const RENDERERS = {
@@ -133,6 +134,18 @@ export function resolve(spec = {}) {
  * Lanza PlotError con una pista de corrección si el spec no se puede dibujar.
  */
 export function plot(spec) {
+  const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
+  if (Array.isArray(skins) && skins.length) {
+    const [specs, whens] = expandSkins({ ...spec, skins });
+    return mergeSkins(specs.map(plot), whens);
+  }
+  // Colores `var(--x, respaldo)`: los decide la página; se calcula con el respaldo.
+  if (spec && typeof spec === 'object') {
+    // Antes de withDefaults: ahí `colors` sólo deja pasar colores literales.
+    const full = { ...DEFAULTS, ...spec };
+    const vars = cssVars(full);
+    if (vars.size) return plotWithVars(full, vars, plot);
+  }
   let s = resolve(spec);
   s = applyTime(s);
   s = applyExclude(s);

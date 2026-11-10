@@ -43,6 +43,8 @@ export interface TableColumn {
 export type Row = Record<string, string | number | Date | null | undefined>;
 
 export type Format =
+  /** JS only: your own formatter, used for value labels, tooltips and axis ticks. */
+  | ((value: number) => string)
   | 'number' | 'compact' | 'percent' | 'currency' | 'integer'
   | { type?: 'number' | 'compact' | 'percent' | 'currency' | 'integer'; prefix?: string; suffix?: string; /** 0–20. */ decimals?: number; currency?: string; scale?: number };
 
@@ -106,6 +108,17 @@ export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
 export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle';
 
+/** A color set for `skins`: patches only colors. */
+export interface Skin {
+  /** CSS selector of an ancestor under which this skin applies (every skin but the first). */
+  when?: string;
+  theme?: ThemeInput;
+  palette?: string | string[];
+  ramp?: string | string[];
+  colorScale?: ColorScale;
+  colors?: Record<string, string>;
+}
+
 export interface Spec {
   type?: ChartType;
   data?: Row[] | Record<string, number>;
@@ -152,7 +165,10 @@ export interface Spec {
   xLabel?: string;
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
+  /** Entity → color. Any color may be "var(--name, #fallback)": the page decides it, the fallback is used to compute. */
   colors?: Record<string, string>;
+  /** Several color sets in one SVG, chosen by page CSS. The first is the default; the rest need `when` (a CSS selector of an ancestor). */
+  skins?: Skin[] | null;
   theme?: ThemeInput;
   /** Palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
   palette?: string | string[];

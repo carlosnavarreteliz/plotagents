@@ -292,7 +292,12 @@ export const schema = {
     diverging: bool('heatmap/choropleth: diverging color scale around 0 (or `midpoint`).'),
 
     // Appearance
-    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }.' },
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }. Any color may be a CSS variable with a fallback, "var(--accent, #3A47B8)": the page decides it, the fallback is used for contrast and tints.' },
+    skins: {
+      type: 'array',
+      description: 'Several color sets in one SVG; page CSS picks which one shows. Each item patches the colors of the spec (theme, palette, ramp, colorScale, colors). The first is the default (written in the attributes); every other one needs `when`, the CSS selector of an ancestor under which it applies (e.g. "html.dark"). Geometry and text must not change between skins.',
+      items: { type: 'object', properties: { when: { type: 'string' }, theme: {}, palette: {}, ramp: {}, colorScale: {}, colors: { type: 'object', additionalProperties: { type: 'string' } } } },
+    },
     palette: { description: 'Categorical colors: a name ("cdia", "okabe-ito", "tableau10", "udec"), a matplotlib qualitative palette ("tab10", "tab20", "Set1", "Set2", "Set3", "Pastel1", "Pastel2", "Paired", "Accent", "Dark2"), any colormap name (sampled, e.g. "viridis"), or a list of colors in fixed order.', ...strOrList },
     ramp: { description: 'Sequential ramp: a name ("indigo", "magenta", "teal", "amber"), any colormap name, or a list of colors from light to dark.', ...strOrList },
     colorScale: colorScaleSpec('Continuous color scale (heatmap, choropleth, treemap change, pointmap values): any matplotlib colormap name, case-insensitive, `_r` reverses ("viridis", "plasma", "inferno", "magma", "cividis", "Blues", "Greens", "YlOrRd", "RdBu", "coolwarm", "Spectral", "turbo", "twilight"…); diverging names imply a diverging scale. Or a list of hex colors, or { name | colors, reverse, mid }. Aliases: cmap, colormap. Qualitative palettes (tab10…) go in `palette`; avoid rainbow maps (jet, hsv).'),

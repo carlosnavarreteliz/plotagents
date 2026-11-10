@@ -384,7 +384,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (f.decimals !== undefined && !(Number.isInteger(f.decimals) && f.decimals >= 0 && f.decimals <= 20)) {
       err('format-decimals', L(`\`format.decimals: ${q(f.decimals)}\` debe ser un entero entre 0 y 20.`, `\`format.decimals: ${q(f.decimals)}\` must be an integer between 0 and 20.`), L('Usa entre 0 y 3 decimales: `format: { decimals: 1 }`.', 'Use 0 to 3 decimals: `format: { decimals: 1 }`.'));
     }
-  } else if (f !== undefined && f !== null) err('enum-format', L('`format` debe ser un texto o un objeto.', '`format` must be a string or an object.'), 'format: "percent" | { prefix: "$", decimals: 0 }');
+  } else if (f !== undefined && f !== null && typeof f !== 'function') err('enum-format', L('`format` debe ser un texto o un objeto.', '`format` must be a string or an object.'), 'format: "percent" | { prefix: "$", decimals: 0 }');
   if (spec.stack !== undefined && typeof spec.stack !== 'boolean') {
     if (spec.stack !== 'percent') {
       const near = typeof spec.stack === 'string' ? didYouMean(spec.stack, ['percent']) : null;

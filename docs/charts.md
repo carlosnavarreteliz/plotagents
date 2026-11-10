@@ -14,7 +14,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `series` / `hue` | Field that splits the data into colored groups. |
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. From JavaScript, also a function `(value) => string`: your own number rules for labels, tooltips and axis ticks. |
 | `locale` | `"es"` (default: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"`, or `"auto"`: recognized from the title, subtitle, column names and categories. Tables use `"auto"` when `locale` is omitted. |
 | `xLabel`, `yLabel` | Axis titles (horizontal, never rotated). |
 | `xScale`, `yScale` | `"log"` where it makes sense. |
