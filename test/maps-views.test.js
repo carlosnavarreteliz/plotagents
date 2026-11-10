@@ -264,3 +264,11 @@ test('mapSprite writes one <path id> per region; sprite draws <use> through one 
   assert.throws(() => plot({ ...base, sprite: '/m.svg#x' }), /sprite/);
   assert.match(lint({ ...base, title: 't', source: 's', sprite: 'x.svg#a' }).errors.map((e) => e.code).join(), /sprite/);
 });
+
+test('choropleth: legend false also drops a numeric scale bar', () => {
+  const data = [{ r: 'Antofagasta', v: 1 }, { r: 'Biobío', v: 5 }, { r: 'Los Lagos', v: 9 }];
+  const on = plot({ type: 'choropleth', geo: 'chile', data, key: 'r', value: 'v' });
+  const off = plot({ type: 'choropleth', geo: 'chile', data, key: 'r', value: 'v', legend: false });
+  assert.match(on, /pa-map-legend/);
+  assert.doesNotMatch(off, /pa-map-legend/);
+});

@@ -713,7 +713,8 @@ function baseChart(spec, theme, kind, views = null) {
     }
     if (kind === 'choropleth' && vv.length) {
       const s1 = colorScale(vv, sp, th);
-      return { sc: s1, lg: legendBar(s1, area.x, area.y, area.w, th, fm.tick ? (v) => fm(v) : fm, { title: sp.legendTitle ?? label ?? humanize(mv.valueF), missing: missingOf(sp, mv), locale, gid, gradId, dashed: dashedKey }) };
+      //: `legend: false` también quita la barra de una escala numérica (antes se ignoraba)
+      return { sc: s1, lg: sp.legend === false ? { svg: '', h: 0 } : legendBar(s1, area.x, area.y, area.w, th, fm.tick ? (v) => fm(v) : fm, { title: sp.legendTitle ?? label ?? humanize(mv.valueF), missing: missingOf(sp, mv), locale, gid, gradId, dashed: dashedKey }) };
     }
     return null;
   };
