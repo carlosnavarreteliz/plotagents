@@ -47,6 +47,7 @@ const { render, _bind, loadGeo } = __req("src/runtime.js");
 const { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } = __req("src/dashboard.js");
 const { makeFormat, formatNumber, formatCompact } = __req("src/format.js");
 const { esc } = __req("src/svg.js");
+const { expandSkins, mergeSkins, cssVars, plotWithVars } = __req("src/skins.js");
 const { resolveColorScale, colorScaleNames, interpolate: interpolateColor, COLORMAPS, QUALITATIVE } = __req("src/colorscales.js");
 
 const RENDERERS = {
@@ -130,6 +131,16 @@ function resolve(spec = {}) {
  * Lanza PlotError con una pista de corrección si el spec no se puede dibujar.
  */
 function plot(spec) {
+  const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
+  if (Array.isArray(skins) && skins.length) {
+    const [specs, whens] = expandSkins({ ...spec, skins });
+    return mergeSkins(specs.map(plot), whens);
+  }
+  if (spec && typeof spec === 'object') {
+    const full = { ...DEFAULTS, ...spec };
+    const vars = cssVars(full);
+    if (vars.size) return plotWithVars(full, vars, plot);
+  }
   let s = resolve(spec);
   s = applyTime(s);
   s = applyExclude(s);
@@ -1450,6 +1461,12 @@ const isYearLike = (vals) =>
  * `values` permite autodetectar (p. ej. porcentajes ya multiplicados por 100).
  */
 function makeFormat(fmt, locale = 'es', values = []) {
+  if (typeof fmt === 'function') {
+    const f = (v) => (v === null || v === undefined || Number.isNaN(v) ? '' : String(fmt(v)));
+    f.type = 'custom';
+    f.tick = () => f;
+    return f;
+  }
   const o = typeof fmt === 'string' ? { type: fmt } : { ...(fmt || {}) };
   const l = loc(locale);
   const nums = values.filter((v) => Number.isFinite(v));
@@ -11545,7 +11562,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (f.decimals !== undefined && !(Number.isInteger(f.decimals) && f.decimals >= 0 && f.decimals <= 20)) {
       err('format-decimals', L(`\`format.decimals: ${q(f.decimals)}\` debe ser un entero entre 0 y 20.`, `\`format.decimals: ${q(f.decimals)}\` must be an integer between 0 and 20.`), L('Usa entre 0 y 3 decimales: `format: { decimals: 1 }`.', 'Use 0 to 3 decimals: `format: { decimals: 1 }`.'));
     }
-  } else if (f !== undefined && f !== null) err('enum-format', L('`format` debe ser un texto o un objeto.', '`format` must be a string or an object.'), 'format: "percent" | { prefix: "$", decimals: 0 }');
+  } else if (f !== undefined && f !== null && typeof f !== 'function') err('enum-format', L('`format` debe ser un texto o un objeto.', '`format` must be a string or an object.'), 'format: "percent" | { prefix: "$", decimals: 0 }');
   if (spec.stack !== undefined && typeof spec.stack !== 'boolean') {
     if (spec.stack !== 'percent') {
       const near = typeof spec.stack === 'string' ? didYouMean(spec.stack, ['percent']) : null;
@@ -11918,7 +11935,12 @@ const schema = {
     panelSize: number('pairplot: maximum panel size in px.'),
     diverging: bool('heatmap/choropleth: diverging color scale around 0 (or `midpoint`).'),
 
-    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }.' },
+    colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }. Any color may be a CSS variable with a fallback, "var(--accent, #3A47B8)": the page decides it, the fallback is used for contrast and tints.' },
+    skins: {
+      type: 'array',
+      description: 'Several color sets in one SVG; page CSS picks which one shows. Each item patches the colors of the spec (theme, palette, ramp, colorScale, colors). The first is the default (written in the attributes); every other one needs `when`, the CSS selector of an ancestor under which it applies (e.g. "html.dark"). Geometry and text must not change between skins.',
+      items: { type: 'object', properties: { when: { type: 'string' }, theme: {}, palette: {}, ramp: {}, colorScale: {}, colors: { type: 'object', additionalProperties: { type: 'string' } } } },
+    },
     palette: { description: 'Categorical colors: a name ("cdia", "okabe-ito", "tableau10", "udec"), a matplotlib qualitative palette ("tab10", "tab20", "Set1", "Set2", "Set3", "Pastel1", "Pastel2", "Paired", "Accent", "Dark2"), any colormap name (sampled, e.g. "viridis"), or a list of colors in fixed order.', ...strOrList },
     ramp: { description: 'Sequential ramp: a name ("indigo", "magenta", "teal", "amber"), any colormap name, or a list of colors from light to dark.', ...strOrList },
     colorScale: colorScaleSpec('Continuous color scale (heatmap, choropleth, treemap change, pointmap values): any matplotlib colormap name, case-insensitive, `_r` reverses ("viridis", "plasma", "inferno", "magma", "cividis", "Blues", "Greens", "YlOrRd", "RdBu", "coolwarm", "Spectral", "turbo", "twilight"…); diverging names imply a diverging scale. Or a list of hex colors, or { name | colors, reverse, mid }. Aliases: cmap, colormap. Qualitative palettes (tab10…) go in `palette`; avoid rainbow maps (jet, hsv).'),
@@ -12128,18 +12150,28 @@ function attach(root) {
     for (let t = 0.05; ratio(fg, bg) < 4.5 && t <= 1.001; t += 0.05) bg = hex(A.map((v, i) => v + (to[i] - v) * t));
     return { bg, fg };
   };
+  const skinned = (n, attr) => {
+    const st = n && n.getAttribute ? n.getAttribute('style') || '' : '';
+    const m = st.match(new RegExp('(?:^|;)\\s*' + attr + ':var\\((--pa-s\\d+)\\)'));
+    if (!m || typeof getComputedStyle !== 'function') return null;
+    return getComputedStyle(svg).getPropertyValue(m[1]).trim() || null;
+  };
+  const isLit = (c) => !!c && (/^#/.test(c) || /^rgba?\(/i.test(c));
   const markColor = (node) => {
     if (!node) return null;
     const dc = node.getAttribute && (node.getAttribute('data-color') || (node.querySelector('[data-color]') || { getAttribute: () => null }).getAttribute('data-color'));
-    if (dc && /^#/.test(dc)) return dc;
     const cands = [node, ...node.querySelectorAll('[fill],[stroke]')];
+    if (dc && /^#/.test(dc)) {
+      for (const n of cands) if (norm(n.getAttribute && n.getAttribute('fill')) === norm(dc)) return skinned(n, 'fill') || dc;
+      return dc;
+    }
     for (const n of cands) {
       const f = n.getAttribute && n.getAttribute('fill');
-      if (f && /^#/.test(f)) return f;
+      if (isLit(f)) return skinned(n, 'fill') || f;
     }
     for (const n of cands) {
       const st = n.getAttribute && n.getAttribute('stroke');
-      if (st && /^#/.test(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return st;
+      if (isLit(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return skinned(n, 'stroke') || st;
     }
     return null;
   };
@@ -13353,6 +13385,236 @@ function safeDashboard(spec) {
 
 
 return { "_bindDashboard": _bindDashboard, "packRows": packRows, "balancedRows": balancedRows, "computeKpi": computeKpi, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "kpiMarkup": kpiMarkup, "dashboardMarkup": dashboardMarkup, "filterSpec": filterSpec, "mountDashboard": mountDashboard, "renderDashboard": renderDashboard, "dashboard": dashboard, "safeDashboard": safeDashboard, "DASH_CSS": DASH_CSS };
+});
+__def("src/skins.js", function () {
+
+const { PlotError } = __req("src/data.js");
+
+const COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g;
+const PRESENTATION = new Set(['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color', 'color']);
+const OWN = new Set(['when', 'name']);
+
+/** Parte un SVG en [texto, color, texto, color, …, texto]. */
+function tokens(svg) {
+  const out = [];
+  let last = 0;
+  for (const m of svg.matchAll(COLOR)) {
+    out.push(svg.slice(last, m.index), m[0]);
+    last = m.index + m[0].length;
+  }
+  out.push(svg.slice(last));
+  return out;
+}
+
+/** Dónde cae la posición `at` de `svg`: dentro de una etiqueta (con su atributo), de un <style> o en texto. */
+function contextAt(svg, at) {
+  const lt = svg.lastIndexOf('<', at);
+  const gt = svg.lastIndexOf('>', at);
+  if (lt > gt) {
+    const head = svg.slice(lt, at);
+    const m = head.match(/([\w:-]+)="[^"]*$/);
+    return { kind: 'tag', start: lt, attr: m ? m[1] : null };
+  }
+  const open = svg.lastIndexOf('<style', at);
+  const close = svg.lastIndexOf('</style', at);
+  return { kind: open > close ? 'css' : 'text' };
+}
+
+/** Suma `prop:valor` al atributo style de la etiqueta que empieza en `start`. */
+function addStyle(svg, start, decl) {
+  const end = svg.indexOf('>', start);
+  const tag = svg.slice(start, end);
+  const m = tag.match(/\sstyle="([^"]*)"/);
+  let next;
+  if (m) {
+    const prop = decl.slice(0, decl.indexOf(':'));
+    if (new RegExp('(?:^|;)\\s*' + prop + '\\s*:').test(m[1])) return svg;
+    const body = m[1].trim().replace(/;$/, '');
+    next = tag.replace(m[0], ` style="${body ? body + ';' : ''}${decl}"`);
+  } else {
+    const selfClose = tag.endsWith('/');
+    next = (selfClose ? tag.slice(0, -1) : tag) + ` style="${decl}"` + (selfClose ? '/' : '');
+  }
+  return svg.slice(0, start) + next + svg.slice(end);
+}
+
+/** Lanza si los dibujos difieren en algo que no sea un color. */
+function same(parts, msg, fix) {
+  const n = parts[0].length;
+  for (let i = 1; i < parts.length; i++) {
+    const p = parts[i];
+    if (!(p.length === n && p.every((t, j) => j % 2 === 1 || t === parts[0][j]))) throw new PlotError(msg(i), fix);
+  }
+}
+
+/**
+ * Reescribe los colores `at` = [[índice del token, css(color), decl]] de `svg`
+ * (cuyas piezas son `base`). En CSS y en atributos style, el color pasa a
+ * `css(color)`; en un atributo de presentación se suma `prop:decl` al style y
+ * el atributo conserva el literal. En data-* y en el texto no se toca.
+ */
+function rewrite(svg, base, at) {
+  const offsets = [];
+  let pos = 0;
+  for (const t of base) { offsets.push(pos); pos += t.length; }
+  for (let k = at.length - 1; k >= 0; k--) {
+    const [j, css, decl] = at[k];
+    const start = offsets[j];
+    const color = base[j];
+    const c = contextAt(svg, start);
+    if (c.kind === 'css' || (c.kind === 'tag' && c.attr === 'style')) {
+      svg = svg.slice(0, start) + css(color) + svg.slice(start + color.length);
+    } else if (c.kind === 'tag' && PRESENTATION.has(c.attr)) {
+      svg = addStyle(svg, c.start, `${c.attr}:${decl}`);
+    }
+  }
+  return svg;
+}
+
+
+const VAR = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+?))?\s*\)$/;
+const NOT_STYLE = new Set(['data', 'compareData', 'geo', 'layers', 'markers']);
+
+function rgbOf(c) {
+  const h = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
+  if (h) {
+    const x = h[1].length === 3 ? h[1].replace(/./g, (d) => d + d) : h[1];
+    return [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16));
+  }
+  const m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(c);
+  return m ? [+m[1], +m[2], +m[3]] : null;
+}
+const hex6 = (rgb) => '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join('');
+
+/** Las variables de color del spec: expresión → { name, fallback, probe }. */
+function cssVars(spec) {
+  const found = new Map();
+  const walk = (v, key) => {
+    if (typeof v === 'string') {
+      const m = VAR.exec(v.trim());
+      if (!m || found.has(v)) return;
+      const fb = m[2] && m[2].trim();
+      if (!fb || !rgbOf(fb)) {
+        throw new PlotError(`El color \`${v}\` necesita un respaldo hex o rgb(): con él se calculan contrastes y tintes.`, `var(${m[1]}, #3A47B8)`);
+      }
+      found.set(v, { name: m[1], fallback: fb });
+    } else if (Array.isArray(v)) v.forEach((x) => walk(x));
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (!(key === undefined && NOT_STYLE.has(k))) walk(x, k);
+  };
+  walk(spec);
+  const taken = new Set([...found.values()].map((v) => hex6(rgbOf(v.fallback))));
+  let k = 0;
+  for (const v of found.values()) {
+    const [r, g, b] = rgbOf(v.fallback);
+    let probe;
+    do { k++; probe = hex6([r, g ^ (k >> 8 & 1), b ^ (k & 255)]); } while (taken.has(probe));
+    taken.add(probe);
+    v.probe = probe;
+  }
+  return found;
+}
+
+function replaceVars(v, map, which, key) {
+  if (typeof v === 'string') return map.has(v) ? map.get(v)[which] : v;
+  if (Array.isArray(v)) return v.map((x) => replaceVars(x, map, which));
+  if (v && typeof v === 'object' && !(v instanceof Date)) {
+    const out = {};
+    for (const [k, x] of Object.entries(v)) out[k] = key === undefined && NOT_STYLE.has(k) ? x : replaceVars(x, map, which, k);
+    return out;
+  }
+  return v;
+}
+
+/** Dibuja un spec con colores `var(--x, respaldo)`; `draw` es plot() sin variables. */
+function plotWithVars(spec, map, draw) {
+  const a = draw(replaceVars(spec, map, 'fallback'));
+  const b = draw(replaceVars(spec, map, 'probe'));
+  const pa = tokens(a);
+  const pb = tokens(b);
+  same([pa, pb], () => 'Un color `var()` cambió algo más que colores al dibujarse.', 'Usa un respaldo cercano al color que la página va a dar.');
+  const byProbe = new Map([...map.values()].map((v) => [v.probe, v]));
+  const at = [];
+  for (let j = 1; j < pa.length; j += 2) {
+    if (pa[j].toLowerCase() === pb[j].toLowerCase()) continue;
+    const v = byProbe.get(pb[j].toLowerCase());
+    if (!v) continue; // un derivado: queda calculado con el respaldo
+    at.push([j, (c) => `var(${v.name}, ${c})`, `var(${v.name}, ${pa[j]})`]);
+  }
+  return rewrite(a, pa, at);
+}
+
+/** Un hash corto y estable (para el nombre de la clase de la piel). */
+function hash(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(36);
+}
+
+/** El spec de una piel: el spec sin `skins`, con el parche encima (theme se fusiona). */
+function skinSpec(spec, patch) {
+  const { skins, ...base } = spec;
+  const s = { ...base, skins: null };
+  for (const [k, v] of Object.entries(patch || {})) {
+    if (OWN.has(k)) continue;
+    if (k === 'colors' && v && typeof v === 'object') s.colors = { ...(base.colors || {}), ...v };
+    else if (k === 'theme' && v && typeof v === 'object' && base.theme && typeof base.theme === 'object' && v.extends === undefined) s.theme = { ...base.theme, ...v };
+    else s[k] = v;
+  }
+  return s;
+}
+
+/**
+ * Une los SVG de varias pieles en uno. `svgs[0]` es la piel por defecto;
+ * `whens[i]` es el selector CSS (de un ancestro) bajo el que rige la piel i.
+ */
+function mergeSkins(svgs, whens) {
+  if (svgs.length === 1) return svgs[0];
+  const parts = svgs.map(tokens);
+  const n = parts[0].length;
+  same(parts, (i) => `La piel ${i + 1} cambia algo más que colores (posiciones, textos u orden).`,
+    'Una piel sólo puede traer theme, palette, ramp, colorScale y colors: lo demás va en el spec.');
+  const vars = new Map();
+  const at = []; // [índice del token, nombre de la variable]
+  for (let j = 1; j < n; j += 2) {
+    const combo = parts.map((p) => p[j]);
+    if (combo.every((c) => c.toLowerCase() === combo[0].toLowerCase())) continue;
+    const key = combo.join('|');
+    if (!vars.has(key)) vars.set(key, { name: `--pa-s${vars.size}`, combo });
+    at.push([j, vars.get(key).name]);
+  }
+  if (!vars.size) return svgs[0];
+
+  let svg = rewrite(svgs[0], parts[0], at.map(([j, name]) => [j, (c) => `var(${name}, ${c})`, `var(${name})`]));
+
+  const cls = 'pa-skin-' + hash(svgs.join('\u0000'));
+  const decl = (i) => [...vars.values()].map((v) => `${v.name}:${v.combo[i]}`).join(';');
+  const rules = [`.${cls}{${decl(0)}}`];
+  for (let i = 0; i < svgs.length; i++) {
+    if (whens[i]) rules.push(`${whens[i]} .${cls}{${decl(i)}}`);
+  }
+  svg = svg.replace(/^<svg\b([^>]*?)\sclass="([^"]*)"/, (m, a, c) => `<svg${a} class="${c} ${cls}"`);
+  if (!svg.includes(cls)) svg = svg.replace(/^<svg\b/, `<svg class="${cls}"`);
+  const css = rules.join('');
+  if (svg.includes('</style>')) svg = svg.replace('</style>', css + '</style>');
+  else svg = svg.replace(/^(<svg\b[^>]*>)/, `$1<style>${css}</style>`);
+  return svg;
+}
+
+/** Valida `skins` y devuelve [specs, whens]. */
+function expandSkins(spec) {
+  const list = spec.skins;
+  if (!Array.isArray(list) || !list.length) throw new PlotError('`skins` debe ser una lista de parches del spec.', 'skins: [{ palette: [...] }, { when: "html.dark", palette: [...] }]');
+  list.forEach((p, i) => {
+    if (!p || typeof p !== 'object') throw new PlotError(`skins[${i}] debe ser un objeto.`, 'skins: [{ palette: [...] }, { when: "html.dark", palette: [...] }]');
+    if (i > 0 && (typeof p.when !== 'string' || !p.when.trim())) throw new PlotError(`skins[${i}] necesita \`when\`: el selector CSS bajo el que rige.`, 'when: "html.dark"');
+    for (const k of ['data', 'type', 'x', 'y', 'series', 'path', 'value', 'width', 'height']) {
+      if (k in p) throw new PlotError(`skins[${i}] no puede cambiar \`${k}\`: una piel sólo cambia colores.`, 'Mueve ese campo al spec.');
+    }
+  });
+  return [list.map((p) => skinSpec(spec, p)), list.map((p) => (p.when ? p.when.trim() : null))];
+}
+
+return { "cssVars": cssVars, "plotWithVars": plotWithVars, "skinSpec": skinSpec, "mergeSkins": mergeSkins, "expandSkins": expandSkins };
 });
 global.plotagents = __req("src/index.js");
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -106,6 +106,32 @@ Usa `pairs: 'all'` para diagramas de dispersión y mapas, donde dos colores cual
 
 `lint(spec)` ejecuta esta validación de forma automática cada vez que una especificación trae su propia paleta. Los mensajes siguen `locale` (español por defecto, `'en'` para inglés).
 
+## Colores que decide la página
+
+Cualquier color de un spec (`colors`, `palette`, `ramp`, `colorScale`, cualquier clave del tema) puede ser una variable CSS con un respaldo:
+
+```js
+plot({ ...spec, palette: ['var(--accent, #3A47B8)'], theme: { ink: 'var(--ink, #141A3F)', grid: 'var(--rule, #E9EBF3)' } });
+```
+
+La marca se escribe con la variable, así que una sección, un modo oscuro o un cambio de marca en la página la recolorea sin un SVG nuevo. Con el respaldo calcula la biblioteca (el texto sobre una marca elige blanco u oscuro a partir de él, los tintes se mezclan desde él), y es lo que muestra el SVG fuera de la página, en un `<img>` o en un archivo. Una variable sin respaldo hex o `rgb()` es un error.
+
+## Pieles: varios juegos de colores en un SVG
+
+Un sitio estático no puede entregar otro relleno cuando el lector cambia de aspecto: el relleno ya está en el archivo. `skins` escribe todos los juegos en el mismo SVG y deja que el CSS de la página elija:
+
+```js
+plot({
+  ...spec,
+  skins: [
+    { palette: ['#6E86C8', '#D9714F'] },                                     // la de siempre, en los atributos
+    { when: 'html.classic', palette: ['#0B3F8C', '#D52B1E'], theme: { surface: '#FFFFFF' } },
+  ],
+});
+```
+
+Cada piel cambia sólo colores (`theme`, `palette`, `ramp`, `colorScale`, `colors`) y se dibuja aparte; donde dos pieles difieren, la marca recibe una variable CSS definida en el `<style>` del propio SVG bajo el selector `when` de cada piel. Los atributos conservan la primera piel, así que un `<img>` y el resaltado desde la leyenda siguen funcionando. Posiciones, textos y orden tienen que salir iguales en todas las pieles; si no, `plot` lanza un error. Las pieles se combinan con los colores como variables CSS, y `configure({ skins })` las fija para todos los gráficos (`skins: null` las apaga en uno).
+
 ## El color sigue a la entidad
 
 Los colores se asignan a entidades, nunca a posiciones:

@@ -106,6 +106,32 @@ Use `pairs: 'all'` for scatter plots and maps, where any two colors can sit next
 
 `lint(spec)` runs this automatically whenever a spec brings its own palette. Messages follow `locale` (Spanish by default, `'en'` for English).
 
+## Colors the page decides
+
+Any color in a spec (`colors`, `palette`, `ramp`, `colorScale`, any theme key) can be a CSS variable with a fallback:
+
+```js
+plot({ ...spec, palette: ['var(--accent, #3A47B8)'], theme: { ink: 'var(--ink, #141A3F)', grid: 'var(--rule, #E9EBF3)' } });
+```
+
+The mark is written with the variable, so a section, a dark mode or a brand switch on the page recolors it with no new SVG. The fallback is what the library computes with (text on a filled mark picks white or dark from it, tints are mixed from it) and what an SVG shows outside the page, in an `<img>` or a file. A variable without a hex or `rgb()` fallback is an error.
+
+## Skins: several color sets in one SVG
+
+A static site cannot hand a reader a different fill when they switch the look: the fill is already in the file. `skins` writes every set into the same SVG and lets the page's CSS pick:
+
+```js
+plot({
+  ...spec,
+  skins: [
+    { palette: ['#6E86C8', '#D9714F'] },                                     // default, in the attributes
+    { when: 'html.classic', palette: ['#0B3F8C', '#D52B1E'], theme: { surface: '#FFFFFF' } },
+  ],
+});
+```
+
+Each skin patches only colors (`theme`, `palette`, `ramp`, `colorScale`, `colors`) and is drawn on its own; wherever two skins disagree, the mark gets a CSS variable defined in the SVG's own `<style>` under each skin's `when` selector. Attributes keep the first skin, so an `<img>` and the legend highlight still work. Positions, text and order must come out the same in every skin, or `plot` throws. Skins nest with CSS-variable colors, and `configure({ skins })` sets them for every chart (`skins: null` turns them off for one).
+
 ## Color follows the entity
 
 Colors are assigned to entities, never to positions:

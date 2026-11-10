@@ -14,7 +14,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `series` / `hue` | Campo que divide los datos en grupos de color. |
 | `highlight` | Un nombre o una lista: destaca esos y atenúa el resto. |
 | `colors` | `{ "name": "#hex" }` para fijar el color de una entidad. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. Desde JavaScript, también una función `(valor) => texto`: tus propias reglas para escribir cifras en etiquetas, tooltips y marcas del eje. |
 | `locale` | `"es"` (por defecto: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"` o `"auto"`: se reconoce a partir del título, el subtítulo, los nombres de columna y las categorías. Las tablas usan `"auto"` cuando omites `locale`. |
 | `xLabel`, `yLabel` | Títulos de los ejes (horizontales, nunca rotados). |
 | `xScale`, `yScale` | `"log"` donde tenga sentido. |
