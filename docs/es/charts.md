@@ -228,7 +228,8 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `label` | Entrada por filas: campo con el nombre visible de cada hoja. |
 | `series` | Entrada por filas: un campo que colorea cada hoja (una muestra al pie y la barra de peso), con leyenda salvo `legend: false`. No necesita `cut`; `colors` fija el color de una categoría. |
 | `size` | Entrada por filas: el peso de cada hoja (cuántas cosas cuelgan de ella), una barra con su cifra junto al nombre (`sizeFormat` le da formato). Cada unión suma sus hojas. En vertical va sólo en el tooltip. |
-| `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. |
+| `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. Un `"\n"` en el valor la parte en varias líneas, y cada fila crece hasta que quepa la más larga. |
+| `tickFormat` | Formato de las marcas del eje de alturas, aparte de `format` (tooltips): `format: { decimals: 2 }, tickFormat: "integer"`. También sirve `xFormat` (horizontal) o `yFormat` (vertical). El eje lleva hasta 4 marcas, menos si sus rótulos se tocarían (un `treeWidth` angosto). |
 | `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
 | `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
 | `labelWidth` / `treeWidth` | La columna de nombres ocupa a lo más el 30 % del ancho (120 px en vertical); `labelWidth` fija ese tope en px. `treeWidth` (horizontal) fija en cambio el ancho del árbol y deja a los nombres todo lo demás: `width: 1236, treeWidth: 250`. |
@@ -276,9 +277,12 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `inner` | Violín: `"box"` (por defecto), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violín con dos niveles de `hue`: una mitad cada uno. |
 | `scale` | Ancho del violín: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. Cada punto de strip y swarm lleva el `tooltip` de su fila (`{ title, text, replace: true }`). |
-| `clamp` | Con un dominio de valores (`xDomain` en horizontal, `yDomain` en vertical): lo que cae fuera se dibuja en el borde, y la marca del borde lo dice («≤ 0,0001 %», «≥ 100 %») cuando algún valor quedó más allá. En un eje log, un 0 va al borde de abajo. |
-| `yLabelPosition` | Gráficos horizontales: `"above"` escribe el nombre de cada fila sobre ella, alineado a la izquierda, y el eje de valores se queda con todo el ancho (un teléfono). |
+| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. Cada punto de strip y swarm lleva el `tooltip` de su fila (`{ title, text, replace: true }`). En un enjambre `radius` es un punto de partida: se achica hasta que el grupo más ancho quepa en su banda. |
+| `fixedRadius` | Enjambre: `radius` queda tal cual. En horizontal, sin `rowHeight` ni `height`, las filas crecen hasta que quepa el grupo más ancho; si no, los puntos que no caben se aprietan contra el borde de su banda y se tocan. |
+| `rowHeight` | Gráficos horizontales: px por fila de categoría, el paso exacto entre filas (46 por omisión; con `hue` y `dodge`, 22 por grupo + 12). Fija el alto si no hay `height`. |
+| `rowLine` | Una guía a lo largo de cada categoría, de punta a punta del eje de valores y detrás de las marcas: `true` continua, `"dashed"` punteada (2 3), en el color de la grilla del tema. |
+| `clamp` | Con un dominio de valores (`xDomain` en horizontal, `yDomain` en vertical): lo que cae fuera se dibuja en el borde, y la marca del borde lo dice («≤ 0,0001 %», «≥ 100 %») cuando algún valor quedó más allá. `"always"` marca los dos bordes aunque nada quede más allá. En un eje log, un 0 va al borde de abajo. |
+| `yLabelPosition` | Gráficos horizontales: `"above"` escribe el nombre de cada fila sobre ella, alineado a la izquierda, y el eje de valores se queda con todo el ancho (un teléfono). En strip y swarm cada fila es una franja de `rowHeight` con el nombre arriba y los puntos debajo, el nombre justo sobre su punto más alto. |
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Eje de categorías con grupos y rótulos raleados, como en `bar`. |
@@ -505,7 +509,7 @@ Un mapa ya calculado (el espacio de productos, una red de conocimiento) suele pe
 | `stretch` | Sólo con `layout: "preset"`: x e y se escalan por separado para llenar el área, para posiciones ya normalizadas por eje (MDS en 0–1). |
 | `minRadius` | Radio mínimo de un nodo en px (2,5 por omisión). |
 | `labelWidth` | Ancho máximo del nombre de un nodo en px antes de cortarlo con «…» (150 por omisión). |
-| `edgeTip` | `false` no escribe tooltip en las aristas (`tooltip: false` también las deja sin él). Cientos de aristas con su propio texto pesan más que el dibujo. |
+| `edgeTip` | `false` no escribe tooltip en las aristas (`tooltip: false` también las deja sin él). Cientos de aristas con su propio texto pesan más que el dibujo. El tooltip de una arista nombra sus dos nodos como lo hacen sus propios tooltips: con `tooltip: { title: "full" }`, por ese campo de `nodes` (el nombre entero); si no, por su rótulo. |
 | `href` | Un campo de `nodes` con una URL: cada nodo es un enlace. |
 
 ### `chord`
@@ -525,13 +529,14 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | Opción | Qué hace |
 |---|---|
 | `colorScale: { colors, breaks }` | Clases discretas en vez de un degradado ([escalas de color](colorscales.md#clases)); la leyenda pasa a ser una clave escalonada con los cortes escritos debajo, con `format`. |
-| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. `midClass: { color }` la pinta en ese color, así un parche de piel la fija sin reemplazar el tema. |
+| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. `midClass: { color }` la pinta en ese color, así un parche de piel la fija sin reemplazar el tema. Con `midClass`, `colorScale.colors` puede traer además un color por corte (uno menos que las clases): los colores divergentes sin el del medio, p. ej. una paleta divergente de 6 con 6 cortes. El color del medio se inserta en la posición k = número de cortes negativos (contando desde arriba con `reverse`). Pide que el 0 quede estrictamente dentro de los cortes y no sea un corte; si no, la cuenta tiene que calzar como siempre. |
 | `missingLabel` | Lo que dice el tooltip de una celda sin valor (`"—"` por omisión): `"sin dato"`. |
 | `missing` | Celdas sin valor: `"tint"` (por defecto), `"plain"` (sólo el borde), `"hatch"` (rayado de «sin dato») o `"gap"` (nada). |
 | `floor` / `ceiling` | Los valores bajo / sobre se dibujan como celdas vacías: el valor existe (el tooltip lo muestra), pero no se colorea ni estira la escala. |
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
 | `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. Un nombre que no cabe se corta, y va entero en su tooltip. |
 | `groupColors` | `{ [grupo]: color }`: cada grupo con color lleva una franja de 3 px de su color en el borde de su banda que mira a la grilla (el matiz de una familia bajo sus sectores), en vez del tinte alterno. |
+| `groupStripe` | Dónde va la franja de `groupColors`: `"grid"` (por omisión) en la banda de grupos, o `"labels"` en el borde de la grilla del lado de los rótulos, entre los rótulos y las celdas (sobre la grilla con `xLabelPosition: "top"`, a su izquierda en las filas). La banda de grupos queda entonces sólo con los nombres. |
 | `cornerLabel` | Un título en la esquina vacía donde se encuentran los rótulos de fila y de columna: `"nació en ↓ / vive en →"`; `"\n"` lo parte en líneas. La columna de rótulos de fila se ensancha para que quepa (con el mismo tope); lo que no cabe se corta y va entero en el tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
 | `rowTip` | Tooltip del rótulo de cada fila, desde este campo: lo que es de toda la fila y no tiene que repetirse en cada celda. Desde JS, también una función del rótulo. |

@@ -228,8 +228,9 @@ How things group, and at what height they join. The tree comes in already comput
 | `label` | Rows input: field with the display name of each leaf. |
 | `series` | Rows input: a field that colors each leaf (a swatch at its end and the weight bar), with a legend unless `legend: false`. No `cut` needed; `colors` fixes a category's color. |
 | `size` | Rows input: each leaf's weight (how many things hang off it), a bar with its figure beside the name (`sizeFormat` formats it). Each join adds up its leaves. Vertical trees show it in the tooltip only. |
-| `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. |
+| `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. A `"\n"` in the value splits it into several lines, and every row grows to fit the longest. |
 | `xLabel` | Title of the height axis ("Ward merge height": a merge height is not a distance, say what it is). |
+| `tickFormat` | Format of the height-axis ticks, apart from `format` (tooltips): `format: { decimals: 2 }, tickFormat: "integer"`. `xFormat` (horizontal) or `yFormat` (vertical) also work. The axis takes up to 4 ticks, fewer when their labels would touch (a narrow `treeWidth`). |
 | `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
 | `labelWidth` / `treeWidth` | The names column takes at most 30% of the width (120 px vertical); `labelWidth` sets that cap in px. `treeWidth` (horizontal) fixes the tree's width instead and gives the names the rest: `width: 1236, treeWidth: 250`. |
 
@@ -276,9 +277,12 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `inner` | Violin: `"box"` (default), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violin with two `hue` levels: one half each. |
 | `scale` | Violin width: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Strip and swarm layout. Strip and swarm dots carry their own row's `tooltip` (`{ title, text, replace: true }`). |
-| `clamp` | With a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0.0001%", "≥ 100%") when some value lies beyond. On a log axis a 0 sits on the low edge. |
-| `yLabelPosition` | Horizontal charts: `"above"` writes each row's name above it, left-aligned, so the value axis keeps the full width (a phone). |
+| `jitter`, `dodge`, `radius` | Strip and swarm layout. Strip and swarm dots carry their own row's `tooltip` (`{ title, text, replace: true }`). In a swarm `radius` is a starting value: it shrinks until the widest cluster fits its band. |
+| `fixedRadius` | Swarm: keep `radius` as given. Horizontal, without `rowHeight` or `height`, the rows grow until the widest cluster fits; otherwise the dots that do not fit are pressed against the edge of their band and overlap. |
+| `rowHeight` | Horizontal charts: px per category row, the exact pitch between rows (default 46; with `hue` and `dodge`, 22 per group + 12). Sets the height when `height` is not given. |
+| `rowLine` | A guide line along each category, across the value axis and behind the marks: `true` solid, `"dashed"` dashed (2 3), in the theme's grid color. |
+| `clamp` | With a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0.0001%", "≥ 100%") when some value lies beyond. `"always"` marks both edge ticks even when nothing lies beyond. On a log axis a 0 sits on the low edge. |
+| `yLabelPosition` | Horizontal charts: `"above"` writes each row's name above it, left-aligned, so the value axis keeps the full width (a phone). In strip and swarm each row is a strip of `rowHeight` with the name on top and the dots under it, the name right above its highest dot. |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
@@ -505,7 +509,7 @@ A map you already computed (the product space, a knowledge network) usually want
 | `stretch` | `layout: "preset"` only: x and y are scaled apart to fill the area, for positions already normalized per axis (0–1 MDS). |
 | `minRadius` | Smallest node radius in px (default 2.5). |
 | `labelWidth` | Widest node name in px before it is cut with "…" (default 150). |
-| `edgeTip` | `false` writes no tooltip on the edges (`tooltip: false` also drops them). Hundreds of edges, each with its own text, weigh more than the drawing. |
+| `edgeTip` | `false` writes no tooltip on the edges (`tooltip: false` also drops them). Hundreds of edges, each with its own text, weigh more than the drawing. An edge's tooltip names its two nodes as their own tooltips do: with `tooltip: { title: "full" }`, by that field of `nodes` (the whole name), else by their label. |
 | `href` | A field of `nodes` with a URL: each node is a link. |
 
 ### `chord`
@@ -525,13 +529,14 @@ A map you already computed (the product space, a knowledge network) usually want
 | Option | Meaning |
 |---|---|
 | `colorScale: { colors, breaks }` | Discrete classes instead of a gradient ([color scales](colorscales.md#classes)); the legend becomes a stepped key with the breaks written under it, formatted with `format`. |
-| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. `midClass: { color }` paints it in that color instead, so a skin patch can set it without replacing the theme. |
+| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. `midClass: { color }` paints it in that color instead, so a skin patch can set it without replacing the theme. With `midClass`, `colorScale.colors` may also list one color per break (one fewer than the classes): the diverging colors without the middle one, e.g. a 6-color diverging palette with 6 breaks. The mid color is inserted at position k = the number of negative breaks (counted from the top with `reverse`). It needs 0 strictly inside the breaks and not a break itself; otherwise the count must match as usual. |
 | `missingLabel` | What the tooltip of a cell without a value says (default `"—"`): `"no data"`. |
 | `missing` | Cells without a value: `"tint"` (default), `"plain"` (outline only), `"hatch"` (striped "no data") or `"gap"` (nothing). |
 | `floor` / `ceiling` | Values below / above are drawn as plain empty cells: the value exists (the tooltip shows it) but it is not colored and does not stretch the scale. |
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
 | `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. A name that does not fit is cut, with the whole name in its tooltip. |
 | `groupColors` | `{ [group]: color }`: each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid (a family's hue under its sectors), instead of the alternate tint. |
+| `groupStripe` | Where the `groupColors` stripe goes: `"grid"` (default) on the group band, or `"labels"` on the grid edge on the labels side, between the labels and the cells (over the grid with `xLabelPosition: "top"`, left of it for rows). The group band then keeps only the names. |
 | `cornerLabel` | A title in the empty corner where row labels meet column labels: `"born in ↓ / lives in →"`; `"\n"` breaks it into lines. The row-label column widens to fit it (same cap); what does not fit is cut, whole in the tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
 | `rowTip` | Tooltip of each row label, from this field: what belongs to the whole row and need not repeat in every cell. From JS, also a function of the label. |

@@ -233,13 +233,16 @@ export interface Spec {
   path?: string[];
   /** Bubble size field. network: node weight (field of `nodes`). dendrogram: each leaf's weight (bar + figure; joins add up). */
   size?: string;
-  /** dendrogram (rows input): a second line under each leaf name. */
+  /** dendrogram (rows input): a second line under each leaf name; "\n" in the value splits it into several lines (rows grow to fit). */
   sub?: string;
   from?: string;
   to?: string;
   items?: KpiItem[];
   format?: Format;
+  /** x values when x is a measure (scatter, regplot, hist). dendrogram (horizontal): the height-axis ticks, like `tickFormat`. */
   xFormat?: Format;
+  /** dendrogram: format of the height-axis ticks, apart from `format` (tooltips). Default: `format`. */
+  tickFormat?: Format;
   /** Axis ticks of the value axis (line, area, bar), apart from `format` (labels, tooltips). Default: `format`. */
   yFormat?: Format;
   stack?: boolean | 'percent';
@@ -448,7 +451,7 @@ export interface Spec {
   minRadius?: number;
   /** network: widest node label in px before truncating (default 150). dendrogram: widest names column in px (default 30% of the width; 120 px vertical). */
   labelWidth?: number;
-  /** dendrogram (horizontal): width of the tree in px; the names take the rest. */
+  /** dendrogram (horizontal): width of the tree in px; the names take the rest. The height axis shows as many ticks (up to 4) as fit. */
   treeWidth?: number;
   /** network: false writes no tooltip on edges (also off with `tooltip: false`). */
   edgeTip?: boolean;
@@ -507,7 +510,12 @@ export interface Spec {
   cumulative?: boolean;
   rug?: boolean;
   complementary?: boolean;
+  /** Point radius in px. swarm: a starting value that shrinks to fit the band, unless `fixedRadius`. */
   radius?: number;
+  /** swarm: keep `radius`. Horizontal without `rowHeight`/`height` the rows grow to fit; otherwise the dots that do not fit press against the band edge and overlap. */
+  fixedRadius?: boolean;
+  /** box/violin/strip/swarm/point: a guide line along each category behind the marks; "dashed" = 2 3. */
+  rowLine?: boolean | 'dashed';
   endLabels?: boolean;
   /** treemap/sunburst */
   showValues?: boolean;
@@ -517,12 +525,18 @@ export interface Spec {
   /** heatmap: values below `floor` / above `ceiling` are plain empty cells (value kept in the tooltip) and leave the color scale. */
   floor?: number;
   ceiling?: number;
-  /** heatmap + binned breaks around 0: the class containing 0 takes the neutral tint ("neutral") or the color given ({ color }). */
+  /**
+   * heatmap + binned breaks around 0: the class containing 0 takes the neutral tint ("neutral") or the color given ({ color }).
+   * `colorScale.colors` may then have one color per break (the diverging colors without the middle one): the mid color is
+   * inserted at position k = number of negative breaks (from the top with `reverse`). 0 must lie strictly inside the breaks.
+   */
   midClass?: 'neutral' | { color: string };
   /** heatmap: a title in the empty corner where row and column labels meet ("born in ↓ / lives in →"); "\n" breaks lines. */
   cornerLabel?: string;
-  /** heatmap with xGroup / yGroup: a color per group name, drawn as a 3 px stripe on the band edge facing the grid. */
+  /** heatmap with xGroup / yGroup: a color per group name, drawn as a 3 px stripe on the band edge facing the grid (see `groupStripe`). */
   groupColors?: Record<string, string>;
+  /** heatmap with `groupColors`: stripe on the group band ("grid", default) or on the grid edge next to the column / row labels ("labels"; over the grid with `xLabelPosition: "top"`). */
+  groupStripe?: 'grid' | 'labels';
   /** heatmap: text written across a row that has no values. */
   emptyRow?: string;
   /** heatmap: row / column labels link to the URL in this field (paths and http(s) only), or a function of the label. */
@@ -534,10 +548,10 @@ export interface Spec {
   xLabelAngle?: number;
   /** heatmap: column labels under the grid (default) or over it. */
   xLabelPosition?: 'top' | 'bottom';
-  /** Horizontal box/violin/strip/swarm/point: row names left of the axis (default) or above each row (a phone). */
+  /** Horizontal box/violin/strip/swarm/point: row names left of the axis (default) or above each row (a phone); in strip/swarm the name sits right above its highest dot. */
   yLabelPosition?: 'left' | 'above';
-  /** strip/swarm/box/violin/point with a value domain: values outside sit on its edge; the edge tick says ≤ / ≥ when some value lies beyond. */
-  clamp?: boolean;
+  /** strip/swarm/box/violin/point with a value domain: values outside sit on its edge; the edge tick says ≤ / ≥ when some value lies beyond ("always": on both edges regardless). */
+  clamp?: boolean | 'always';
   /** heatmap: px between cells (default 2); 0 joins them; [x, y] per axis. */
   cellGap?: number | [number, number];
   /** heatmap: cells where x = y drawn apart (own color, outside the scale, legend entry, tooltip line). */
@@ -563,6 +577,7 @@ export interface Spec {
   milestone?: string;
   today?: string | number | boolean;
   groupHeaders?: boolean | 'compact';
+  /** gantt: row height in px. Horizontal box/violin/strip/swarm/point: px per category row (default 46), the exact row pitch; sets the height when `height` is not given. */
   rowHeight?: number;
   /** gantt: phases drawn collapsed into a summary row; true for all. Click toggles in the browser. */
   collapsed?: boolean | string | string[];
