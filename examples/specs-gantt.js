@@ -24,6 +24,23 @@ export const lanzamiento = [
   { equipo: 'Ventas', tarea: 'Primeros pedidos', semana: 11, semanas: 2 },
 ];
 
+export const ampliacionSucursal = [
+  { fase: 'Permisos', tarea: 'Levantamiento del local', inicio: '2026-03-02', fin: '2026-03-06', avance: 100 },
+  { fase: 'Permisos', tarea: 'Planos y especificaciones', inicio: '2026-03-09', fin: '2026-03-20', avance: 100, depende: 'Levantamiento del local' },
+  { fase: 'Permisos', tarea: 'Permiso municipal', inicio: '2026-03-23', fin: '2026-04-03', avance: 100, depende: 'Planos y especificaciones' },
+  { fase: 'Permisos', tarea: 'Permiso aprobado', inicio: '2026-04-06', depende: 'Permiso municipal' },
+  { fase: 'Obra gruesa', tarea: 'Demolición interior', inicio: '2026-04-06', fin: '2026-04-10', avance: 100, depende: 'Permiso aprobado' },
+  { fase: 'Obra gruesa', tarea: 'Tabiquería', inicio: '2026-04-13', fin: '2026-04-24', avance: 30, depende: 'Demolición interior' },
+  { fase: 'Obra gruesa', tarea: 'Instalaciones eléctricas', inicio: '2026-04-13', fin: '2026-05-01', avance: 20, depende: 'Demolición interior' },
+  { fase: 'Obra gruesa', tarea: 'Climatización', inicio: '2026-04-27', fin: '2026-05-15', avance: 0, depende: 'Tabiquería' },
+  { fase: 'Terminaciones', tarea: 'Pintura y pisos', inicio: '2026-05-18', fin: '2026-05-29', avance: 0, depende: 'Instalaciones eléctricas, Climatización' },
+  { fase: 'Terminaciones', tarea: 'Señalética', inicio: '2026-05-25', fin: '2026-06-05', avance: 0 },
+  { fase: 'Terminaciones', tarea: 'Mobiliario', inicio: '2026-06-01', fin: '2026-06-12', avance: 0, depende: 'Pintura y pisos' },
+  { fase: 'Apertura', tarea: 'Capacitación del equipo', inicio: '2026-06-08', fin: '2026-06-17', avance: 0 },
+  { fase: 'Apertura', tarea: 'Marcha blanca', inicio: '2026-06-15', fin: '2026-06-19', avance: 0, depende: 'Mobiliario' },
+  { fase: 'Apertura', tarea: 'Apertura al público', inicio: '2026-06-22', depende: 'Marcha blanca, Capacitación del equipo' },
+];
+
 export const ganttGallery = [
   {
     id: 'gantt',
@@ -54,6 +71,22 @@ export const ganttGallery = [
       source: SRC,
       data: lanzamiento,
       task: 'tarea', start: 'semana', duration: 'semanas', group: 'equipo', groupHeaders: false, highlight: 'Marketing', xLabel: 'Semana',
+    },
+  },
+  {
+    id: 'gantt-fases',
+    name: 'Fases desplegables y ruta crítica',
+    nameEn: 'Collapsible phases and critical path',
+    note: 'Con `collapsed` una fase se resume en una sola fila: su avance ponderado por duración y sus hitos (`true` contrae todas). En el navegador, un clic en la fase la abre o la cierra. `critical: true` marca la ruta crítica, las tareas sin holgura; en planes cortos los fines de semana van sombreados.',
+    noteEn: 'With `collapsed` a phase rolls up into one row: its duration-weighted progress and its milestones (`true` collapses them all). In the browser, a click on the phase opens or closes it. `critical: true` marks the critical path, the tasks with no slack; short plans shade weekends.',
+    spec: {
+      type: 'gantt',
+      title: 'La apertura del 22 de junio no tiene holgura: un día de atraso en la climatización la mueve',
+      subtitle: 'Plan de ampliación de la sucursal por fase, 2026. Permisos, ya cerrada, va contraída; la parte llena es el avance',
+      source: SRC,
+      data: ampliacionSucursal,
+      task: 'tarea', start: 'inicio', end: 'fin', group: 'fase', progress: 'avance', dependsOn: 'depende',
+      today: '2026-04-15', collapsed: ['Permisos'], critical: true,
     },
   },
 ];

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { plot, safePlot, lint, resolve, toFeatureCollection } from '../src/index.js';
-import { ganttGallery, planProyecto } from '../examples/specs-gantt.js';
+import { ganttGallery, planProyecto, ampliacionSucursal } from '../examples/specs-gantt.js';
 import { customGeoGallery, southAmerica } from '../examples/specs-geo-custom.js';
 import { colorMap, themeFor } from '../src/theme.js';
 
@@ -48,6 +48,79 @@ test('gantt: lint avisa tareas al revés y sugiere la línea de hoy', () => {
   const rep = lint({ type: 'gantt', data: [{ task: 'A', start: '2026-03-10', end: '2026-03-01' }] });
   assert.ok(rep.warnings.some((w) => w.code === 'gantt-backwards'));
   assert.ok(rep.suggestions.some((w) => w.code === 'gantt-today'));
+});
+
+const arrows = (svg) => (svg.match(/marker-end=/g) || []).length;
+const axisLabels = (svg) => [.../<g class="pa-axis pa-axis-x">(.*?)<\/g>/.exec(svg)[1].matchAll(/>([^<]+)<\/text>/g)].map((m) => m[1]);
+const gridX = (svg) => [.../<g class="pa-grid">(.*?)<\/g>/.exec(svg)[1].matchAll(/x1="([^"]+)"/g)].map((m) => m[1]);
+const descOf = (svg) => /<desc[^>]*>([^<]+)</.exec(svg)[1];
+
+test('gantt: una fase contraída se resume en su cabecera y oculta sus tareas', () => {
+  const svg = plot({ ...ganttGallery[0].spec, collapsed: ['Construcción'] });
+  assert.ok(clean(svg));
+  assert.match(svg, /<g class="pa-gh" data-group="Construcción" data-collapsed="true"/);
+  assert.match(svg, /<g class="pa-gh" data-group="Diseño" data-collapsed="false"/);
+  assert.equal((svg.match(/class="pa-chev"/g) || []).length, 4);
+  assert.equal((svg.match(/class="pa-hit"/g) || []).length, 4);
+  for (const t of ['Integración con el ERP', 'Panel de indicadores', 'Pruebas con usuarios']) {
+    assert.doesNotMatch(svg, new RegExp(`data-task="${t}"|>${t}<`), t);
+  }
+  assert.match(svg, /data-task="Prototipo del agente"/);
+  assert.match(svg, />· 3</);
+  assert.match(svg, /3 tareas · 4%\nClic para expandir/);
+  assert.match(svg, /2 tareas · 1 hito · 100%\nClic para contraer/);
+  assert.match(descOf(svg), /Fase contraída: Construcción \(3\)/);
+  const en = plot({ ...ganttGallery[0].spec, locale: 'en', collapsed: true });
+  assert.match(en, /2 tasks · 1 milestone · 100%\nClick to expand/);
+  assert.match(descOf(en), /All phases collapsed/);
+  assert.doesNotMatch(en, /data-task=/);
+});
+
+test('gantt: las dependencias se remiten a la fase contraída, sin repetirse', () => {
+  const spec = ganttGallery[0].spec;
+  assert.equal(arrows(plot({ ...spec, collapsed: ['Construcción'] })), 7);
+  // Diagnóstico pierde sus dos vínculos internos.
+  assert.equal(arrows(plot({ ...spec, collapsed: ['Diagnóstico', 'Construcción'] })), 5);
+  // Todas: Diagnóstico→Diseño, Diseño→Construcción (dos vínculos, una flecha) y Construcción→Cierre.
+  assert.equal(arrows(plot({ ...spec, collapsed: true })), 3);
+});
+
+test('gantt: contraer no mueve el eje ni la columna de nombres', () => {
+  for (const width of [720, 390]) for (const ex of [ganttGallery[0], ganttGallery[2]]) {
+    const open = plot({ ...ex.spec, width, collapsed: [] });
+    for (const collapsed of [true, ['Diseño'], ['Permisos', 'Apertura']]) {
+      const svg = plot({ ...ex.spec, width, collapsed });
+      assert.deepEqual(axisLabels(svg), axisLabels(open), `${ex.id} ${width}`);
+      assert.deepEqual(gridX(svg), gridX(open), `${ex.id} ${width}`);
+    }
+  }
+});
+
+test('gantt: collapsible: false y sin fases no hay controles', () => {
+  const svg = plot({ ...ganttGallery[0].spec, collapsible: false, collapsed: ['Cierre'] });
+  assert.doesNotMatch(svg, /pa-chev|pa-hit/);
+  assert.match(svg, /data-collapsed="true"/);
+  const flat = plot({ ...ganttGallery[1].spec, collapsed: true });
+  assert.ok(clean(flat));
+  assert.doesNotMatch(flat, /data-group=|pa-chev/);
+  assert.equal((flat.match(/data-task=/g) || []).length, 7);
+});
+
+test('gantt: ruta crítica (holgura cero en días hábiles) y fines de semana', () => {
+  const spec = { ...ganttGallery[2].spec, collapsed: [] };
+  const svg = plot(spec);
+  const desc = descOf(svg);
+  assert.match(desc, /Ruta crítica: Levantamiento del local → Planos y especificaciones → Permiso municipal → Permiso aprobado → Demolición interior → Tabiquería → Climatización → Pintura y pisos → Mobiliario → Marcha blanca → Apertura al público\./);
+  assert.match(svg, />Ruta crítica</);
+  assert.equal((svg.match(/url\(#[^)]*-arrow-c\)/g) || []).length, 10);
+  assert.match(svg, /class="pa-weekends"/);
+  assert.doesNotMatch(plot({ ...spec, weekends: false }), /pa-weekends/);
+  assert.doesNotMatch(plot(ganttGallery[0].spec), /pa-weekends|Ruta crítica/); // más de 120 días y sin `critical`
+  // Contraída, la fase crítica conserva su flecha crítica hacia la obra.
+  const c = plot(ganttGallery[2].spec);
+  assert.ok(clean(c));
+  assert.match(c, /url\(#[^)]*-arrow-c\)/);
+  assert.equal(ampliacionSucursal.filter((r) => r.fase === 'Permisos').length, 4);
 });
 
 test('geo propio: detecta la propiedad que calza (ADMIN) y colorea categorías', () => {

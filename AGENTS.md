@@ -24,7 +24,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Count rows per category | `countplot` | `x` |
 | Mean per category with a CI | `barplot` or `point` | `x`, `y`, `hue?` |
 | Change over time | `line` | `x` date (`"2024-03"`) or year, `y`, `series?`; `ci: true` with several observations per x |
-| A project plan or schedule | `gantt` | `task`, `start`, `end` (or `duration`), `group?`, `progress?`, `dependsOn?`, `today?` |
+| A project plan or schedule | `gantt` | `task`, `start`, `end` (or `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volume over time | `area` | like `line`; stacks with `series` |
 | Measures on different scales | `line` + `index: true`, or `facet` | **there is no dual axis** |
 | Exponential growth | `line` + `yScale: "log"` | |
@@ -37,7 +37,8 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
 | Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
 | A value per region, state or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "usa" \| "world"` or any GeoJSON/TopoJSON object, `key`, `value` (text → one color per category) |
-| Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group` |
+| Dots at real places on a street map | `pointmap` | `lon`, `lat` (auto-detected), `size?`, `hue?`, `value?`, `label?`; `tiles: "osm"` (default) / `"esri-gray"` / `"esri-dark"`, or carto-* / mapbox-* with `tilesKey` |
+| Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group`; `layout?` |
 | Exchanges between a few groups | `chord` | `from`, `to`, `value` |
 | Age structure | `pyramid` | `age`, `sex`, `value` |
 | A process with decisions | `flowchart` | `nodes` (`type`, `lane`), `edges` (`label`) |
@@ -49,7 +50,9 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 
 ## Most useful options
 
-- `highlight: "Ñuble"`: emphasize one category or series and mute the rest.
+- `highlight: "Ñuble"`: emphasize one category or series and mute the rest. `exclude: ["Maule"]` drops entries and recomputes the chart; colors stay put.
+- `legend: "top" | "bottom" | "left" | "right" | false`: where the legend goes (top by default).
+- `colorScale: "viridis"`: any matplotlib colormap for heatmaps, maps and treemaps by change (`"RdBu"` diverges around 0; `_r` reverses; or a list of colors). `palette: "tab10"` for categories.
 - `dashed` for what is not a firm number (estimates, projections, provisional figures): a name, a list, or a data field (`dashed: "provisional"`). Shapes keep their color, with a hatched fill and a dashed outline. On a time axis, `dashedFrom: 2025` dashes lines, areas and columns from that year on. **Always set `dashedLabel`** ("Projection", "Preliminary") so readers know what the hatching means.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
 - `time: "year"`: one period at a time (the latest) with % change vs the previous one. Time controls are **off by default**: add `slider: true` only when the person asks to move through periods (buttons for ≤ 8 periods, a minimal slider otherwise; `"buttons"` / `"slider"` force one, `play: false` hides play). Treemaps can be colored by change with `colorBy: "change"`.
@@ -60,7 +63,10 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
 - `network` + `focus: "node id"`: center a node and highlight its neighbors.
 - Your own map: `geo: <GeoJSON or TopoJSON>`; the matching property is found for you (`featureKey` to force it). Add `markers: [{ lon, lat, label }]`, `layers: [{ geo, label }]` for rivers or routes, and `fitTo: ["Biobío"]` or a `[lonMin, latMin, lonMax, latMax]` box to zoom.
-- `gantt`: day `end` dates are inclusive; a row without `end` is a milestone. Always set `today` on a live plan.
+- `gantt`: day `end` dates are inclusive; a row without `end` is a milestone. Always set `today` on a live plan. `collapsed: ["Phase 2"]` (or `true`) folds phases into one summary bar; in the browser a click on a phase toggles it.
+- `network` + `layout: "force" | "circular" | "radial" | "concentric" | "clusters" | "tree" | "grid"` picks the placement; `curveness: 0` straightens edges.
+- `pointmap` draws on OpenStreetMap tiles by default (`tiles: "esri-gray"`, `"mapbox-light"` + `tilesKey`, or your own `{ url, attribution }`). Tiles load only when the SVG is inline or in `toHTML`, not inside `<img>`.
+- Your own look for every chart: `registerTheme("acme", { background, text, grid: { color, dash }, categorical: "tab10", font })` then `configure({ theme: "acme" })`.
 - `geo: "usa"`: states match by postal code ("TX"), English or Spanish name, or FIPS ("48"). Alaska and Hawaii are insets; Puerto Rico appears only when your data has it. In the browser, maps zoom on click, Ctrl/⌘ + scroll or pinch.
 
 ## Mistakes the library already handles

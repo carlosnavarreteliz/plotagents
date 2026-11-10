@@ -35,7 +35,7 @@ export function donut(spec, theme) {
   const sums = new Map();
   for (const r of data) {
     const v = num(r[valueF]);
-    if (!(v > 0)) continue;
+    if (!(v > 0) || !Number.isFinite(v)) continue; // ≤ 0, vacíos e Infinity no tienen ángulo
     const k = String(r[labelF]);
     sums.set(k, (sums.get(k) || 0) + v);
   }

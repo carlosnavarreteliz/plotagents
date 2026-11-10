@@ -2,11 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://unpkg.com/plotagents/schema.json",
   "title": "plotagents spec",
-  "description": "Declarative chart spec. Data as rows (tidy) plus the field name for each role. Everything else has well-designed defaults.",
+  "description": "Declarative chart spec. Data as rows (tidy) plus the field name for each role. Everything else has well-designed defaults. `data` is required except for kpi (`items`), flowchart (`nodes` + `edges`), chord (`matrix`) and wordcloud with raw `text`.",
   "type": "object",
-  "required": [
-    "data"
-  ],
   "properties": {
     "type": {
       "type": "string",
@@ -46,6 +43,7 @@
         "wordcloud",
         "choropleth",
         "symbolmap",
+        "pointmap",
         "barplot",
         "countplot",
         "columns",
@@ -69,6 +67,13 @@
         "pointplot",
         "spider",
         "doughnut",
+        "dotmap",
+        "dot-map",
+        "tilemap",
+        "basemap",
+        "mapa-puntos",
+        "mapa-de-puntos",
+        "latlon",
         "graph",
         "force",
         "red",
@@ -110,7 +115,7 @@
         "number",
         "heat"
       ],
-      "description": "Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi. Maps: choropleth, symbolmap. seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). \"auto\" (default) picks from the data."
+      "description": "Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). \"auto\" (default) picks from the data."
     },
     "data": {
       "description": "Array of rows, e.g. [{ \"region\": \"Biobío\", \"sales\": 1240 }]. For kpi it can be omitted in favor of `items`.",
@@ -167,6 +172,10 @@
     "series": {
       "type": "string",
       "description": "Field that splits the data into colored series. Alias: hue."
+    },
+    "color": {
+      "type": "string",
+      "description": "Alias of series when it names a field (a \"#hex\" value is a fixed color instead)."
     },
     "hue": {
       "type": "string",
@@ -360,6 +369,54 @@
       "type": "number",
       "description": "gantt: row height in px."
     },
+    "collapsed": {
+      "description": "gantt: phases (values of `group`) drawn collapsed into one summary row; true collapses all. In the browser a click on a phase header toggles it.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "collapsible": {
+      "type": "boolean",
+      "description": "gantt: false disables click-to-collapse of phases in the browser."
+    },
+    "critical": {
+      "type": "boolean",
+      "description": "gantt: highlight the critical path, the zero-slack chain along `dependsOn`."
+    },
+    "criticalColor": {
+      "type": "string",
+      "description": "gantt: color of the critical path."
+    },
+    "weekends": {
+      "type": "boolean",
+      "description": "gantt: shade weekends on day plans of up to 120 days (default true)."
+    },
+    "todayColor": {
+      "type": "string",
+      "description": "gantt: color of the \"today\" line."
+    },
+    "sort": {
+      "type": "string",
+      "enum": [
+        "desc",
+        "asc",
+        "none",
+        "alpha",
+        "start"
+      ],
+      "description": "bar: category order (desc by default unless the categories are time). gantt: \"start\" orders tasks by start date. donut/chord: \"none\" keeps the data order."
+    },
     "geo": {
       "description": "choropleth/symbolmap: \"chile\" (16 regions, default), \"usa\" (50 states + DC, Albers with Alaska/Hawaii insets; Puerto Rico when it has data), \"world\" (countries), a name registered with registerGeo(), or YOUR OWN geometry: a GeoJSON FeatureCollection, Feature, list of Features or bare geometry, or a TopoJSON Topology. Polygons are filled, LineStrings stroked and Points drawn as dots. In the browser, render() also accepts a URL to a .geojson/.topojson file.",
       "anyOf": [
@@ -491,6 +548,106 @@
       "type": "number",
       "description": "Map: radius of Point features in your own GeoJSON (default 5)."
     },
+    "missing": {
+      "type": "string",
+      "enum": [
+        "hatch",
+        "plain"
+      ],
+      "description": "choropleth: how regions without data look: hatched (default) or \"plain\" (flat tint)."
+    },
+    "thresholds": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "choropleth: class breaks (same as a list in `scale`)."
+    },
+    "lat": {
+      "type": "string",
+      "description": "pointmap: latitude field (auto-detected: lat, latitude, latitud)."
+    },
+    "lon": {
+      "type": "string",
+      "description": "pointmap: longitude field (auto-detected: lon, lng, longitude, longitud)."
+    },
+    "tiles": {
+      "description": "pointmap: basemap. \"osm\" (default), \"esri-gray\", \"esri-dark\", \"carto-light\", \"carto-dark\", \"mapbox-light\", \"mapbox-dark\" (needs `tilesKey`), your own { url, attribution, subdomains, maxZoom, retina } with {z}/{x}/{y}, or false for none (vector world outline).",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "osm",
+            "esri-gray",
+            "esri-dark",
+            "carto-light",
+            "carto-dark",
+            "mapbox-light",
+            "mapbox-dark"
+          ]
+        },
+        {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "attribution": {
+              "type": "string"
+            },
+            "subdomains": {
+              "type": "string"
+            },
+            "maxZoom": {
+              "type": "number"
+            },
+            "retina": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "url"
+          ]
+        }
+      ]
+    },
+    "tilesKey": {
+      "type": "string",
+      "description": "pointmap: API key or PUBLIC token for the tile provider (Mapbox \"pk.…\"; a secret \"sk.\" token is rejected because it would be visible in the SVG)."
+    },
+    "tileStyle": {
+      "type": "string",
+      "enum": [
+        "muted",
+        "original"
+      ],
+      "description": "pointmap: \"muted\" (default) desaturates the basemap so the data stands out; \"original\" keeps its colors."
+    },
+    "tileOpacity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "pointmap: basemap opacity."
+    },
+    "zoom": {
+      "type": "number",
+      "description": "pointmap: tile zoom level (automatic from the points by default)."
+    },
+    "center": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "pointmap: map center [lon, lat] (default: fitted to the points)."
+    },
     "tall": {
       "type": "boolean",
       "description": "Map: false prevents the tall layout (map on the left, ranked label column on the right) for elongated territories."
@@ -541,9 +698,53 @@
       "type": "string",
       "enum": [
         "force",
+        "circular",
+        "radial",
+        "concentric",
+        "clusters",
+        "tree",
+        "grid",
         "circle"
       ],
-      "description": "network layout."
+      "description": "network layout: \"force\" (default) deterministic force-directed; \"circular\" around a circle by group with names rotated outward (\"circle\" = circular); \"radial\" tree rings from `focus` or the most connected node; \"concentric\" rings by weight; \"clusters\" one cluster per group; \"tree\" the radial tree laid flat; \"grid\" ordered by group."
+    },
+    "curveness": {
+      "type": "number",
+      "minimum": 0,
+      "description": "network: edge bend as a share of its length (default 0.3; 0 = straight)."
+    },
+    "maxRadius": {
+      "type": "number",
+      "description": "network/symbolmap/pointmap/bubble: largest node or circle radius in px."
+    },
+    "iterations": {
+      "type": "integer",
+      "description": "network: force-layout iterations (automatic by size)."
+    },
+    "nodeId": {
+      "type": "string",
+      "description": "network: id field in `nodes` (default id/name)."
+    },
+    "nodeLabel": {
+      "type": "string",
+      "description": "network: label field in `nodes` (default label, else the id)."
+    },
+    "labelOrientation": {
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "radial"
+      ],
+      "description": "chord: label orientation (radial by default above 10 groups)."
+    },
+    "ribbonColor": {
+      "type": "string",
+      "enum": [
+        "source",
+        "smaller",
+        "larger"
+      ],
+      "description": "chord: ribbon color: \"source\" (default when directed), \"smaller\" group (default) or \"larger\" flow."
     },
     "matrix": {
       "type": "array",
@@ -590,9 +791,28 @@
       "type": "string",
       "description": "One panel per value of this field (small multiples, seaborn col). Shared scales and colors."
     },
+    "col": {
+      "type": "string",
+      "description": "Alias of facet (seaborn naming)."
+    },
+    "facetOrder": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "facet: panel order (values of the facet field; the rest follow)."
+    },
     "columns": {
       "type": "integer",
-      "description": "facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens."
+      "description": "facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens. kpi: tiles per row."
+    },
+    "sharex": {
+      "type": "boolean",
+      "description": "facet: same x scale in every panel (default true)."
+    },
+    "panelHeight": {
+      "type": "number",
+      "description": "facet: height of each panel in px."
     },
     "sharey": {
       "type": "boolean",
@@ -623,6 +843,59 @@
     "play": {
       "type": "boolean",
       "description": "Browser: false keeps the time controls but hides the play button."
+    },
+    "playInterval": {
+      "type": "number",
+      "description": "Browser: milliseconds per period while playing."
+    },
+    "legend": {
+      "description": "Legend: true/false, or its position \"top\" (default), \"bottom\", \"left\", \"right\" (left/right fall back to bottom under 520px wide), or { position }.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "position": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "legendTitle": {
+      "type": "string",
+      "description": "Title of a color-ramp or size legend (heatmap, maps)."
+    },
+    "exclude": {
+      "description": "Drop legend entries (series, first hierarchy level, group or donut slice) and recompute axes and shares with the rest. Colors stay fixed; excluded entries remain in the legend, faded, so a click re-adds them. In the browser shift+click on a legend key toggles it.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
     },
     "compare": {
       "description": "With `time`: period to compute changes against: \"previous\" (default), \"first\", a specific period, or false.",
@@ -655,8 +928,18 @@
       "type": "array",
       "description": "line/area: visible x range [from, to] (what the range slider sets with `slider: true`)."
     },
+    "showValues": {
+      "type": "boolean",
+      "description": "treemap: show each tile value next to its label."
+    },
+    "hole": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.9,
+      "description": "sunburst: size of the center hole as a fraction of the radius (default 0.3)."
+    },
     "focus": {
-      "description": "treemap/sunburst: path to drill into, e.g. [\"Mining\"]. network: a node id to center and highlight with its neighbors. In the browser, clicking does it.",
+      "description": "treemap/sunburst: path to drill into, e.g. [\"Mining\"] (in the browser a click on a tile or legend key zooms to it). network: a node id to center and highlight with its neighbors.",
       "anyOf": [
         {
           "type": "string"
@@ -701,6 +984,23 @@
       },
       "description": "Fixed value-axis domain [min, max]."
     },
+    "valueDomain": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "box/violin/strip/swarm/point/radar: fixed value-axis domain [min, max] whatever the orientation."
+    },
+    "orient": {
+      "type": "string",
+      "enum": [
+        "v",
+        "h"
+      ],
+      "description": "box/violin/strip/swarm/point: \"v\" vertical or \"h\" horizontal (same as `horizontal`)."
+    },
     "zero": {
       "type": "boolean",
       "description": "line: force (or prevent) a y axis starting at zero."
@@ -714,7 +1014,7 @@
       "description": "y-axis title (drawn horizontally above the axis)."
     },
     "format": {
-      "description": "Value format: \"number\" | \"compact\" | \"percent\" | \"currency\" | \"integer\", or { type, prefix, suffix, decimals, currency }.",
+      "description": "Value format: \"number\" | \"compact\" | \"percent\" | \"currency\" | \"integer\", or { type, prefix, suffix, decimals (0–20), currency }.",
       "anyOf": [
         {
           "type": "string",
@@ -730,7 +1030,14 @@
           "type": "object",
           "properties": {
             "type": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "number",
+                "compact",
+                "percent",
+                "currency",
+                "integer"
+              ]
             },
             "prefix": {
               "type": "string"
@@ -739,10 +1046,109 @@
               "type": "string"
             },
             "decimals": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
             },
             "currency": {
               "type": "string"
+            },
+            "scale": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "xFormat": {
+      "description": "Format of x values when x is a measure (scatter, regplot, hist).",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "number",
+            "compact",
+            "percent",
+            "currency",
+            "integer"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "number",
+                "compact",
+                "percent",
+                "currency",
+                "integer"
+              ]
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "decimals": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "currency": {
+              "type": "string"
+            },
+            "scale": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "yFormat": {
+      "description": "Format of y values (overrides `format` on the y axis).",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "number",
+            "compact",
+            "percent",
+            "currency",
+            "integer"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "number",
+                "compact",
+                "percent",
+                "currency",
+                "integer"
+              ]
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "decimals": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "currency": {
+              "type": "string"
+            },
+            "scale": {
+              "type": "number"
             }
           }
         }
@@ -811,7 +1217,7 @@
       ]
     },
     "labels": {
-      "description": "Value labels: true, false or \"auto\". In scatter/regplot: a number of points or a list of names to label.",
+      "description": "Value labels: true, false or \"auto\". In scatter/regplot: a number of points or a list of names to label. network: true labels every node.",
       "anyOf": [
         {
           "type": "boolean"
@@ -882,19 +1288,20 @@
       "type": "boolean",
       "description": "Force horizontal orientation (otherwise chosen from label length and count)."
     },
-    "sort": {
-      "type": "string",
-      "enum": [
-        "desc",
-        "asc",
-        "none",
-        "alpha"
-      ],
-      "description": "bar: category order (desc by default unless the categories are time)."
-    },
     "top": {
       "type": "integer",
       "description": "bar: keep the N largest and fold the rest into \"Other\"."
+    },
+    "endLabels": {
+      "type": "boolean",
+      "description": "line/regplot: false removes the series names at the end of each line (a legend is drawn instead)."
+    },
+    "labelsFor": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Wide table (y as a list): display names per column, e.g. { \"rev\": \"Revenue\" }."
     },
     "index": {
       "type": "boolean",
@@ -1041,9 +1448,64 @@
         "box",
         "quartiles",
         "points",
+        "stick",
         "none"
       ],
       "description": "violin: what goes inside."
+    },
+    "bandwidth": {
+      "type": "number",
+      "description": "violin: KDE bandwidth (default Scott's rule)."
+    },
+    "bwAdjust": {
+      "type": "number",
+      "description": "kde/violin/hist kde: multiply the bandwidth (seaborn bw_adjust)."
+    },
+    "cut": {
+      "type": "number",
+      "description": "kde/violin: how far the density extends past the data, in bandwidths."
+    },
+    "jitter": {
+      "description": "strip: spread of the points across the category (fraction of the band, default 0.6; 0 or false = none).",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "dodge": {
+      "type": "boolean",
+      "description": "strip/swarm/point with hue: place groups side by side."
+    },
+    "hueOrder": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Order of the hue groups."
+    },
+    "showMeans": {
+      "type": "boolean",
+      "description": "box/strip: mark the mean."
+    },
+    "cumulative": {
+      "type": "boolean",
+      "description": "hist/kde: cumulative distribution."
+    },
+    "rug": {
+      "type": "boolean",
+      "description": "kde: tick marks for each observation."
+    },
+    "complementary": {
+      "type": "boolean",
+      "description": "ecdf: show 1 − F(x) (share above each value)."
+    },
+    "radius": {
+      "type": "number",
+      "description": "Point radius in px (scatter, regplot, strip, swarm)."
     },
     "split": {
       "type": "boolean",
@@ -1061,6 +1523,33 @@
       "type": "boolean",
       "description": "donut: semicircle."
     },
+    "thickness": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "donut: ring thickness as a fraction of the radius (1 = pie)."
+    },
+    "maxSlices": {
+      "type": "integer",
+      "minimum": 2,
+      "description": "donut/pie: slices before the rest fold into \"Other\" (default 6)."
+    },
+    "centerValue": {
+      "type": "string",
+      "description": "donut/sunburst: text in the center (default: the total)."
+    },
+    "centerLabel": {
+      "type": "string",
+      "description": "donut/sunburst: caption under the center value."
+    },
+    "cellHeight": {
+      "type": "number",
+      "description": "heatmap: maximum cell height in px."
+    },
+    "diverging": {
+      "type": "boolean",
+      "description": "heatmap/choropleth: diverging color scale around 0 (or `midpoint`)."
+    },
     "colors": {
       "type": "object",
       "additionalProperties": {
@@ -1069,7 +1558,7 @@
       "description": "Pin colors to entities: { \"Biobío\": \"#3A47B8\" }."
     },
     "palette": {
-      "description": "Palette shortcut: a name (\"cdia\", \"okabe-ito\", \"tableau10\", \"udec\") or a list of colors in fixed order.",
+      "description": "Categorical colors: a name (\"cdia\", \"okabe-ito\", \"tableau10\", \"udec\"), a matplotlib qualitative palette (\"tab10\", \"tab20\", \"Set1\", \"Set2\", \"Set3\", \"Pastel1\", \"Pastel2\", \"Paired\", \"Accent\", \"Dark2\"), any colormap name (sampled, e.g. \"viridis\"), or a list of colors in fixed order.",
       "anyOf": [
         {
           "type": "string"
@@ -1083,7 +1572,7 @@
       ]
     },
     "ramp": {
-      "description": "Sequential ramp: a name (\"indigo\", \"magenta\", \"teal\", \"amber\") or a list of colors from light to dark.",
+      "description": "Sequential ramp: a name (\"indigo\", \"magenta\", \"teal\", \"amber\"), any colormap name, or a list of colors from light to dark.",
       "anyOf": [
         {
           "type": "string"
@@ -1096,20 +1585,261 @@
         }
       ]
     },
+    "colorScale": {
+      "description": "Continuous color scale (heatmap, choropleth, treemap change, pointmap values): any matplotlib colormap name, case-insensitive, `_r` reverses (\"viridis\", \"plasma\", \"inferno\", \"magma\", \"cividis\", \"Blues\", \"Greens\", \"YlOrRd\", \"RdBu\", \"coolwarm\", \"Spectral\", \"turbo\", \"twilight\"…); diverging names imply a diverging scale. Or a list of hex colors, or { name | colors, reverse, mid }. Aliases: cmap, colormap. Qualitative palettes (tab10…) go in `palette`; avoid rainbow maps (jet, hsv).",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "colors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "reverse": {
+              "type": "boolean"
+            },
+            "mid": {
+              "type": "number",
+              "description": "Center of a diverging scale."
+            }
+          }
+        }
+      ]
+    },
+    "cmap": {
+      "description": "Alias of colorScale (matplotlib naming).",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "colors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "reverse": {
+              "type": "boolean"
+            },
+            "mid": {
+              "type": "number",
+              "description": "Center of a diverging scale."
+            }
+          }
+        }
+      ]
+    },
+    "colormap": {
+      "description": "Alias of colorScale.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "colors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "reverse": {
+              "type": "boolean"
+            },
+            "mid": {
+              "type": "number",
+              "description": "Center of a diverging scale."
+            }
+          }
+        }
+      ]
+    },
     "theme": {
-      "description": "Theme: \"papel\" (light, default), \"noche\" (dark), or a JSON object deep-merged over `extends`. Keys: surface, ink, lede, muted, grid, axis, tint, dim, other, categorical (list or palette name), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}.",
+      "description": "Theme: \"papel\" (light, default), \"noche\" (dark), a name registered with registerTheme(), or a JSON object deep-merged over `extends`. Simple tokens: background (alias of surface), text (alias of ink), accent (first series color), grid (a color or { color, dash, width }), axis, tooltip { bg, ink }, radius / barRadius (corner radius), font. Full keys: surface, ink, lede, muted, tint, dim, other, categorical (list, palette or colormap name), sequential, diverging, status {good, warning, critical}, font {family, mono, import}, type {title, subtitle, label, axis, legend, source, titleWeight}, marks {barRadius, barMax, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity}, axes {inside, grid}, layout {padding}. configure({ theme }) applies it to every chart.",
       "anyOf": [
         {
           "type": "string",
-          "enum": [
-            "papel",
-            "noche",
-            "light",
-            "dark"
-          ]
+          "description": "\"papel\", \"noche\", \"light\", \"dark\" or a registered theme name."
         },
         {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "extends": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "light",
+                "dark"
+              ]
+            },
+            "background": {
+              "type": "string"
+            },
+            "surface": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "ink": {
+              "type": "string"
+            },
+            "lede": {
+              "type": "string"
+            },
+            "muted": {
+              "type": "string"
+            },
+            "accent": {
+              "type": "string"
+            },
+            "grid": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "color": {
+                      "type": "string"
+                    },
+                    "dash": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "type": "number"
+                    }
+                  }
+                }
+              ]
+            },
+            "axis": {
+              "type": "string"
+            },
+            "tooltip": {
+              "type": "object",
+              "properties": {
+                "bg": {
+                  "type": "string"
+                },
+                "ink": {
+                  "type": "string"
+                }
+              }
+            },
+            "radius": {
+              "type": "number"
+            },
+            "barRadius": {
+              "type": "number"
+            },
+            "categorical": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "sequential": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "diverging": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "font": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            "status": {
+              "type": "object"
+            },
+            "type": {
+              "type": "object"
+            },
+            "marks": {
+              "type": "object"
+            },
+            "axes": {
+              "type": "object"
+            },
+            "layout": {
+              "type": "object"
+            }
+          }
         }
       ]
     },
@@ -1135,6 +1865,10 @@
     "height": {
       "type": "number",
       "description": "Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars."
+    },
+    "padding": {
+      "type": "number",
+      "description": "Outer padding in px (default from the width)."
     }
   }
 }

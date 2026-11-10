@@ -51,7 +51,10 @@ function ensureAssets() {
 .pa-track input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--pa-ink),0 0 0 4px color-mix(in srgb,var(--pa-accent) 35%,transparent)}
 .pa-ends{position:absolute;left:0;right:0;top:22px;display:flex;justify-content:space-between;font-size:10.5px;color:var(--pa-muted);pointer-events:none}
 .pa-now{flex:none;font-weight:600;color:var(--pa-ink);font-size:12.5px;min-width:4ch;text-align:right}
-.pa-chart [data-drill],.pa-chart [data-node]{cursor:pointer}
+.pa-chart [data-drill],.pa-chart [data-node],.pa-chart [data-group]{cursor:pointer}
+.pa-chart [data-group]:focus-visible,.pa-chart .pa-key:focus-visible{outline:2px solid var(--pa-accent,#3A47B8);outline-offset:1px}
+.pa-live .pa-chev{opacity:1!important}
+.pa-chart .pa-gh:hover .pa-hit{fill:var(--pa-tint,#ECEEF8);fill-opacity:.5}
 .pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
 @media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
   document.head.appendChild(st);
@@ -117,14 +120,14 @@ export function render(target, spec, opts = {}) {
   // Posiciones anteriores de los nodos (para animar el cambio de foco).
   const nodePos = () => {
     const m = new Map();
-    for (const c of chart.querySelectorAll('[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
+    for (const c of chart.querySelectorAll('circle[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
     return m;
   };
   const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animateFrom = (before) => {
     if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
     const ease = 'cubic-bezier(.2,.7,.2,1)';
-    for (const c of chart.querySelectorAll('[data-node]')) {
+    for (const c of chart.querySelectorAll('circle[data-node]')) {
       const old = before.get(c.getAttribute('data-node'));
       if (!old) continue;
       const dx = old[0] - +c.getAttribute('cx'), dy = old[1] - +c.getAttribute('cy');
@@ -149,6 +152,34 @@ export function render(target, spec, opts = {}) {
       if (old && /^#/.test(now || '') && old.toLowerCase() !== now.toLowerCase()) n.animate([{ fill: old }, { fill: now }], { duration: 420, easing: 'ease-out' });
     }
   };
+  // Leyenda: en treemap y sunburst, clic = ver solo esa categoría en todo el
+  // plano (otro clic vuelve); en todos los gráficos, shift + clic la excluye
+  // (o la vuelve a sumar). Devuelve true si tomó el clic.
+  const onLegend = (key, e) => {
+    const v = key.getAttribute('data-value');
+    if (v === null || key.getAttribute('data-color') === 'dashed') return false;
+    const ex = [].concat(state.exclude ?? []).map(String);
+    if (e.shiftKey || key.classList.contains('pa-key-off')) {
+      const next = ex.includes(v) ? ex.filter((x) => x !== v) : [...ex, v];
+      // Colores fijos: los de la leyenda actual, para que nada cambie de color.
+      const colors = { ...(state.colors || {}) };
+      for (const k of chart.querySelectorAll('.pa-key[data-value]')) {
+        const c = k.getAttribute('data-color');
+        if (/^#/.test(c || '') && !k.classList.contains('pa-key-off') && !(k.getAttribute('data-value') in colors)) colors[k.getAttribute('data-value')] = c;
+      }
+      const f = Array.isArray(state.focus) && state.focus[0] === v ? undefined : state.focus;
+      state = { ...state, exclude: next.length ? next : undefined, colors, focus: f };
+      draw();
+      return true;
+    }
+    if (state.type === 'treemap' || state.type === 'sunburst') {
+      const cur = Array.isArray(state.focus) ? state.focus : [];
+      state = { ...state, focus: cur.length === 1 && cur[0] === v ? [] : [v] };
+      draw();
+      return true;
+    }
+    return false;
+  };
   const draw = () => {
     const before = nodePos();
     const fills = regionFills();
@@ -156,11 +187,18 @@ export function render(target, spec, opts = {}) {
     animateFrom(before);
     tweenFills(fills);
     chart.__pa = false;
+    chart.__paLegend = onLegend;
     attach(chart);
+    const svgNode = chart.querySelector('svg');
+    if (svgNode) svgNode.classList.add('pa-live');
     // Red: clic en un nodo lo lleva al centro y destaca sus conexiones; otro clic (o Esc) vuelve.
     for (const n of chart.querySelectorAll('[data-node]')) {
-      n.setAttribute('tabindex', '0');
-      n.setAttribute('role', 'button');
+      // Solo los círculos son paradas de tabulación; las etiquetas también responden al clic.
+      if (n.tagName.toLowerCase() === 'circle') {
+        n.setAttribute('tabindex', '0');
+        n.setAttribute('role', 'button');
+        n.setAttribute('aria-label', (n.getAttribute('data-tip') || n.getAttribute('data-node')).split('\n')[0]);
+      }
       const id = n.getAttribute('data-node');
       const go = () => { state = { ...state, focus: String(state.focus) === id ? undefined : id }; draw(); };
       n.addEventListener('click', go);
@@ -172,6 +210,27 @@ export function render(target, spec, opts = {}) {
       const go = () => { state = { ...state, focus: JSON.parse(n.getAttribute('data-drill')) }; draw(); };
       n.addEventListener('click', go);
       n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    }
+    // Gantt: clic en una fase la pliega en una barra-resumen; otro clic la despliega.
+    // Alt + clic pliega o despliega todas.
+    const groupsAll = [...chart.querySelectorAll('[data-group]')].map((n) => n.getAttribute('data-group'));
+    for (const n of chart.querySelectorAll('[data-group]')) {
+      if (!n.querySelector('.pa-chev')) continue; // collapsible: false
+      const name = n.getAttribute('data-group');
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('role', 'button');
+      n.setAttribute('aria-expanded', n.getAttribute('data-collapsed') === 'true' ? 'false' : 'true');
+      const go = (e) => {
+        let cur = state.collapsed === true ? [...groupsAll] : [].concat(state.collapsed || []).map(String);
+        if (e && e.altKey) cur = cur.length === groupsAll.length ? [] : [...groupsAll];
+        else cur = cur.includes(name) ? cur.filter((g) => g !== name) : [...cur, name];
+        state = { ...state, collapsed: cur };
+        draw();
+        const again = [...chart.querySelectorAll('[data-group]')].find((m) => m.getAttribute('data-group') === name);
+        if (again && e && e.type === 'keydown') again.focus();
+      };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
     }
   };
   const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); };
@@ -287,7 +346,13 @@ export function render(target, spec, opts = {}) {
     set();
   }
 
-  host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); } });
+  host.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); return; }
+    // Treemap/sunburst: Esc sube un nivel; en la raíz, vuelve a sumar lo excluido.
+    if (Array.isArray(state.focus) && state.focus.length) { state = { ...state, focus: state.focus.slice(0, -1) }; draw(); return; }
+    if (state.exclude && [].concat(state.exclude).length) { state = { ...state, exclude: undefined }; draw(); }
+  });
 
   draw();
   if (state.width === undefined && typeof ResizeObserver !== 'undefined') {

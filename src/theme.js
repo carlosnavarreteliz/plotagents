@@ -14,6 +14,8 @@ export const MONO = "'Fragment Mono', ui-monospace, 'SFMono-Regular', Menlo, mon
 export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
+import { resolveColorScale, interpolate, sample } from './colorscales.js';
+
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
 const STRUCT = {
   font: { family: FONT, mono: MONO, import: FONT_CSS },
@@ -105,28 +107,111 @@ export function deepMerge(base, over) {
   return out;
 }
 
+// Colores válidos: hex, rgb()/hsl() y nombres CSS. Cualquier otra cosa se
+// descarta: los colores viajan a atributos, CSS y tooltips (sin inyección).
+const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgba?|hsla?)\([\d\s.,%/+-]+\)|[a-z]{3,20}|transparent|none)$/i;
+export const isColor = (c) => typeof c === 'string' && COLOR_RE.test(c.trim());
+const COLOR_KEYS = ['surface', 'ink', 'lede', 'muted', 'grid', 'axis', 'tint', 'tint2', 'dim', 'other'];
+
+/** Alias legibles de los tokens (background → surface, text → ink, …). */
+function normalizeTokens(t) {
+  if (!isObj(t)) return t;
+  const o = { ...t };
+  if (o.background !== undefined && o.surface === undefined) o.surface = o.background;
+  if (o.text !== undefined && o.ink === undefined) o.ink = o.text;
+  if (o.textMuted !== undefined && o.muted === undefined) o.muted = o.textMuted;
+  // grid: color o { color, dash, width }.
+  if (isObj(o.grid)) { o.gridStyle = { ...(o.gridStyle || {}), ...o.grid }; if (o.grid.color) o.grid = o.grid.color; else delete o.grid; }
+  if (isObj(o.axis)) { o.axisStyle = { ...(o.axisStyle || {}), ...o.axis }; if (o.axis.color) o.axis = o.axis.color; else delete o.axis; }
+  if (o.barRadius !== undefined) o.marks = { ...(o.marks || {}), barRadius: o.barRadius };
+  if (o.radius !== undefined) o.marks = { ...(o.marks || {}), barRadius: o.marks?.barRadius ?? o.radius, radius: o.radius };
+  if (o.lineWidth !== undefined) o.marks = { ...(o.marks || {}), lineWidth: o.lineWidth };
+  if (o.padding !== undefined) o.layout = { ...(o.layout || {}), padding: o.padding };
+  if (typeof o.font === 'string') o.font = fontSpec(o.font);
+  return o;
+}
+
+/** Descarta colores inválidos (vuelve al del tema base). */
+function sanitize(theme, base) {
+  for (const k of COLOR_KEYS) if (theme[k] !== undefined && !isColor(theme[k])) theme[k] = base[k];
+  for (const k of ['categorical', 'sequential', 'diverging']) {
+    if (Array.isArray(theme[k])) { const ok = theme[k].filter(isColor); theme[k] = ok.length ? ok : base[k]; }
+  }
+  if (theme.accent !== undefined && !isColor(theme.accent)) delete theme.accent;
+  if (isObj(theme.tooltip)) for (const k of ['bg', 'ink']) if (theme.tooltip[k] !== undefined && !isColor(theme.tooltip[k])) delete theme.tooltip[k];
+  if (isObj(theme.status)) for (const k of Object.keys(theme.status)) if (!isColor(theme.status[k])) theme.status[k] = base.status?.[k];
+  if (theme.font && typeof theme.font.import === 'string' && !/^https:\/\/[^\s'"()<>\\]+$/.test(theme.font.import)) theme.font = { ...theme.font, import: undefined };
+  if (theme.font && typeof theme.font.family === 'string') theme.font = { ...theme.font, family: theme.font.family.replace(/[<>{};]/g, '') };
+  return theme;
+}
+
+/** Paleta categórica por nombre: propias, matplotlib cualitativas o muestras de una colormap. */
+function namedPalette(name, n = 8) {
+  if (palettes[name]) return palettes[name];
+  const cs = resolveColorScale(name);
+  if (!cs) return null;
+  if (cs.kind === 'qualitative') return cs.stops;
+  // Escala continua como paleta: n muestras sin los extremos (estilo seaborn).
+  return Array.from({ length: n }, (_, i) => interpolate(cs.stops, (i + 1) / (n + 1)));
+}
+
+/** Rampa secuencial/divergente por nombre: propias o cualquier colormap. */
+function namedRamp(name) {
+  if (ramps[name]) return ramps[name];
+  const cs = resolveColorScale(name);
+  return cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
+}
+
 /**
- * Tema = JSON. Acepta un nombre ("papel", "noche") o un objeto parcial que se
- * fusiona en profundidad sobre `extends` (por defecto "papel"):
+ * Registra un tema con nombre (se fusiona sobre `extends`, por defecto papel):
+ *   registerTheme('acme', { background: '#FFF', ink: '#111', categorical: 'tab10', grid: { dash: '2 3' } })
+ *   configure({ theme: 'acme' })   // todos los gráficos
+ */
+export function registerTheme(name, theme) {
+  if (!name || typeof name !== 'string') throw new TypeError('registerTheme(name, theme): falta el nombre.');
+  if (name === 'papel' || name === 'noche' || name === 'light' || name === 'dark') throw new TypeError(`"${name}" es un tema de fábrica: usa otro nombre o { extends: "${name}" }.`);
+  themes[name] = { ...getTheme(theme || {}), name };
+  return themes[name];
+}
+
+/**
+ * Tema = JSON. Acepta un nombre ("papel", "noche" o uno registrado) o un
+ * objeto parcial que se fusiona en profundidad sobre `extends` (por defecto
+ * "papel"):
  *   { extends: "noche", categorical: ["#..."], type: { title: 24 }, marks: { lineWidth: 3 } }
- * `categorical`, `sequential` y `diverging` aceptan también un nombre de paleta.
+ * Alias: background, text, accent, grid { color, dash, width }, tooltip { bg, ink }, radius, barRadius, font.
+ * `categorical`, `sequential` y `diverging` aceptan también un nombre de paleta o colormap.
  */
 export function getTheme(t) {
   if (!t) return papel;
   if (typeof t === 'string') return themes[t] || papel;
-  const base = themes[t.extends] || (t.mode === 'dark' ? noche : papel);
-  const merged = deepMerge(base, t);
-  if (typeof merged.categorical === 'string') merged.categorical = palettes[merged.categorical] || base.categorical;
-  if (typeof merged.sequential === 'string') merged.sequential = ramps[merged.sequential] || base.sequential;
-  if (typeof merged.diverging === 'string') merged.diverging = ramps[merged.diverging] || base.diverging;
-  return merged;
+  const over = normalizeTokens(t);
+  const base = (typeof over.extends === 'string' ? themes[over.extends] : isObj(over.extends) ? getTheme(over.extends) : null) || (over.mode === 'dark' ? noche : papel);
+  const merged = deepMerge(base, over);
+  delete merged.extends;
+  if (typeof merged.categorical === 'string') merged.categorical = namedPalette(merged.categorical) || base.categorical;
+  if (typeof merged.sequential === 'string') merged.sequential = namedRamp(merged.sequential) || base.sequential;
+  if (typeof merged.diverging === 'string') merged.diverging = namedRamp(merged.diverging) || base.diverging;
+  return sanitize(merged, base);
 }
 
-/** Tema efectivo de un spec: `theme` + atajos `palette` y `ramp`. */
+/** Tema efectivo de un spec: `theme` + atajos `palette`, `ramp` y `colorScale`. */
 export function themeFor(spec = {}) {
   let t = getTheme(spec.theme);
-  if (spec.palette) t = { ...t, categorical: Array.isArray(spec.palette) ? spec.palette : palettes[spec.palette] || t.categorical };
-  if (spec.ramp) t = { ...t, sequential: Array.isArray(spec.ramp) ? spec.ramp : ramps[spec.ramp] || t.sequential };
+  if (spec.palette) {
+    const p = Array.isArray(spec.palette) ? spec.palette.filter(isColor) : namedPalette(spec.palette);
+    if (p && p.length) t = { ...t, categorical: p };
+  }
+  if (spec.ramp) {
+    const r = Array.isArray(spec.ramp) ? spec.ramp.filter(isColor) : namedRamp(spec.ramp);
+    if (r && r.length >= 2) t = { ...t, sequential: r };
+  }
+  const cs = resolveColorScale(spec.colorScale ?? spec.cmap ?? spec.colormap);
+  if (cs && cs.kind !== 'qualitative') {
+    const stops = sample(cs.stops, 17);
+    // `cmap`: la escala se usa completa (sin recortar el extremo claro como la rampa de fábrica).
+    t = cs.kind === 'diverging' ? { ...t, diverging: stops, cmap: cs.name } : { ...t, sequential: [stops[0], ...stops], cmap: cs.name };
+  }
   return t;
 }
 

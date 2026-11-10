@@ -6,6 +6,20 @@ export const finite = (vs) => vs.filter((v) => Number.isFinite(v));
 export const sum = (vs) => vs.reduce((a, b) => a + b, 0);
 export const mean = (vs) => (vs.length ? sum(vs) / vs.length : NaN);
 
+/**
+ * [mín, máx] de los valores finitos con un bucle: `Math.min(...arr)` desborda
+ * la pila con ~150 mil elementos. Vacío → [Infinity, -Infinity] (como Math.min()).
+ */
+export function extent(vs) {
+  let lo = Infinity, hi = -Infinity;
+  for (const v of vs) {
+    if (!Number.isFinite(v)) continue;
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return [lo, hi];
+}
+
 export function variance(vs) {
   const n = vs.length;
   if (n < 2) return 0;
@@ -112,10 +126,15 @@ export function histogram(vs, { bins, binWidth, domain } = {}) {
 export function scottBandwidth(vs) {
   const v = finite(vs);
   const s = sd(v);
-  const iqr = quantile([...v].sort((a, b) => a - b), 0.75) - quantile([...v].sort((a, b) => a - b), 0.25);
+  const sorted = [...v].sort((a, b) => a - b);
+  const iqr = quantile(sorted, 0.75) - quantile(sorted, 0.25);
   const sigma = Math.min(s, iqr / 1.349) || s || 1;
   return 1.06 * sigma * v.length ** -0.2;
 }
+
+const extentOf = extent;
+/** Sobre este número de valores, la KDE usa binning lineal. */
+export const KDE_BIN_MIN = 2048;
 
 /**
  * Densidad por kernel gaussiano. Devuelve [[x, densidad], ...] en una grilla.
@@ -125,14 +144,29 @@ export function kde(vs, { bandwidth, adjust = 1, gridSize = 160, extent, cut = 3
   const v = finite(vs);
   if (!v.length) return [];
   const bw = (bandwidth ?? scottBandwidth(v)) * adjust || 1;
-  let [lo, hi] = extent || [Math.min(...v) - cut * bw, Math.max(...v) + cut * bw];
+  const [vmin, vmax] = extentOf(v);
+  let [lo, hi] = extent || [vmin - cut * bw, vmax + cut * bw];
   if (clip) { lo = Math.max(lo, clip[0]); hi = Math.min(hi, clip[1]); }
   const k = 1 / (v.length * bw * Math.sqrt(2 * Math.PI));
+  // Muchos valores: binning lineal en ~1024 nodos (cada valor reparte su peso
+  // entre los dos nodos vecinos). Error despreciable frente al ancho de banda.
+  let xsK = v, ws = null;
+  if (v.length > KDE_BIN_MIN && vmax > vmin) {
+    const B = 1024, dx = (vmax - vmin) / (B - 1);
+    ws = new Float64Array(B);
+    for (const xi of v) {
+      const t = (xi - vmin) / dx, j = Math.min(B - 2, Math.floor(t)), f = t - j;
+      ws[j] += 1 - f; ws[j + 1] += f;
+    }
+    xsK = Array.from({ length: B }, (_, j) => vmin + j * dx);
+  }
   const out = [];
   for (let i = 0; i < gridSize; i++) {
     const x = lo + ((hi - lo) * i) / (gridSize - 1);
     let d = 0;
-    for (const xi of v) { const u = (x - xi) / bw; if (u > -6 && u < 6) d += Math.exp(-0.5 * u * u); }
+    if (ws) {
+      for (let j = 0; j < xsK.length; j++) { if (!ws[j]) continue; const u = (x - xsK[j]) / bw; if (u > -6 && u < 6) d += ws[j] * Math.exp(-0.5 * u * u); }
+    } else for (const xi of v) { const u = (x - xi) / bw; if (u > -6 && u < 6) d += Math.exp(-0.5 * u * u); }
     out.push([x, d * k]);
   }
   return out;
@@ -216,27 +250,50 @@ export function pearson(xs, ys) {
   return sxx && syy ? sxy / Math.sqrt(sxx * syy) : 0;
 }
 
-/** LOWESS (Cleveland): suavizado local robusto. Devuelve [[x, y], ...] ordenado. */
-export function lowess(xs, ys, { frac = 2 / 3, iters = 2 } = {}) {
+/**
+ * LOWESS (Cleveland): suavizado local robusto. Devuelve [[x, y], ...] ordenado.
+ * Como x está ordenado, los r vecinos más cercanos forman una ventana contigua
+ * (dos punteros, sin ordenar distancias). Con muchos puntos (> 400) se ajusta
+ * solo en ~200 anclas y se interpola entre ellas (el `delta` de statsmodels).
+ */
+export function lowess(xs, ys, { frac = 2 / 3, iters = 2, delta } = {}) {
   const pts = xs.map((x, i) => [x, ys[i]]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y)).sort((a, b) => a[0] - b[0]);
   const n = pts.length;
   if (n < 3) return pts;
-  const r = Math.max(2, Math.ceil(frac * n));
+  const X = pts.map((p) => p[0]), Y = pts.map((p) => p[1]);
+  const r = Math.min(n, Math.max(2, Math.ceil(frac * n)));
+  const dl = delta ?? (n > 400 ? (X[n - 1] - X[0]) / 200 : 0);
+  // Anclas: el primero, luego el primer punto a más de `dl` del ancla anterior, y el último.
+  const anchors = [0];
+  if (dl > 0) {
+    for (let i = 1; i < n; i++) if (X[i] > X[anchors[anchors.length - 1]] + dl) anchors.push(i);
+    if (anchors[anchors.length - 1] !== n - 1) anchors.push(n - 1);
+  } else for (let i = 1; i < n; i++) anchors.push(i);
   let robust = new Array(n).fill(1);
-  let fit = new Array(n).fill(0);
+  const fit = new Array(n).fill(0);
   for (let it = 0; it <= iters; it++) {
-    for (let i = 0; i < n; i++) {
-      const x0 = pts[i][0];
-      const d = pts.map(([x]) => Math.abs(x - x0)).sort((a, b) => a - b);
-      const h = d[Math.min(n - 1, r - 1)] || 1e-12;
+    let lo = 0;
+    for (const i of anchors) {
+      const x0 = X[i];
+      while (lo + r < n && X[lo + r] - x0 < x0 - X[lo]) lo++;
+      const hiI = lo + r - 1;
+      const h = Math.max(x0 - X[lo], X[hiI] - x0) || 1e-12;
       let sw = 0, swx = 0, swy = 0, swxx = 0, swxy = 0;
-      for (let j = 0; j < n; j++) {
-        const u = Math.abs(pts[j][0] - x0) / h;
+      for (let j = lo; j <= hiI; j++) {
+        const u = Math.abs(X[j] - x0) / h;
         const w = u < 1 ? (1 - u ** 3) ** 3 * robust[j] : 0;
-        sw += w; swx += w * pts[j][0]; swy += w * pts[j][1]; swxx += w * pts[j][0] ** 2; swxy += w * pts[j][0] * pts[j][1];
+        sw += w; swx += w * X[j]; swy += w * Y[j]; swxx += w * X[j] ** 2; swxy += w * X[j] * Y[j];
       }
       const den = sw * swxx - swx * swx;
       fit[i] = Math.abs(den) < 1e-12 ? swy / (sw || 1) : ((swxx * swy - swx * swxy) + (sw * swxy - swx * swy) * x0) / den;
+    }
+    // Entre anclas: interpolación lineal (mismo x → mismo valor).
+    for (let a = 0; a < anchors.length - 1; a++) {
+      const i0 = anchors[a], i1 = anchors[a + 1];
+      for (let i = i0 + 1; i < i1; i++) {
+        const span = X[i1] - X[i0];
+        fit[i] = span ? fit[i0] + ((fit[i1] - fit[i0]) * (X[i] - X[i0])) / span : fit[i0];
+      }
     }
     const res = pts.map(([, y], i) => Math.abs(y - fit[i]));
     const m = median(res) || 1e-12;

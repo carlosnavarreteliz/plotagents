@@ -148,7 +148,7 @@ export function planDashboard(spec = {}) {
   if (spec.layout === 'grid') primary = null;
   if (primary && spec.order !== 'given') charts = [primary, ...charts.filter((c) => c !== primary)];
   // Colores comunes: misma entidad, mismo color en todos los gráficos.
-  const theme = themeFor({ ...base });
+  const theme = themeFor(core.resolveDefaults ? core.resolveDefaults({ ...base }) : { ...base });
   const tot = new Map();
   for (const c of charts) {
     const f = colorField(c.spec);

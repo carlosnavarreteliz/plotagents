@@ -4,7 +4,9 @@
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
-import { themeFor } from './theme.js';
+import { themeFor, themes, palettes, ramps } from './theme.js';
+import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
+import { schema } from './schema.js';
 import { parseDate } from './format.js';
 
 /** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
@@ -12,6 +14,10 @@ let RENDER_PROBE = null;
 export const _setProbe = (fn) => { RENDER_PROBE = fn; };
 
 export function lint(spec = {}) {
+  if (!spec || typeof spec !== 'object') spec = {};
+  const en = String(spec.locale || '').toLowerCase().startsWith('en');
+  /** Mensajes nuevos: se escriben directo en ambos idiomas. */
+  const L = (es, english) => (en ? english : es);
   const errors = [];
   const warnings = [];
   const tips = [];
@@ -23,7 +29,7 @@ export function lint(spec = {}) {
   const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
   try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
-  if (!TYPES.includes(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')}`);
+  if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
   const check = (f, role) => {
     for (const ff of [].concat(f ?? [])) if (ff && !fields.includes(ff)) err('field', `El campo "${ff}" (${role}) no existe.`, `Campos disponibles: ${fields.join(', ')}`);
@@ -61,17 +67,18 @@ export function lint(spec = {}) {
       if (a && b && Math.max(a, b) / Math.min(a, b) > 10) warn('dual-scale', 'Las dos medidas tienen escalas muy distintas (no hay doble eje: inventa correlaciones).', 'Usa `index: true` (base 100) o dos gráficos separados.');
     }
   }
-  if (type === 'donut') {
+  if (type === 'donut' || type === 'pie') {
+    const shape = type === 'pie' ? 'torta' : 'dona';
     const lf = spec.label ?? spec.x ?? fields.find((f) => fieldKind(data, f) === 'category');
     const vf = spec.value ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
     const n = lf ? uniq(data.map((r) => String(r[lf]))).length : 0;
-    if (n > 6) warn('donut-slices', `${n} segmentos: sobre 6 la dona no se lee; se agrupan en "Otros".`, 'Usa `type: "bar"` o `type: "treemap"`.');
+    if (n > 6) warn('donut-slices', `${n} segmentos: sobre 6 la ${shape} no se lee; se agrupan en "Otros".`, 'Usa `type: "bar"` o `type: "treemap"`.');
     if (n === 2) sug('donut-two', 'Dos segmentos son un solo número.', 'Usa `type: "kpi"` con el porcentaje.');
     if (vf && n >= 3) {
       const vals = data.map((r) => num(r[vf])).filter((v) => v > 0).sort((a, b) => b - a);
       if (vals.length >= 3 && vals[0] / vals[vals.length - 1] < 1.35) sug('donut-close', 'Los valores son muy parecidos: los ángulos no permiten compararlos.', 'Usa `type: "bar"` ordenado.');
     }
-    if (data.some((r) => num(r[vf]) < 0)) err('negative', 'La dona no admite valores negativos.', 'Usa barras.');
+    if (vf && data.some((r) => num(r[vf]) < 0)) err('negative', `La ${shape} no admite valores negativos.`, 'Usa barras.');
   }
   if (type === 'treemap') {
     const vf = spec.value ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
@@ -129,7 +136,7 @@ export function lint(spec = {}) {
     if (sf && fields.includes(sf)) { const n = uniq(data.map((r) => String(r[sf]))).length; if (n !== 2) err('pyramid-sides', `La pirámide necesita exactamente 2 grupos en "${sf}" (hay ${n}).`, 'Usa `type: "bar"` con `series` para más grupos.'); }
   }
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
-  if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circle"`.');
+  if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circular"` o `layout: "clusters"`.');
 
   if (type === 'wordcloud') {
     if (!data.length && !spec.text) err('empty', 'La nube no tiene palabras.', 'Pasa filas { palabra, valor } o `text: "…"` con el texto a contar.');
@@ -145,11 +152,24 @@ export function lint(spec = {}) {
       if (back.length) warn('gantt-backwards', `${back.length} tarea(s) terminan antes de empezar.`, 'Revisa si `start` y `end` están invertidos.');
     }
     if (data.length > 40) sug('gantt-many', `${data.length} tareas en una sola carta: cuesta encontrar la ruta crítica.`, 'Agrupa por fase con `group`, resume subtareas o usa `facet` por equipo.');
-    if (spec.today === undefined && !spec.refLines) sug('gantt-today', 'Una línea de "hoy" dice de un vistazo qué va atrasado.', 'Agrega `today: "2026-03-12"` (o `today: true`).');
+    if (spec.today === undefined && ![].concat(spec.refLines ?? []).length) sug('gantt-today', 'Una línea de "hoy" dice de un vistazo qué va atrasado.', 'Agrega `today: "2026-03-12"` (o `today: true`).');
   }
-  if (type === 'kpi' && !(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
+  if (type === 'gantt' && data.length) {
+    const gF = spec.group ?? spec.series ?? spec.hue;
+    if (gF && fields.includes(gF)) {
+      const phases = uniq(data.map((r) => String(r[gF] ?? '')));
+      if (spec.collapsed !== undefined && spec.collapsed !== true && spec.collapsed !== false) {
+        const bad = [].concat(spec.collapsed).map(String).filter((v) => !phases.includes(v));
+        if (bad.length) warn('gantt-collapsed-unknown', L(`\`collapsed\` nombra fases que no existen: ${bad.slice(0, 4).join(', ')}.`, `\`collapsed\` names phases that do not exist: ${bad.slice(0, 4).join(', ')}.`), L(`Usa valores de \`${gF}\`: ${phases.slice(0, 6).join(', ')}.`, `Use values of \`${gF}\`: ${phases.slice(0, 6).join(', ')}.`));
+      }
+      if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
+    }
+  }
+  if (type === 'kpi' && ![].concat(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
-  if (String(spec.locale || '').toLowerCase().startsWith('en')) for (const list of [errors, warnings, tips]) list.forEach((it, i) => { list[i] = toEnglish(it); });
+  checkOptions(spec, { type, data, fields, err, warn, sug, L });
+
+  if (en) for (const list of [errors, warnings, tips]) list.forEach((it, i) => { list[i] = toEnglish(it); });
   return { ok: errors.length === 0, type, errors, warnings, suggestions: tips };
 }
 
@@ -176,10 +196,10 @@ const EN = {
   'line-nominal': () => ['The x axis holds unordered categories: lines suggest continuity.', 'To compare categories, use `type: "bar"`.'],
   'line-few': () => ['Fewer than 3 points in time.', 'With 2 periods, grouped bars or a `kpi` with its change say it better.'],
   'dual-scale': () => ['The two measures have very different scales (there is no dual axis: it invents correlations).', 'Use `index: true` (base 100) or two separate charts.'],
-  'donut-slices': (m) => [`${n0(m.message)} slices: beyond 6 a donut cannot be read; the rest fold into "Other".`, 'Use `type: "bar"` or `type: "treemap"`.'],
+  'donut-slices': (m) => [`${n0(m.message)} slices: beyond 6 a ${/torta/.test(m.message) ? 'pie' : 'donut'} cannot be read; the rest fold into "Other".`, 'Use `type: "bar"` or `type: "treemap"`.'],
   'donut-two': () => ['Two slices are a single number.', 'Use `type: "kpi"` with the percentage.'],
   'donut-close': () => ['The values are very similar: angles cannot tell them apart.', 'Use a sorted `type: "bar"`.'],
-  negative: (m) => (/dona/.test(m.message) ? ['Donuts cannot show negative values.', 'Use bars.'] : ['Negative values are left out of the treemap.', 'Use bars for signed data.']),
+  negative: (m) => (/dona|torta/.test(m.message) ? [`${/torta/.test(m.message) ? 'Pies' : 'Donuts'} cannot show negative values.`, 'Use bars.'] : ['Negative values are left out of the treemap.', 'Use bars for signed data.']),
   'groups-max': () => ['More than 8 groups: from the 8th on they go into a gray "Other".', 'Merge categories or use another hierarchy level.'],
   'scatter-colors': (m) => [`${n0(m.message)} color groups in a scatter: only the first 3 colors stay distinct across every pair for color-blind readers.`, 'Use `highlight`, merge groups or split into several charts.'],
   overplot: (m) => [`${n0(m.message)} points: they may overlap.`, 'Reduce `radius` or use a heatmap.'],
@@ -193,7 +213,7 @@ const EN = {
   'dashed-from-type': () => ['`dashedFrom` only applies to lines, areas and columns on a time axis.', 'Use `dashed` with a list of categories or a data field.'],
   'pyramid-sides': (m) => { const [f] = qs(m.message); return [`A population pyramid needs exactly 2 groups in "${f}" (found ${(/hay (\d+)/.exec(m.message) || [])[1]}).`, 'Use `type: "bar"` with `series` for more groups.']; },
   'chord-many': () => ['More than 16 groups in a chord diagram: the ribbons become unreadable.', 'Fold the smallest into "Other" or use `type: "sankey"`.'],
-  'network-big': (m) => [`${n0(m.message)} links: the network may look like a blob.`, 'Filter weak links or use `layout: "circle"`.'],
+  'network-big': (m) => [`${n0(m.message)} links: the network may look like a blob.`, 'Filter weak links or use `layout: "circular"` or `layout: "clusters"`.'],
   'gantt-start': () => ['A Gantt chart needs a start date per task.', 'Set `start` and `end` (or `duration`): start: "start", end: "end".'],
   'gantt-backwards': (m) => [`${n0(m.message)} task(s) end before they start.`, 'Check whether `start` and `end` are swapped.'],
   'gantt-many': (m) => [`${n0(m.message)} tasks in one chart: the critical path is hard to find.`, 'Group by phase with `group`, roll up subtasks or use `facet` by team.'],
@@ -210,3 +230,188 @@ function toEnglish(it) {
 }
 
 export { PlotError };
+
+// ── Opciones: nombres desconocidos, valores fuera de catálogo ─────────────
+// Solo avisan (warnings) salvo cuando el valor no puede funcionar (errors).
+
+export const KNOWN_TYPES = new Set([...TYPES, 'pointmap']);
+
+/**
+ * Opciones de primer nivel que el código lee además de las del schema
+ * (alias, atajos, opciones avanzadas e internas). Mejor de más que de menos:
+ * un nombre válido marcado como desconocido confunde al agente.
+ */
+const EXTRA_OPTIONS = `
+  ageOrder aggregate annotate antarctica axisInside background bandwidth barHeight barWidth bars bw_adjust bwAdjust
+  cellHeight center centerLabel centerValue change changeDomain clip cmap col colWrap col_wrap collapsed collapsible
+  color colorScale colormap commonNorm common_norm compareData compareField compareLabel complementary controls
+  critical criticalColor cumulative current curveness cut densityNorm diverging dodge domain edgeLabel element
+  endLabels exclude facetOrder fontFamily fontImport fontScale frac grid hole hueOrder invert iterations jitter join
+  labelOrientation labelScale labelValues labelsFor lane lanes lat latitude legend legendPosition legendTitle level
+  lineWidth lng lon longitude maxRadius maxSlices mean missing nodeId nodeLabel nodeWidth note orient orientation
+  other padding panelGap panelHeight panelLabels playInterval radius region ribbonColor rug scatter shareX shareY sharex
+  showMeans showValues sides size sizeFormat sizeTitle source_field span swimlanes territories thickness thresholds
+  tileOpacity tileStyle tiles tilesKey todayColor truncate unit valueDomain valueFormat valueScale weekends word
+  xFormat yFormat yTicks zoom curveness exclude colorScale filters kpis charts updated primary layout
+  after area good minLength sizeKey x2
+  id name description notes meta alt $schema comment
+`.trim().split(/\s+/);
+
+let KNOWN_OPTIONS = null;
+const knownOptions = () => (KNOWN_OPTIONS ??= new Set([...Object.keys(schema.properties || {}), ...EXTRA_OPTIONS]));
+
+/** Distancia de edición (Levenshtein), con corte temprano en `max`. */
+export function editDistance(a, b, max = 3) {
+  a = String(a); b = String(b);
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < best) best = cur[j];
+    }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/** Candidato más parecido (≤ 2 ediciones, sin distinguir mayúsculas) o null. */
+export function didYouMean(value, candidates, max = 2) {
+  const v = String(value).toLowerCase();
+  let best = null, bestD = max + 1;
+  // "percentage" → "percent": un prefijo largo cuenta como parecido.
+  for (const c of candidates) { const lc = String(c).toLowerCase(); if (lc.length >= 4 && v.length >= 4 && (v.startsWith(lc) || lc.startsWith(v))) return c; }
+  for (const c of candidates) {
+    const d = editDistance(v, String(c).toLowerCase(), max);
+    if (d < bestD) { best = c; bestD = d; }
+  }
+  return best;
+}
+
+const FORMAT_TYPES = ['number', 'compact', 'percent', 'currency', 'integer', 'year'];
+const SCALES = ['linear', 'log'];
+const CURVES = ['linear', 'smooth', 'step'];
+const LEGEND_POS = ['top', 'bottom', 'left', 'right', 'arriba', 'abajo', 'izquierda', 'derecha'];
+const NETWORK_LAYOUTS = ['force', 'circular', 'circle', 'radial', 'concentric', 'clusters', 'tree', 'grid', 'ring', 'cluster', 'groups', 'hierarchy', 'concentrico', 'arbol', 'árbol', 'grilla', 'fuerzas'];
+const TILES = ['osm', 'esri-gray', 'esri-dark', 'carto-light', 'carto-dark', 'mapbox-light', 'mapbox-dark', 'esri', 'carto', 'mapbox', 'none', 'openstreetmap', 'esri-light', 'esri-grey', 'positron', 'dark-matter', 'darkmatter'];
+const THEME_KEYS = 'extends mode name surface background ink text lede muted grid axis tint tint2 dim other link accent categorical sequential diverging status font type marks axes layout tooltip radius barRadius'.split(' ');
+const PALETTE_NAMES = () => [...Object.keys(palettes), ...Object.values(colorScaleNames()).flat()];
+const MAPS = new Set(['choropleth', 'symbolmap', 'pointmap']);
+
+function checkOptions(spec, { type, data, fields, err, warn, L }) {
+  const q = (v) => (typeof v === 'string' ? `"${v}"` : JSON.stringify(v));
+  const enumCheck = (key, value, allowed, example) => {
+    if (typeof value !== 'string' || allowed.includes(value)) return;
+    const near = didYouMean(value, allowed);
+    err('enum-' + key, L(`\`${key}: ${q(value)}\` no es un valor válido.`, `\`${key}: ${q(value)}\` is not a valid value.`),
+      (near ? L(`¿Quisiste decir \`${key}: "${near}"\`? `, `Did you mean \`${key}: "${near}"\`? `) : '') + L(`Valores: ${example ?? allowed.map((a) => `"${a}"`).join(', ')}.`, `Values: ${example ?? allowed.map((a) => `"${a}"`).join(', ')}.`));
+  };
+
+  // 1. Nombres de opciones desconocidos (probablemente un error de tipeo).
+  const known = knownOptions();
+  for (const k of Object.keys(spec)) {
+    if (known.has(k) || k.startsWith('_')) continue;
+    const near = didYouMean(k, known);
+    warn('unknown-option', L(`Opción desconocida \`${k}\`: se ignora.`, `Unknown option \`${k}\`: it is ignored.`),
+      near ? L(`¿Quisiste decir \`${near}\`?`, `Did you mean \`${near}\`?`) : L('Revisa el nombre en el schema (`plotagents --schema`).', 'Check the name in the schema (`plotagents --schema`).'));
+  }
+
+  // 2. Valores fuera de catálogo.
+  const f = spec.format;
+  if (typeof f === 'string') enumCheck('format', f, FORMAT_TYPES, '"number", "compact", "percent", "currency", "integer" o { prefix, suffix, decimals }');
+  else if (f && typeof f === 'object') {
+    if (f.type !== undefined) enumCheck('format', f.type, FORMAT_TYPES);
+    if (f.decimals !== undefined && !(Number.isInteger(f.decimals) && f.decimals >= 0 && f.decimals <= 20)) {
+      err('format-decimals', L(`\`format.decimals: ${q(f.decimals)}\` debe ser un entero entre 0 y 20.`, `\`format.decimals: ${q(f.decimals)}\` must be an integer between 0 and 20.`), L('Usa entre 0 y 3 decimales: `format: { decimals: 1 }`.', 'Use 0 to 3 decimals: `format: { decimals: 1 }`.'));
+    }
+  } else if (f !== undefined && f !== null) err('enum-format', L('`format` debe ser un texto o un objeto.', '`format` must be a string or an object.'), 'format: "percent" | { prefix: "$", decimals: 0 }');
+  if (spec.stack !== undefined && typeof spec.stack !== 'boolean') {
+    if (spec.stack !== 'percent') {
+      const near = typeof spec.stack === 'string' ? didYouMean(spec.stack, ['percent']) : null;
+      err('enum-stack', L(`\`stack: ${q(spec.stack)}\` no es válido.`, `\`stack: ${q(spec.stack)}\` is not valid.`), (near ? L('¿Quisiste decir `stack: "percent"`? ', 'Did you mean `stack: "percent"`? ') : '') + L('Usa `stack: true` (apilar) o `stack: "percent"` (100%).', 'Use `stack: true` (stacked) or `stack: "percent"` (100%).'));
+    }
+  }
+  for (const k of ['xScale', 'yScale']) if (spec[k] !== undefined) enumCheck(k, spec[k], SCALES, '"linear", "log"');
+  if (spec.curve !== undefined) enumCheck('curve', spec.curve, CURVES);
+  if (spec.legend !== undefined && typeof spec.legend !== 'boolean') {
+    const pos = typeof spec.legend === 'string' ? spec.legend : spec.legend && typeof spec.legend === 'object' ? spec.legend.position : undefined;
+    if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
+  }
+  if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid"');
+  if (type === 'pointmap') {
+    if (typeof spec.tiles === 'string') enumCheck('tiles', spec.tiles.toLowerCase(), TILES, '"osm", "esri-gray", "esri-dark", "carto-light", "carto-dark", "mapbox-light", "mapbox-dark", { url, attribution } o false');
+    if (spec.tileStyle !== undefined) enumCheck('tileStyle', spec.tileStyle, ['muted', 'original']);
+  }
+  // Un token secreto de Mapbox quedaría a la vista en el SVG.
+  const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);
+  if (token !== undefined && token !== null && String(token).trim().startsWith('sk.')) err('tiles-secret', L('El token de Mapbox es secreto (empieza con "sk."): quedaría a la vista de cualquiera en el SVG.', 'The Mapbox token is secret (it starts with "sk."): anyone could read it in the SVG.'), L('Usa un token público ("pk.…") restringido a tu dominio, de account.mapbox.com.', 'Use a public token ("pk.…") restricted to your domain, from account.mapbox.com.'));
+
+  // 3. Escalas de color (matplotlib).
+  for (const key of ['colorScale', 'cmap', 'colormap']) {
+    const v = spec[key];
+    if (v === undefined || v === null || v === false) continue;
+    const nameOf = typeof v === 'string' ? v : v && typeof v === 'object' && !Array.isArray(v) && typeof (v.name ?? v.colors) === 'string' ? v.name ?? v.colors : null;
+    const cs = resolveColorScale(v);
+    if (!cs) {
+      if (nameOf !== null) {
+        const all = Object.values(colorScaleNames()).flat();
+        const base = String(nameOf).replace(/_r$/i, '');
+        const near = didYouMean(base, all);
+        err('colorscale-unknown', L(`La escala de color "${nameOf}" no existe.`, `The color scale "${nameOf}" does not exist.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Usa un nombre de matplotlib ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` invierte) o una lista de colores hex.', 'Use a matplotlib name ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` reverses) or a list of hex colors.'));
+      } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores hex (["#FFF", "#123"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two hex colors (["#FFF", "#123"]) or { name, reverse, mid }.'));
+    } else if (cs.kind === 'qualitative') {
+      err('colorscale-qualitative', L(`"${cs.name}" es una paleta cualitativa: no sirve para una escala continua.`, `"${cs.name}" is a qualitative palette: it cannot be a continuous scale.`), L(`Usa \`palette: "${cs.name}"\` para categorías, o una escala como "viridis" o "Blues".`, `Use \`palette: "${cs.name}"\` for categories, or a scale such as "viridis" or "Blues".`));
+    } else if (RAINBOW.has(cs.name.replace(/_r$/, ''))) {
+      warn('colorscale-rainbow', L(`"${cs.name}" es un arcoíris: inventa bordes, no se lee en escala de grises ni con daltonismo.`, `"${cs.name}" is a rainbow map: it invents edges and fails in grayscale and for color-blind readers.`), L('Usa "viridis" (o "turbo" si necesitas muchos tonos).', 'Use "viridis" (or "turbo" if you need many hues).'));
+    }
+  }
+  if (typeof spec.palette === 'string' && !palettes[spec.palette] && !resolveColorScale(spec.palette)) {
+    const near = didYouMean(spec.palette, PALETTE_NAMES());
+    warn('palette-unknown', L(`La paleta "${spec.palette}" no existe: se usa la de fábrica.`, `The palette "${spec.palette}" does not exist: the default is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Nombres: "okabe-ito", "tab10", "Set2", "Dark2"… o una lista de colores.', 'Names: "okabe-ito", "tab10", "Set2", "Dark2"… or a list of colors.'));
+  }
+  if (typeof spec.ramp === 'string' && !ramps[spec.ramp] && !resolveColorScale(spec.ramp)) {
+    const near = didYouMean(spec.ramp, [...Object.keys(ramps), ...Object.values(colorScaleNames()).flat()]);
+    warn('ramp-unknown', L(`La rampa "${spec.ramp}" no existe: se usa la de fábrica.`, `The ramp "${spec.ramp}" does not exist: the default is used.`), near ? L(`¿Quisiste decir "${near}"?`, `Did you mean "${near}"?`) : L('Usa "indigo", "teal", "viridis", "Blues"…', 'Use "indigo", "teal", "viridis", "Blues"…'));
+  }
+  if (typeof spec.theme === 'string' && !themes[spec.theme]) {
+    const near = didYouMean(spec.theme, Object.keys(themes));
+    warn('theme-unknown', L(`El tema "${spec.theme}" no existe: se usa "papel".`, `The theme "${spec.theme}" does not exist: "papel" is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Usa "papel", "noche", un tema de registerTheme() o un objeto.', 'Use "papel", "noche", a theme from registerTheme() or an object.'));
+  } else if (spec.theme && typeof spec.theme === 'object') {
+    for (const k of Object.keys(spec.theme)) {
+      if (THEME_KEYS.includes(k)) continue;
+      const near = didYouMean(k, THEME_KEYS);
+      warn('theme-key', L(`\`theme.${k}\` no es un token del tema: se ignora.`, `\`theme.${k}\` is not a theme token: it is ignored.`), near ? L(`¿Quisiste decir \`theme.${near}\`?`, `Did you mean \`theme.${near}\`?`) : L(`Tokens: ${THEME_KEYS.join(', ')}.`, `Tokens: ${THEME_KEYS.join(', ')}.`));
+    }
+  }
+
+  // 4. Formas: refLines y annotations van como lista.
+  for (const k of ['refLines', 'annotations']) {
+    const v = spec[k];
+    if (v !== undefined && v !== null && !Array.isArray(v)) warn('not-a-list', L(`\`${k}\` debe ser una lista.`, `\`${k}\` must be a list.`), `${k}: [${typeof v === 'object' ? JSON.stringify(v) : '{ y: 600, label: "Meta" }'}]`);
+  }
+
+  // 5. highlight / dashed / exclude que no nombran nada de los datos.
+  if (!data.length || MAPS.has(type)) return;
+  let names = null;
+  const has = (v) => {
+    if (!names) {
+      names = new Set(fields.map((x) => x.toLowerCase()));
+      for (const r of data) for (const x of fields) { const c = r[x]; if (c !== null && c !== undefined && typeof c !== 'object') names.add(String(c).toLowerCase()); }
+      for (const n of [].concat(spec.nodes || [])) if (n && typeof n === 'object') for (const c of [n.id, n.label, n.name]) if (c !== undefined) names.add(String(c).toLowerCase());
+      for (const y of [].concat(spec.y || [])) names.add(String(y).toLowerCase());
+    }
+    return names.has(String(v).toLowerCase());
+  };
+  for (const key of ['highlight', 'exclude', 'dashed']) {
+    const v = spec[key];
+    if (v === undefined || v === null || typeof v === 'boolean' || (typeof v === 'object' && !Array.isArray(v))) continue;
+    // Fechas y "Otros" pueden no estar escritas igual en los datos: no se marcan.
+    const bad = [].concat(v).filter((x) => x !== null && x !== undefined && typeof x !== 'object' && !has(x) && !/^\d{4}(-\d{1,2}){0,2}$/.test(String(x)) && !/^(otros|other|others)$/i.test(String(x))).map(String);
+    if (!bad.length) continue;
+    warn(key + '-unknown', L(`\`${key}\` nombra valores que no están en los datos: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`, `\`${key}\` names values that are not in the data: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`),
+      L('Usa el texto exacto de una categoría o serie (se distinguen tildes y espacios).', 'Use the exact text of a category or series (accents and spaces count).'));
+  }
+}

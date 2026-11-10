@@ -13,6 +13,7 @@ import { dashedGallery } from './specs-dashed.js';
 import { ganttGallery } from './specs-gantt.js';
 import { customGeoGallery } from './specs-geo-custom.js';
 import { wordsGallery } from './specs-words.js';
+import { pointmapGallery } from './specs-pointmap.js';
 
 export { NOTES_EN, SECTIONS_EN };
 
@@ -33,6 +34,7 @@ const all = [
   ...catGallery.map((e) => ({ ...e, section: e.spec.type === 'radar' ? 'Relaciones' : 'Distribuciones' })),
   ...tag(geoGallery, 'Mapas'),
   ...tag(customGeoGallery, 'Mapas'),
+  ...tag(pointmapGallery, 'Mapas'),
   ...tag(ganttGallery, 'Proyectos'),
   ...tag(wordsGallery, 'Flujos y números'),
   ...tag(networkGallery, 'Redes y flujos'),

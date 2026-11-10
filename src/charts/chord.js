@@ -16,7 +16,7 @@ export function prepareChord(spec) {
   if (Array.isArray(spec.matrix)) {
     const names = (spec.names || spec.matrix.map((_, i) => String(i + 1))).map(String);
     if (spec.matrix.length !== names.length) throw new PlotError('`matrix` y `names` deben tener el mismo largo.', 'matrix: [[0, 5], [3, 0]], names: ["A", "B"]');
-    return { names, m: spec.matrix.map((row) => names.map((_, j) => Math.max(0, num(row[j]) || 0))) };
+    return { names, m: spec.matrix.map((row) => names.map((_, j) => { const v = num(row[j]); return Number.isFinite(v) && v > 0 ? v : 0; })) };
   }
   const data = ensureData(spec);
   const fields = fieldsOf(data);
@@ -33,7 +33,7 @@ export function prepareChord(spec) {
   for (const r of data) {
     if (r[from] === null || r[from] === undefined || r[to] === null || r[to] === undefined) continue;
     const v = vf ? num(r[vf]) : 1;
-    if (!(v > 0)) continue;
+    if (!(v > 0) || !Number.isFinite(v)) continue;
     flows.push([at(String(r[from])), at(String(r[to])), v]);
   }
   const m = names.map(() => names.map(() => 0));
@@ -78,7 +78,7 @@ export function chord(spec, theme) {
   const fmt = makeFormat(spec.format, locale, ribbons.map((r) => r.v).concat(totals));
   const pct = (a, b) => (b > 0 ? formatNumber((a / b) * 100, a / b < 0.1 ? 1 : 0, locale, true) + '%' : '');
 
-  const legend = spec.legend === true ? sizeOrder.map((i) => ({ label: names[i], color: colorOf(i) })) : [];
+  const legend = spec.legend === true || (spec.legend && typeof spec.legend !== 'boolean') ? sizeOrder.map((i) => ({ label: names[i], color: colorOf(i) })) : [];
   const W = spec.width || 720;
   const frame = createFrame(spec, theme, { height: W < 560 ? Math.round(W * 1.02 + 150) : 600 });
   const area = frame.layout(legend);

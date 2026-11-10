@@ -15,7 +15,34 @@ plot({ ...spec, ramp: 'teal' });                            // shortcut for them
 configure({ font: 'Poppins', textScale: 1.4, theme: { extends: 'papel', marks: { lineWidth: 2.5 } } });
 ```
 
-Every later `plot()`, `render()` and `toHTML()` starts from these values; the spec always wins. `configure()` returns the current defaults and `configure(null)` clears them.
+Every later `plot()`, `render()`, `toHTML()` and dashboard starts from these values; the spec always wins. A spec's own `theme` object is deep-merged **over** the global theme, so `configure({ theme: 'noche' })` plus `theme: { marks: { barRadius: 0 } }` stays dark. `configure()` returns the current defaults and `configure(null)` clears them.
+
+## Your own theme, everywhere
+
+The default theme (`papel`) never changes unless you ask. To restyle every chart, register a theme once and make it the default:
+
+```js
+import { registerTheme, configure } from 'plotagents';
+
+registerTheme('acme', {
+  extends: 'papel',              // or 'noche', or another registered theme
+  background: '#FFFFFF',         // alias of surface
+  text: '#111827',               // alias of ink
+  lede: '#4B5563',
+  muted: '#6B7280',
+  grid: { color: '#EEF0F4', dash: '2 3', width: 1 },
+  axis: '#C7CBD6',
+  categorical: 'tab10',          // any palette or matplotlib qualitative map
+  sequential: 'viridis',         // any colormap name
+  tooltip: { bg: '#111827', ink: '#FFFFFF' },
+  radius: 2,                     // bar, tile and swatch corners
+  font: 'Inter',                 // Google Fonts name or CSS stack
+});
+
+configure({ theme: 'acme' });
+```
+
+`theme: 'acme'` also works per chart, and `{ extends: 'acme', … }` builds on it. Colors are validated: anything that is not a CSS color (hex, `rgb()`, `hsl()` or a color name) is dropped and the base value is kept.
 
 ## Built-in themes
 
@@ -30,17 +57,20 @@ Both share the same eight hues, stepped separately for each surface and validate
 
 | Key | Type | Meaning |
 |---|---|---|
-| `extends` | `'papel' \| 'noche'` | Base to merge over (default `papel`, or `noche` when `mode: 'dark'`). |
+| `extends` | theme name or object | Base to merge over (default `papel`, or `noche` when `mode: 'dark'`). |
 | `mode` | `'light' \| 'dark'` | Affects tooltips and text-on-fill contrast. |
-| `surface` | color | Chart background. Also used for 2 px gaps and rings around marks. |
-| `ink`, `lede`, `muted` | color | Primary text, secondary text, axis and source text. |
-| `grid`, `axis` | color | Gridlines and baselines (1 px, solid). |
+| `surface` (alias `background`) | color | Chart background. Also used for 2 px gaps and rings around marks. |
+| `ink` (alias `text`), `lede`, `muted` | color | Primary text, secondary text, axis and source text. |
+| `grid` | color or `{ color, dash, width }` | Gridlines (default 1 px, solid). `dash: '2 3'` draws dotted gridlines. |
+| `axis` | color or `{ color, width }` | Baselines. |
+| `tooltip` | `{ bg, ink }` | Tooltip card colors in the browser (default: white card on light themes, navy on dark). |
+| `radius`, `barRadius` | number | Corner radius of bars (default 4). `radius` sets it for every mark that has corners. |
 | `tint`, `tint2` | color | Quiet fills: KPI tiles, slider tracks, meters. |
 | `dim` | color | Muted marks when `highlight` is used. |
 | `other` | color | The "Other" bucket and series past the 8th. |
-| `categorical` | colors or palette name | Identity colors, assigned in this order. |
-| `sequential` | colors or ramp name | Light → dark, for heatmaps. |
-| `diverging` | colors or ramp name | Two poles with a neutral midpoint. |
+| `categorical` | colors, palette or colormap name | Identity colors, assigned in this order. |
+| `sequential` | colors, ramp or colormap name | Light → dark, for heatmaps and maps. |
+| `diverging` | colors, ramp or colormap name | Two poles with a neutral midpoint. |
 | `status` | `{ good, warning, critical }` | KPI deltas and meters. Never used for series. |
 | `font` | `{ family, mono, import }` | Font stack and optional Google Fonts URL (`fontImport: true` embeds it in the SVG). |
 | `type` | `{ title, subtitle, label, axis, legend, source, titleWeight }` | Type sizes in px. Titles shrink automatically on narrow widths. |
@@ -52,7 +82,7 @@ Both share the same eight hues, stepped separately for each surface and validate
 
 | Palettes (`categorical`) | Ramps (`sequential` / `diverging`) |
 |---|---|
-| `cdia` (default), `cdia-noche`, `okabe-ito`, `tableau10`, `udec` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust` |
+| `cdia` (default), `cdia-noche`, `okabe-ito`, `tableau10`, `udec`, plus matplotlib's `tab10`, `tab20`, `tab20b`, `tab20c`, `Set1`, `Set2`, `Set3`, `Pastel1`, `Pastel2`, `Paired`, `Accent`, `Dark2` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust`, plus every matplotlib colormap (see [Color scales](colorscales.md)) |
 
 ## Validating a palette
 
