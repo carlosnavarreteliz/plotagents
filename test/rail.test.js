@@ -232,3 +232,19 @@ test('treemap tileLabels "wrap": a tall tile writes more than three lines and st
   assert.ok(name.length > 3, name.join('|'));
   assert.equal(name.join(' '), 'Servicios de alojamiento y de comidas para turistas');
 });
+
+// ── table: missingLabel ─────────────────────────────────────────────────────
+test('table missingLabel: a missing value prints the label in its cell and tooltip; default unchanged', () => {
+  const data = [{ n: 'A', v: 10, b: 5 }, { n: 'B', v: null, b: 7 }, { n: 'C', v: 30, b: null }];
+  const spec = { type: 'table', data, columns: ['n', { field: 'v', type: 'number' }, { field: 'b', type: 'bar' }], locale: 'es', width: 600 };
+  const plain = plot(spec);
+  assert.ok(texts(plain).filter((t) => t === '—').length === 2);
+  assert.equal(plain, plot({ ...spec, missingLabel: undefined }));
+  const svg = plot({ ...spec, missingLabel: 'sin dato' });
+  assert.equal(texts(svg).filter((t) => t === 'sin dato').length, 2);
+  assert.ok(!texts(svg).includes('—'));
+  assert.ok(tips(svg).some((t) => t === 'B\nV: sin dato'), tips(svg).join(' ## '));
+  // Cards on a phone too.
+  assert.ok(texts(plot({ ...spec, missingLabel: 's/d', width: 300, cards: true })).includes('s/d'));
+  assert.equal(lint({ ...spec, missingLabel: 'sin dato' }).warnings.filter((w) => w.code === 'unknown-option').length, 0);
+});

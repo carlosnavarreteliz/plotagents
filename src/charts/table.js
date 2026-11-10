@@ -413,6 +413,9 @@ export function table(spec, theme) {
   const hasTotal = spec.total !== false && cols.some((c) => totalOf(c) !== null);
   const totalLabel = spec.totalLabel ?? (spec.total && typeof spec.total === 'object' ? spec.total.label : undefined) ?? W.total;
 
+  // `missingLabel`: lo que dice una celda sin valor (y su tooltip) en vez de «—».
+  const missingLabel = spec.missingLabel === undefined || spec.missingLabel === null || spec.missingLabel === '' ? null : String(spec.missingLabel);
+
   // 5. Anchos: se miden sobre TODAS las filas, así no saltan al cambiar de página.
   const edge = Math.min(BASE.pad, Math.max(4, frame.pad - 6));
   const tableX = area.x - edge, tableW = area.w + edge * 2;
@@ -425,6 +428,8 @@ export function table(spec, theme) {
     const widths = texts.map((t) => measure(t, FS, weight));
     let tw = Math.max(0, ...widths);
     if (hasTotal && c.isLabel) tw = Math.max(tw, measure(totalLabel, FS, 600));
+    // `missingLabel`: la columna que tiene celdas vacías mide también ese rótulo.
+    if (missingLabel !== null && c.type !== 'rank' && sample.some((r) => isNil(r[c.field]))) tw = Math.max(tw, measure(missingLabel, FS, 400));
     const tot = hasTotal ? totalOf(c) : null;
     if (tot !== null) tw = Math.max(tw, measure(c.type === 'progress' && !c.hasTarget ? c.pctFmt(tot / (c.scale100 ? 100 : 1)) : c.fmt(tot), FS, 600));
     const longest = Math.max(0, ...texts.map((t) => Math.max(0, ...String(t).split(/\s+/).map((w) => measure(w, FS, weight)))));
@@ -559,7 +564,13 @@ export function table(spec, theme) {
       else put(ts);
       return { out };
     }
-    if (c.type !== 'rank' && isNil(v)) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+    if (c.type !== 'rank' && isNil(v)) {
+      if (missingLabel === null) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+      const ms = truncate(missingLabel, iw, FS, 400);
+      // Barras, avances y rieles: el rótulo va donde iría la cifra.
+      put(ms, { fill: theme.muted, fontWeight: 400, ...((c.type === 'bar' || c.type === 'progress' || c.type === 'range') && c.align === 'right' ? { x: ix + c.valueW, textAnchor: 'end' } : {}) });
+      return { out, tip: `${c.label}: ${missingLabel}` };
+    }
     const s = cellText(c, r, locale, W);
     switch (c.type) {
       case 'rank': put(s, { fill: theme.muted, fontWeight: 400 }); break;
@@ -652,7 +663,7 @@ export function table(spec, theme) {
       }
       case 'sparkline': {
         const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
-        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : '—', { fill: theme.muted }); break; }
+        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : missingLabel ?? '—', { fill: theme.muted }); break; }
         const sw = Math.min(iw, 120), sh = Math.max(10, Math.min(18, h - 2 * padY - 2));
         const sx = c.align === 'right' ? x + w - P - sw : c.align === 'center' ? x + (w - sw) / 2 : ix;
         out.push(spark(sx, my, sw, sh, vals, muted));

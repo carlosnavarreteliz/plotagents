@@ -169,9 +169,15 @@ export function sankey(spec, theme) {
     const anchor = i === 0 ? 'end' : i === cols.length - 1 ? 'start' : 'middle';
     body.push(text(x, area0.y + 12, stages[i], { fill: theme.muted, fontSize: 11.5, fontWeight: 600, textAnchor: anchor, letterSpacing: '0.04em' }));
   });
+  const pp = Number.isInteger(spec.pathPrecision) ? Math.max(0, Math.min(3, spec.pathPrecision)) : 2;
+  const PREC = 10 ** pp;
   for (const l of [...links].sort((a, b) => b.v - a.v)) {
-    const x0 = l.sn.x + NW, x1 = l.tn.x, xm = (x0 + x1) / 2, w = l.v * ky;
-    const d = `M${x0},${l.y0}C${xm},${l.y0} ${xm},${l.y1} ${x1},${l.y1}L${x1},${l.y1 + w}C${xm},${l.y1 + w} ${xm},${l.y0 + w} ${x0},${l.y0 + w}Z`;
+    // Coordenadas redondeadas como en el resto de la biblioteca (2 decimales;
+    // `pathPrecision` 0–3 para menos): sin esto, cada número lleva 15 cifras.
+    const R = (v) => +(Math.round(v * PREC) / PREC);
+    const x0 = R(l.sn.x + NW), x1 = R(l.tn.x), xm = R((l.sn.x + NW + l.tn.x) / 2), w = l.v * ky;
+    const ya = R(l.y0), yb = R(l.y1), yc = R(l.y1 + w), yd = R(l.y0 + w);
+    const d = `M${x0},${ya}C${xm},${ya} ${xm},${yb} ${x1},${yb}L${x1},${yc}C${xm},${yc} ${xm},${yd} ${x0},${yd}Z`;
     const share = l.sn.value ? Math.round((l.v / l.sn.value) * 100) : 0;
     linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-key': `${l.s}→${l.t}`, 'data-tip': T({ [from]: l.s, [to]: l.t }, `${l.sn.name} → ${l.tn.name}`, `${fmt(l.v)} · ${share}% ${en ? 'of' : 'de'} ${l.sn.name}`) }));
   }

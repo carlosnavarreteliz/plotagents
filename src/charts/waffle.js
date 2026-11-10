@@ -68,7 +68,10 @@ export function waffle(spec, theme) {
   const gap = theme.marks?.gap ?? 2;
   const cell = Math.max(3, Math.min(spec.cellSize ?? 22, area.w / cols, spec.height !== undefined ? area.h / rowsN : Infinity));
   const s = cell - gap;
-  const rad = Math.min(theme.marks?.barRadius ?? 4, s / 4);
+  // `cellRadius`: el radio de las esquinas en px (0 = cuadros rectos); por
+  // omisión el de las barras del tema, con un tope de un cuarto del cuadro.
+  const cr = spec.cellRadius;
+  const rad = cr !== undefined && cr !== null && Number.isFinite(+cr) ? Math.max(0, Math.min(+cr, s / 2)) : Math.min(theme.marks?.barRadius ?? 4, s / 4);
   if (spec.height === undefined) frame.setHeight(area.y + rowsN * cell + frame.chrome);
 
   // Un path por serie (una corrida de cuadros), con su tooltip.
@@ -89,11 +92,11 @@ export function waffle(spec, theme) {
       const list = rowsOf.get(k);
       for (let j = 0; j < squares[i]; j++, idx++) {
         const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;
-        const d = rad > 0.5
-          ? `M${(cx + rad).toFixed(2)},${cy.toFixed(2)}h${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${rad}v${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${rad}h${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${-rad}v${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${-rad}Z`
-          : `M${cx.toFixed(2)},${cy.toFixed(2)}h${s.toFixed(2)}v${s.toFixed(2)}h${(-s).toFixed(2)}Z`;
+        // Un <rect> por cuadro (con rx si va redondeado): la misma figura que
+        // el path de arcos, en la mitad de bytes, y `rect:hover` lo alcanza.
+        const sq = el('rect', { x: cx, y: cy, width: s, height: s, rx: rad > 0.5 ? rad : undefined, fill: colorOf(k) });
         const row = list[Math.min(j, list.length - 1)];
-        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [el('path', { d, fill: colorOf(k) })]));
+        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [sq]));
       }
     });
   } else keys.forEach((k, i) => {

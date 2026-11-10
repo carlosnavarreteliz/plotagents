@@ -100,11 +100,16 @@ export function dotplot(spec, theme) {
     binPx = Math.abs(sc(lo + w) - sc(lo));
   }
   const maxD = spec.dotSize ?? 14;
-  let d = Math.max(2, Math.min(binPx, maxD));
+  // `dotRadius`: el radio en px, sin el tope del ancho del tramo (con un tramo
+  // fino los puntos de tramos vecinos se tocan, pero se leen); con `height`
+  // se achica sólo si la pila más alta no cabe.
+  const fixedR = Number.isFinite(+spec.dotRadius) && spec.dotRadius !== null && +spec.dotRadius > 0 ? +spec.dotRadius : null;
+  const pad = (dd) => (dd > 6 ? 0.75 : 0.25);
+  let d = fixedR !== null ? 2 * fixedR + (2 * fixedR + 1.5 > 6 ? 1.5 : 0.5) : Math.max(2, Math.min(binPx, maxD));
   if (spec.height !== undefined) d = Math.max(2, Math.min(d, (inner.h - refTop) / maxStack));
   else { inner.h = maxStack * d + 4 + (hl && labelF ? 20 : 0) + refTop; frame.setHeight(inner.y + inner.h + axisH + frame.chrome); }
   const base = inner.y + inner.h;
-  const r = Math.max(1, d / 2 - (d > 6 ? 0.75 : 0.25));
+  const r = Math.max(1, d / 2 - pad(d));
 
   const body = [];
   // Eje.
@@ -149,9 +154,12 @@ export function dotplot(spec, theme) {
     for (const r of refs) {
       const px = Math.round(xs.value(r.v)) + 0.5;
       const lab = r.label ? (r.showValue === false ? String(r.label) : `${r.label} · ${fmt(r.v)}`) : '';
-      const tipTxt = tip(r.label ? String(r.label) : '', fmt(r.v));
+      // `showValue: false` calla la cifra también en el tooltip (si hay rótulo).
+      const tipTxt = r.label && r.showValue === false ? tip(String(r.label)) : tip(r.label ? String(r.label) : '', fmt(r.v));
+      // `dash`: true (3 3) o un patrón SVG ('4 2').
+      const dash = r.dash === true ? '3 3' : typeof r.dash === 'string' && /^[\d.\s,]+$/.test(r.dash.trim()) && r.dash.trim() ? r.dash.trim() : undefined;
       lines.push(g({ class: 'pa-ref', 'data-tip': tipTxt }, [
-        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7 }),
+        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7, strokeDasharray: dash }),
         el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: 'transparent', strokeWidth: 8 }),
       ]));
       if (lab) {
