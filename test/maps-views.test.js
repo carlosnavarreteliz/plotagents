@@ -234,3 +234,33 @@ test('href: regions link to their row (paths and http only)', () => {
   assert.doesNotMatch(evil, /javascript:/);
   assert.doesNotMatch(plot(base), /<a href/);
 });
+
+// ── sprite: los contornos en un archivo aparte ───────────────────────────
+import { mapSprite } from '../src/index.js';
+
+test('mapSprite writes one <path id> per region; sprite draws <use> through one matrix', () => {
+  const file = mapSprite({ geo: island });
+  const ids = [...file.matchAll(/<path id="([^"]+)" d="([^"]+)"/g)];
+  assert.equal(ids.length, 11);
+  assert.ok(ids.every(([, id]) => /^gc\d$|^gfar$/.test(id)));
+  assert.match(file, /vector-effect="non-scaling-stroke"/);
+  for (const orientation of [undefined, 'landscape']) {
+    const inline = plot({ ...base, geo: island, orientation });
+    const viaFile = plot({ ...base, geo: island, orientation, sprite: '/maps/strip.svg' });
+    assert.doesNotMatch(viaFile, /<path class="pa-m/);
+    const uses = [...viaFile.matchAll(/<use class="pa-m"[^>]*href="\/maps\/strip\.svg#(g[^"]+)"/g)].map((m) => m[1]);
+    assert.equal(uses.length, 11);
+    // La matriz lleva el primer punto del sprite al primer punto del trazo en línea.
+    const [a, b, c, d, e, f] = viaFile.match(/<g transform="matrix\(([^)]+)\)"><use/)[1].split(' ').map(Number);
+    const [, qx, qy] = file.match(/id="gc3" d="M([\d.-]+),([\d.-]+)/).map(Number);
+    const tag = regions(inline).find((t) => attr(t, 'data-key') === 'c3');
+    const [, sx, sy] = attr(tag, 'd').match(/^M([\d.-]+),([\d.-]+)/).map(Number);
+    assert.ok(Math.abs(a * qx + c * qy + e - sx) < 0.3 && Math.abs(b * qx + d * qy + f - sy) < 0.3, `${orientation}: ${a * qx + c * qy + e},${b * qx + d * qy + f} vs ${sx},${sy}`);
+  }
+  // Con vistas y enlaces: clases, tooltips y <a> van en el <use>.
+  const v = plot({ ...base, sprite: '/m.svg', views, href: 'url' });
+  assert.match(v, /<a href="\/es\/comuna\/c0\/" class="pa-link"><use class="pa-m pv1-\d+ pv2-\d+"[^>]*data-vtip-b="c0\nBeta/);
+  assert.throws(() => plot({ ...base, sprite: 'javascript:alert(1)' }), /sprite/);
+  assert.throws(() => plot({ ...base, sprite: '/m.svg#x' }), /sprite/);
+  assert.match(lint({ ...base, title: 't', source: 's', sprite: 'x.svg#a' }).errors.map((e) => e.code).join(), /sprite/);
+});

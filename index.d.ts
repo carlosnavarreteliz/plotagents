@@ -372,6 +372,8 @@ export interface Spec {
   pathPrecision?: 0 | 1 | 2 | 3;
   /** Maps: on-screen simplification tolerance in px (Douglas–Peucker); 0.3–1 is invisible. */
   simplify?: number;
+  /** choropleth: path of an outlines file from mapSprite(spec); regions become <use href="file#id">. */
+  sprite?: string;
   /** World maps: draw states too small for an outline (Singapore, Malta…) as dots; true = with data, "all" = every one. */
   microstates?: boolean | 'all';
   /** network: node rows (id, group, size). flowchart: steps (id, label, type, lane). */
@@ -605,6 +607,8 @@ export declare function registeredGeo(): string[];
 export declare function registerGeo(name: string, geo: object, aliases?: string[]): object;
 /** Any GeoJSON / TopoJSON shape → FeatureCollection. */
 export declare function toFeatureCollection(geo: object | object[], objectName?: string): object;
+/** The outlines file for `sprite`: an SVG with one <path id> per region, projected but not framed (longer side 1000). Takes the same spec as the map (geo, projection, pathPrecision, simplify). */
+export declare function mapSprite(spec: Spec): string;
 /** Browser: downloads (once per URL) a GeoJSON or TopoJSON. */
 export declare function loadGeo(url: string): Promise<object>;
 export declare const palettes: Record<string, string[]>;

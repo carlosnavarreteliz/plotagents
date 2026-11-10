@@ -300,12 +300,13 @@ function prepare(spec, locale) {
   if (spec.flipY && /^(identity|none|pixels)$/i.test(String(spec.projection))) raw = planar();
   // Un cuarto de vuelta después de proyectar (Chile acostado): encuadre, zonas de
   // clic, marcadores y etiquetas quedan en el espacio de la pantalla y el texto, derecho.
+  const raw0 = raw; // sin el giro: el espacio de un `sprite`
   const turn = mapTurn(spec, features, raw);
   if (turn) raw = rotated(raw, turn);
   // `dashed`: por nombre de región (con los mismos alias) o por un campo de los datos.
   const dm = dashedMatcher(spec, data, key, null, normKey);
   const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories, keyOf, idx, rowsOf };
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, raw0, turn, data, dashed, categorical, categories, keyOf, idx, rowsOf };
 }
 
 /**
@@ -872,6 +873,77 @@ export function mainlandBox(features) {
   return Number.isFinite(a) ? [a, b, c, d] : null;
 }
 
+// ── Geometría en un archivo aparte (`sprite`) ─────────────────────────────
+//
+// Un sitio con el mismo mapa en cientos de páginas no tiene por qué repetir
+// sus contornos en cada una. mapSprite(spec) escribe un SVG con un <path id>
+// por región, proyectado pero sin encuadre ni giro (el lado mayor mide 1000);
+// el sitio lo publica una vez (/maps/chile.svg) y el navegador lo guarda. Con
+// `sprite: "/maps/chile.svg"`, cada región del mapa es un <use> que apunta a
+// su contorno, dentro de un grupo con la transformación que lo encuadra y lo
+// gira: el mismo archivo sirve al mapa ancho, al de teléfono y a cada
+// encuadre. Los colores, clases, tooltips y enlaces quedan en el <use>; los
+// puntos (microestados) se siguen dibujando en la página.
+
+const SPRITE_SIDE = 1000;
+
+/** El id de una región en el sprite: su código (o ISO, id, nombre), sin tildes ni signos. */
+export const spriteId = (f) => { const p = f.properties || {}; return 'g' + normKey(p.code ?? p.iso3 ?? p.iso_a3 ?? f.id ?? p.id ?? p.name ?? p.nameEn ?? ''); };
+
+/** Las formas que van al sprite: todas las de `geo` (territorios opcionales incluidos), sin importar los datos. */
+function spriteModel(spec) {
+  return prepare({ ...spec, data: [{ __k: '', __v: 0 }], key: '__k', value: '__v', territories: true, microstates: false, fitTo: undefined }, spec.locale || 'es');
+}
+
+/** Las formas del sprite y la escala que lleva lo proyectado a [0, 1000]. */
+function spriteFrame(m) {
+  const feats = m.features.filter((f) => !isPointGeom(f.geometry));
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const f of feats) for (const r of rings(f.geometry)) for (const pt of r) { const [x, y] = m.raw0(pt); if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; }
+  const s = SPRITE_SIDE / Math.max(c - a, d - b, 1e-12);
+  const N = (pt) => { const [x, y] = m.raw0(pt); return [(x - a) * s, (y - b) * s]; };
+  N.continuous = m.raw0.continuous;
+  return { feats, a, b, s, N };
+}
+
+const GIRO = { 90: ([x, y]) => [-y, x], '-90': ([x, y]) => [y, -x], 180: ([x, y]) => [-x, -y] };
+
+/** La transformación (matrix) que lleva el sprite a la pantalla de este mapa. */
+function spriteMatrix(m, proj, F) {
+  const rot = m.turn ? GIRO[m.turn] : (q) => q;
+  const at = ([qx, qy]) => proj.post(rot([qx / F.s + F.a, qy / F.s + F.b]));
+  const [e, f] = at([0, 0]), [x1, y1] = at([1, 0]), [x2, y2] = at([0, 1]);
+  const r = (v) => +v.toFixed(6);
+  return `matrix(${[x1 - e, y1 - f, x2 - e, y2 - f, e, f].map(r).join(' ')})`;
+}
+
+/** El href de un sprite: sólo rutas y http(s), sin fragmento. */
+function spriteHref(spec, locale) {
+  const h = String(spec.sprite ?? '').trim();
+  if (!/^(https?:\/\/|\/|\.{0,2}\/)[^#"<>\s]*$/i.test(h)) throw new PlotError(T(locale, `\`sprite\` debe ser la ruta de un archivo (/maps/chile.svg), sin #: "${h}".`, `\`sprite\` must be a file path (/maps/chile.svg), without #: "${h}".`), 'sprite: "/maps/chile.svg"');
+  return h;
+}
+
+/**
+ * El archivo de contornos para `sprite`: un SVG con un <path id> por región.
+ * Toma el mismo spec que el mapa (geo, projection, pathPrecision, simplify;
+ * los datos no hacen falta).
+ */
+export function mapSprite(spec0) {
+  const spec = resolve({ ...spec0, type: 'choropleth', views: undefined, sprite: undefined });
+  const F = spriteFrame(spriteModel(spec));
+  const seen = new Set();
+  const compact = compactOf(spec);
+  const out = [];
+  for (const f of F.feats) {
+    const id = spriteId(f);
+    if (seen.has(id)) throw new PlotError(T(spec.locale, `Dos regiones darían el mismo id en el sprite: "${id}".`, `Two regions would get the same id in the sprite: "${id}".`), T(spec.locale, 'Cada región necesita un código propio (code, iso3 o id).', 'Each region needs its own code (code, iso3 or id).'));
+    seen.add(id);
+    out.push(el('path', { id, d: pathD(f.geometry, F.N, { compact }), 'vector-effect': 'non-scaling-stroke' }));
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SPRITE_SIDE} ${SPRITE_SIDE}"><defs>${out.join('')}</defs></svg>`;
+}
+
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
 /** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
@@ -905,6 +977,12 @@ export function choropleth(spec0, theme0) {
   const hrefOf = (f) => (spec.href ? (m.rowsOf.get(f) || [])[0]?.[spec.href] : undefined);
   if (views) for (const V of views) { V.TT = tipper(V.spec, V.m.data, locale); V.items = []; V.rules = new Map(); }
   const valueLine = (V, fm, v) => (V?.label ? `${V.label}: ${fm(v)}` : fm(v));
+  // `sprite`: los contornos viven en un archivo aparte; aquí, un <use> por región.
+  const sprite = spec.sprite !== undefined && spec.sprite !== null && spec.sprite !== false ? { href: spriteHref(spec, locale) } : null;
+  if (sprite) sprite.matrix = spriteMatrix(m, proj, spriteFrame(spriteModel(spec)));
+  const viaSprite = (f) => sprite && !isPointGeom(f.geometry);
+  const shape = (f, attrs) => (viaSprite(f) ? el('use', { ...attrs, d: undefined, href: `${sprite.href}#${spriteId(f)}` }) : el('path', attrs));
+  const spriteRegions = [], spriteDashed = [], spriteOutlines = [];
   for (const f of m.features) {
     const v = m.values.get(f);
     const has = v !== undefined;
@@ -912,7 +990,7 @@ export function choropleth(spec0, theme0) {
     const isDashed = m.dashed.has(f);
     const name = nameOf(f, locale);
     const tipTxt = (has ? `${name}\n${valueLine(views?.[0], fmt, v)}${m.categorical ? '' : ' · ' + rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
-    const d = pathD(f.geometry, proj, { r: f.properties?.dot && f.properties.r ? f.properties.r : ptR, compact });
+    const d = viaSprite(f) ? undefined : pathD(f.geometry, proj, { r: f.properties?.dot && f.properties.r ? f.properties.r : ptR, compact });
     const isLine = isLineGeom(f.geometry);
     // `missing: "context"`: lo que no tiene dato es fondo, sin tooltip.
     const quiet = !has && spec.missing === 'context';
@@ -944,20 +1022,22 @@ export function choropleth(spec0, theme0) {
       common.class += ' ' + cls.join(' ');
     }
     const wrap = (x) => linkWrap(hrefOf(f), x);
+    const R = viaSprite(f) ? spriteRegions : regions, RD = viaSprite(f) ? spriteDashed : dashedRegions;
     let fill = has ? base : spec.missing === 'plain' || spec.missing === 'context' ? theme.tint : `url(#${gid}-nd)`;
     let stroke = null;
     if (isDashed && has) {
       // Rayado del color de su clase + borde discontinuo: se lee igual en la escala.
       const a = dashedAttrs(H, base, { width: 1.2 });
       fill = a.fill; stroke = a.stroke;
-      dashedRegions.push(wrap(el('path', { ...common, ...a })));
+      RD.push(wrap(shape(f, { ...common, ...a })));
     } else if (isDashed) {
       stroke = theme.muted;
-      dashedRegions.push(wrap(el('path', { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill })));
-    } else if (isLine) regions.push(wrap(el('path', { ...common, fill: 'none', stroke: has ? base : theme.muted, strokeWidth: spec.lineWidth ?? 2.5, strokeLinecap: 'round', 'data-color': has ? base : fill })));
-    else regions.push(wrap(el('path', { ...common, fill, stroke: isPointGeom(f.geometry) ? theme.surface : borderC, strokeWidth: isPointGeom(f.geometry) ? 1.2 : borderW, 'data-color': fill })));
-    if (isHl(f)) outlines.push(el('path', { d, fill: 'none', stroke: theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' }));
-    if (views) views.forEach((V, i) => { if (V.hl && featureIndexHas(f, V.hl)) V.outlines.push(el('path', { d, fill: 'none', stroke: V.theme.ink, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' })); });
+      RD.push(wrap(shape(f, { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill })));
+    } else if (isLine) R.push(wrap(shape(f, { ...common, fill: 'none', stroke: has ? base : theme.muted, strokeWidth: spec.lineWidth ?? 2.5, strokeLinecap: 'round', 'data-color': has ? base : fill })));
+    else R.push(wrap(shape(f, { ...common, fill, stroke: isPointGeom(f.geometry) ? theme.surface : borderC, strokeWidth: isPointGeom(f.geometry) ? 1.2 : borderW, 'data-color': fill })));
+    const ring = (stroke2) => shape(f, { d, fill: 'none', stroke: stroke2, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' });
+    if (isHl(f)) (viaSprite(f) ? spriteOutlines : outlines).push(ring(theme.ink));
+    if (views) views.forEach((V) => { if (V.hl && featureIndexHas(f, V.hl)) (viaSprite(f) ? V.spriteOutlines ??= [] : V.outlines).push(ring(V.theme.ink)); });
     const c = centroidOf(f);
     items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
@@ -966,9 +1046,12 @@ export function choropleth(spec0, theme0) {
     if (!centroidOf.memo.has(f)) centroidOf.memo.set(f, centroid(f.geometry, proj));
     return centroidOf.memo.get(f);
   }
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
+  // Con sprite, los <use> van en un grupo con la transformación que encuadra y gira el archivo.
+  const viaT = (list) => (list.length ? g({ transform: sprite.matrix }, list) : '');
+  if (sprite) { regions.unshift(viaT(spriteRegions)); dashedRegions.unshift(viaT(spriteDashed)); outlines.unshift(viaT(spriteOutlines)); }
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.some(Boolean) ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
-  if (views) views.forEach((V, i) => { if (V.outlines.length) layer.push(g({ class: `pa-outlines pv${i}` }, V.outlines)); });
+  if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}` }, o)); });
   // Líneas: comunes a todas las vistas, o una tanda por vista si alguna trae las suyas.
   const links = linkList(views && views.some((V) => V.hasLinks) ? { ...spec, links: views[0].hasLinks ? views[0].links : spec.links } : spec, m, theme, locale);
   if (views && views.some((V) => V.hasLinks)) {
@@ -1034,7 +1117,7 @@ export function choropleth(spec0, theme0) {
 // cambiar un atributo: no hay código de la biblioteca en el navegador.
 
 // Lo que una vista no puede cambiar: las formas, el encuadre y el marco son de todas.
-const VIEW_FIXED = ['type', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories'];
+const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories'];
 const VIEW_ID = /^[a-z0-9][a-z0-9_-]*$/;
 
 /** `views` → [{ id, label, spec, theme, hl, links, hasLinks }]; la vista 0 sin su highlight/links (van aparte). */

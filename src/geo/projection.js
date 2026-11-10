@@ -145,6 +145,8 @@ export function fit(features, raw, [x0, y0, x1, y1], { align = 'center' } = {}) 
   const ox = align === 'left' ? x0 : x0 + (w - mw) / 2;
   const oy = y0 + (h - mh) / 2;
   const proj = (p) => { const [x, y] = raw(p); return [ox + (x - bx0) * k, oy + (y - by0) * k]; };
+  // De coordenadas ya proyectadas (la salida de `raw`) a la pantalla: lo que encaja una geometría externa (`sprite`).
+  proj.post = ([x, y]) => [ox + (x - bx0) * k, oy + (y - by0) * k];
   proj.bounds = { x: ox, y: oy, w: mw, h: mh };
   proj.continuous = !!raw.continuous;
   proj.inset = raw.inset;
