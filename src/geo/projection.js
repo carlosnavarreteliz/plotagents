@@ -71,8 +71,9 @@ export function equirectangular() {
  * píxeles o dibujado a mano. `identity` deja el eje y hacia abajo (como
  * SVG); `planar` lo invierte (y hacia arriba, como un plano cartesiano o UTM).
  */
-export function identity() { const f = ([x, y]) => [x, y]; f.continuous = true; return f; }
-export function planar() { const f = ([x, y]) => [x, -y]; f.continuous = true; return f; }
+// `flat`: las coordenadas no son lon/lat (un punto [x, y] se nombra «x, y», no «lat, lon»).
+export function identity() { const f = ([x, y]) => [x, y]; f.continuous = true; f.flat = true; return f; }
+export function planar() { const f = ([x, y]) => [x, -y]; f.continuous = true; f.flat = true; return f; }
 
 /** Cónica de áreas iguales con paralelos y meridiano central propios. */
 export function conicEqualArea({ parallels = [29.5, 45.5], rotate, center = [0, 0] } = {}) {

@@ -13,7 +13,7 @@ import { makeFormat } from '../format.js';
 import { ramp, textOn, colorMap, themeFor } from '../theme.js';
 import { resolve } from '../base.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, hash, domId } from '../frame.js';
 import { niceStep } from '../scale.js';
 import { getGeo } from '../geo/registry.js';
 import { ISO2, microstateFeatures } from '../geo/iso.js';
@@ -97,6 +97,29 @@ function niceRound(v, range) {
   return Math.round(v / step) * step;
 }
 
+/** Dos cifras significativas del propio corte (0,00034 → 0,00034; 123.456 → 120.000). */
+function sigRound(v) {
+  if (!v || !Number.isFinite(v)) return v;
+  const step = 10 ** (Math.floor(Math.log10(Math.abs(v))) - 1);
+  return +(Math.round(v / step) * step).toPrecision(12);
+}
+
+/**
+ * Cortes redondeados sin perder clases. Primero, a dos cifras del rango (lo de
+ * siempre); si eso funde clases (datos sesgados: de US$ 100 mil a 27.000
+ * millones, todo corte bajo 1.000 millones daba 0 y el mapa salía de un color),
+ * cada corte a dos cifras de su propia magnitud; si aún se funden, sin redondear.
+ */
+function roundBreaks(raw, range, min, max) {
+  const clean = (bs) => [...new Set(bs)].filter((b) => b > min && b <= max);
+  const want = clean(raw).length;
+  for (const r of [(b) => niceRound(b, range), sigRound]) {
+    const bs = clean(raw.map(r));
+    if (bs.length >= want) return bs;
+  }
+  return clean(raw);
+}
+
 function quantile(sorted, p) {
   const h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
@@ -133,9 +156,8 @@ export function colorScale(values, spec, theme) {
   if (mode === 'thresholds') breaks = [...(Array.isArray(spec.scale) ? spec.scale : spec.thresholds)].map(Number).sort((a, b) => a - b);
   else {
     const n = Math.max(2, Math.min(9, spec.classes ?? Math.min(5, v.length)));
-    if (mode === 'equal') breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(min + (range * (k + 1)) / n, range));
-    else breaks = Array.from({ length: n - 1 }, (_, k) => niceRound(quantile(v, (k + 1) / n), range));
-    breaks = [...new Set(breaks)].filter((b) => b > min && b <= max);
+    const raw = Array.from({ length: n - 1 }, (_, k) => (mode === 'equal' ? min + (range * (k + 1)) / n : quantile(v, (k + 1) / n)));
+    breaks = roundBreaks(raw, range, min, max);
   }
   const n = breaks.length + 1;
   const t0 = theme.cmap ? 0 : theme.mode === 'dark' ? 0.26 : 0.16;
@@ -349,7 +371,12 @@ function regionKey(m, f, locale) {
 // proporcional al valor. Los extremos son claves de región (las mismas que
 // `key`) o [lon, lat].
 
-/** `links`: [{ from, to, value }] o { data, from, to, value, color, curveness, width: [min, max], opacity }. */
+/**
+ * `links`: [{ from, to, value }] o { data, from, to, value, color, curveness,
+ * width: [min, max], widthScale ("linear" | "sqrt"), opacity, label,
+ * fromLabel / toLabel (campos con el nombre de un extremo), format (el de la
+ * tarjeta de la línea), ends (un punto en cada extremo) }.
+ */
 function linkList(spec, m, theme, locale) {
   const lk = spec.links;
   if (!lk) return null;
@@ -360,15 +387,25 @@ function linkList(spec, m, theme, locale) {
   const toF = o.to ?? pickF(fields, ['to', 'target', 'destino', 'hasta']);
   const valF = o.value ?? pickF(fields, ['value', 'valor', 'weight', 'peso']);
   if (!fromF || !toF) throw new PlotError(T(locale, 'Las líneas (`links`) necesitan un origen y un destino.', 'Lines (`links`) need an origin and a destination.'), 'links: [{ from: "CHL", to: "CHN", value: 120 }]');
-  const end = (v) => {
-    if (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(num(x)))) return { lonlat: [num(v[0]), num(v[1])], name: `${num(v[1])}, ${num(v[0])}`, key: `${num(v[0])},${num(v[1])}` };
-    const f = v === undefined || v === null ? null : m.idx.get(normKey(v));
-    return f ? { f, name: nameOf(f, locale), key: String(v) } : null;
+  // Un punto suelto: [lon, lat] se nombra «lat, lon»; en trazos ya proyectados (identity, planar), «x, y».
+  const flat = !!m.raw0?.flat;
+  const end = (v, label) => {
+    let e = null;
+    if (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(num(x)))) {
+      const [x, y] = [num(v[0]), num(v[1])];
+      e = { lonlat: [x, y], name: flat ? `${x}, ${y}` : `${y}, ${x}`, key: `${x},${y}` };
+    } else {
+      const f = v === undefined || v === null ? null : m.idx.get(normKey(v));
+      e = f ? { f, name: nameOf(f, locale), key: String(v) } : null;
+    }
+    if (e && label !== undefined && label !== null && label !== '') e.name = String(label);
+    return e;
   };
+  const labelOf = (r, F) => (typeof F === 'string' && fields.includes(F) ? r[F] : undefined);
   const items = [];
   const unmatched = [];
   for (const r of rows) {
-    const a = end(r[fromF]), b = end(r[toF]);
+    const a = end(r[fromF], labelOf(r, o.fromLabel)), b = end(r[toF], labelOf(r, o.toLabel));
     if (!a || !b) { unmatched.push(String(!a ? r[fromF] : r[toF])); continue; }
     const v = valF ? num(r[valF]) : 1;
     if (valF && !(Number.isFinite(v) && v > 0)) continue;
@@ -377,11 +414,16 @@ function linkList(spec, m, theme, locale) {
   const w = Array.isArray(o.width) && o.width.length === 2 ? o.width.map(Number) : [0.75, 6];
   const color = (typeof o.color === 'string' && !fields.includes(o.color) && o.color) || theme.categorical[0];
   const colorF = typeof o.color === 'string' && fields.includes(o.color) ? o.color : null;
-  return { items, unmatched: [...new Set(unmatched)], valF, width: w, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null };
+  const ws = o.widthScale ?? 'linear';
+  if (ws !== 'linear' && ws !== 'sqrt') throw new PlotError(T(locale, `\`links.widthScale\` es "linear" o "sqrt": "${ws}".`, `\`links.widthScale\` is "linear" or "sqrt": "${ws}".`), 'widthScale: "sqrt"');
+  const fmt = o.format === undefined || o.format === null ? null : makeFormat(o.format, locale, items.map((i) => i.v));
+  const ends = o.ends === true ? { r: 2.5 } : o.ends && typeof o.ends === 'object' ? { r: Number.isFinite(+o.ends.radius) ? +o.ends.radius : 2.5 } : null;
+  return { items, unmatched: [...new Set(unmatched)], valF, width: w, widthScale: ws, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null, fmt, ends };
 }
 
-function drawLinks(L, proj, theme, fmt, locale) {
+function drawLinks(L, proj, theme, fmt0, locale) {
   if (!L || !L.items.length) return '';
+  const fmt = L.fmt || fmt0;
   const at = (e) => {
     if (e.lonlat) return proj(e.lonlat);
     const p = e.f.properties || {};
@@ -392,6 +434,7 @@ function drawLinks(L, proj, theme, fmt, locale) {
   const maxV = Math.max(...L.items.map((i) => i.v), 1e-9);
   const f1 = (v) => Math.round(v * 10) / 10;
   const out = [];
+  const dots = new Map(); // extremo → [x, y, color]: un punto por lugar
   // Las gruesas atrás: las finas quedan encima y se pueden señalar.
   for (const it of [...L.items].sort((p, q) => q.v - p.v || (p.b.key < q.b.key ? -1 : 1))) {
     const [x0, y0] = at(it.a), [x1, y1] = at(it.b);
@@ -399,12 +442,16 @@ function drawLinks(L, proj, theme, fmt, locale) {
     if (!(len > 0.5)) continue;
     // Curva hacia la izquierda del sentido origen → destino: ida y vuelta no se pisan.
     const mx = (x0 + x1) / 2 - dy * L.curveness, my = (y0 + y1) / 2 + dx * L.curveness;
-    const sw = L.valF ? Math.max(L.width[0], L.width[1] * (it.v / maxV)) : L.width[0] + 0.75;
+    const t = it.v / maxV;
+    const sw = L.valF ? Math.max(L.width[0], L.width[1] * (L.widthScale === 'sqrt' ? Math.sqrt(t) : t)) : L.width[0] + 0.75;
     const c = (L.colorF && it.row[L.colorF]) || L.color;
     const tip = `${it.a.name} → ${it.b.name}` + (L.valF ? `\n${fmt(it.v)}` : '');
     out.push(el('path', { class: 'pa-m pa-link', d: `M${f1(x0)},${f1(y0)}Q${f1(mx)},${f1(my)} ${f1(x1)},${f1(y1)}`, fill: 'none', stroke: c, strokeWidth: Math.round(sw * 100) / 100, strokeLinecap: 'round', strokeOpacity: L.opacity, 'data-tip': tip, 'data-color': c, 'data-key': `${it.a.key}→${it.b.key}`, 'data-from': it.a.key, 'data-to': it.b.key }));
+    if (L.ends) for (const [e, x, y] of [[it.a, x0, y0], [it.b, x1, y1]]) if (!dots.has(e.key)) dots.set(e.key, [x, y, c]);
   }
-  return g({ class: 'pa-links' }, out);
+  // `ends`: un punto en cada lugar que une una línea (encima de las líneas, sin tarjeta propia).
+  const endDots = L.ends && dots.size ? g({ class: 'pa-link-ends', stroke: theme.surface, strokeWidth: 1, 'pointer-events': 'none' }, [...dots].map(([k, [x, y, c]]) => el('circle', { cx: f1(x), cy: f1(y), r: L.ends.r, fill: c, 'data-key': k }))) : '';
+  return g({ class: 'pa-links' }, endDots ? [...out, endDots] : out);
 }
 
 // ── Capas extra: marcadores (lon/lat) y GeoJSON superpuesto ─────────────────
@@ -572,6 +619,8 @@ function chooseLabeled(m, spec, locale, defaultN) {
   const hl = spec.highlight === undefined ? [] : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl.length && featureIndexHas(f, hl);
   if (Array.isArray(spec.labels)) { const want = spec.labels.map(normKey); return m.features.filter((f) => featureIndexHas(f, want)); }
+  // `labels: false` es sin texto, también para lo destacado (antes se rotulaba igual).
+  if (spec.labels === false) return [];
   const n = typeof spec.labels === 'number' ? spec.labels : spec.labels === false ? 0 : defaultN;
   const top = m.ranked.slice(0, n).map(([f]) => f);
   return [...new Set([...m.features.filter(isHl), ...top])];
@@ -667,6 +716,7 @@ function baseChart(spec, theme, kind, views = null) {
   const markers = markerList(spec, theme);
   // `fitTo`: encuadra unas regiones (nombres o códigos), una caja [lon0, lat0, lon1, lat1] o "markers".
   let fitFeats = m.features;
+  const fitPad = fitPadding(spec, locale);
   if (spec.fitTo !== undefined && spec.fitTo !== null) {
     const ft = spec.fitTo;
     if (Array.isArray(ft) && ft.length === 4 && ft.every((v) => typeof v === 'number')) {
@@ -682,11 +732,12 @@ function baseChart(spec, theme, kind, views = null) {
       const hit = m.features.filter((f) => featureIndexHas(f, want));
       if (hit.length) fitFeats = hit;
     }
-    // Un margen del 6 % para que lo encuadrado no toque el borde.
+    // Un margen (`fitPadding`, 6 % por omisión) para que lo encuadrado no toque el borde.
     if (fitFeats !== m.features) {
       let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
       for (const f of fitFeats) for (const r of rings(f.geometry)) for (const p of r) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); }
-      const px = (c - a) * 0.06 || 0.5, py = (d - b) * 0.06 || 0.5;
+      const k = fitPad.frac;
+      const px = (c - a) * k || (c - a ? 0 : 0.5), py = (d - b) * k || (d - b ? 0 : 0.5);
       fitFeats = [{ type: 'Feature', properties: {}, geometry: { type: 'MultiPoint', coordinates: [[a - px, b - py], [c + px, d + py], [a - px, d + py], [c + px, b - py]] } }];
     }
   }
@@ -696,7 +747,7 @@ function baseChart(spec, theme, kind, views = null) {
   const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
   let area = frame.layout([]);
-  const gid = 'pa-map-' + Math.abs(hash(String(spec.title) + kind + W)).toString(36);
+  const gid = mapId(spec, kind, W, m, views);
   const missingOf = (sp, mv) => sp.missing !== 'plain' && sp.missing !== 'context' && m.features.some((f) => !mv.values.has(f));
   const missingAny = missingOf(spec, m);
   const body = [];
@@ -814,9 +865,42 @@ function baseChart(spec, theme, kind, views = null) {
   const pts = m.features.some((f) => isPointGeom(f.geometry) && !f.properties?.dot);
   const inset = pts ? (spec.pointRadius ?? 5) + 18 : markers?.items.length ? 12 : 0;
   if (inset) box = [box[0] + inset * (tall ? 0 : 1), box[1] + inset + (pts ? 12 : 0), box[2] - inset, box[3] - Math.min(inset, 10)];
+  // `fitPadding: "12px"`: el margen en píxeles, dentro de la caja del mapa.
+  if (fitPad.px && fitFeats !== m.features) { const q = Math.min(fitPad.px, (box[2] - box[0]) / 2 - 1, (box[3] - box[1]) / 2 - 1); if (q > 0) box = [box[0] + q, box[1] + q, box[2] - q, box[3] - q]; }
   const proj = fit(fitFeats, m.raw, box, { align: tall ? 'left' : 'center' });
   const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
   return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax, layers, markers, views };
+}
+
+/**
+ * `fitPadding`: el margen alrededor de lo encuadrado con `fitTo`. Un número es
+ * una fracción del largo de lo encuadrado, a cada lado (0.06 por omisión; 0 =
+ * a ras); "12px", píxeles dentro de la caja del mapa.
+ */
+function fitPadding(spec, locale) {
+  const v = spec.fitPadding;
+  if (v === undefined || v === null) return { frac: 0.06, px: 0 };
+  const m = typeof v === 'string' ? /^\s*(\d+(?:\.\d+)?)\s*px\s*$/i.exec(v) : null;
+  if (m) return { frac: 0, px: +m[1] };
+  const n = typeof v === 'number' ? v : NaN;
+  if (!(Number.isFinite(n) && n >= 0 && n <= 1)) throw new PlotError(T(locale, `\`fitPadding\` es una fracción entre 0 y 1 (0.06) o píxeles ("12px"): "${v}".`, `\`fitPadding\` is a fraction from 0 to 1 (0.06) or pixels ("12px"): "${v}".`), 'fitPadding: 0.02');
+  return { frac: n, px: 0 };
+}
+
+/**
+ * Base de los ids internos (recorte, patrón sin dato, degradados): `idPrefix`
+ * si viene; si no, un hash de lo que distingue un mapa de otro del mismo ancho
+ * en la misma página —título, tipo, ancho, alto, encuadre, sprite, las vistas y
+ * qué valor tiene cada región—. Nada de colores: las pieles dibujan el mismo
+ * mapa con otros y tienen que dar el mismo id.
+ */
+function mapId(spec, kind, W, m, views) {
+  if (spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '') return domId(spec.idPrefix) + '-map';
+  // Cada región por su código (no por cómo la nombran los datos: "CL" y "CHL" son el mismo mapa).
+  const vals = [];
+  for (const f of m.features) if (m.values.has(f)) vals.push(normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, 'es')) + '=' + m.values.get(f));
+  const sig = [spec.title, kind, W, spec.height, JSON.stringify(spec.fitTo ?? null), spec.sprite, m.turn, m.features.length, views ? views.map((V) => V.id + ':' + V.m.valueF + ':' + V.m.values.size).join(',') : '', vals.join(';')].join('|');
+  return 'pa-map-' + Math.abs(hash(sig)).toString(36);
 }
 
 /**
@@ -947,6 +1031,14 @@ export function mapSprite(spec0) {
 
 const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
+/** `highlightWidth`: el ancho del anillo de lo destacado, en píxeles (1,5 por omisión). */
+function ringWidth(v, locale) {
+  if (v === undefined || v === null) return 1.5;
+  const n = +v;
+  if (!(Number.isFinite(n) && n > 0)) throw new PlotError(T(locale, `\`highlightWidth\` es un ancho en píxeles mayor que 0: "${v}".`, `\`highlightWidth\` is a width in pixels above 0: "${v}".`), 'highlightWidth: 3');
+  return n;
+}
+
 /** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
 function zoomLayer(B, children) {
   const { area, gid } = B;
@@ -971,6 +1063,11 @@ export function choropleth(spec0, theme0) {
   const compact = compactOf(spec);
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
   const isHl = (f) => hl && featureIndexHas(f, hl);
+  // `highlightMode`: "dim" (lo de siempre: el resto a la mitad) u "outline" (sólo el borde).
+  const hlMode = spec.highlightMode ?? 'dim';
+  if (hlMode !== 'dim' && hlMode !== 'outline') throw new PlotError(T(locale, `\`highlightMode\` es "dim" u "outline": "${hlMode}".`, `\`highlightMode\` is "dim" or "outline": "${hlMode}".`), 'highlightMode: "outline"');
+  const ringOf = (sp, th) => ({ stroke: sp.highlightColor ?? th.ink, width: ringWidth(sp.highlightWidth, locale) });
+  const ring0 = ringOf(spec, theme);
   const N = m.values.size;
   const regions = [], dashedRegions = [], outlines = [];
   const items = [];
@@ -995,7 +1092,8 @@ export function choropleth(spec0, theme0) {
     const isLine = isLineGeom(f.geometry);
     // `missing: "context"`: lo que no tiene dato es fondo, sin tooltip.
     const quiet = !has && spec.missing === 'context';
-    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': quiet ? undefined : TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name), 'data-key': regionKey(m, f, locale) };
+    // El borde, su ancho y la unión van en el grupo (.pa-regions); cada región lleva lo que la distingue.
+    const common = { class: 'pa-m', d, opacity: hl && hlMode === 'dim' && !isHl(f) ? 0.5 : null, 'data-tip': quiet ? undefined : TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-key': regionKey(m, f, locale) };
     if (views) {
       // Las demás vistas: una clase por vista (su clase de color) y su tooltip en data-vtip-<id>.
       const cls = [];
@@ -1033,12 +1131,14 @@ export function choropleth(spec0, theme0) {
       RD.push(wrap(shape(f, { ...common, ...a })));
     } else if (isDashed) {
       stroke = theme.muted;
-      RD.push(wrap(shape(f, { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': fill })));
+      RD.push(wrap(shape(f, { ...common, fill, stroke, strokeWidth: 1.1, strokeDasharray: DASH.outline, 'data-dashed': '1' })));
     } else if (isLine) R.push(wrap(shape(f, { ...common, fill: 'none', stroke: has ? base : theme.muted, strokeWidth: spec.lineWidth ?? 2.5, strokeLinecap: 'round', 'data-color': has ? base : fill })));
-    else R.push(wrap(shape(f, { ...common, fill, stroke: isPointGeom(f.geometry) ? theme.surface : borderC, strokeWidth: isPointGeom(f.geometry) ? 1.2 : borderW, 'data-color': fill })));
-    const ring = (stroke2) => shape(f, { d, fill: 'none', stroke: stroke2, strokeWidth: 1.5, strokeLinejoin: 'round', 'pointer-events': 'none' });
-    if (isHl(f)) (viaSprite(f) ? spriteOutlines : outlines).push(ring(theme.ink));
-    if (views) views.forEach((V) => { if (V.hl && featureIndexHas(f, V.hl)) (viaSprite(f) ? V.spriteOutlines ??= [] : V.outlines).push(ring(V.theme.ink)); });
+    else if (isPointGeom(f.geometry)) R.push(wrap(shape(f, { ...common, fill, stroke: theme.surface, strokeWidth: 1.2 })));
+    else R.push(wrap(shape(f, { ...common, fill })));
+    // El anillo de lo destacado: color, ancho y demás en su grupo (.pa-outlines).
+    const ring = () => shape(f, { d });
+    if (isHl(f)) (viaSprite(f) ? spriteOutlines : outlines).push(ring());
+    if (views) views.forEach((V) => { if (V.hl && featureIndexHas(f, V.hl)) (viaSprite(f) ? V.spriteOutlines ??= [] : V.outlines).push(ring()); });
     const c = centroidOf(f);
     items.push({ f, name, v, cx: c.x, cy: c.y, area: c.area, label: has ? fmt(v) : '—', color: has ? base : theme.tint, fill, stroke, dashedShape: isDashed, missing: !has, tip: tipTxt });
   }
@@ -1050,9 +1150,11 @@ export function choropleth(spec0, theme0) {
   // Con sprite, los <use> van en un grupo con la transformación que encuadra y gira el archivo.
   const viaT = (list) => (list.length ? g({ transform: sprite.matrix }, list) : '');
   if (sprite) { regions.unshift(viaT(spriteRegions)); dashedRegions.unshift(viaT(spriteDashed)); outlines.unshift(viaT(spriteOutlines)); }
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.some(Boolean) ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
+  const shared = { stroke: borderC, strokeWidth: borderW, strokeLinejoin: 'round' };
+  const ringG = (R0) => ({ fill: 'none', stroke: R0.stroke, strokeWidth: R0.width, strokeLinejoin: 'round', 'pointer-events': 'none' });
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions', ...shared }, regions), dashedRegions.some(Boolean) ? g({ class: 'pa-regions pa-dashed', ...shared }, dashedRegions) : '', g({ class: 'pa-outlines', ...(outlines.some(Boolean) ? ringG(ring0) : {}) }, outlines), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
-  if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}` }, o)); });
+  if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}`, ...ringG(ringOf(V.spec, V.theme)) }, o)); });
   // Líneas: comunes a todas las vistas, o una tanda por vista si alguna trae las suyas.
   const links = linkList(views && views.some((V) => V.hasLinks) ? { ...spec, links: views[0].hasLinks ? views[0].links : spec.links } : spec, m, theme, locale);
   if (views && views.some((V) => V.hasLinks)) {
@@ -1102,8 +1204,17 @@ export function choropleth(spec0, theme0) {
   desc += T(locale, ` ${views.length} vistas: ${names.join(', ')}.`, ` ${views.length} views: ${names.join(', ')}.`);
   // El alcance de las reglas: una clase propia de este mapa (dos mapas con vistas en la misma página no se pisan).
   const scope = 'pa-v' + Math.abs(hash(gid + '|' + views.map((V) => `${V.id}:${V.m.valueF}:${[...V.m.values.values()].slice(0, 16).join(',')}`).join('|') + '|' + m.features.length)).toString(36);
-  const css = views.map((V, i) => `.${scope}:not([data-view="${V.id}"]) .pv${i}{display:none}`).join('')
-    + views.slice(1).map((V) => [...V.rules].map(([k, decl]) => `.${scope}[data-view="${V.id}"] .${k}{${decl}}`).join('')).join('');
+  const sel = viewSelectorOf(spec0, locale);
+  // Sin `viewSelector`, la vista la dice `data-view` en la raíz; con él, un
+  // ancestro (un radio :checked, una clase): la primera se ve si ninguno calza.
+  const css = !sel
+    ? views.map((V, i) => `.${scope}:not([data-view="${V.id}"]) .pv${i}{display:none}`).join('')
+      + views.slice(1).map((V) => [...V.rules].map(([k, decl]) => `.${scope}[data-view="${V.id}"] .${k}{${decl}}`).join('')).join('')
+    : views.slice(1).map((_, j) => `.${scope} .pv${j + 1}`).join(',') + '{display:none}'
+      + views.slice(1).map((V, j) => {
+        const a = `${sel(V.id, j + 1)} .${scope}`;
+        return `${a} .pv0{display:none}${a} .pv${j + 1}{display:inline}` + [...V.rules].map(([k, decl]) => `${a} .${k}{${decl}}`).join('');
+      }).join('');
   return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs(), css, root: { class: `pa-views ${scope}`, 'data-view': views[0].id, 'data-views': views.map((V) => V.id).join(' ') } });
 }
 
@@ -1118,7 +1229,7 @@ export function choropleth(spec0, theme0) {
 // cambiar un atributo: no hay código de la biblioteca en el navegador.
 
 // Lo que una vista no puede cambiar: las formas, el encuadre y el marco son de todas.
-const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories'];
+const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories', 'viewSelector', 'highlightMode', 'fitPadding', 'idPrefix', 'ariaLabel'];
 const VIEW_ID = /^[a-z0-9][a-z0-9_-]*$/;
 
 /** `views` → [{ id, label, spec, theme, hl, links, hasLinks }]; la vista 0 sin su highlight/links (van aparte). */
@@ -1141,6 +1252,26 @@ export function viewStates(spec) {
     const si = resolve(raw);
     return { id, label: label === undefined || label === null ? null : String(label), spec: si, theme: themeFor(si), hl: highlight === undefined ? null : [].concat(highlight).map(normKey), hasLinks: 'links' in v, links, outlines: [] };
   });
+}
+
+/**
+ * `viewSelector`: el selector CSS de un ancestro bajo el que se ve cada vista.
+ * Un texto con {id} ("#mapa:has(input[value={id}]:checked)") o, desde JS, una
+ * función (id, i) => selector. Devuelve null si no viene.
+ */
+export function viewSelectorOf(spec, locale = 'es') {
+  const v = spec.viewSelector;
+  if (v === undefined || v === null || v === false) return null;
+  const bad = (msg) => new PlotError(T(locale, `\`viewSelector\` ${msg[0]}`, `\`viewSelector\` ${msg[1]}`), 'viewSelector: "#mapa:has(input[value={id}]:checked)"');
+  if (typeof v === 'string' && !v.includes('{id}')) throw bad(['necesita {id}: si no, todas las vistas tendrían el mismo selector.', 'needs {id}: otherwise every view would get the same selector.']);
+  if (typeof v !== 'string' && typeof v !== 'function') throw bad(['es un texto con {id} o una función (id) => selector.', 'is a string with {id} or a function (id) => selector.']);
+  return (id, i) => {
+    const s = String(typeof v === 'function' ? v(id, i) : v.split('{id}').join(id)).trim();
+    // Va dentro del <style> del SVG: sin llaves, punto y coma, comentarios, "<" ni "&".
+    if (!s || /[<&{};]|\/\*/.test(s)) throw bad([`no sirve como selector: "${s}".`, `is not a usable selector: "${s}".`]);
+    // Una lista ("a, b") se agrupa para que " .clase" se aplique a cada parte.
+    return /,/.test(s) ? `:is(${s})` : s;
+  };
 }
 
 /** Valores de una vista sobre las formas de la base (misma lista, mismo orden). */
@@ -1177,7 +1308,7 @@ export function symbolMap(spec, theme) {
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5, compact: compactOf(spec) }), fill: isLineGeom(f.geometry) ? 'none' : theme.tint, stroke: isLineGeom(f.geometry) ? theme.axis : spec.borderColor ?? theme.surface, strokeWidth: isLineGeom(f.geometry) ? 1.5 : spec.borderWidth ?? 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)), 'data-key': regionKey(m, f, locale) }))), insetFrames(m.features, proj, theme),
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base', fill: theme.tint, stroke: spec.borderColor ?? theme.surface, strokeWidth: spec.borderWidth ?? 0.75, strokeLinejoin: 'round' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5, compact: compactOf(spec) }), ...(isLineGeom(f.geometry) ? { fill: 'none', stroke: theme.axis, strokeWidth: 1.5 } : {}), 'data-key': regionKey(m, f, locale) }))), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);

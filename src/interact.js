@@ -418,7 +418,7 @@ function mapZoom(root, svg, z, { dark, hide }) {
     if (!(ev.target.closest && ev.target.closest('.pa-zoom'))) return;
     const m = ev.target.closest && ev.target.closest('.pa-m');
     if (!m || !m.getBBox) return;
-    const key = m.getAttribute('data-k') || m.getAttribute('d') || m.getAttribute('cx');
+    const key = m.getAttribute('data-key') || m.getAttribute('d') || m.getAttribute('cx');
     if (st.key === key) { reset(); return; }
     const b = m.getBBox();
     const k = Math.max(1.4, Math.min(MAX, 0.62 * Math.min(bw / Math.max(b.width, 4), bh / Math.max(b.height, 4))));

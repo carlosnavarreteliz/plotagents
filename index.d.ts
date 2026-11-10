@@ -153,6 +153,7 @@ export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | 
  * `breaks` (ascending) turns the scale into discrete classes: `colors` needs breaks.length + 1 entries, or give `name` and it is sampled.
  * Repeated breaks are merged (the empty class between them and its color drop out). `closed`: "left" (default) puts a value equal to a
  * break in the class above (breaks[i−1] ≤ v < breaks[i]); "right" in the class below (breaks[i−1] < v ≤ breaks[i]).
+ * `breaks: []` with one color is a single class.
  */
 export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number; breaks?: number[]; closed?: 'left' | 'right' };
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
@@ -212,14 +213,39 @@ export interface MapView {
   missing?: 'hatch' | 'plain' | 'context';
   /** Outlined in this view only. */
   highlight?: string | string[];
+  /** This view's outline color and width (default the spec's, or the theme ink at 1.5 px). */
+  highlightColor?: string;
+  highlightWidth?: number;
   /** This view's lines (replace the spec's). */
   links?: Spec['links'];
 }
+
+/** A line end: a region key (same matching as `key`) or a point [lon, lat] ([x, y] on already-projected geometry). */
+export type MapLinkEnd = string | [number, number];
+/** Maps: lines between places. A line is a relation, not a route: curved, one color, no arrowheads, width by value. */
+export type MapLinks = Array<{ from: MapLinkEnd; to: MapLinkEnd; value?: number }> | {
+  data: Row[]; from?: string; to?: string; value?: string; color?: string; curveness?: number;
+  /** [min, max] stroke width in px (default [0.75, 6]). */
+  width?: [number, number];
+  /** "linear" (default): width ∝ value / max; "sqrt": ∝ its square root, so small flows stay visible. */
+  widthScale?: 'linear' | 'sqrt';
+  opacity?: number; label?: string;
+  /** Fields with the name of each end in the line's tooltip (a point end is otherwise named by its coordinates). */
+  fromLabel?: string; toLabel?: string;
+  /** Number format of the line's tooltip (default the map's `format`). */
+  format?: Format;
+  /** A dot at each place a line joins (true: radius 2.5). */
+  ends?: boolean | { radius?: number };
+};
 
 export interface Spec {
   type?: ChartType;
   data?: Row[] | Record<string, number>;
   title?: string;
+  /** Accessible name (the SVG <title>) without drawing a title; default `title`, else the chart type. */
+  ariaLabel?: string;
+  /** Base of the SVG's internal ids (aria ids; maps: clip path, no-data pattern). Set it when one chart appears twice on a page. */
+  idPrefix?: string;
   subtitle?: string;
   source?: string;
   x?: string;
@@ -411,7 +437,15 @@ export interface Spec {
   /** Zoom to regions, a [lonMin, latMin, lonMax, latMax] box, or "markers". */
   fitTo?: 'mainland' | 'markers' | string | string[] | [number, number, number, number];
   /** Maps: lines between places (region keys or [lon, lat]); width ∝ value, one color, no arrowheads. */
-  links?: Array<{ from: string | [number, number]; to: string | [number, number]; value?: number }> | { data: Row[]; from?: string; to?: string; value?: string; color?: string; curveness?: number; width?: [number, number]; opacity?: number; label?: string };
+  links?: MapLinks;
+  /** Maps with `fitTo`: margin around what is framed. A fraction of the framed extent on each side (default 0.06; 0 = flush) or pixels ("12px"). */
+  fitPadding?: number | `${number}px`;
+  /** Maps with `highlight`: "dim" (default) outlines it and draws the rest at half opacity; "outline" only outlines it. */
+  highlightMode?: 'dim' | 'outline';
+  /** Maps: outline color of highlighted regions (default the theme ink; CSS var with fallback, skins and views welcome). */
+  highlightColor?: string;
+  /** Maps: outline width of highlighted regions, in px (default 1.5). */
+  highlightWidth?: number;
   /** Maps: turn the projected map clockwise (labels stay upright). -90 puts north on the left. */
   rotate?: 90 | -90 | 180 | 270;
   /** Maps: "landscape" lays a tall territory on its side (north left); "portrait" stands a wide one up. bar: "horizontal" | "vertical". dendrogram: root left ("horizontal", default) or on top ("vertical"). */
@@ -421,8 +455,14 @@ export interface Spec {
   borderColor?: string;
   borderWidth?: number;
   pointRadius?: number;
-  /** choropleth: several readings of one geometry in one SVG; switch with `data-view` on the root (plotagents/views). */
+  /** choropleth: several readings of one geometry in one SVG; switch with `data-view` on the root (plotagents/views) or `viewSelector`. */
   views?: MapView[];
+  /**
+   * choropleth with `views`: CSS-only switching from outside the SVG. The selector of an ANCESTOR of the <svg> under which a view shows,
+   * with "{id}" (e.g. "#block:has(input[value={id}]:checked)"), or a function (id, index) => selector. The rules then follow it instead
+   * of `data-view`; the first view shows when none matches. Tooltips (attributes) still need setView/bindViews to swap.
+   */
+  viewSelector?: string | ((id: string, index: number) => string);
   /** Maps: decimals of path coordinates in px; setting it (or `simplify`) writes compact relative paths. sankey: decimals of the link paths (default 2). */
   pathPrecision?: 0 | 1 | 2 | 3;
   /** Maps: on-screen simplification tolerance in px (Douglas–Peucker); 0.3–1 is invisible. */

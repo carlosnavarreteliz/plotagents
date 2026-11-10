@@ -512,6 +512,25 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   if (spec.simplify !== undefined && !(+spec.simplify >= 0)) err('simplify', L('`simplify` es una tolerancia en píxeles: un número ≥ 0.', '`simplify` is a tolerance in pixels: a number ≥ 0.'), 'simplify: 0.5');
   else if (+spec.simplify > 2) warn('simplify-coarse', L(`\`simplify: ${spec.simplify}\` borra detalles que se ven: las costas y las comunas chicas pierden su forma.`, `\`simplify: ${spec.simplify}\` removes visible detail: coastlines and small regions lose their shape.`), L('Entre 0,3 y 1 px no se nota en la página.', '0.3 to 1 px is invisible on a page.'));
   if (spec.microstates !== undefined && typeof spec.microstates !== 'boolean' && spec.microstates !== 'all') err('enum-microstates', L(`\`microstates: ${q(spec.microstates)}\` no es válido.`, `\`microstates: ${q(spec.microstates)}\` is not valid.`), 'microstates: true | "all"');
+  // Lo destacado, el encuadre, las vistas por selector y las líneas.
+  if (spec.highlightMode !== undefined) { if (typeof spec.highlightMode !== 'string') err('enum-highlightMode', L('`highlightMode` es "dim" u "outline".', '`highlightMode` is "dim" or "outline".'), 'highlightMode: "outline"'); else enumCheck('highlightMode', spec.highlightMode, ['dim', 'outline']); }
+  if (spec.highlightWidth !== undefined && !(+spec.highlightWidth > 0)) err('highlight-width', L('`highlightWidth` es un ancho en píxeles mayor que 0.', '`highlightWidth` is a width in pixels above 0.'), 'highlightWidth: 3');
+  if (MAPS.has(type) && spec.highlight === undefined && !(Array.isArray(spec.views) && spec.views.some((v) => v && v.highlight !== undefined)) && ['highlightMode', 'highlightColor', 'highlightWidth'].some((k) => spec[k] !== undefined)) warn('highlight-none', L('`highlightMode`, `highlightColor` y `highlightWidth` dibujan lo destacado, y no hay `highlight`: no hacen nada.', '`highlightMode`, `highlightColor` and `highlightWidth` draw what is highlighted, and there is no `highlight`: they do nothing.'), 'highlight: "Biobío"');
+  if (spec.fitPadding !== undefined && spec.fitPadding !== null) {
+    const fp = spec.fitPadding;
+    if (!((typeof fp === 'number' && fp >= 0 && fp <= 1) || (typeof fp === 'string' && /^\s*\d+(\.\d+)?\s*px\s*$/i.test(fp)))) err('fit-padding', L(`\`fitPadding: ${q(fp)}\` es una fracción entre 0 y 1 (0.06) o píxeles ("12px").`, `\`fitPadding: ${q(fp)}\` is a fraction from 0 to 1 (0.06) or pixels ("12px").`), 'fitPadding: 0.02');
+    else if (spec.fitTo === undefined || spec.fitTo === null) warn('fit-padding-alone', L('`fitPadding` es el margen de lo encuadrado con `fitTo`, y no hay `fitTo`: no hace nada.', '`fitPadding` is the margin of what `fitTo` frames, and there is no `fitTo`: it does nothing.'), 'fitTo: ["Biobío"]');
+  }
+  if (spec.viewSelector !== undefined && spec.viewSelector !== null) {
+    const vs = spec.viewSelector;
+    if (typeof vs === 'string' && !vs.includes('{id}')) err('view-selector', L('`viewSelector` necesita {id}: si no, todas las vistas tendrían el mismo selector.', '`viewSelector` needs {id}: otherwise every view would get the same selector.'), 'viewSelector: "#mapa:has(input[value={id}]:checked)"');
+    else if (typeof vs === 'string' && /[<&{};]|\/\*/.test(vs.split('{id}').join('x'))) err('view-selector', L('`viewSelector` no sirve como selector: sin llaves, punto y coma, comentarios, "<" ni "&".', '`viewSelector` is not a usable selector: no braces, semicolons, comments, "<" or "&".'), 'viewSelector: ".mostrar-{id}"');
+    else if (typeof vs !== 'string' && typeof vs !== 'function') err('view-selector', L('`viewSelector` es un texto con {id}.', '`viewSelector` is a string with {id}.'), 'viewSelector: ".mostrar-{id}"');
+    else if (!Array.isArray(spec.views)) warn('view-selector-alone', L('`viewSelector` cambia de vista, y no hay `views`: no hace nada.', '`viewSelector` switches views, and there are no `views`: it does nothing.'), 'views: [{ id: "a", value: "a" }, { id: "b", value: "b" }]');
+  }
+  for (const lk of [spec.links, ...(Array.isArray(spec.views) ? spec.views.map((v) => v && v.links) : [])]) {
+    if (lk && typeof lk === 'object' && !Array.isArray(lk) && lk.widthScale !== undefined) enumCheck('widthScale', lk.widthScale, ['linear', 'sqrt']);
+  }
   if (MAPS.has(type) && spec.fitTo === 'mainland' && spec.geo === 'world') warn('fit-mainland-world', L('`fitTo: "mainland"` busca islas lejanas de un país; en el mundo deja fuera continentes.', '`fitTo: "mainland"` looks for one country\'s far islands; on the world it leaves out continents.'), L('Quita `fitTo`, o encuadra con una caja [lon0, lat0, lon1, lat1].', 'Drop `fitTo`, or frame with a box [lon0, lat0, lon1, lat1].'));
   // Un token secreto de Mapbox quedaría a la vista en el SVG.
   const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);

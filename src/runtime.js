@@ -181,13 +181,13 @@ export function render(target, spec, opts = {}) {
   // de cada región transita al nuevo en vez de saltar.
   const regionFills = () => {
     const m = new Map();
-    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-k'), f); }
+    for (const n of chart.querySelectorAll('.pa-regions [data-key]')) { const f = n.getAttribute('fill'); if (/^#/.test(f || '')) m.set(n.getAttribute('data-key'), f); }
     return m;
   };
   const tweenFills = (before) => {
     if (reduced || !before.size || typeof Element === 'undefined' || !Element.prototype.animate) return;
-    for (const n of chart.querySelectorAll('.pa-regions [data-k]')) {
-      const old = before.get(n.getAttribute('data-k')), now = n.getAttribute('fill');
+    for (const n of chart.querySelectorAll('.pa-regions [data-key]')) {
+      const old = before.get(n.getAttribute('data-key')), now = n.getAttribute('fill');
       if (old && /^#/.test(now || '') && old.toLowerCase() !== now.toLowerCase()) n.animate([{ fill: old }, { fill: now }], { duration: 420, easing: 'ease-out' });
     }
   };
