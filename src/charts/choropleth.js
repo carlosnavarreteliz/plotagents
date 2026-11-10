@@ -15,12 +15,13 @@ import { resolve } from '../base.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { niceStep } from '../scale.js';
+import { quantile } from '../stats.js';
 import { getGeo } from '../geo/registry.js';
 import { ISO2, microstateFeatures } from '../geo/iso.js';
 import { mercator, equalEarth, planar, projections, makeProjection, fit, aspectOf, pathD, centroid, rings, polygonsOf, isPointGeom, isLineGeom } from '../geo/projection.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } from '../dashed.js';
+import { esEn as T } from '../i18n.js';
 
-const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
 /** `pathPrecision` / `simplify`: trazos relativos, redondeados y simplificados en la pantalla (null: los de siempre). */
 const compactOf = (spec) => (spec.pathPrecision !== undefined || spec.simplify !== undefined
@@ -97,10 +98,6 @@ function niceRound(v, range) {
   return Math.round(v / step) * step;
 }
 
-function quantile(sorted, p) {
-  const h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
-}
 
 /** Escala de color: clases (cuantiles, intervalos iguales o cortes dados) o continua. */
 export function colorScale(values, spec, theme) {

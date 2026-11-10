@@ -5,10 +5,10 @@ import { el, g, text, tip, barPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
-import { createFrame } from '../frame.js';
+import { createFrame, hash as hashStr } from '../frame.js';
 import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
 
@@ -90,7 +90,6 @@ export function axisTitles(body, theme, area, inner, { x, y }) {
 /** Escala log10 → valor, para bins en espacio logarítmico. */
 const T = (isLog) => (isLog ? { f: (v) => Math.log10(v), inv: (t) => 10 ** t } : { f: (v) => v, inv: (t) => t });
 
-const halo = (theme) => ({ stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' });
 
 function rangeLabel(a, b, fx) {
   return `${fx(a)} – ${fx(b)}`;
@@ -524,8 +523,3 @@ function emptyChart(spec, theme, en) {
   return frame.finish([text(area.x, area.y + 20, en ? 'No numeric values to plot.' : 'No hay valores numéricos para graficar.', { fill: theme.lede, fontSize: 13 })], { desc: en ? 'Empty chart.' : 'Gráfico vacío.', type: 'empty' });
 }
 
-function hashStr(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  return h;
-}

@@ -2,7 +2,7 @@
 // agregado, ordenado de mayor a menor. También colores por familia, foco
 // (drill-down) y migas de pan.
 import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from './data.js';
-import { hexToRgb, rgbToHex } from './theme.js';
+import { mix } from './theme.js';
 import { formatNumber } from './format.js';
 import { el, g, text } from './svg.js';
 import { measure, truncate } from './text.js';
@@ -76,10 +76,6 @@ export const height = (n) => (n.children.length ? 1 + Math.max(...n.children.map
 export const descendants = (n) => [n, ...n.children.flatMap(descendants)];
 
 /** Mezcla un color hacia otro (t ∈ [0,1]). */
-export function mix(a, b, t) {
-  const A = hexToRgb(a), B = hexToRgb(b);
-  return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
-}
 
 /**
  * Colores por familia: el primer nivel visible toma la paleta categórica en

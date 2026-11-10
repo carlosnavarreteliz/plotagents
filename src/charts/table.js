@@ -11,7 +11,7 @@ import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js'
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { ramp, textOn, readable, hexToRgb, rgbToHex, contrast } from '../theme.js';
+import { ramp, textOn, readable, contrast, mix } from '../theme.js';
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
 import { words, langOf } from '../i18n.js';
@@ -60,10 +60,6 @@ const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const isNil = (v) => v === null || v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v));
 const decimalsOf = (v) => { if (!Number.isFinite(v) || Number.isInteger(v)) return 0; const s = String(+v.toPrecision(12)); const m = /\.(\d+)$/.exec(s) || /e-(\d+)/.exec(s); return m ? Math.min(6, m[1].length) : 0; };
 
-function mix(a, b, t) {
-  const A = hexToRgb(a), B = hexToRgb(b);
-  return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
-}
 /** Acerca `fg` a `toward` hasta lograr contraste ≥ min sobre `bg`. */
 function legible(fg, bg, toward, min = 4.5) {
   let c = fg;

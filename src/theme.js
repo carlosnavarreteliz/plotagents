@@ -229,6 +229,12 @@ export function rgbToHex([r, g, b]) {
   return ('#' + f(r) + f(g) + f(b)).toUpperCase();
 }
 
+/** Mezcla de dos colores: t = 0 → a, t = 1 → b. */
+export function mix(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
+}
+
 const lin = (c) => {
   c /= 255;
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -285,6 +291,9 @@ export function colorMap(keys, theme, overrides = {}) {
  * (o aclara, en tema oscuro) hasta ≥ 4,5:1 contra el fondo. Así una etiqueta
  * puede llevar el color de su línea sin perder legibilidad.
  */
+/** Contorno del color de fondo detrás de un texto que cruza marcas. */
+export const halo = (theme) => ({ stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' });
+
 export function readable(color, theme, min = 4.5) {
   const target = theme.mode === 'dark' ? '#FFFFFF' : theme.ink;
   let c = color;

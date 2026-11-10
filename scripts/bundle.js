@@ -10,6 +10,69 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const GEO = ['src/geo/chile.js', 'src/geo/world.js', 'src/geo/usa.js'];
 
+// Quita la sangría y las líneas vacías del código, sin tocar lo que va dentro de
+// un template literal o un comentario de bloque (ahí el espacio es contenido).
+// No une líneas, así que la inserción automática de punto y coma no cambia.
+const REGEX_AFTER = new Set('(,=:[!&|?{};+-*%<>~^'.split(''));
+const REGEX_KW = /(?:^|[^\w$])(?:return|typeof|case|do|else|in|of|void|yield|await|delete|throw|new)$/;
+function squeeze(code) {
+  const out = [];
+  const stack = []; // 'tpl' | { depth } (expresión ${…} dentro de un template)
+  let mode = 'code'; // code | tpl | ' | " | block | line | regex
+  let prev = ''; // último carácter significativo en modo código
+  let lineStart = 0, startMode = 'code';
+  const flush = (end) => {
+    const line = code.slice(lineStart, end);
+    if (startMode === 'code') { const t = line.replace(/^[ \t]+/, ''); if (t.trim()) out.push(t); }
+    else out.push(line);
+  };
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    if (c === '\n') {
+      if (mode === 'line') mode = 'code';
+      flush(i);
+      lineStart = i + 1;
+      startMode = mode === 'code' ? 'code' : 'keep';
+      continue;
+    }
+    switch (mode) {
+      case 'line': break;
+      case 'block': if (c === '*' && code[i + 1] === '/') { mode = 'code'; i++; } break;
+      case "'": case '"': if (c === '\\') i++; else if (c === mode) { mode = 'code'; prev = c; } break;
+      case 'regex':
+        if (c === '\\') i++;
+        else if (c === '[') { for (i++; i < code.length && code[i] !== ']'; i++) if (code[i] === '\\') i++; }
+        else if (c === '/') { mode = 'code'; prev = 'a'; }
+        break;
+      case 'tpl':
+        if (c === '\\') i++;
+        else if (c === '`') { stack.pop(); mode = 'code'; prev = '`'; }
+        else if (c === '$' && code[i + 1] === '{') { stack.push({ depth: 0 }); mode = 'code'; prev = '{'; i++; }
+        break;
+      default: { // code
+        if (c === ' ' || c === '\t' || c === '\r') break;
+        const top = stack[stack.length - 1];
+        if (c === '/' && code[i + 1] === '/') { mode = 'line'; i++; break; }
+        if (c === '/' && code[i + 1] === '*') { mode = 'block'; i++; break; }
+        if (c === '/') {
+          const before = code.slice(Math.max(0, i - 12), i).replace(/\s+$/, '');
+          if (!prev || REGEX_AFTER.has(prev) || REGEX_KW.test(before)) { mode = 'regex'; break; }
+        }
+        if (c === "'" || c === '"') { mode = c; break; }
+        if (c === '`') { stack.push('tpl'); mode = 'tpl'; break; }
+        if (top && typeof top === 'object') {
+          if (c === '{') top.depth++;
+          else if (c === '}') { if (top.depth === 0) { stack.pop(); mode = 'tpl'; break; } top.depth--; }
+        }
+        prev = c;
+      }
+    }
+  }
+  flush(code.length);
+  if (mode !== 'code' && mode !== 'line' || stack.length) throw new Error(`squeeze: estado final "${mode}" (pila ${stack.length}); el lexer se perdió`);
+  return out.join('\n');
+}
+
 function build(entries, { exclude = new Set(), external = {} } = {}) {
   const mods = new Map();
   function load(file) {
@@ -65,6 +128,7 @@ function build(entries, { exclude = new Set(), external = {} } = {}) {
     code = code.replace(/import\.meta\.url/g, '"about:blank"');
     // Quita comentarios de línea completa (más liviano, mismo código).
     code = code.split('\n').filter((l) => !/^\s*\/\/(?!\s*#)/.test(l)).join('\n');
+    code = squeeze(code);
     const ret = exportsList.map(([k, v]) => `${JSON.stringify(k)}: ${v}`).join(', ');
     const body = star ? `var __star = [];\n${code}\nreturn Object.assign({}, ...__star, { ${ret} });` : `${code}\nreturn { ${ret} };`;
     mods.set(file, `__def(${JSON.stringify(id)}, function () {\n${body}\n});`);

@@ -12,6 +12,7 @@ import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap, readable } from '../theme.js';
 import { niceDomain, linear } from '../scale.js';
+import { extent } from '../stats.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { xLabels } from '../axes.js';
@@ -44,10 +45,12 @@ export function dotplot(spec, theme) {
   let bins, binOf, center, lo = 0, w = 1;
   if (categorical) {
     bins = uniq(rows.map((r) => String(r[x])));
-    binOf = (r) => bins.indexOf(String(r[x]));
+    const at = new Map(bins.map((b, i) => [b, i]));
+    binOf = (r) => at.get(String(r[x])) ?? -1;
   } else {
-    lo = Math.min(...vals);
-    const hi = Math.max(...vals);
+    // Con un bucle: `Math.min(...vals)` desborda la pila con ~150 mil valores.
+    let hi;
+    [lo, hi] = extent(vals);
     w = +(spec.bin ?? spec.binWidth) || (hi - lo) / Math.max(1, Math.round(spec.bins ?? 30)) || 1;
     // Origen redondo: los tramos caen en múltiplos del ancho.
     lo = Math.floor(lo / w) * w;
@@ -170,9 +173,14 @@ export function dotplot(spec, theme) {
       }
     }
     body.push(g({ class: 'pa-refs' }, lines));
-    body.push(...marks, ...top);
+    for (const m of marks) body.push(m);
+    for (const m of top) body.push(m);
     body.push(g({ class: 'pa-refs' }, labels));
-  } else body.push(...marks, ...top);
+  } else {
+    // Un punto por fila: `push(...marks)` desborda la pila con ~150 mil.
+    for (const m of marks) body.push(m);
+    for (const m of top) body.push(m);
+  }
 
   const big = stacks.reduce((b, s, i) => (s.length > stacks[b].length ? i : b), 0);
   const where = categorical ? bins[big] : `${fmt(lo + big * w)}–${fmt(lo + (big + 1) * w)}`;

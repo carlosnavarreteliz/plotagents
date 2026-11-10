@@ -3,15 +3,14 @@
 import { el, g, text, tip, esc, barPath, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, readable } from '../theme.js';
+import { colorMap, readable, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
-import { createFrame } from '../frame.js';
+import { createFrame, hash as hashStr } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
 
 const EN = (spec) => String(spec.locale || 'es').startsWith('en');
-const halo = (theme) => ({ stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' });
 const dec = (v, locale, d = 2) => formatNumber(v, d, locale);
 
 /** Lee puntos (x, y, grupo, nombre) válidos para escalas log si corresponde. */
@@ -369,8 +368,3 @@ function visible(p, xS, yS, inner) {
   return cx >= inner.x - 1 && cx <= inner.x + inner.w + 1 && cy >= inner.y - 1 && cy <= inner.y + inner.h + 1;
 }
 
-function hashStr(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return h;
-}

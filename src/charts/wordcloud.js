@@ -21,8 +21,8 @@ import { colorMap, ramp } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
+import { esEn as T } from '../i18n.js';
 
-const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
 const STOP = new Set((
   // Español

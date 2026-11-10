@@ -6,7 +6,13 @@ const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;
 // Además de escapar, quita los caracteres que XML 1.0 prohíbe (controles y
 // sustitutos sueltos): un solo \x00 en un dato invalida todo el SVG.
 const BAD_XML = /[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
-export const esc = (s) => String(s ?? '').replace(BAD_XML, '').replace(/[&<>"']/g, (c) => ESC[c]);
+// La mayoría de los valores (colores, números, nombres) no tienen nada que escapar:
+// una sola prueba sin captura evita las dos sustituciones.
+const NEEDS_ESC = /[&<>"'\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF\uFFFE\uFFFF]/;
+export const esc = (s) => {
+  const str = String(s ?? '');
+  return NEEDS_ESC.test(str) ? str.replace(BAD_XML, '').replace(/[&<>"']/g, (c) => ESC[c]) : str;
+};
 
 /** Redondea a 2 decimales para SVG compactos. */
 export const r2 = (n) => Math.round(n * 100) / 100;
@@ -14,11 +20,21 @@ export const r2 = (n) => Math.round(n * 100) / 100;
 const ATTR_ALIAS = { className: 'class' };
 const KEEP_CASE = new Set(['viewBox', 'preserveAspectRatio', 'gradientUnits', 'gradientTransform', 'patternUnits', 'patternTransform', 'patternContentUnits', 'clipPathUnits', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'textLength', 'lengthAdjust', 'startOffset']);
 
+// camelCase → kebab-case, una vez por nombre de atributo.
+const NAMES = new Map();
+const attrName = (k) => {
+  let n = NAMES.get(k);
+  if (n === undefined) NAMES.set(k, (n = ATTR_ALIAS[k] || (KEEP_CASE.has(k) ? k : k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()))));
+  return n;
+};
+
 export function el(tag, attrs = {}, children) {
   let s = '<' + tag;
-  for (const [k, v] of Object.entries(attrs)) {
+  for (const k in attrs) {
+    if (!Object.prototype.hasOwnProperty.call(attrs, k)) continue;
+    const v = attrs[k];
     if (v === undefined || v === null || v === false) continue;
-    const name = ATTR_ALIAS[k] || (KEEP_CASE.has(k) ? k : k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()));
+    const name = attrName(k);
     // Escala de texto global: todo font-size numérico se multiplica aquí.
     const val = typeof v === 'number' ? r2(k === 'fontSize' ? v * ctx.textScale : v) : v;
     s += ` ${name}="${esc(val)}"`;
