@@ -196,15 +196,17 @@ export function resolveColorScale(v) {
 /**
  * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
  * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
- * i si breaks[i − 1] ≤ v < breaks[i]. Devuelve { breaks, colors, cls, color } o
+ * i si breaks[i − 1] ≤ v < breaks[i] (con `closed: 'right'`, breaks[i − 1] < v ≤
+ * breaks[i]); los cortes repetidos se funden. Devuelve { breaks, colors, cls, color } o
  * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
  */
 export function binnedScale(spec) {
   const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
   if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
-  const breaks = cs.breaks.map(Number);
+  let breaks = cs.breaks.map(Number);
   if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
-  for (let i = 1; i < breaks.length; i++) if (!(breaks[i] > breaks[i - 1])) throw new PlotError('`colorScale.breaks` debe ir en orden creciente y sin repetir.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  for (let i = 1; i < breaks.length; i++) if (breaks[i] < breaks[i - 1]) throw new PlotError('`colorScale.breaks` debe ir en orden creciente.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  if (cs.closed !== undefined && cs.closed !== 'left' && cs.closed !== 'right') throw new PlotError('`colorScale.closed` es "left" (un valor igual a un corte va a la clase de arriba) o "right" (a la de abajo).', 'closed: "right"');
   let colors;
   if (Array.isArray(cs.colors)) {
     colors = cs.colors.map(String);
@@ -215,6 +217,17 @@ export function binnedScale(spec) {
     colors = sample(base.stops, breaks.length + 1);
   }
   if (cs.reverse) colors = [...colors].reverse();
-  const cls = (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
-  return { breaks, colors, cls, color: (v) => colors[cls(v)] };
+  // Cortes repetidos (cuantiles de datos con empates): la clase entre dos
+  // cortes iguales no puede tener valores; se funden y su color se va.
+  if (breaks.some((b, i) => i > 0 && b === breaks[i - 1])) {
+    const keep = breaks.map((b, i) => i === 0 || b !== breaks[i - 1]);
+    colors = colors.filter((_, i) => i >= breaks.length || keep[i]); // la clase i va de breaks[i − 1] a breaks[i]
+    breaks = breaks.filter((_, i) => keep[i]);
+  }
+  // `closed`: 'left' (por omisión) → breaks[i − 1] ≤ v < breaks[i]; 'right' →
+  // breaks[i − 1] < v ≤ breaks[i] (un valor igual a un corte, en la clase de abajo).
+  const cls = cs.closed === 'right'
+    ? (v) => { let i = 0; while (i < breaks.length && v > breaks[i]) i++; return i; }
+    : (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
+  return { breaks, colors, cls, color: (v) => colors[cls(v)], closed: cs.closed === 'right' ? 'right' : 'left' };
 }

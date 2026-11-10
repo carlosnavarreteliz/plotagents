@@ -4,7 +4,7 @@
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
-import { themeFor, themes, palettes, ramps } from './theme.js';
+import { themeFor, themes, palettes, ramps, isColor } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
@@ -162,7 +162,23 @@ function lintSpec(spec = {}) {
       const bare = named.filter((v) => !(spec.colors && spec.colors[v]));
       if (bare.length) sug('cellcolor-no-color', L(`Las clases de \`cellColor\` sin color en \`colors\` van en gris: ${bare.slice(0, 4).join(', ')}.`, `\`cellColor\` classes without a color in \`colors\` are drawn gray: ${bare.slice(0, 4).join(', ')}.`), `colors: { ${JSON.stringify(bare[0])}: "#7A3E9D" }`);
     }
+    if (spec.groupColors && typeof spec.groupColors === 'object') {
+      const gf = [spec.xGroup, spec.yGroup].filter((f) => typeof f === 'string' && fields.includes(f));
+      if (!gf.length) warn('groupcolors-no-group', L('`groupColors` pinta las bandas de `xGroup` / `yGroup`, y no hay grupos.', '`groupColors` paints the bands of `xGroup` / `yGroup`, and there are no groups.'), L('Agrega `xGroup: "familia"`.', 'Add `xGroup: "family"`.'));
+      else {
+        const names = new Set(gf.flatMap((f) => data.map((r) => String(r[f] ?? ''))));
+        const stray = Object.keys(spec.groupColors).filter((k) => !names.has(k));
+        if (stray.length) sug('groupcolors-unknown', L(`\`groupColors\` nombra grupos que no están en los datos: ${stray.slice(0, 4).join(', ')}.`, `\`groupColors\` names groups that are not in the data: ${stray.slice(0, 4).join(', ')}.`), L('Usa los valores del campo de grupo, tal cual.', 'Use the values of the group field, exactly.'));
+      }
+    }
+    if (spec.midClass && typeof spec.midClass === 'object' && !isColor(spec.midClass.color)) warn('midclass-color', L('`midClass.color` no es un color: la clase del medio va en el tinte del tema.', '`midClass.color` is not a color: the middle class takes the theme tint.'), 'midClass: { color: "#f3ece0" }');
     if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
+  }
+  {
+    const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+    const br = cs && typeof cs === 'object' && Array.isArray(cs.breaks) ? cs.breaks.map(Number) : [];
+    const rep = br.filter((b, i) => i > 0 && b === br[i - 1]);
+    if (rep.length) sug('colorscale-repeated-breaks', L(`Cortes repetidos (${uniq(rep).join(', ')}): la clase vacía entre ellos se funde y su color no se usa.`, `Repeated breaks (${uniq(rep).join(', ')}): the empty class between them is merged and its color is not used.`), L('Normal con cuantiles de datos con empates; si la leyenda es tuya, dibuja las mismas clases.', 'Expected with quantiles of tied data; if you draw your own key, draw the same classes.'));
   }
   if (type === 'dotplot' && data.length && !spec.facet && !spec.col) {
     for (const r of [].concat(spec.refLines ?? [])) {
@@ -415,6 +431,9 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   // Escala por clases: cortes en orden y un color más que cortes.
   try { binnedScale(spec); } catch (e) {
     err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
+  }
+  if (spec.clamp && !(Array.isArray(spec.xDomain) || Array.isArray(spec.yDomain) || Array.isArray(spec.valueDomain))) {
+    warn('clamp-no-domain', L('`clamp` lleva lo de fuera al borde de un dominio, y no hay dominio: no hace nada.', '`clamp` pulls what lies outside onto the edge of a domain, and there is none: it does nothing.'), L('Agrega `xDomain: [mín, máx]` (horizontal) o `yDomain`.', 'Add `xDomain: [min, max]` (horizontal) or `yDomain`.'));
   }
   const f = spec.format;
   if (typeof f === 'string') enumCheck('format', f, FORMAT_TYPES, '"number", "compact", "percent", "currency", "integer" o { prefix, suffix, decimals }');

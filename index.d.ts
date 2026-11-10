@@ -86,8 +86,10 @@ export interface RefLine {
   value?: number;
   label?: string;
   color?: string;
-  /** dotplot: false writes the label without the value. */
+  /** dotplot: false writes the label without the value, on the line and in its tooltip. */
   showValue?: boolean;
+  /** dotplot: dash the line: true (3 3) or an SVG dash pattern ("4 2"). */
+  dash?: boolean | string;
 }
 export interface Annotation { x: string | number | Date; label?: string }
 
@@ -128,8 +130,12 @@ export interface ThemeTokens {
 export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | (Omit<DeepPartial<Theme>, 'grid' | 'font'> & ThemeTokens & { extends?: 'papel' | 'noche' | (string & {}) })
 
 /** matplotlib colormap name (case-insensitive, `_r` reverses), a list of hex colors, or { name | colors, reverse, mid }. */
-/** `breaks` (ascending) turns the scale into discrete classes: `colors` needs breaks.length + 1 entries, or give `name` and it is sampled. */
-export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number; breaks?: number[] };
+/**
+ * `breaks` (ascending) turns the scale into discrete classes: `colors` needs breaks.length + 1 entries, or give `name` and it is sampled.
+ * Repeated breaks are merged (the empty class between them and its color drop out). `closed`: "left" (default) puts a value equal to a
+ * break in the class above (breaks[i−1] ≤ v < breaks[i]); "right" in the class below (breaks[i−1] < v ≤ breaks[i]).
+ */
+export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number; breaks?: number[]; closed?: 'left' | 'right' };
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
 export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle' | 'preset';
@@ -252,7 +258,7 @@ export interface Spec {
   crosshair?: boolean;
   /** line/area: an interval already computed, drawn as is. */
   band?: { lower: string; upper: string; label?: string };
-  /** bar: tooltip text for a missing value (never drawn as 0). */
+  /** bar: tooltip text for a missing value (never drawn as 0). heatmap: tooltip text of a cell without a value (default "—"). */
   missingLabel?: string;
   /** bar: text written at the base of a missing bar. */
   missingMark?: string;
@@ -392,7 +398,7 @@ export interface Spec {
   pointRadius?: number;
   /** choropleth: several readings of one geometry in one SVG; switch with `data-view` on the root (plotagents/views). */
   views?: MapView[];
-  /** Maps: decimals of path coordinates in px; setting it (or `simplify`) writes compact relative paths. */
+  /** Maps: decimals of path coordinates in px; setting it (or `simplify`) writes compact relative paths. sankey: decimals of the link paths (default 2). */
   pathPrecision?: 0 | 1 | 2 | 3;
   /** Maps: on-screen simplification tolerance in px (Douglas–Peucker); 0.3–1 is invisible. */
   simplify?: number;
@@ -418,6 +424,12 @@ export interface Spec {
   maxRadius?: number;
   /** network: smallest node radius in px (default 2.5). */
   minRadius?: number;
+  /** network: widest node label in px before truncating (default 150). dendrogram: widest names column in px (default 30% of the width; 120 px vertical). */
+  labelWidth?: number;
+  /** dendrogram (horizontal): width of the tree in px; the names take the rest. */
+  treeWidth?: number;
+  /** network: false writes no tooltip on edges (also off with `tooltip: false`). */
+  edgeTip?: boolean;
   /** network layout "preset": scale x and y separately to fill the area (positions normalized per axis). */
   stretch?: boolean;
   /** network: "source" (default), "neutral" (muted ink) or one color for every edge. */
@@ -483,8 +495,12 @@ export interface Spec {
   /** heatmap: values below `floor` / above `ceiling` are plain empty cells (value kept in the tooltip) and leave the color scale. */
   floor?: number;
   ceiling?: number;
-  /** heatmap + binned breaks around 0: the class containing 0 takes the neutral tint. */
-  midClass?: 'neutral';
+  /** heatmap + binned breaks around 0: the class containing 0 takes the neutral tint ("neutral") or the color given ({ color }). */
+  midClass?: 'neutral' | { color: string };
+  /** heatmap: a title in the empty corner where row and column labels meet ("born in ↓ / lives in →"); "\n" breaks lines. */
+  cornerLabel?: string;
+  /** heatmap with xGroup / yGroup: a color per group name, drawn as a 3 px stripe on the band edge facing the grid. */
+  groupColors?: Record<string, string>;
   /** heatmap: text written across a row that has no values. */
   emptyRow?: string;
   /** heatmap: row / column labels link to the URL in this field (paths and http(s) only), or a function of the label. */
@@ -496,6 +512,10 @@ export interface Spec {
   xLabelAngle?: number;
   /** heatmap: column labels under the grid (default) or over it. */
   xLabelPosition?: 'top' | 'bottom';
+  /** Horizontal box/violin/strip/swarm/point: row names left of the axis (default) or above each row (a phone). */
+  yLabelPosition?: 'left' | 'above';
+  /** strip/swarm/box/violin/point with a value domain: values outside sit on its edge; the edge tick says ≤ / ≥ when some value lies beyond. */
+  clamp?: boolean;
   /** heatmap: px between cells (default 2); 0 joins them; [x, y] per axis. */
   cellGap?: number | [number, number];
   /** heatmap: cells where x = y drawn apart (own color, outside the scale, legend entry, tooltip line). */
@@ -572,14 +592,16 @@ export interface Spec {
   dotSize?: number;
   /** spark: false hides the end dot. */
   dot?: boolean;
-  /** spark: end dot radius. */
+  /** spark: end dot radius. dotplot: dot radius in px, not capped by the bin's pixel width (shrinks only to fit an explicit `height`). */
   dotRadius?: number;
   /** waffle: what one square is worth. */
   unit?: number;
   /** waffle: most squares before a round `unit` kicks in (default 400). */
   maxSquares?: number;
-  /** waffle: each square its own mark with its own row's tooltip (only while a square is one unit). */
+  /** waffle: each square its own mark (a <rect>) with its own row's tooltip (only while a square is one unit). */
   perSquare?: boolean;
+  /** waffle: corner radius of each square in px (0 = square). */
+  cellRadius?: number;
   /** dendrogram (rows input): field with each row's id (default "id"). */
   id?: string;
   /** spark: line width in px. */

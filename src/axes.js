@@ -2,6 +2,7 @@
 import { el, g, text, linkWrap } from './svg.js';
 import { measure, truncate } from './text.js';
 import { SIZES } from './frame.js';
+import { isColor } from './theme.js';
 import { ctx } from './context.js';
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
@@ -251,13 +252,21 @@ export function groupBandWidth(runs, maxW, size = 11.5) {
  * Banda de grupos bajo un eje horizontal. `pos(i)` → [x0, x1] de la categoría i;
  * `y` es el borde superior de la banda; la línea entre grupos sube hasta `top`.
  */
-export function groupBandX(runs, pos, y, theme, top, size = 11.5) {
+export function groupBandX(runs, pos, y, theme, top, size = 11.5, colors) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
-    if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
+    // `colors[grupo]`: una franja de su color en el borde que mira a la grilla, en vez del tinte alterno.
+    const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
+    if (c) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: 3, fill: c }));
+    else if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: a - 1, x2: a - 1, y1: top, y2: y + GROUP_BAND - 4, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
-    if (r.group && b - a >= 24) out.push(text((a + b) / 2, y + 13 + (ctx.textScale - 1) * 4, truncate(r.group, b - a - 6, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' }));
+    if (r.group && b - a >= 24) {
+      const t = truncate(r.group, b - a - 6, size, 500);
+      const node = text((a + b) / 2, y + 13 + (c ? 2 : 0) + (ctx.textScale - 1) * 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' });
+      // Un nombre recortado se lee entero en el tooltip.
+      out.push(t === r.group ? node : g({ 'data-tip': r.group }, node));
+    } else if (r.group) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, fill: 'transparent', 'data-tip': r.group }));
   });
   return g({ class: 'pa-groups pa-groups-x' }, out);
 }
@@ -266,13 +275,19 @@ export function groupBandX(runs, pos, y, theme, top, size = 11.5) {
  * Banda de grupos a la izquierda de un eje vertical. `pos(i)` → [y0, y1];
  * `x`, `w` = posición y ancho de la banda; la línea entre grupos llega a `right`.
  */
-export function groupBandY(runs, pos, x, w, theme, right, size = 11.5) {
+export function groupBandY(runs, pos, x, w, theme, right, size = 11.5, colors) {
   const out = [];
   runs.forEach((r, k) => {
     const a = pos(r.from)[0], b = pos(r.to)[1];
-    if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
+    const c = colors && isColor(colors[r.group]) ? colors[r.group] : null;
+    if (c) out.push(el('rect', { x, y: a, width: 3, height: Math.max(0, b - a), fill: c }));
+    else if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
     if (k > 0) out.push(el('line', { x1: x, x2: right, y1: a - 1, y2: a - 1, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
-    if (r.group && b - a >= 12) out.push(text(x + 6, (a + b) / 2 + 4, truncate(r.group, w - 14, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500 }));
+    if (r.group && b - a >= 12) {
+      const t = truncate(r.group, w - 14, size, 500);
+      const node = text(x + 6, (a + b) / 2 + 4, t, { fill: theme.lede, fontSize: size, fontWeight: 500 });
+      out.push(t === r.group ? node : g({ 'data-tip': r.group }, node));
+    } else if (r.group) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), fill: 'transparent', 'data-tip': r.group }));
   });
   return g({ class: 'pa-groups pa-groups-y' }, out);
 }

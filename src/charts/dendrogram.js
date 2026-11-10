@@ -113,16 +113,22 @@ export function dendrogram(spec, theme) {
   // Muestra de color al pie de cada hoja.
   const swW = cats.length ? 9 : 0;
   const fsSub = 11;
-  const labW = (lblMode === false ? 0 : Math.min(horizontal ? area.w * 0.3 : 120, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
   // Columna de pesos (horizontal): barra ∝ peso y la cifra.
   const barMax = sizeF && horizontal && maxWt > 0 ? Math.min(60, area.w * 0.1) : 0;
   const weightW = barMax ? barMax + 8 + Math.max(...weights.map((v) => measure(fmtW(v), 11))) + 6 : 0;
   const groupLabel = (i) => `${gNames[i]} · ${leaves(groups[i]).length}`;
   const groupW = groups.length && horizontal ? Math.min(area.w * 0.25, Math.max(...groups.map((_, i) => measure(groupLabel(i), fs, 600)))) + 16 : 0;
+  // Columna de nombres: hasta el 30 % del ancho (120 px en vertical), o hasta
+  // `labelWidth` px. `treeWidth` (horizontal) fija el ancho del árbol y deja
+  // a los nombres todo lo demás.
+  const posNum = (v) => (Number.isFinite(+v) && v !== null && +v > 0 ? +v : null);
+  const treeW = horizontal ? posNum(spec.treeWidth) : null;
+  const labCap = treeW !== null ? Math.max(40, area.w - treeW - groupW - weightW - 8 - swW - 14) : posNum(spec.labelWidth) ?? (horizontal ? area.w * 0.3 : 120);
+  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
   const hTitle = horizontal ? spec.xLabel ?? spec.yLabel : spec.yLabel ?? spec.xLabel;
   const axisH = 26 + (hTitle && horizontal ? 16 : 0);
   const inner = horizontal
-    ? { x: area.x, y: area.y, w: Math.max(60, area.w - labW - groupW - weightW - 8), h: n * gap }
+    ? { x: area.x, y: area.y, w: treeW !== null ? Math.max(60, Math.min(treeW, area.w - labW - groupW - weightW - 8)) : Math.max(60, area.w - labW - groupW - weightW - 8), h: n * gap }
     : { x: area.x, y: area.y + (hTitle ? 16 : 0), w: area.w - groupW, h: Math.max(60, area.h - labW - axisH - (hTitle ? 16 : 0)) };
   if (!horizontal) gap = inner.w / n;
   if (spec.height === undefined && horizontal) frame.setHeight(inner.y + inner.h + axisH + frame.chrome);

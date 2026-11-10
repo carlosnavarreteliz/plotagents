@@ -208,6 +208,7 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. |
 | `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
 | `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
+| `labelWidth` / `treeWidth` | La columna de nombres ocupa a lo más el 30 % del ancho (120 px en vertical); `labelWidth` fija ese tope en px. `treeWidth` (horizontal) fija en cambio el ancho del árbol y deja a los nombres todo lo demás: `width: 1236, treeWidth: 250`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -252,7 +253,9 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `inner` | Violín: `"box"` (por defecto), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violín con dos niveles de `hue`: una mitad cada uno. |
 | `scale` | Ancho del violín: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. |
+| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. Cada punto de strip y swarm lleva el `tooltip` de su fila (`{ title, text, replace: true }`). |
+| `clamp` | Con un dominio de valores (`xDomain` en horizontal, `yDomain` en vertical): lo que cae fuera se dibuja en el borde, y la marca del borde lo dice («≤ 0,0001 %», «≥ 100 %») cuando algún valor quedó más allá. En un eje log, un 0 va al borde de abajo. |
+| `yLabelPosition` | Gráficos horizontales: `"above"` escribe el nombre de cada fila sobre ella, alineado a la izquierda, y el eje de valores se queda con todo el ancho (un teléfono). |
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Eje de categorías con grupos y rótulos raleados, como en `bar`. |
@@ -268,8 +271,9 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `series` | Colores de los puntos. |
 | `highlight` | Un nombre (o lista): ese punto lleva un anillo y su nombre; el resto se aclara. |
 | `ticks` | Marcas propias en el eje: `[[500000, "$500 mil"], [1000000, "$1 M"]]`. |
-| `dotSize` | Diámetro máximo de un punto en px (14 por defecto). |
-| `refLines` | Valores de referencia que no son un punto más (la cifra de Chile): `[{ x: 18.4, label: "Chile" }]`, una línea vertical detrás de los puntos con su rótulo arriba (`rótulo · valor`; `showValue: false` escribe sólo el rótulo) y su propio tooltip. `x` puede ser un campo cuyas filas digan todas lo mismo (con `facet`, el de cada panel). El eje se abre para incluirla. |
+| `dotSize` | Diámetro máximo de un punto en px (14 por defecto); además, un punto nunca es más ancho que su tramo. |
+| `dotRadius` | El radio del punto en px, sin el tope del ancho del tramo: un tramo fino en una caja angosta sigue dando puntos que se leen (los de tramos vecinos pueden tocarse). Con `height` explícito se achica igual para que quepa la pila más alta. |
+| `refLines` | Valores de referencia que no son un punto más (la cifra de Chile): `[{ x: 18.4, label: "Chile" }]`, una línea vertical detrás de los puntos con su rótulo arriba (`rótulo · valor`; `showValue: false` escribe sólo el rótulo, en la línea y en el tooltip) y su propio tooltip. `dash: true` la punta (3 3), o da un patrón SVG (`"4 2"`). `x` puede ser un campo cuyas filas digan todas lo mismo (con `facet`, el de cada panel). El eje se abre para incluirla. |
 
 ## Partes de un todo
 
@@ -316,8 +320,9 @@ Una cuenta hecha cuadros: un cuadro por fila, o por unidad de `value`, por `seri
 |---|---|
 | `value` | Campo a sumar (si no, un cuadro por fila). |
 | `unit`, `maxSquares` | Cuánto vale un cuadro; cuándo entra la unidad redonda. |
-| `perSquare` | Cada cuadro es su propia marca con el tooltip de su fila (una verificación, una persona), en el orden de los datos dentro de cada serie; va bien con `tooltip: { title, text, replace: true }`. Sólo mientras un cuadro es una unidad; sobre `maxSquares` vuelve a un tooltip por serie. |
+| `perSquare` | Cada cuadro es su propia marca (un `<rect>`, con `rx` si va redondeado) con el tooltip de su fila (una verificación, una persona), en el orden de los datos dentro de cada serie; va bien con `tooltip: { title, text, replace: true }`. Sólo mientras un cuadro es una unidad; sobre `maxSquares` vuelve a un tooltip por serie. |
 | `columns` | Cuadros por fila (10, 20 o 25 según el total). |
+| `cellRadius` | Radio de las esquinas de cada cuadro en px; `0` para esquinas rectas (por omisión, el radio de las barras del tema, a lo más un cuarto del cuadro). |
 | `order` | Orden de las series (por defecto, la mayor primero). |
 
 ## Mapas
@@ -476,6 +481,8 @@ Un mapa ya calculado (el espacio de productos, una red de conocimiento) suele pe
 | `edgeOpacity` / `edgeWidth` | Un número para todas las aristas, o `[mín, máx]` según el valor (la opacidad lineal, el ancho por la raíz). |
 | `stretch` | Sólo con `layout: "preset"`: x e y se escalan por separado para llenar el área, para posiciones ya normalizadas por eje (MDS en 0–1). |
 | `minRadius` | Radio mínimo de un nodo en px (2,5 por omisión). |
+| `labelWidth` | Ancho máximo del nombre de un nodo en px antes de cortarlo con «…» (150 por omisión). |
+| `edgeTip` | `false` no escribe tooltip en las aristas (`tooltip: false` también las deja sin él). Cientos de aristas con su propio texto pesan más que el dibujo. |
 | `href` | Un campo de `nodes` con una URL: cada nodo es un enlace. |
 
 ### `chord`
@@ -495,11 +502,14 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | Opción | Qué hace |
 |---|---|
 | `colorScale: { colors, breaks }` | Clases discretas en vez de un degradado ([escalas de color](colorscales.md#clases)); la leyenda pasa a ser una clave escalonada con los cortes escritos debajo, con `format`. |
-| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. |
+| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. `midClass: { color }` la pinta en ese color, así un parche de piel la fija sin reemplazar el tema. |
+| `missingLabel` | Lo que dice el tooltip de una celda sin valor (`"—"` por omisión): `"sin dato"`. |
 | `missing` | Celdas sin valor: `"tint"` (por defecto), `"plain"` (sólo el borde), `"hatch"` (rayado de «sin dato») o `"gap"` (nada). |
 | `floor` / `ceiling` | Los valores bajo / sobre se dibujan como celdas vacías: el valor existe (el tooltip lo muestra), pero no se colorea ni estira la escala. |
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
-| `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
+| `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. Un nombre que no cabe se corta, y va entero en su tooltip. |
+| `groupColors` | `{ [grupo]: color }`: cada grupo con color lleva una franja de 3 px de su color en el borde de su banda que mira a la grilla (el matiz de una familia bajo sus sectores), en vez del tinte alterno. |
+| `cornerLabel` | Un título en la esquina vacía donde se encuentran los rótulos de fila y de columna: `"nació en ↓ / vive en →"`; `"\n"` lo parte en líneas. La columna de rótulos de fila se ensancha para que quepa (con el mismo tope); lo que no cabe se corta y va entero en el tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
 | `rowTip` | Tooltip del rótulo de cada fila, desde este campo: lo que es de toda la fila y no tiene que repetirse en cada celda. Desde JS, también una función del rótulo. |
 | `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
@@ -519,7 +529,7 @@ plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
 
 `from`, `to`, `value` (también detecta `source`/`target`). El color parte en la primera etapa con más de un nodo y fluye aguas abajo.
 
-`nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno.
+`nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno. Los trazos de los flujos van con dos decimales; `pathPrecision: 1` (o 0) escribe menos.
 
 Muchos nodos chicos quedan a pocos píxeles unos de otros y sus nombres se enciman. `relax: true` separa los rótulos de cada columna: todo nodo lleva su nombre y su segunda línea, cada rótulo se corre lo mínimo para quedar a 31 px de sus vecinos (un número fija otra distancia; bajo 28 px el rótulo es de una línea) y el que quedó lejos de su nodo lleva una guía fina hasta él. Sin `height`, el gráfico crece hasta que caben; con `height`, los que no caben pasan a una línea y luego se aprietan.
 

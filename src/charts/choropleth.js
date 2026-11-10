@@ -108,7 +108,7 @@ export function colorScale(values, spec, theme) {
   const min = v[0], max = v[v.length - 1], range = max - min;
   // `colorScale: { colors, breaks }`: las clases las fija quien llama.
   const bins = binnedScale(spec);
-  if (bins) return classed(bins.breaks, bins.colors, min, max);
+  if (bins) return { mode: 'classes', breaks: bins.breaks, colors: bins.colors, min, max, cls: bins.cls, color: bins.color };
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const mode = Array.isArray(spec.scale) || Array.isArray(spec.thresholds) ? 'thresholds' : spec.scale || 'quantile';
   if (mid !== undefined) {

@@ -637,6 +637,9 @@ export function network(spec, theme) {
   const P = (x, y) => `${f1(x)},${f1(y)}`;
   const linkG = [];
   // Las aristas fijadas con `colors["a→b"]` van encima.
+  // `edgeTip: false` (o `tooltip: false`): aristas sin tooltip; en una red de
+  // cientos de aristas el texto repetido pesa más que el dibujo.
+  const edgeTips = spec.edgeTip !== false && spec.tooltip !== false;
   for (const e of [...edges].sort((a, b) => (!!pinE(a) - !!pinE(b)) || a.v - b.v)) {
     const a = byId.get(e.src), b = byId.get(e.dst);
     const w = Number.isFinite(eW) ? eW : pair(eW) ? eW[0] + (eW[1] - eW[0]) * Math.sqrt(e.v / maxE) : valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
@@ -665,7 +668,7 @@ export function network(spec, theme) {
       class: 'pa-m', d, stroke: hl && !active ? theme.muted : pinE(e) || edgeInk || colorOf(a),
       strokeOpacity: op === baseOp ? undefined : op, strokeWidth: sw === 1 ? undefined : sw,
       'data-s': e.src, 'data-t': e.dst,
-      'data-tip': tip(`${a.label} — ${b.label}`, fmtE(e.v)),
+      'data-tip': edgeTips ? tip(`${a.label} — ${b.label}`, fmtE(e.v)) : undefined,
     }));
   }
   const links = g({ class: 'pa-links', fill: 'none', strokeLinecap: 'round', strokeOpacity: baseOp, strokeWidth: 1 }, linkG);
@@ -707,6 +710,8 @@ export function network(spec, theme) {
   const angles = []; // etiquetas radiales ya puestas: [ángulo, medio alto angular]
   const labG = [];
   const h = labelPx + 1;
+  // `labelWidth`: el ancho máximo de un rótulo en px (150 por omisión).
+  const labelMax = Number.isFinite(+spec.labelWidth) && spec.labelWidth !== null && +spec.labelWidth > 0 ? +spec.labelWidth : 150;
   const inArea = (b) => b[0] >= area.x - 2 && b[2] <= area.x + area.w + 2 && b[1] >= area.y - 6 && b[3] <= area.y + area.h + 6;
   for (const n of lbls) {
     const isF = focusNode && n === focusNode;
@@ -727,7 +732,7 @@ export function network(spec, theme) {
       labG.push(el('text', { x: lx, y: ly, dy: '0.35em', textAnchor: flip ? 'end' : 'start', transform: `rotate(${f1(deg)} ${f1(lx)} ${f1(ly)})`, ...attrs }, esc(label)));
       continue;
     }
-    const label = truncate(n.label, 150, labelSize, weight);
+    const label = truncate(n.label, labelMax, labelSize, weight);
     const w = measure(label, labelSize, weight);
     const cands = [
       [n.px + n.r + 5, n.py + labelPx * 0.35, 'start'],

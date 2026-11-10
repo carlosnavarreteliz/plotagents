@@ -208,6 +208,7 @@ How things group, and at what height they join. The tree comes in already comput
 | `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. |
 | `xLabel` | Title of the height axis ("Ward merge height": a merge height is not a distance, say what it is). |
 | `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
+| `labelWidth` / `treeWidth` | The names column takes at most 30% of the width (120 px vertical); `labelWidth` sets that cap in px. `treeWidth` (horizontal) fixes the tree's width instead and gives the names the rest: `width: 1236, treeWidth: 250`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -252,7 +253,9 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `inner` | Violin: `"box"` (default), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violin with two `hue` levels: one half each. |
 | `scale` | Violin width: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Strip and swarm layout. |
+| `jitter`, `dodge`, `radius` | Strip and swarm layout. Strip and swarm dots carry their own row's `tooltip` (`{ title, text, replace: true }`). |
+| `clamp` | With a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0.0001%", "≥ 100%") when some value lies beyond. On a log axis a 0 sits on the low edge. |
+| `yLabelPosition` | Horizontal charts: `"above"` writes each row's name above it, left-aligned, so the value axis keeps the full width (a phone). |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
@@ -268,8 +271,9 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `series` | Dot colors. |
 | `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
 | `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
-| `dotSize` | Largest dot diameter in px (default 14). |
-| `refLines` | Reference values that are not one more dot (the national figure): `[{ x: 18.4, label: "Chile" }]`, drawn as a vertical line behind the dots with its label on top (`label · value`; `showValue: false` writes the label alone) and its own tooltip. `x` may be a field whose rows all hold the same value (with `facet`, each panel's own). The axis widens to include it. |
+| `dotSize` | Largest dot diameter in px (default 14); a dot is also never wider than its bin. |
+| `dotRadius` | The dot radius in px, without the bin-width cap: a fine bin in a narrow box keeps readable dots (neighbouring bins may touch). With an explicit `height` it still shrinks so the tallest stack fits. |
+| `refLines` | Reference values that are not one more dot (the national figure): `[{ x: 18.4, label: "Chile" }]`, drawn as a vertical line behind the dots with its label on top (`label · value`; `showValue: false` writes the label alone, on the line and in the tooltip) and its own tooltip. `dash: true` dashes the line (3 3), or give an SVG pattern (`"4 2"`). `x` may be a field whose rows all hold the same value (with `facet`, each panel's own). The axis widens to include it. |
 
 ## Part-to-whole
 
@@ -316,8 +320,9 @@ A count drawn as squares: one square per row, or per unit of `value`, by `series
 |---|---|
 | `value` | Field to add up (otherwise one square per row). |
 | `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
-| `perSquare` | Each square is its own mark with its own row's tooltip (one check, one person), in data order within each series; pair it with `tooltip: { title, text, replace: true }`. Only while a square is one unit; past `maxSquares` it falls back to one tooltip per series. |
+| `perSquare` | Each square is its own mark (a `<rect>`, with `rx` when rounded) with its own row's tooltip (one check, one person), in data order within each series; pair it with `tooltip: { title, text, replace: true }`. Only while a square is one unit; past `maxSquares` it falls back to one tooltip per series. |
 | `columns` | Squares per row (default 10, 20 or 25 by total). |
+| `cellRadius` | Corner radius of each square in px; `0` for square corners (default: the theme's bar radius, at most a quarter of the square). |
 | `order` | Series order (default: largest first). |
 
 ## Maps
@@ -476,6 +481,8 @@ A map you already computed (the product space, a knowledge network) usually want
 | `edgeOpacity` / `edgeWidth` | One number for every edge, or `[min, max]` scaled by value (opacity linearly, width by the square root). |
 | `stretch` | `layout: "preset"` only: x and y are scaled apart to fill the area, for positions already normalized per axis (0–1 MDS). |
 | `minRadius` | Smallest node radius in px (default 2.5). |
+| `labelWidth` | Widest node name in px before it is cut with "…" (default 150). |
+| `edgeTip` | `false` writes no tooltip on the edges (`tooltip: false` also drops them). Hundreds of edges, each with its own text, weigh more than the drawing. |
 | `href` | A field of `nodes` with a URL: each node is a link. |
 
 ### `chord`
@@ -495,11 +502,14 @@ A map you already computed (the product space, a knowledge network) usually want
 | Option | Meaning |
 |---|---|
 | `colorScale: { colors, breaks }` | Discrete classes instead of a gradient ([color scales](colorscales.md#classes)); the legend becomes a stepped key with the breaks written under it, formatted with `format`. |
-| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. |
+| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. `midClass: { color }` paints it in that color instead, so a skin patch can set it without replacing the theme. |
+| `missingLabel` | What the tooltip of a cell without a value says (default `"—"`): `"no data"`. |
 | `missing` | Cells without a value: `"tint"` (default), `"plain"` (outline only), `"hatch"` (striped "no data") or `"gap"` (nothing). |
 | `floor` / `ceiling` | Values below / above are drawn as plain empty cells: the value exists (the tooltip shows it) but it is not colored and does not stretch the scale. |
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
-| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
+| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. A name that does not fit is cut, with the whole name in its tooltip. |
+| `groupColors` | `{ [group]: color }`: each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid (a family's hue under its sectors), instead of the alternate tint. |
+| `cornerLabel` | A title in the empty corner where row labels meet column labels: `"born in ↓ / lives in →"`; `"\n"` breaks it into lines. The row-label column widens to fit it (same cap); what does not fit is cut, whole in the tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
 | `rowTip` | Tooltip of each row label, from this field: what belongs to the whole row and need not repeat in every cell. From JS, also a function of the label. |
 | `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
@@ -519,7 +529,7 @@ plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
 
-`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
+`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one. Link paths are written with two decimals; `pathPrecision: 1` (or 0) writes fewer.
 
 Many small nodes stack within a few pixels of each other and their names overprint. `relax: true` separates the labels of each column: every node gets its name and second line, each label moves as little as possible to keep 31 px from its neighbors (a number sets another distance; below 28 px labels are one line), and a label that ended up away from its node gets a thin leader line back to it. Without `height`, the chart grows until the labels fit; with `height`, labels that do not fit drop to one line, then squeeze.
 
