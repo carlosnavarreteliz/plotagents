@@ -133,18 +133,30 @@ export function attach(root) {
     for (let t = 0.05; ratio(fg, bg) < 4.5 && t <= 1.001; t += 0.05) bg = hex(A.map((v, i) => v + (to[i] - v) * t));
     return { bg, fg };
   };
+  // Con `skins`, el atributo trae la piel por defecto y el style la variable
+  // de la piel que rige: el encabezado lleva el color que el lector ve.
+  const skinned = (n, attr) => {
+    const st = n && n.getAttribute ? n.getAttribute('style') || '' : '';
+    const m = st.match(new RegExp('(?:^|;)\\s*' + attr + ':var\\((--pa-s\\d+)\\)'));
+    if (!m || typeof getComputedStyle !== 'function') return null;
+    return getComputedStyle(svg).getPropertyValue(m[1]).trim() || null;
+  };
+  const isLit = (c) => !!c && (/^#/.test(c) || /^rgba?\(/i.test(c));
   const markColor = (node) => {
     if (!node) return null;
     const dc = node.getAttribute && (node.getAttribute('data-color') || (node.querySelector('[data-color]') || { getAttribute: () => null }).getAttribute('data-color'));
-    if (dc && /^#/.test(dc)) return dc;
     const cands = [node, ...node.querySelectorAll('[fill],[stroke]')];
+    if (dc && /^#/.test(dc)) {
+      for (const n of cands) if (norm(n.getAttribute && n.getAttribute('fill')) === norm(dc)) return skinned(n, 'fill') || dc;
+      return dc;
+    }
     for (const n of cands) {
       const f = n.getAttribute && n.getAttribute('fill');
-      if (f && /^#/.test(f)) return f;
+      if (isLit(f)) return skinned(n, 'fill') || f;
     }
     for (const n of cands) {
       const st = n.getAttribute && n.getAttribute('stroke');
-      if (st && /^#/.test(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return st;
+      if (isLit(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return skinned(n, 'stroke') || st;
     }
     return null;
   };
@@ -367,7 +379,7 @@ function mapZoom(root, svg, z, { dark, hide }) {
   box.style.cssText = `position:absolute;display:flex;gap:4px;z-index:5;opacity:.0;transition:opacity .15s`;
   const mk = (label, svgIcon) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
+    b.type = 'button'; b.setAttribute('aria-label', label);
     // Tamaño fijo en línea: hojas como `figure svg{width:100%}` no deben estirar el ícono.
     b.innerHTML = svgIcon.replace('<svg ', '<svg style="width:12px;height:12px;display:block;flex:none" ');
     b.style.cssText = `width:28px;height:28px;display:grid;place-items:center;padding:0;border-radius:7px;border:1px solid ${bd};background:${bg};color:${fg};cursor:pointer;box-shadow:0 1px 3px rgba(11,15,43,.12)`;

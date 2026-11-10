@@ -1,6 +1,20 @@
 // Sankey: flujos entre etapas (presupuesto → áreas, origen → destino).
 // El grosor es proporcional al valor; el color sigue al origen.
+//
+// `nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el
+// mismo lugar puede estar en dos etapas («Antofagasta» región y «Antofagasta»
+// aduana) sin fundirse ni formar un ciclo. `column` fija la etapa, `order:
+// "given"` respeta el orden de `nodes`, `stages` rotula las columnas y
+// `linkColor` decide si un flujo lleva el color de su origen o de su destino.
+//
+// `relax: true` (o un número de px) separa los rótulos de cada columna: muchos
+// nodos chicos apilados dejan sus nombres uno encima del otro. Cada rótulo se
+// corre lo mínimo (regresión isotónica: la menor suma de desplazamientos al
+// cuadrado que deja `gap` px entre centros, dentro del área), todos llevan
+// nombre y segunda línea, y el que se movió lleva una guía hasta su nodo. Sin
+// `height`, el gráfico crece hasta que caben.
 import { el, g, text, tip } from '../svg.js';
+import { tipper } from '../tooltip.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
@@ -34,8 +48,11 @@ export function sankey(spec, theme) {
       ? new PlotError('The sankey has no positive flows between different nodes.', `Check \`${valueF}\`: it needs values > 0, and \`${from}\` must differ from \`${to}\` (self-loops are dropped).`)
       : new PlotError('El sankey no tiene flujos positivos entre nodos distintos.', `Revisa \`${valueF}\`: necesita valores > 0, y \`${from}\` debe ser distinto de \`${to}\` (los bucles se omiten).`);
   }
-  const names = [...new Set(links.flatMap((l) => [l.s, l.t]))];
-  const nodes = new Map(names.map((n) => [n, { name: n, in: [], out: [], depth: 0 }]));
+  const meta = new Map((Array.isArray(spec.nodes) ? spec.nodes : []).filter((n) => n && n.id !== undefined).map((n) => [String(n.id), n]));
+  const given = [...meta.keys()];
+  const seen = [...new Set(links.flatMap((l) => [l.s, l.t]))];
+  const names = [...given.filter((n) => seen.includes(n)), ...seen.filter((n) => !meta.has(n))];
+  const nodes = new Map(names.map((n, i) => [n, { id: n, name: String(meta.get(n)?.label ?? n), sub: meta.get(n)?.sub, tipText: meta.get(n)?.tip, column: meta.get(n)?.column, rank: i, in: [], out: [], depth: 0 }]));
   for (const l of links) { l.sn = nodes.get(l.s); l.tn = nodes.get(l.t); l.sn.out.push(l); l.tn.in.push(l); }
   for (const n of nodes.values()) n.value = Math.max(sum(n.in), sum(n.out));
 
@@ -54,19 +71,38 @@ export function sankey(spec, theme) {
     for (const l of links) if (l.tn.depth < l.sn.depth + 1) { l.tn.depth = l.sn.depth + 1; changed = true; }
     if (!changed) break;
   }
-  const maxDepth = Math.max(...[...nodes.values()].map((n) => n.depth));
+  let maxDepth = Math.max(...[...nodes.values()].map((n) => n.depth));
   for (const n of nodes.values()) if (!n.out.length) n.depth = maxDepth; // sumideros a la derecha
+  // Etapa fijada a mano: manda sobre la calculada.
+  if ([...nodes.values()].some((n) => Number.isInteger(n.column))) {
+    for (const n of nodes.values()) if (Number.isInteger(n.column)) n.depth = n.column;
+    maxDepth = Math.max(...[...nodes.values()].map((n) => n.depth));
+  }
   const cols = Array.from({ length: maxDepth + 1 }, () => []);
   for (const n of nodes.values()) cols[n.depth].push(n);
-  cols.forEach((c) => c.sort((a, b) => b.value - a.value));
+  const givenOrder = spec.order === 'given';
+  cols.forEach((c) => c.sort(givenOrder ? (a, b) => a.rank - b.rank : (a, b) => b.value - a.value));
 
   const fmt = makeFormat(spec.format, locale, links.map((l) => l.v));
   const frame = createFrame(spec, theme, { height: 440 });
-  const area = frame.layout([]);
+  const area0 = frame.layout([]);
+  // Encabezados de columna (`stages`): una línea sobre cada etapa.
+  const stages = Array.isArray(spec.stages) ? spec.stages.map(String) : null;
+  const area = stages ? { ...area0, y: area0.y + 22, h: area0.h - 22 } : area0;
+  // `relax`: distancia mínima entre centros de rótulo (31 px: dos líneas).
+  const relaxGap = spec.relax === true ? 31 : typeof spec.relax === 'number' && spec.relax > 0 ? spec.relax : 0;
+  const LAB_TOP = 11, LAB_BOTTOM = 15;
+  if (relaxGap && (spec.height === undefined || spec.height === null)) {
+    const need = (Math.max(...cols.map((c) => c.length)) - 1) * relaxGap + LAB_TOP + LAB_BOTTOM;
+    if (need > area.h) { frame.setHeight(frame.height + (need - area.h)); area.h = need; }
+  }
+  // Con guías, el rótulo se aparta 6 px más del nodo.
+  const leadW = relaxGap ? 6 : 0;
   const label = (n) => n.name;
-  const leftW = Math.min(area.w * 0.22, Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(fmt(n.value), 12))))) + 10;
+  const second = (n) => (n.sub !== undefined && n.sub !== null ? String(n.sub) : fmt(n.value));
+  const leftW = Math.min(area.w * 0.22, Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
   const last = cols[cols.length - 1];
-  const rightW = Math.min(area.w * 0.22, Math.max(...last.map((n) => Math.max(measure(label(n), 12.5, 500), measure(fmt(n.value), 12))))) + 10;
+  const rightW = Math.min(area.w * 0.22, Math.max(...last.map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
   const NW = 10;
   const inner = { x: area.x + leftW, y: area.y + 4, w: area.w - leftW - rightW, h: area.h - 8 };
   const pad = Math.max(6, Math.min(18, inner.h / Math.max(...cols.map((c) => c.length)) / 4));
@@ -83,7 +119,7 @@ export function sankey(spec, theme) {
   place();
   // Baricentros para reducir cruces.
   const center = (n) => n.y + n.h / 2;
-  for (let it = 0; it < 6; it++) {
+  for (let it = 0; it < (givenOrder ? 0 : 6); it++) {
     for (let i = 1; i < cols.length; i++) cols[i].sort((a, b) => bary(a.in, 'sn') - bary(b.in, 'sn'));
     place();
     for (let i = cols.length - 2; i >= 0; i--) cols[i].sort((a, b) => bary(a.out, 'tn') - bary(b.out, 'tn'));
@@ -97,14 +133,24 @@ export function sankey(spec, theme) {
   // Color: orígenes en orden fijo; los demás heredan su mayor flujo de entrada.
   // Si hay un solo origen, el color nace en la primera etapa con 2+ nodos.
   const cc = Math.max(0, cols.findIndex((c) => c.length > 1));
-  const fixed = (n) => spec.colors && spec.colors[n.name];
+  const fixed = (n) => (spec.colors && (spec.colors[n.id] ?? spec.colors[n.name])) || meta.get(n.id)?.color;
   for (let i = 0; i < cc; i++) for (const n of cols[i]) n.color = fixed(n) || theme.ink;
   [...cols[cc]].sort((a, b) => b.value - a.value).forEach((n, i) => { n.color = fixed(n) || (i < theme.categorical.length ? theme.categorical[i] : theme.other); });
   for (let i = cc + 1; i < cols.length; i++) for (const n of cols[i]) {
     const big = [...n.in].sort((a, b) => b.v - a.v)[0];
     n.color = fixed(n) || (n.in.length ? big.sn.color : theme.categorical[0]);
   }
-  const linkColor = (l) => (l.sn.depth < cc ? l.tn.color : l.sn.color);
+  // `linkColor`: "source" | "target", o uno por etapa (["source", "target"]).
+  // `colors["origen→destino"]` fija un flujo.
+  const lcOf = (l) => (Array.isArray(spec.linkColor) ? spec.linkColor[l.sn.depth] : spec.linkColor);
+  const linkColor = (l) => {
+    const pin = spec.colors && spec.colors[`${l.s}→${l.t}`];
+    if (pin) return pin;
+    const how = lcOf(l);
+    if (how === 'target') return l.tn.color;
+    if (how === 'source') return l.sn.color;
+    return l.sn.depth < cc ? l.tn.color : l.sn.color;
+  };
 
   // Posición de cada enlace dentro de sus nodos.
   for (const n of nodes.values()) {
@@ -116,35 +162,106 @@ export function sankey(spec, theme) {
 
   const body = [];
   const linkG = [];
+  const T = tipper(spec, data, locale);
+  if (stages) cols.forEach((c, i) => {
+    if (!stages[i]) return;
+    const x = i === 0 ? colX(0) + NW : i === cols.length - 1 ? colX(i) : colX(i) + NW / 2;
+    const anchor = i === 0 ? 'end' : i === cols.length - 1 ? 'start' : 'middle';
+    body.push(text(x, area0.y + 12, stages[i], { fill: theme.muted, fontSize: 11.5, fontWeight: 600, textAnchor: anchor, letterSpacing: '0.04em' }));
+  });
+  const pp = Number.isInteger(spec.pathPrecision) ? Math.max(0, Math.min(3, spec.pathPrecision)) : 2;
+  const PREC = 10 ** pp;
   for (const l of [...links].sort((a, b) => b.v - a.v)) {
-    const x0 = l.sn.x + NW, x1 = l.tn.x, xm = (x0 + x1) / 2, w = l.v * ky;
-    const d = `M${x0},${l.y0}C${xm},${l.y0} ${xm},${l.y1} ${x1},${l.y1}L${x1},${l.y1 + w}C${xm},${l.y1 + w} ${xm},${l.y0 + w} ${x0},${l.y0 + w}Z`;
+    // Coordenadas redondeadas como en el resto de la biblioteca (2 decimales;
+    // `pathPrecision` 0–3 para menos): sin esto, cada número lleva 15 cifras.
+    const R = (v) => +(Math.round(v * PREC) / PREC);
+    const x0 = R(l.sn.x + NW), x1 = R(l.tn.x), xm = R((l.sn.x + NW + l.tn.x) / 2), w = l.v * ky;
+    const ya = R(l.y0), yb = R(l.y1), yc = R(l.y1 + w), yd = R(l.y0 + w);
+    const d = `M${x0},${ya}C${xm},${ya} ${xm},${yb} ${x1},${yb}L${x1},${yc}C${xm},${yc} ${xm},${yd} ${x0},${yd}Z`;
     const share = l.sn.value ? Math.round((l.v / l.sn.value) * 100) : 0;
-    linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-tip': `${l.s} → ${l.t}\n${fmt(l.v)} · ${share}% ${en ? 'of' : 'de'} ${l.s}` }));
+    linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-key': `${l.s}→${l.t}`, 'data-tip': T({ [from]: l.s, [to]: l.t }, `${l.sn.name} → ${l.tn.name}`, `${fmt(l.v)} · ${share}% ${en ? 'of' : 'de'} ${l.sn.name}`) }));
   }
   body.push(g({ class: 'pa-links' }, linkG));
+  // Rótulos separados (`relax`): una posición por nodo, columna por columna.
+  const lab = new Map();
+  if (relaxGap) {
+    const top = area.y + LAB_TOP, bottom = area.y + area.h - LAB_BOTTOM;
+    for (const c of cols) {
+      const want = c.map(center);
+      let gap = relaxGap;
+      if ((c.length - 1) * gap > bottom - top) gap = Math.min(gap, 16);
+      if ((c.length - 1) * gap > bottom - top) gap = (bottom - top) / Math.max(1, c.length - 1);
+      const at = spreadLabels(want, gap, top, bottom);
+      const two = gap >= 28;
+      // Un rótulo que quedó junto a su nodo (aunque no en su centro) no necesita
+      // guía; el que se fue lejos la lleva desde el punto más cercano del nodo.
+      const info = c.map((n, i) => {
+        const ny = two ? at[i] - 6 : at[i];
+        const from = Math.max(n.y + Math.min(1, n.h / 2), Math.min(n.y + n.h - Math.min(1, n.h / 2), ny));
+        return { ly: at[i], ny, from, two, moved: Math.abs(ny - from) > 2 };
+      });
+      const any = info.some((x) => x.moved);
+      c.forEach((n, i) => lab.set(n, { ...info[i], any }));
+    }
+  }
   for (const [ci, c] of cols.entries()) for (const n of c) {
     const parts = [el('rect', { x: n.x, y: n.y, width: NW, height: n.h, rx: 2, fill: n.color })];
     const isLeft = ci === 0 && cols.length > 1;
     const lx = isLeft ? n.x - 8 : n.x + NW + 8;
     const anchor = isLeft ? 'end' : 'start';
-    const maxW = isLeft ? leftW - 10 : ci === cols.length - 1 ? rightW - 10 : (inner.w / Math.max(1, cols.length - 1)) * 0.55;
+    const maxW = isLeft ? leftW - 10 - leadW : ci === cols.length - 1 ? rightW - 10 - leadW : (inner.w / Math.max(1, cols.length - 1)) * 0.55;
     const halo = ci > 0 && ci < cols.length - 1 ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
     const cy = n.y + n.h / 2;
-    if (n.h >= 30) {
+    const L = lab.get(n);
+    if (L) {
+      // Guía: del borde del nodo al centro del nombre, sólo si el rótulo se movió.
+      const sgn = isLeft ? -1 : 1, edge = isLeft ? n.x : n.x + NW, off = L.any ? 8 + leadW : 8;
+      const tx = edge + sgn * off;
+      if (L.moved) parts.push(el('path', { class: 'pa-leader', d: `M${f1(edge + sgn * 2)},${f1(L.from)}L${f1(tx - sgn * 3)},${f1(L.ny)}`, fill: 'none', stroke: theme.muted, strokeWidth: 0.75 }));
+      if (L.two) {
+        parts.push(text(tx, L.ly - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...halo }));
+        parts.push(text(tx, L.ly + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...halo }));
+      } else {
+        parts.push(text(tx, L.ly + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo }));
+      }
+    } else if (n.h >= 30) {
       parts.push(text(lx, cy - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...halo }));
-      parts.push(text(lx, cy + 13, fmt(n.value), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...halo }));
+      parts.push(text(lx, cy + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...halo }));
     } else if (n.h >= 8 || c.length < 12) {
       parts.push(text(lx, cy + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo }));
     }
-    body.push(g({ 'data-tip': `${n.name}\n${fmt(n.value)}` }, parts));
+    body.push(g({ 'data-key': n.id, 'data-tip': T([], n.name, fmt(n.value), n.sub !== undefined && n.sub !== null && String(n.sub) !== fmt(n.value) ? String(n.sub) : '', n.tipText ? String(n.tipText) : '') }, parts));
   }
-  const top = [...links].sort((a, b) => b.v - a.v).slice(0, 3).map((l) => `${l.s} → ${l.t} (${fmt(l.v)})`).join('; ');
+  const top = [...links].sort((a, b) => b.v - a.v).slice(0, 3).map((l) => `${l.sn.name} → ${l.tn.name} (${fmt(l.v)})`).join('; ');
   const desc = en ? `Sankey diagram with ${nodes.size} nodes and ${links.length} flows. Largest flows: ${top}.` : `Diagrama de Sankey con ${nodes.size} nodos y ${links.length} flujos. Mayores flujos: ${top}.`;
   return frame.finish(body, { desc, type: 'sankey' });
 }
 
 const sum = (ls) => ls.reduce((a, l) => a + l.v, 0);
+const f1 = (v) => (Math.round(v * 10) / 10).toString();
+
+/**
+ * Posiciones de rótulos en una columna: lo más cerca de `want` (ascendente) con
+ * al menos `gap` entre vecinos, dentro de [top, bottom]. Con z_i = y_i − i·gap la
+ * condición es z no decreciente: regresión isotónica (pool adjacent violators),
+ * que minimiza la suma de desplazamientos al cuadrado, y luego el tope común.
+ */
+export function spreadLabels(want, gap, top, bottom) {
+  const n = want.length;
+  const blocks = [];
+  for (let i = 0; i < n; i++) {
+    let b = { s: want[i] - i * gap, c: 1 };
+    while (blocks.length && blocks[blocks.length - 1].s / blocks[blocks.length - 1].c > b.s / b.c) {
+      const p = blocks.pop();
+      b = { s: p.s + b.s, c: p.c + b.c };
+    }
+    blocks.push(b);
+  }
+  const z = [];
+  for (const b of blocks) for (let k = 0; k < b.c; k++) z.push(b.s / b.c);
+  const lo = top, hi = bottom - (n - 1) * gap;
+  return z.map((v, i) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))) + i * gap);
+}
 
 /** Primer ciclo encontrado (lista de nombres, cerrada) o null. DFS iterativo. */
 function findCycle(nodes) {

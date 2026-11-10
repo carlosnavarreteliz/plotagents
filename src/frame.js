@@ -16,32 +16,35 @@ export const SIZES = {
 };
 
 export function createFrame(spec, theme, defaults = {}) {
-  const width = Math.max(240, +spec.width || defaults.width || 720);
+  // `chrome: false` (sparklines): sin título, bajada ni fuente dibujados (el
+  // título sigue en aria-label para lectores de pantalla) y sin tamaño mínimo.
+  const chrome = defaults.chrome !== false;
+  const width = Math.max(defaults.minWidth ?? 240, +spec.width || defaults.width || 720);
   // Con textos más grandes (textScale), el alto por defecto crece para no aplastar los datos.
   const XS = ctx.textScale;
   // En gráficos anchos el alto por defecto crece con el ancho (hasta ~2,8:1),
   // para que una lámina de 1500 px no quede como una franja vacía.
   const h0 = defaults.height || 420;
   const hW = defaults.fixedHeight ? h0 : Math.max(h0, Math.min(Math.round(h0 * 1.35), Math.round(width * 0.36)));
-  let height = Math.max(160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1))));
+  let height = Math.max(defaults.minHeight ?? 160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1))));
   // Responsivo: en pantallas angostas, menos margen y títulos algo menores
   // (nunca bajo 11 px en ejes). El ancho útil es lo que más importa en móvil.
   const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
+  const pad = spec.padding ?? defaults.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
 
   const tw = T.titleWeight ?? 600;
-  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
-  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
+  const titleLines = chrome && spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
+  const subLines = chrome && spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
   const header = [];
   const X = ctx.textScale; // alturas de línea crecen con la escala de texto
   const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: spec._titleColor ?? theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
   if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {
@@ -49,8 +52,11 @@ export function createFrame(spec, theme, defaults = {}) {
   });
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
+  // Paneles de un facet: el encabezado de todos mide lo que el más alto, para
+  // que el trazado empiece a la misma altura en cada uno.
+  if (spec._headerMin > y) y = spec._headerMin;
 
-  const srcText = spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
+  const srcText = chrome && spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   // Una fuente larga salta a una segunda línea en vez de salirse por la izquierda.
   const srcLines = srcText ? wrap(srcText, innerW, T.source, 400, 2) : [];
   const srcLH = Math.round(T.source * X * 1.35);
@@ -98,7 +104,7 @@ export function createFrame(spec, theme, defaults = {}) {
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
-    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '' } = {}) {
+    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '', root = null } = {}) {
       if (legendBottom) {
         const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
@@ -119,19 +125,20 @@ export function createFrame(spec, theme, defaults = {}) {
           width,
           height: r2(height),
           role,
-          'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
-          'aria-describedby': role === 'img' ? null : `${id}-d`,
+          // Sin <title>: el navegador lo muestra como tooltip nativo encima del propio.
+          'aria-label': spec.title || type,
+          'aria-describedby': `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
-          class: 'pa-chart',
+          class: 'pa-chart' + (root?.class ? ' ' + root.class : ''),
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
           'data-pa-lang': String(spec.locale || 'es').slice(0, 2),
           'data-pa-top': r2(frame.top),
           'data-pa-tip': theme.tooltip && (theme.tooltip.bg || theme.tooltip.ink) ? `${theme.tooltip.bg || ''},${theme.tooltip.ink || ''}` : null,
           style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
+          ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
-          el('title', { id: `${id}-t` }, esc(spec.title || type)),
           el('desc', { id: `${id}-d` }, esc(desc)),
           el('style', {}, style),
           defs ? el('defs', {}, defs) : '',
@@ -168,7 +175,7 @@ function withExcluded(items, spec, theme) {
 
 function legendWidth(items, size) {
   const X = ctx.textScale;
-  return Math.max(...items.map((it) => (it.type === 'ramp' ? 220 : 18 * X + measure(String(it.label), size) + 12)));
+  return Math.max(...items.map((it) => (it.type === 'ramp' ? 220 : it.type === 'steps' ? 320 : 18 * X + measure(String(it.label), size) + 12)));
 }
 
 function drawLegend(items, x0, y0, maxW, theme, opts) {
@@ -179,6 +186,33 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
   const vertical = !!opts.vertical;
   let x = x0, y = y0, rows = 1;
   for (const it of items) {
+    // Clave escalonada (escala por clases): un cuadro por clase y los cortes
+    // rotulados debajo, entre cuadro y cuadro. Ocupa dos filas.
+    if (it.type === 'steps') {
+      if (x > x0) { x = x0; y += rowH; rows++; }
+      if (it.title) {
+        const tw = Math.min(measure(it.title, size), maxW * 0.45);
+        out.push(text(x, y + 10, truncate(it.title, tw, size), { fill: theme.lede, fontSize: size }));
+        x += tw + 10;
+      }
+      const n = it.colors.length, gap = 2;
+      const w = Math.max(60, Math.min(x0 + maxW - x, Math.max(140, n * 46)));
+      const sw = (w - gap * (n - 1)) / n;
+      it.colors.forEach((c, i) => out.push(g({ class: 'pa-key', 'data-color': c, style: 'cursor:pointer' }, [
+        el('rect', { x: x + i * (sw + gap), y: y + 1, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c }),
+      ])));
+      let last = -Infinity;
+      (it.labels || []).forEach((lab, i) => {
+        const cx = x + (i + 1) * (sw + gap) - gap / 2;
+        const lw = measure(lab, SIZES.axis);
+        if (cx - lw / 2 < last + 6) return;
+        out.push(text(cx, y + 11 + rowH * 0.8, lab, { fill: theme.muted, fontSize: SIZES.axis, textAnchor: 'middle' }));
+        last = cx + lw / 2;
+      });
+      y += rowH; rows++;
+      x = x0 + maxW; // lo que siga empieza en una fila nueva
+      continue;
+    }
     if (it.type === 'ramp') {
       if (vertical && x > x0) { x = x0; y += rowH; rows++; }
       const w = Math.min(220, maxW);
@@ -214,6 +248,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     else if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: it.dashed ? 'butt' : 'round', strokeDasharray: it.dashed ? '4 2.5' : null }));
     else if (it.shape === 'square' && it.dashed) out.push(el('rect', { x: x + 0.6, y: cy - sw / 2 + 0.6, width: sw - 1.2, height: sw - 1.2, rx: 2, fill: it.fill || it.color, stroke: it.stroke || it.color, strokeWidth: 1.2, strokeDasharray: '3 2' }));
     else if (it.shape === 'square') out.push(el('rect', { x, y: cy - sw / 2, width: sw, height: sw, rx: 2.5, fill: it.color }));
+    else if (it.shape === 'none') { /* una nota en la leyenda (p. ej. «1 cuadro = 10»): sin marca */ }
     else out.push(el('circle', { cx: x + sw / 2, cy, r: sw / 2, fill: it.color }));
     out.push(text(x + sw + 6, y + 11 * X, label, { fill: theme.lede, fontSize: size, textDecoration: it.off ? 'line-through' : null }));
     out.push('</g>');

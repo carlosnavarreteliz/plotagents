@@ -16,6 +16,19 @@ plot({ ...spec, colorScale: { name: 'coolwarm', mid: 100 } });    // diverging a
 - La interpolación ocurre en OKLab, así que los pasos se ven parejos. Las paradas se muestrearon de matplotlib 3.9 y quedan a menos de 2 ΔE (×100) del original.
 - `cmap` y `colormap` son alias de `colorScale`. La opción anterior `ramp` todavía funciona.
 
+## Clases
+
+Con `breaks`, la escala pasa a ser de clases discretas: un valor cae en la clase *i* si `breaks[i-1] ≤ v < breaks[i]`.
+
+```js
+plot({ ...spec, colorScale: { colors: ['#2166AC', '#92C5DE', '#F7F7F7', '#F4A582', '#B2182B'], breaks: [-1, -0.25, 0.25, 1] } });
+plot({ ...spec, colorScale: { name: 'Blues', breaks: [10, 20, 40] } });   // 4 clases muestreadas de Blues
+```
+
+`colors` lleva un color más que `breaks` (o da `name` y se muestrea). Sirve en mapas de calor, coropletas y treemaps coloreados por variación (cortes como fracción: `0.1` es 10 %). La leyenda pasa a ser una clave escalonada, un cuadro por clase, con los cortes escritos debajo a través de `format`. Si los cortes y los colores no calzan, `lint` lo marca como error con la corrección.
+
+Un valor igual a un corte va a la clase de arriba. `closed: "right"` lo deja en la de abajo (`breaks[i-1] < v ≤ breaks[i]`), como en una clave que dice «hasta 10». Los cortes repetidos (cuantiles de datos con empates) se funden: la clase entre ellos quedaría vacía, así que ella y su color se van (`lint` lo avisa).
+
 ## Paletas categóricas
 
 `palette` acepta una lista de colores, una paleta de plotagents o uno de los mapas cualitativos de matplotlib:

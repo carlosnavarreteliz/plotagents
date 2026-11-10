@@ -26,6 +26,9 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Change over time | `line` | `x` date (`"2024-03"`) or year, `y`, `series?`; `ci: true` with several observations per x |
 | A project plan or schedule | `gantt` | `task`, `start`, `end` (or `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volume over time | `area` | like `line`; stacks with `series` |
+| The shape of a series in a table cell | `spark` | `x`, `y`, `width`/`height` any size (e.g. 108×26), `fill?`, `series?` |
+| One row of a distribution in a table cell | `rail` | `value`, `min`, `max`, `band?: [lo, hi]`, `median?`, `refs?: [{ field \| value, label }]`, `clip?` / `domain?` (past an end → chevron); 160×18 by default |
+| Who passed whom over time | `bump` (`slope` for first vs last) | `x` period, `y` value (or `rank`), `series`, `top?`, `ends?: "first-last"` |
 | Measures on different scales | `line` + `index: true`, or `facet` | **there is no dual axis** |
 | Exponential growth | `line` + `yScale: "log"` | |
 | Relationship between two measures | `regplot` (fit + CI) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
@@ -34,10 +37,13 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Every pair of measures at once | `pairplot` (`splom`) | `vars` (3–6), `hue?`, `corner?`, `kind?: "reg"` |
 | Distribution of one measure | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
 | Distribution by category | `box`, `violin`, `strip`, `swarm` | `x` category, `y` measure, `hue?` |
+| Distribution where each thing stays one thing | `dotplot` | `x`, `bin?`, `label?`, `series?`, `highlight?`, `ticks?: [[value, label]]` |
 | Multi-dimensional profile | `radar` | `axis`, `value`, `series` (≤ 4 series) |
 | Hierarchical part-to-whole | `treemap` or `sunburst` | `path: [level1, level2, …]`, `value` |
 | Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
 | Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
+| A count as a number of things | `waffle` | `series`, `value?` (or one square per row), `columns?`, `unit?` |
+| How things group, and at what height | `dendrogram` | rows `id`, `parent`, `heightField?` or `linkage` + `labels`; `cut?`, `clusters?` |
 | A value per region, state or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "usa" \| "world"` or any GeoJSON/TopoJSON object, `key`, `value` (text → one color per category) |
 | Dots at real places on a street map | `pointmap` | `lon`, `lat` (auto-detected), `size?`, `hue?`, `value?`, `label?`; `tiles: "osm"` (default) / `"esri-gray"` / `"esri-dark"`, or carto-* / mapbox-* with `tilesKey` |
 | Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group`; `layout?` |
@@ -67,6 +73,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `font: "Poppins"` and `textScale: 1.5` (presentation mode); `configure({ font, textScale })` sets them for every chart.
 - `network` + `focus: "node id"`: center a node and highlight its neighbors.
 - Your own map: `geo: <GeoJSON or TopoJSON>`; the matching property is found for you (`featureKey` to force it). Add `markers: [{ lon, lat, label }]`, `layers: [{ geo, label }]` for rivers or routes, and `fitTo: ["Biobío"]` or a `[lonMin, latMin, lonMax, latMax]` box to zoom.
+- Maps for a static site: `geo: { paths: { id: "M…Z" } }` takes outlines already projected (no projection runs); `views: [{ id, label, value }, …]` bakes several readings of one geometry into one SVG (switch with `data-view`, `plotagents/views`); `pathPrecision: 1, simplify: 0.5` shrink the paths; `fitTo: "mainland"` drops far islands; `microstates: true` draws Singapore or Malta as dots; world countries match by ISO-2 too.
 - `gantt`: day `end` dates are inclusive; a row without `end` is a milestone. Always set `today` on a live plan. `collapsed: ["Phase 2"]` (or `true`) folds phases into one summary bar; in the browser a click on a phase toggles it.
 - `network` + `layout: "force" | "circular" | "radial" | "concentric" | "clusters" | "tree" | "grid"` picks the placement; `curveness: 0` straightens edges.
 - `pointmap` draws on OpenStreetMap tiles by default (`tiles: "esri-gray"`, `"mapbox-light"` + `tilesKey`, or your own `{ url, attribution }`). Tiles load only when the SVG is inline or in `toHTML`, not inside `<img>`.

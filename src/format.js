@@ -81,6 +81,14 @@ const isYearLike = (vals) =>
  * `values` permite autodetectar (p. ej. porcentajes ya multiplicados por 100).
  */
 export function makeFormat(fmt, locale = 'es', values = []) {
+  // Desde JS, una función: el sitio que ya tiene sus reglas para escribir cifras
+  // las usa en etiquetas, tooltips y marcas del eje (no viaja en el JSON).
+  if (typeof fmt === 'function') {
+    const f = (v) => (v === null || v === undefined || Number.isNaN(v) ? '' : String(fmt(v)));
+    f.type = 'custom';
+    f.tick = () => f;
+    return f;
+  }
   const o = typeof fmt === 'string' ? { type: fmt } : { ...(fmt || {}) };
   const l = loc(locale);
   const nums = values.filter((v) => Number.isFinite(v));

@@ -16,6 +16,19 @@ plot({ ...spec, colorScale: { name: 'coolwarm', mid: 100 } });    // diverging a
 - Interpolation happens in OKLab, so steps look even. The stops were sampled from matplotlib 3.9 and stay within 2 ΔE (×100) of the original.
 - `cmap` and `colormap` are aliases of `colorScale`. The older `ramp` option still works.
 
+## Classes
+
+Give `breaks` and the scale becomes discrete classes: a value falls in class *i* when `breaks[i-1] ≤ v < breaks[i]`.
+
+```js
+plot({ ...spec, colorScale: { colors: ['#2166AC', '#92C5DE', '#F7F7F7', '#F4A582', '#B2182B'], breaks: [-1, -0.25, 0.25, 1] } });
+plot({ ...spec, colorScale: { name: 'Blues', breaks: [10, 20, 40] } });   // 4 classes sampled from Blues
+```
+
+`colors` needs one more entry than `breaks` (or give `name` and it is sampled). Works in heatmaps, choropleths and treemaps colored by change (breaks as fractions: `0.1` is 10%). The legend becomes a stepped key, one swatch per class, with the breaks written under it through `format`. A mismatch between breaks and colors is a `lint` error with the fix.
+
+A value equal to a break goes to the class above it. `closed: "right"` puts it in the class below (`breaks[i-1] < v ≤ breaks[i]`), as in a key that reads "up to 10". Repeated breaks (quantiles of data with ties) are merged: the class between them would be empty, so it and its color drop out (`lint` says so).
+
 ## Categorical palettes
 
 `palette` takes a list of colors, a plotagents palette, or one of matplotlib's qualitative maps:

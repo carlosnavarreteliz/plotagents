@@ -2,7 +2,15 @@
 // El tamaño del nodo es su peso (o su grado ponderado); el color, su grupo.
 // Cada disposición llena coordenadas propias; luego un mismo ajuste al área y
 // una misma pasada contra encimados sirven a todas.
-import { el, g, tip, esc } from '../svg.js';
+//
+// Para un mapa ya calculado (`layout: "preset"`, MDS del espacio de productos):
+// `hollow`/`filled` dibujan huecos los nodos de un campo o lista (una segunda
+// codificación sin un segundo color); `edgeColor: "neutral"` (o un color) deja
+// las aristas en una sola tinta, con `edgeOpacity`/`edgeWidth` fijos o por
+// valor; `colors["a→b"]` fija una arista; `href` enlaza cada nodo; `stretch`
+// estira x e y por separado; `minRadius` pone un piso al radio.
+import { tipper } from '../tooltip.js';
+import { el, g, tip, esc, linkWrap } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
@@ -16,23 +24,30 @@ const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 /** Disposiciones disponibles (`layout`). `circle` es alias de `circular`. */
 export const NETWORK_LAYOUTS = ['force', 'circular', 'radial', 'concentric', 'clusters', 'tree', 'grid'];
-const ALIAS = { circle: 'circular', ring: 'circular', cluster: 'clusters', groups: 'clusters', hierarchy: 'tree', concentrico: 'concentric', arbol: 'tree', 'árbol': 'tree', grilla: 'grid', fuerzas: 'force' };
+const ALIAS = { circle: 'circular', ring: 'circular', cluster: 'clusters', groups: 'clusters', hierarchy: 'tree', concentrico: 'concentric', arbol: 'tree', 'árbol': 'tree', grilla: 'grid', fuerzas: 'force', fixed: 'preset', fija: 'preset', posiciones: 'preset' };
 export function layoutName(v) {
   const s = String(v ?? 'force').toLowerCase();
   const k = ALIAS[s] ?? s;
-  return NETWORK_LAYOUTS.includes(k) ? k : 'force';
+  // `preset` no calcula nada: usa las posiciones de `nodes` (por eso no está en la lista de disposiciones).
+  return NETWORK_LAYOUTS.includes(k) || k === 'preset' ? k : 'force';
 }
 
 /** Prepara nodos y aristas a partir del spec. */
 export function prepareNetwork(spec) {
-  const data = ensureData(spec);
+  // Con posiciones dadas (`layout: "preset"`) las aristas son opcionales: una
+  // tabla `nodes` con x, y basta (un mapa de puntos ya calculado: MDS, UMAP, Gephi).
+  const preset = layoutName(spec.layout) === 'preset';
+  const noEdges = preset && Array.isArray(spec.nodes) && spec.nodes.length && (spec.data === undefined || spec.data === null || (Array.isArray(spec.data) && !spec.data.length));
+  const data = noEdges ? [] : ensureData(spec);
   const fields = fieldsOf(data);
   const from = spec.from ?? pick(fields, ['from', 'source', 'origen', 'desde']) ?? fields[0];
   const to = spec.to ?? pick(fields, ['to', 'target', 'destino', 'hasta']) ?? fields[1];
-  requireField(data, from, 'from');
-  requireField(data, to, 'to');
+  if (!noEdges) {
+    requireField(data, from, 'from');
+    requireField(data, to, 'to');
+  }
   const vf = spec.value ?? pick(fields, ['value', 'weight', 'peso', 'valor']) ?? fields.find((f) => f !== from && f !== to && fieldKind(data, f) === 'number');
-  if (spec.value) requireField(data, vf, 'value');
+  if (spec.value && !noEdges) requireField(data, vf, 'value');
 
   // Aristas: pares no dirigidos agregados (A–B y B–A se suman). `src`/`dst`
   // guardan el sentido de la primera fila (el color sale del origen).
@@ -59,13 +74,17 @@ export function prepareNetwork(spec) {
     const labF = spec.nodeLabel ?? pick(nf, ['label', 'etiqueta']) ?? idF;
     const grF = spec.group ?? pick(nf, ['group', 'grupo', 'type', 'tipo', 'category', 'categoria']);
     const szF = spec.size ?? pick(nf, ['size', 'value', 'valor', 'tamaño', 'weight']);
+    const xF = spec.nodeX ?? pick(nf, ['x']);
+    const yF = spec.nodeY ?? pick(nf, ['y']);
     if (!nf.includes(idF)) throw new PlotError(`El campo "${idF}" (nodeId) no existe en nodes.`, `Campos disponibles: ${nf.join(', ')}`);
     for (const r of spec.nodes) {
       if (r[idF] === null || r[idF] === undefined) continue;
       const n = add(String(r[idF]));
+      n.row = r;
       if (labF && r[labF] !== undefined) n.label = String(r[labF]);
       if (grF && r[grF] !== undefined && r[grF] !== null) n.group = String(r[grF]);
       if (szF && Number.isFinite(num(r[szF]))) n.size = num(r[szF]);
+      if (xF && yF && Number.isFinite(num(r[xF])) && Number.isFinite(num(r[yF]))) { n.fx = num(r[xF]); n.fy = num(r[yF]); }
     }
   }
   for (const e of edges) {
@@ -73,7 +92,17 @@ export function prepareNetwork(spec) {
     a.deg++; b.deg++; a.wdeg += e.v; b.wdeg += e.v;
   }
   const list = [...nodes.values()];
-  for (const n of list) n.w = n.size ?? n.wdeg;
+  // Sin aristas ni tamaño, todos pesan lo mismo.
+  for (const n of list) n.w = n.size ?? (edges.length ? n.wdeg : 1);
+  if (preset) {
+    const missing = list.filter((n) => n.fx === undefined).map((n) => n.id);
+    if (missing.length) {
+      throw new PlotError(
+        `layout: "preset" necesita x e y para cada nodo; faltan en ${missing.length}: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}.`,
+        'nodes: [{ id: "A", x: 0.2, y: 1.4 }, …] (o nodeX / nodeY con los nombres de tus campos)',
+      );
+    }
+  }
   return { edges, nodes: list, byId: nodes, valueField: vf };
 }
 
@@ -500,7 +529,7 @@ export function network(spec, theme) {
   // Radios: área ∝ peso, de 2,5 px hasta un máximo que depende del espacio por nodo (≤ 30).
   const maxW = Math.max(...nodes.map((n) => n.w), 1e-9);
   const rMax = spec.maxRadius ?? Math.max(8, Math.min(30, Math.sqrt((area.w * area.h) / nodes.length) * 0.32));
-  const rMin = Math.min(2.5, rMax / 2);
+  const rMin = Number.isFinite(spec.minRadius) && spec.minRadius > 0 ? Math.min(spec.minRadius, rMax) : Math.min(2.5, rMax / 2);
   // En anillos concéntricos los mayores van juntos al centro: algo más chicos, para que se lean los anillos.
   const rTop = layout === 'concentric' && spec.maxRadius === undefined ? rMax * 0.75 : rMax;
   for (const n of nodes) { n.r = Math.max(rMin, rTop * Math.sqrt(Math.max(0, n.w) / maxW)); n.r0 = n.r; n.ring = false; }
@@ -513,6 +542,10 @@ export function network(spec, theme) {
   const near = new Set();
   if (hl) { for (const id of hl) near.add(id); for (const e of edges) { if (hl.has(e.s)) near.add(e.t); if (hl.has(e.t)) near.add(e.s); } }
   const on = (n) => !hl || near.has(n.id);
+  // `hollow` / `filled`: un campo de `nodes` o una lista de ids.
+  const flag = (opt, n) => (Array.isArray(opt) ? opt.map(String).includes(n.id) : !!(n.row && n.row[opt]));
+  const hasHollow = (spec.hollow !== undefined && spec.hollow !== null && spec.hollow !== false) || (spec.filled !== undefined && spec.filled !== null && spec.filled !== false);
+  const isHollow = (n) => (!hasHollow ? false : spec.hollow !== undefined && spec.hollow !== null && spec.hollow !== false ? flag(spec.hollow, n) : !flag(spec.filled, n));
 
   // Etiquetas candidatas.
   const labelSize = (theme.type?.label ?? 12) - 0.5;
@@ -566,6 +599,15 @@ export function network(spec, theme) {
       const lw = Math.min(area.w * 0.18, Math.max(0, ...last.map((n) => measure(n.label, labelSize, 500))));
       pad = { ...pad, r: pad0 + (lw ? lw + 6 : 0) };
     } else pad = { ...pad, b: pad0 + labelPx + 4 };
+  } else if (layout === 'preset') {
+    // Posiciones dadas, en sus unidades: la misma escala en x e y (no se deforma
+    // la nube) y y hacia abajo como en SVG, salvo `flipY: true` (y hacia arriba).
+    for (const n of nodes) { n.x = n.fx; n.y = spec.flipY ? -n.fy : n.fy; }
+    // `stretch`: posiciones ya normalizadas por eje (0–1): cada eje llena el área.
+    // Sin `withR`: las posiciones vienen en sus unidades (0–1 de un MDS, ±10 de
+    // un UMAP) y el radio en px; sumarlos encogía la nube. El margen `pad` ya
+    // reserva el radio mayor.
+    lim = spec.stretch === true ? Infinity : 1; center = false; withR = false; geometric = false;
   } else if (layout === 'grid') {
     gridLayout(nodes, { pin: focusNode, aw: area.w, ah: area.h });
     lim = Infinity; center = false;
@@ -575,20 +617,32 @@ export function network(spec, theme) {
   }
   fitToArea(nodes, area, { pad, lim, center, withR });
   if (geometric) shrinkToFit(nodes);
-  separate(nodes, area, layout === 'circular' || layout === 'grid' || layout === 'tree' ? 2 : 6);
+  // Con posiciones dadas sólo se despegan los nodos encimados: el lugar es el dato.
+  separate(nodes, area, layout === 'preset' ? 1 : layout === 'circular' || layout === 'grid' || layout === 'tree' ? 2 : 6);
   const cx = area.x + pad.l + (area.w - pad.l - pad.r) / 2, cy = area.y + pad.t + (area.h - pad.t - pad.b) / 2;
   const body = [];
 
   // ── Conexiones: curvas del color del nodo de origen, ancho ∝ √peso ───────
   const maxE = Math.max(...edges.map((e) => e.v), 1e-9);
   const baseOp = edges.length > 150 ? 0.3 : 0.5;
+  // `edgeColor`: "source" (por omisión), "neutral" (la tinta tenue del tema) o un color.
+  const ec = spec.edgeColor;
+  const edgeInk = ec === undefined || ec === null || ec === 'source' ? null : ec === 'neutral' ? theme.muted : String(ec);
+  const pinE = (e) => spec.colors && (spec.colors[`${e.src}→${e.dst}`] ?? spec.colors[`${e.dst}→${e.src}`]);
+  // `edgeOpacity` / `edgeWidth`: un número fijo, o [mín, máx] según el valor (√ para el ancho).
+  const pair = (v) => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite);
+  const eOp = spec.edgeOpacity, eW = spec.edgeWidth;
   // Curvatura al estilo ECharts (0,3); en la grilla, más suave para no salirse de las filas.
-  const curv = spec.curveness !== undefined && spec.curveness !== null && spec.curveness !== '' && Number.isFinite(+spec.curveness) ? +spec.curveness : layout === 'grid' ? 0.18 : 0.3;
+  const curv = spec.curveness !== undefined && spec.curveness !== null && spec.curveness !== '' && Number.isFinite(+spec.curveness) ? +spec.curveness : layout === 'grid' ? 0.18 : layout === 'preset' ? 0.15 : 0.3;
   const P = (x, y) => `${f1(x)},${f1(y)}`;
   const linkG = [];
-  for (const e of [...edges].sort((a, b) => a.v - b.v)) {
+  // Las aristas fijadas con `colors["a→b"]` van encima.
+  // `edgeTip: false` (o `tooltip: false`): aristas sin tooltip; en una red de
+  // cientos de aristas el texto repetido pesa más que el dibujo.
+  const edgeTips = spec.edgeTip !== false && spec.tooltip !== false;
+  for (const e of [...edges].sort((a, b) => (!!pinE(a) - !!pinE(b)) || a.v - b.v)) {
     const a = byId.get(e.src), b = byId.get(e.dst);
-    const w = valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
+    const w = Number.isFinite(eW) ? eW : pair(eW) ? eW[0] + (eW[1] - eW[0]) * Math.sqrt(e.v / maxE) : valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
     const isTree = tree ? tree.treeEdges.has(e.s + '\u0000' + e.t) : true;
     let d;
     if (layout === 'tree' && isTree) {
@@ -606,14 +660,15 @@ export function network(spec, theme) {
       d = `M${P(a.px, a.py)}Q${P((a.px + b.px) / 2 - (dy / len) * bend, (a.py + b.py) / 2 + (dx / len) * bend)} ${P(b.px, b.py)}`;
     }
     const active = hl ? hl.has(e.s) || hl.has(e.t) : true;
-    const op = hl ? (active ? 0.8 : 0.06) : !isTree ? 0.15 : baseOp;
+    const own = Number.isFinite(eOp) ? eOp : pair(eOp) ? eOp[0] + (eOp[1] - eOp[0]) * (e.v / maxE) : null;
+    const op = hl ? (active ? 0.8 : 0.06) : !isTree ? 0.15 : own ?? baseOp;
     const sw = hl && active ? Math.max(1.2, w) : w;
     // Lo común (relleno, extremos, opacidad y ancho base) va en el <g>; cada arista lleva solo lo propio.
     linkG.push(el('path', {
-      class: 'pa-m', d, stroke: hl && !active ? theme.muted : colorOf(a),
+      class: 'pa-m', d, stroke: hl && !active ? theme.muted : pinE(e) || edgeInk || colorOf(a),
       strokeOpacity: op === baseOp ? undefined : op, strokeWidth: sw === 1 ? undefined : sw,
       'data-s': e.src, 'data-t': e.dst,
-      'data-tip': tip(`${a.label} — ${b.label}`, fmtE(e.v)),
+      'data-tip': edgeTips ? tip(`${a.label} — ${b.label}`, fmtE(e.v)) : undefined,
     }));
   }
   const links = g({ class: 'pa-links', fill: 'none', strokeLinecap: 'round', strokeOpacity: baseOp, strokeWidth: 1 }, linkG);
@@ -621,33 +676,49 @@ export function network(spec, theme) {
   // ── Nodos: grandes debajo, chicos encima ──────────────────────────────────
   const ring = nodes.length > 60 ? 0 : 0.75;
   const nodeG = [];
+  const TN = tipper(spec, null, locale);
+  const nodeRows = new Map(nodes.filter((n) => n.row).map((n) => [String(n.id), [n.row]]));
   for (const n of [...nodes].sort((a, b) => (on(a) - on(b)) || b.r - a.r || (a.id < b.id ? -1 : 1))) {
     const lines = [n.label];
     if (hasGroups && n.group) lines.push(n.group);
     lines.push(`${en ? 'Connections' : 'Conexiones'}: ${n.deg}`);
     lines.push(`${n.size !== null ? (en ? 'Size' : 'Tamaño') : en ? 'Weighted degree' : 'Grado ponderado'}: ${fmt(n.w)}`);
     const isF = focusNode && n.id === focusNode.id;
-    nodeG.push(el('circle', {
-      class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim,
-      stroke: isF ? theme.ink : ring ? theme.surface : undefined, strokeWidth: isF ? 2.5 : ring || undefined,
-      'data-tip': tip(...lines), 'data-node': n.id, style: 'cursor:pointer',
-    }));
+    const tipN = TN(nodeRows.get(String(n.id)) || [], ...lines);
+    const href = spec.href && n.row ? n.row[spec.href] : undefined;
+    // Hueco: el color en el borde y el fondo adentro (apagado si queda fuera del foco).
+    const circle = isHollow(n)
+      ? el('circle', {
+        class: 'pa-m', cx: n.px, cy: n.py, r: Math.max(1.5, n.r - 0.75), fill: theme.surface,
+        stroke: isF ? theme.ink : on(n) ? colorOf(n) : theme.dim, strokeWidth: isF ? 2.5 : n.r < 4 ? 1 : 1.5,
+        'data-tip': tipN, 'data-node': n.id, style: 'cursor:pointer',
+      })
+      : el('circle', {
+        class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim,
+        stroke: isF ? theme.ink : ring ? theme.surface : undefined, strokeWidth: isF ? 2.5 : ring || undefined,
+        'data-tip': tipN, 'data-node': n.id, style: 'cursor:pointer',
+      });
+    nodeG.push(linkWrap(href, circle));
   }
   const nodesSvg = g({ class: 'pa-nodes' }, nodeG);
 
   // ── Etiquetas: tinta con halo, sin choques con otras etiquetas ni nodos ──
-  const prio = (a, b) => (focusNode ? (b === focusNode) - (a === focusNode) : 0) || (hl ? hl.has(b.id) - hl.has(a.id) : 0) || byWeight(a, b);
+  const prio = (a, b) => (focusNode ? (b === focusNode) - (a === focusNode) : 0) || (hl ? hl.has(b.id) - hl.has(a.id) : 0) || (hasHollow ? isHollow(a) - isHollow(b) : 0) || byWeight(a, b);
   const lbls = cand.filter((n) => on(n) || hl?.has(n.id)).sort(prio);
   const placed = [];
   const topIds = new Set([...nodes].sort(byWeight).slice(0, 3).map((n) => n.id));
   const angles = []; // etiquetas radiales ya puestas: [ángulo, medio alto angular]
   const labG = [];
   const h = labelPx + 1;
+  // `labelWidth`: el ancho máximo de un rótulo en px (150 por omisión).
+  const labelMax = Number.isFinite(+spec.labelWidth) && spec.labelWidth !== null && +spec.labelWidth > 0 ? +spec.labelWidth : 150;
   const inArea = (b) => b[0] >= area.x - 2 && b[2] <= area.x + area.w + 2 && b[1] >= area.y - 6 && b[3] <= area.y + area.h + 6;
   for (const n of lbls) {
     const isF = focusNode && n === focusNode;
-    const weight = isF ? 600 : 500;
-    const attrs = { fill: theme.ink, fontSize: labelSize, fontWeight: weight, stroke: theme.surface, strokeWidth: 2, paintOrder: 'stroke', strokeLinejoin: 'round', 'data-node': n.id };
+    // Con huecos, los rellenos se nombran primero y los huecos en tinta tenue.
+    const quiet = hasHollow && isHollow(n) && !isF;
+    const weight = isF ? 600 : quiet ? 400 : 500;
+    const attrs = { fill: quiet ? theme.muted : theme.ink, fontSize: labelSize, fontWeight: weight, stroke: theme.surface, strokeWidth: 2, paintOrder: 'stroke', strokeLinejoin: 'round', 'data-node': n.id };
     if (circ && n.ring) {
       // En el círculo: radial hacia afuera, girada; a la izquierda, volteada para leerse.
       const a = Math.atan2(n.py - cy, n.px - cx), rr = Math.hypot(n.px - cx, n.py - cy) + n.r + 5;
@@ -661,7 +732,7 @@ export function network(spec, theme) {
       labG.push(el('text', { x: lx, y: ly, dy: '0.35em', textAnchor: flip ? 'end' : 'start', transform: `rotate(${f1(deg)} ${f1(lx)} ${f1(ly)})`, ...attrs }, esc(label)));
       continue;
     }
-    const label = truncate(n.label, 150, labelSize, weight);
+    const label = truncate(n.label, labelMax, labelSize, weight);
     const w = measure(label, labelSize, weight);
     const cands = [
       [n.px + n.r + 5, n.py + labelPx * 0.35, 'start'],

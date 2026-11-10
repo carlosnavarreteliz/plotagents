@@ -15,6 +15,8 @@ export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
+import { parseRgb } from './rgb.js';
+export { parseRgb };
 
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
 const STRUCT = {
@@ -219,10 +221,7 @@ export function themeFor(spec = {}) {
 // Utilidades de color
 
 export function hexToRgb(hex) {
-  let h = String(hex).replace('#', '');
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-  const n = parseInt(h.slice(0, 6), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return parseRgb(hex);
 }
 
 export function rgbToHex([r, g, b]) {

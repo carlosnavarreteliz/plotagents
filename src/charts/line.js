@@ -2,13 +2,14 @@
 // (seaborn lineplot), escala log y áreas apiladas.
 // Etiquetas SIEMPRE al final de cada línea: si chocan se separan y una línea
 // guía fina las une con su punto. El eje y va por dentro para ganar ancho.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError } from '../data.js';
-import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
+import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
@@ -42,6 +43,12 @@ export function prepareLine(spec) {
   const [r0, r1] = range ? [rv(range[0]), rv(range[1])] : [null, null];
 
   const map = new Map(seriesKeys.map((s) => [s, new Map()]));
+  // `band: { lower, upper }`: un intervalo que ya viene calculado (una proyección,
+  // un modelo publicado). Se dibuja tal cual, sin estimador.
+  const band = spec.band && typeof spec.band === 'object' && spec.band.lower && spec.band.upper ? spec.band : null;
+  if (band) { requireField(data, band.lower, 'band.lower'); requireField(data, band.upper, 'band.upper'); }
+  const bands = new Map();
+  const rowsAt = new Map(); // x → filas (para `tooltip`)
   for (const r of data) {
     const s = series ? String(r[series]) : seriesKeys[0];
     const xv = kind === 'category' ? cats.indexOf(String(r[x])) : xValue(r[x], kind);
@@ -51,9 +58,17 @@ export function prepareLine(spec) {
     const m = map.get(s);
     if (!m.has(xv)) m.set(xv, []);
     m.get(xv).push(num(r[y]));
+    if (!rowsAt.has(xv)) rowsAt.set(xv, []);
+    rowsAt.get(xv).push(r);
+    if (band) {
+      const k = s + '\u0000' + xv;
+      if (!bands.has(k)) bands.set(k, { lo: [], hi: [] });
+      bands.get(k).lo.push(num(r[band.lower]));
+      bands.get(k).hi.push(num(r[band.upper]));
+    }
   }
   // Estimador: suma por defecto; con `ci`/`errorbar` → media ± intervalo (seaborn).
-  const errorbar = spec.errorbar ?? (spec.ci === true || typeof spec.ci === 'number' ? 'ci' : null);
+  const errorbar = spec.errorbar ?? (spec.ci === true || typeof spec.ci === 'number' ? 'ci' : band ? 'band' : null);
   const how = spec.aggregate ?? spec.estimator ?? (errorbar ? 'mean' : 'sum');
   const level = typeof spec.ci === 'number' ? (spec.ci > 1 ? spec.ci / 100 : spec.ci) : 0.95;
   let lines = seriesKeys.map((s) => ({
@@ -62,7 +77,12 @@ export function prepareLine(spec) {
       .map(([xv, ys]) => {
         const v = ys.filter(Number.isFinite);
         const p = { x: xv, y: aggregate(v, how), n: v.length };
-        if (errorbar && v.length > 1) {
+        if (errorbar === 'band') {
+          const b = bands.get(s + '\u0000' + xv);
+          const lo = b ? b.lo.filter(Number.isFinite) : [];
+          const hi = b ? b.hi.filter(Number.isFinite) : [];
+          if (lo.length && hi.length) { p.lo = aggregate(lo, how); p.hi = aggregate(hi, how); }
+        } else if (errorbar && v.length > 1) {
           if (errorbar === 'sd') { const m = mean(v), d = sd(v); p.lo = m - d; p.hi = m + d; }
           else if (errorbar === 'se') { const m = mean(v), d = sd(v) / Math.sqrt(v.length); p.lo = m - d; p.hi = m + d; }
           else [p.lo, p.hi] = meanCI(v, level);
@@ -78,7 +98,7 @@ export function prepareLine(spec) {
       return { ...l, points: l.points.map((p) => ({ ...p, raw: p.y, y: p.y * k, lo: p.lo * k, hi: p.hi * k })) };
     });
   }
-  return { data, x, y, series, seriesKeys, lines, kind, cats, errorbar };
+  return { data, x, y, series, seriesKeys, lines, kind, cats, errorbar, rowsAt };
 }
 
 export function line(spec, theme, variant = 'line') {
@@ -181,6 +201,8 @@ export function line(spec, theme, variant = 'line') {
   const allLabeled = labeled.length === labelable.length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true || (spec.legend && typeof spec.legend !== 'boolean')) && spec.legend !== false;
   const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line', dashed: dashedSeries(s) })) : [];
+  // Lo que significa la banda explícita, en la leyenda: un intervalo dibujado se rotula.
+  if (m.errorbar === 'band' && spec.band.label && spec.legend !== false) legend.push({ label: String(spec.band.label), key: 'band', color: colorOf(m.seriesKeys[0]), shape: 'square', opacity: 0.3 });
   const area = frame.layout(legend);
   const inside = stack ? false : spec.axisInside;
   // Alto vertical fijo alrededor del área de trazado (marca superior, eje x, títulos).
@@ -196,7 +218,7 @@ export function line(spec, theme, variant = 'line') {
   const capacity = Math.max(1, Math.floor((area.h - yChrome + 8 - lh / 2) / lh) + 1);
   if (labeled.length > capacity) labeled = labeled.slice(0, capacity);
 
-  const endW = labeled.length
+  let endW = labeled.length
     ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) * 1.04 + 6 * ctx.textScale : 0) : 0; })) + 22
     : 10;
 
@@ -205,10 +227,18 @@ export function line(spec, theme, variant = 'line') {
   const intY = !pct && !spec.index && rawY.length > 0 && rawY.every(Number.isInteger);
   const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)), { integer: intY });
   const yTicksArr = (yLog ? log(nd.min, nd.max, 0, 1) : linear(nd.min, nd.max, 0, 1)).ticks(nd.step);
-  const tickF = yLog ? (v) => fmt.tick(v, v)(v) : fmt.tick(nd.step, yTicksArr);
-  const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
-  const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
-  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
+  // `yFormat`: las marcas del eje y, aparte de `format` (rótulos finales y tooltip).
+  const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, rawY) : fmt;
+  const tickF = yLog ? (v) => axisFmt.tick(v, v)(v) : axisFmt.tick(nd.step, yTicksArr);
+  let leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
+  let yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
+  let padB = 24 * ctx.textScale + (spec.xLabel ? 16 * ctx.textScale : 0);
+  // Facet con `sharey: "span"`: lo reservado alrededor del trazado se iguala al
+  // del panel que más pide, para que todos tengan los mismos píxeles por unidad.
+  if (spec._domains) { spec._domains.pad = [yTop - area.y, padB]; spec._domains.padX = [leftM, endW]; }
+  if (spec._pad) { yTop = Math.max(yTop, area.y + spec._pad[0]); padB = Math.max(padB, spec._pad[1]); }
+  if (spec._padX) { leftM = Math.max(leftM, spec._padX[0]); endW = Math.max(endW, spec._padX[1]); }
+  const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: spec._pad ? area.y + area.h - yTop - padB : area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
   const yS = (yLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
 
   // Escala x
@@ -222,22 +252,33 @@ export function line(spec, theme, variant = 'line') {
   const xLog = spec.xScale === 'log' && x0 > 0;
   // Con el eje y por dentro, si el primer punto choca con una etiqueta de marca,
   // el trazado arranca pasado la etiqueta más ancha.
+  // Puntos: `points` sí/no para todas, o sólo para algunas series (una lista
+  // de nombres o { serie: true }). `lineWidths: { serie: px }`: el grosor de
+  // cada una (una media de período más gruesa que la serie anual).
+  const autoDots = m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea;
+  const pointsOpt = spec.points ?? spec.markers;
+  const dotsOf = (k) => (Array.isArray(pointsOpt) ? pointsOpt.map(String).includes(k)
+    : pointsOpt && typeof pointsOpt === 'object' ? !!pointsOpt[k] : pointsOpt ?? autoDots);
+  const widthOf = (k, w) => { const v = spec.lineWidths && typeof spec.lineWidths === 'object' ? +spec.lineWidths[k] : NaN; return Number.isFinite(v) && v > 0 ? v : w; };
   let xPad = 0;
-  if (isInside(theme, inside) && !singleX && !spec.xDomain) {
+  // Un facet comparte el dominio x (`_xShared`): el eje y por dentro igual
+  // reserva su lugar, y el facet iguala ese margen entre paneles (`_xPad`).
+  if (isInside(theme, inside) && !singleX && (!spec.xDomain || spec._xShared)) {
     const axisSize = theme.type?.axis ?? 12;
     const k = 5 * Math.max(1, ctx.textScale * 0.8);
     // Caja de cada etiqueta: su ancho real, de la altura de las mayúsculas a la línea base.
     const boxes = yTicksArr.map((t) => { const base = Math.round(yS(t)) + 0.5 - k; return { w: measure(tickF(t), axisSize), y0: base - axisSize * 0.75 * ctx.textScale, y1: base + 1 }; });
     const xS0 = (xLog ? log : linear)(x0, x1, inner.x, inner.x + inner.w);
-    const dots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
-    const r = dots ? (M.pointRadius ?? 4) : (M.lineWidth ?? 2.25) / 2 + 0.5;
     for (const l of m.lines) {
+      const r = dotsOf(l.key) ? (M.pointRadius ?? 4) : widthOf(l.key, M.lineWidth ?? 2.25) / 2 + 0.5;
       const p = l.points.find((q) => Number.isFinite(q.y));
       if (!p) continue;
       const px = xS0(p.x), py = yS(p.y);
       if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) xPad = Math.max(xPad, Math.min(Math.max(...boxes.map((b) => b.w)) + 8, inner.w * 0.25));
     }
   }
+  if (spec._xPad > xPad) xPad = Math.min(spec._xPad, inner.w * 0.25);
+  if (spec._domains) spec._domains.xPad = xPad;
   const xS = (xLog ? log : linear)(x0, x1, inner.x + xPad, inner.x + inner.w);
   // Formateadores creados una vez (no por punto).
   const xNumFmt = m.kind === 'number' ? makeFormat(spec.xFormat, locale, xsAll) : null;
@@ -247,11 +288,13 @@ export function line(spec, theme, variant = 'line') {
     if (m.kind === 'year') return String(xv);
     return xNumFmt(xv);
   };
-  let xItems;
+  let xItems, xSteps;
   if (singleX) {
     xItems = [{ pos: xS(xsAll[0]), label: xFmt(xsAll[0]) }];
   } else if (m.kind === 'date') {
-    xItems = timeTicks(x0, x1, Math.max(2, Math.floor(inner.w / 86)), locale).ticks.map((t) => ({ pos: xS(t.value), label: t.label }));
+    const tt = timeTicks(x0, x1, Math.max(2, Math.floor(inner.w / 86)), locale);
+    xItems = tt.ticks.map((t) => ({ pos: xS(t.value), label: t.label }));
+    xSteps = calendarSteps(tt.unit, tt.every);
   } else if (m.kind === 'category') {
     xItems = m.cats.map((c, i) => ({ pos: xS(i), label: c })).filter((it, i) => xsAll.includes(i));
   } else if (xLog) {
@@ -271,7 +314,7 @@ export function line(spec, theme, variant = 'line') {
   const yTicks = yS.ticks(nd.step);
   body.push(yGrid(yTicks, yS, inner, theme, { baseline: zero ? 0 : NaN }));
   if (spec.yLabel) body.push(text(area.x, area.y + 10, spec.yLabel, { fill: theme.lede, fontSize: theme.type?.axis ?? 12, fontWeight: 500 }));
-  body.push(xLabels(xItems, inner, theme, { y: inner.y + inner.h + 18, size: theme.type?.axis }));
+  body.push(xLabels(xItems, inner, theme, { y: inner.y + inner.h + 18, size: theme.type?.axis, steps: xSteps }));
   if (spec.xLabel) body.push(text(inner.x + inner.w, inner.y + inner.h + 36, spec.xLabel, { fill: theme.lede, fontSize: theme.type?.axis ?? 12, fontWeight: 500, textAnchor: 'end' }));
 
   // Anotaciones verticales (eventos). Los rótulos que chocarían bajan a la
@@ -281,6 +324,20 @@ export function line(spec, theme, variant = 'line') {
     const tTop = yTicks.reduce((a, b) => (yS(b) < yS(a) ? b : a));
     const ty = Math.round(yS(tTop)) + 0.5 - 5 * Math.max(1, ctx.textScale * 0.8);
     placedAnn.push([inner.x, ty - (theme.type?.axis ?? 12) * ctx.textScale, inner.x + measure(tickF(tTop), theme.type?.axis ?? 12) + 2, ty + 2]);
+  }
+  // `xBands: [{ from, to, label }]`: tramos del eje sombreados detrás de todo
+  // (los meses sobre los que se lee una cifra, un período de gobierno).
+  for (const xb of [].concat(spec.xBands || []).reverse()) {
+    const v = (q) => (m.kind === 'category' ? m.cats.indexOf(String(q)) : xValue(q, m.kind));
+    let a0 = v(xb.from), a1 = v(xb.to ?? xb.from);
+    if (!Number.isFinite(a0) || !Number.isFinite(a1)) continue;
+    if (a1 < a0) [a0, a1] = [a1, a0];
+    a0 = Math.max(a0, x0); a1 = Math.min(a1, x1);
+    if (a1 < a0) continue;
+    const px0 = xS(a0), px1 = Math.max(xS(a1), px0 + 2);
+    const parts = [el('rect', { x: +px0.toFixed(2), y: inner.y, width: +(px1 - px0).toFixed(2), height: inner.h, fill: xb.color || theme.tint, opacity: xb.color ? 0.18 : 0.7 })];
+    if (xb.label) parts.push(text(px0 + 4, inner.y + 12, truncate(String(xb.label), Math.max(40, px1 - px0 - 8), 11), { fill: theme.muted, fontSize: 11 }));
+    body.unshift(g({ class: 'pa-xband' }, parts));
   }
   for (const a of spec.annotations || []) {
     const xv = m.kind === 'category' ? m.cats.indexOf(String(a.x)) : xValue(a.x, m.kind);
@@ -326,7 +383,6 @@ export function line(spec, theme, variant = 'line') {
   // Orden de dibujo: atenuadas, luego las grises de desborde (9.ª en adelante), luego las de color.
   const rank = (l) => (!focus(l.key) ? 0 : multi && cmap.get(l.key) === theme.other && !spec.colors?.[l.key] ? 1 : 2);
   const ordered = [...m.lines].sort((a, b) => rank(a) - rank(b));
-  const showDots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
   const curve = spec.curve === 'smooth' ? monotonePath : spec.curve === 'step' ? stepPath : linearPath;
   const drawOrder = stack ? [...m.lines].reverse() : ordered;
   const lw = M.lineWidth ?? 2.25;
@@ -372,7 +428,7 @@ export function line(spec, theme, variant = 'line') {
         else parts.push(el('path', areaAttrs));
       }
     }
-    const sw = focus(l.key) ? (hl ? lw + 0.75 : lw) : 1.5;
+    const sw = focus(l.key) ? (hl ? widthOf(l.key, lw) + 0.75 : widthOf(l.key, lw)) : 1.5;
     const lineAttrs = { fill: 'none', stroke: c, strokeWidth: sw, strokeLinejoin: 'round', strokeLinecap: 'round' };
     const dashAttrs = { ...lineAttrs, strokeDasharray: DASH.line };
     if (!stack) for (const sgm of segs) {
@@ -391,7 +447,7 @@ export function line(spec, theme, variant = 'line') {
     const hollow = (p) => dashedSeries(l.key) || (fromT && fromT(p.x));
     const dot = ([a, b, p], r) => el('circle', { cx: a, cy: b, r, ...(hollow(p) ? { fill: theme.surface, stroke: c, strokeWidth: 1.75 } : { fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }) });
     if (focus(l.key) && !stack) {
-      if (showDots) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+      if (dotsOf(l.key)) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
       // Punto aislado entre vacíos: sin marcador sería un trazo de largo cero (invisible).
       else for (const sg of segs) if (sg.length === 1 && sg[0] !== pts[pts.length - 1]) parts.push(dot(sg[0], (M.pointRadius ?? 4) - 0.5));
     }
@@ -456,7 +512,20 @@ export function line(spec, theme, variant = 'line') {
       return [multi ? l.key : m.seriesKeys[0], colorOf(l.key), +yS(p.y).toFixed(1), fmt(stack ? p.v : p.y) + extra];
     }).filter(Boolean),
   }));
-  body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
+  if (spec.crosshair === false || spec.tooltip !== undefined) {
+    // Sin runtime (una página con su propia capa de tooltips): una columna por x,
+    // cada una con su `data-tip` — el x de encabezado y el valor de cada serie.
+    const T = tipper(spec, m.data, locale);
+    cross.forEach((c, j) => {
+      const xa = j ? (cross[j - 1].x + c.x) / 2 : inner.x - 4;
+      const xb = j < cross.length - 1 ? (c.x + cross[j + 1].x) / 2 : inner.x + inner.w + 4;
+      const lines = c.v.map(([k, , , val]) => (multi || m.series ? `${k}: ${val}` : val));
+      const t = T(m.rowsAt.get(crossXs[j]) || [], c.t, ...lines);
+      if (t) body.push(el('rect', { class: 'pa-col', x: +xa.toFixed(2), y: inner.y, width: +Math.max(0, xb - xa).toFixed(2), height: inner.h, fill: 'transparent', 'data-tip': t }));
+    });
+  } else {
+    body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
+  }
 
   const desc = describeLine(m, fmt, xFmt, locale);
   if (clipD) defs += el('clipPath', { id: clipD }, el('rect', { x: inner.x - 6, y: inner.y - 6, width: inner.w + 12, height: inner.h + 12 }));

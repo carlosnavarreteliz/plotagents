@@ -23,7 +23,7 @@ Reprodúcelo con `node scripts/bench.js` (necesita Playwright con Chromium insta
 |---|---|---|
 | Renderizar en un servidor, en Node, sin dependencias | Sí: el SVG es una cadena de texto | Necesita un módulo nativo (`node-canvas`) o un navegador headless |
 | Que un agente pueda leer y revisar lo que generó | Sí: títulos, etiquetas y valores son texto | No: es un mapa de bits |
-| Accesibilidad (`<title>`, `<desc>`, lectores de pantalla, selección de texto) | Incluida | Hay que reconstruirla a mano junto al canvas |
+| Accesibilidad (`aria-label`, `<desc>`, lectores de pantalla, selección de texto) | Incluida | Hay que reconstruirla a mano junto al canvas |
 | Nitidez con cualquier zoom, en impresión y en PDF | Vectorial | Resolución fija; hay que volver a renderizar para cada densidad de píxeles |
 | Pegar en diapositivas, Word, Figma, Markdown o correo | Funciona como archivo | Solo como imagen |
 | Temas con CSS, modo oscuro, estados al pasar el cursor | Clases CSS | Redibujo manual |
