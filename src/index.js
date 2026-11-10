@@ -31,8 +31,11 @@ import './geo/chile.js';
 import './geo/world.js';
 import './geo/usa.js';
 import { heatmap } from './charts/heatmap.js';
+import { corr, pairplot, correlations } from './charts/corr.js';
 import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';
+import { table } from './charts/table.js';
+import { autoLocale, detectLocale } from './i18n.js';
 import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
@@ -59,8 +62,11 @@ const RENDERERS = {
   donut: (s, t) => donut(s, t),
   pie: (s, t) => pie(s, t),
   heatmap: (s, t) => heatmap(s, t),
+  corr: (s, t) => corr(s, t),
+  pairplot: (s, t) => pairplot(s, t),
   sankey: (s, t) => sankey(s, t),
   kpi: (s, t) => kpi(s, t),
+  table: (s, t) => table(s, t),
   hist: (s, t) => hist(s, t),
   kde: (s, t) => kde(s, t),
   ecdf: (s, t) => ecdf(s, t),
@@ -105,6 +111,10 @@ export function resolve(spec = {}) {
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   s.type = type;
+  // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.
+  if (s.locale === 'auto' || (s.locale === undefined && type === 'table')) {
+    s.locale = autoLocale(s, Array.isArray(s.data) ? s.data : []);
+  }
   // Colormap divergente (RdBu, coolwarm…): centrada en 0 si los datos lo cruzan; si no, en el medio.
   const cs = resolveColorScale(s.colorScale ?? s.cmap ?? s.colormap);
   if (cs && cs.kind === 'diverging' && s.midpoint === undefined && s.diverging === undefined) {
@@ -327,7 +337,7 @@ _bindDashboard({ plot, resolve, lint, bundleSource, resolveDefaults: withDefault
 _setProbe((s) => plot(s));
 export { render };
 
-export { countWords, dashboardSchema };
+export { countWords, dashboardSchema, detectLocale, correlations };
 export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALITATIVE };
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };

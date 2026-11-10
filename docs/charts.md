@@ -15,7 +15,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
 | `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. |
-| `locale` | `"es"` (default: `1.234,5`) or `"en"` (`1,234.5`). |
+| `locale` | `"es"` (default: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"`, or `"auto"`: recognized from the title, subtitle, column names and categories. Tables use `"auto"` when `locale` is omitted. |
 | `xLabel`, `yLabel` | Axis titles (horizontal, never rotated). |
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
@@ -133,6 +133,40 @@ plot({
 | `label`, `labels` | Name selected points. |
 | `kind` | `jointplot`: `"scatter"` or `"reg"`. |
 | `marginal` | `jointplot`: `"hist"` or `"kde"`. |
+
+### `corr` (`correlation`, `corrplot`) · `clustermap`
+
+Correlation matrix of numeric fields, computed for you from the rows (pairwise complete cases, like `df.corr()`). Each pair appears once, below the diagonal, on a diverging scale fixed at −1 to 1, so the same color means the same strength in every chart. Long labels turn 45°. The tooltip gives r, n and the p-value.
+
+```js
+plot({ type: 'corr', data, vars: ['income', 'schooling', 'poverty', 'density'], alpha: 0.05,
+  title: 'Where schooling is higher, income is higher (r = 0.85) and poverty lower (r = −0.81)' });
+```
+
+| Option | Meaning |
+|---|---|
+| `vars` | Fields to relate, in order. Default: every numeric field. `y: [...]` works too. |
+| `method` | `"pearson"` (default) or `"spearman"` (ranks: monotonic relations, robust to outliers). |
+| `triangle` | `"lower"` (default) or `"full"`. |
+| `cluster` | Reorder by hierarchical clustering (average linkage on 1 − r) and draw the dendrogram on top. `type: "clustermap"` sets it and shows the full matrix; `dendrogram: false` keeps the order without the tree. |
+| `alpha` | Grey out pairs with p ≥ alpha (Fisher's z) and add a legend key. |
+| `order` | Variable order (list). |
+| `highlight` | One variable: its row and column stay, the rest fade. |
+| `labelsFor` | Display names, e.g. `{ areas_verdes: "Green space" }`. |
+| `x`, `y`, `value` | Draw a matrix you already computed, in long form (one row per pair). |
+
+### `pairplot` (`pairs`, `splom`, `scattermatrix`)
+
+Scatter-plot matrix: each pair as a scatter below the diagonal, each variable's distribution on it (histogram, or density with `hue`), and Pearson r above, tinted by strength and split by `hue` group when there is room. Axes are shared by column and row; tick labels sit only on the outer edges.
+
+| Option | Meaning |
+|---|---|
+| `vars` | Fields to plot (3–6 read best). Default: the first 6 numeric fields. |
+| `hue` | Color by group, with a legend. |
+| `diag` | `"hist"` or `"kde"`. |
+| `upper` | `"corr"` (default), `"scatter"` or `false`. `corner: true` keeps only the lower triangle. |
+| `kind` | `"reg"` adds a least-squares line to every scatter panel. |
+| `radius`, `bins`, `panelSize` | Point radius, histogram bins, maximum panel size. |
 
 ### `radar` (`spider`)
 
@@ -350,3 +384,54 @@ A cloud is good at "what comes up most" and bad at "by how much". `lint` suggest
 ### `kpi`
 
 `items: [{ label, value, delta, previous, period, good: "up" | "down", trend: [...], target, format }]`. Delta is a fraction (`0.12` → +12%); `good: "down"` for costs. Tiles reflow into balanced rows.
+
+## Tables
+
+### `table` (`tabla`, `datatable`)
+
+For when the reader needs to look up the exact number. Thin rules between rows and nothing else; numbers right-aligned in tabular figures with the same decimals down each column; empty cells as a dash. Each column gets the indicator that explains it.
+
+```js
+plot({
+  type: 'table',
+  title: 'Two of six projects are already over budget',
+  data: projects,
+  columns: ['project', 'area',
+    { field: 'progress', type: 'progress' },
+    { field: 'spent', label: 'Spent / budget', type: 'progress', target: 'budget', good: 'down' },
+    'status'],
+  sortBy: 'progress',
+});
+```
+
+| Column `type` | Draws | Inferred when |
+|---|---|---|
+| `bar` | Value + data bar on a shared scale (diverging around 0) | The main numeric column (`value`/`y`, or the first number); `bars: false` turns it off |
+| `delta` | ▲ / ▼ + signed change, green or red by `good` (`"down"` for costs) | Field named var, change, delta, growth, yoy, cambio, variación… |
+| `heat` | Cell tinted by a sequential scale (diverging when it crosses 0); `colorScale` per column | — |
+| `sparkline` | Mini line, last point in the accent | The field holds lists of numbers |
+| `progress` | Percent + meter; against `target` (field or number) or as 0–1 / 0–100 | Field named progress, avance, completion…, or meta/target/goal with fractions |
+| `badge` | Status pill | Values are status words (done, at risk, late, in progress… in es/en/pt/fr/de): good, warning, critical, info colors |
+| `check` | ✓ or a dash, with an accessible label | Booleans, or sí/no, yes/no… |
+| `date` | Readable date in the chart's language | ISO dates |
+| `link` | Underlined link; only `http(s)` and `mailto` get an `href` | URLs |
+| `rank` | Position under the current sort | `rank: true` |
+| `text`, `number` | Text (wraps to 2–3 lines) and plain numbers | Everything else |
+
+| Option | Meaning |
+|---|---|
+| `columns` | Order and type: field names or `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omit to use every field. `x`/`label` picks the row-name column and `y` a list of value columns. |
+| `sortBy`, `sort` | Column and direction (`"desc"` for numbers, `"asc"` for text by default). `sort: "-sales"` works too. Empty cells always go last. |
+| `pageSize`, `page` | Up to 15 rows are shown whole; beyond that, pages of 10. `pageSize: false` shows everything. The pager is numbers and arrows only (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
+| `query` | Keep rows that contain these words, ignoring accents and case. |
+| `total` | Totals row: sums numbers, averages percents and progress, leaves changes blank. `{ sales: "mean" }` per column; `totalLabel` renames it. |
+| `group` | Rows under a tinted band per value, with a count. |
+| `highlight` | Rows whose name matches get a tint and an accent mark; the bars of the other rows are muted. |
+| `top` | Keep the first N rows after sorting. |
+| `cards` | `"auto"` (default) turns each row into a card when the columns do not fit (phones): name and main value on top, the bar under them, the other columns as label–value lines. `true` always, `false` never. |
+| `density`, `striped` | `"compact"` / `"comfortable"` rows; zebra stripes for very wide tables. |
+
+In the browser `render()` adds a search box above 20 rows (`search: false` hides it; `true` forces it), click-to-sort headers (natural order, reversed, then the original order), and page buttons; all of them work from the keyboard and announce `aria-sort` and `aria-current`. Resizing re-renders at the new width, so a table becomes cards on a phone and columns again on a desktop.
+
+The language of the few words a table writes (Total, Search, No results) and the number format come from `locale`; without it, the table recognizes the language from its own title, headers and categories.
+

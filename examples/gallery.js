@@ -14,6 +14,7 @@ import { ganttGallery } from './specs-gantt.js';
 import { customGeoGallery } from './specs-geo-custom.js';
 import { wordsGallery } from './specs-words.js';
 import { pointmapGallery } from './specs-pointmap.js';
+import { tableGallery } from './specs-table.js';
 
 export { NOTES_EN, SECTIONS_EN };
 
@@ -23,20 +24,21 @@ const SECTION = {
   lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración',
   burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Redes y flujos', kpi: 'Flujos y números',
 };
-export const ORDER = ['Comparar', 'Tiempo', 'Proyectos', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Configuración'];
+export const ORDER = ['Comparar', 'Tiempo', 'Proyectos', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Tablas', 'Configuración'];
 const drop = new Set(['treemap', 'dona', 'slider-rango']); // reemplazados por versiones nuevas
 const tag = (list, sec) => list.map((e) => ({ ...e, section: e.section || sec }));
 const all = [
   ...base.filter((e) => !drop.has(e.id)).map((e) => ({ ...e, section: SECTION[e.id] || 'Comparar' })),
   ...tag(moreGallery, 'Tiempo'),
   ...tag(partsGallery, 'Partes de un todo'),
-  ...statsGallery.map((e) => ({ ...e, section: ['regplot', 'residplot', 'jointplot'].includes(e.spec.type) ? 'Relaciones' : 'Distribuciones' })),
+  ...statsGallery.map((e) => ({ ...e, section: ['regplot', 'residplot', 'jointplot', 'corr', 'clustermap', 'pairplot'].includes(e.spec.type) ? 'Relaciones' : 'Distribuciones' })),
   ...catGallery.map((e) => ({ ...e, section: e.spec.type === 'radar' ? 'Relaciones' : 'Distribuciones' })),
   ...tag(geoGallery, 'Mapas'),
   ...tag(customGeoGallery, 'Mapas'),
   ...tag(pointmapGallery, 'Mapas'),
   ...tag(ganttGallery, 'Proyectos'),
   ...tag(wordsGallery, 'Flujos y números'),
+  ...tag(tableGallery, 'Tablas'),
   ...tag(networkGallery, 'Redes y flujos'),
   ...flowGallery.map((e) => ({ ...e, section: e.spec.type === 'pyramid' ? 'Distribuciones' : 'Redes y flujos' })),
   ...dashedGallery,

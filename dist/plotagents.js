@@ -31,8 +31,11 @@ const { registerGeo, getGeo, registeredGeo, toFeatureCollection } = __req("src/g
 
 
 const { heatmap } = __req("src/charts/heatmap.js");
+const { corr, pairplot, correlations } = __req("src/charts/corr.js");
 const { sankey } = __req("src/charts/sankey.js");
 const { kpi } = __req("src/charts/kpi.js");
+const { table } = __req("src/charts/table.js");
+const { autoLocale, detectLocale } = __req("src/i18n.js");
 const { ensureData, PlotError, fieldKind, uniq, num } = __req("src/data.js");
 const { facet } = __req("src/facet.js");
 const { parseDate } = __req("src/format.js");
@@ -59,8 +62,11 @@ const RENDERERS = {
   donut: (s, t) => donut(s, t),
   pie: (s, t) => pie(s, t),
   heatmap: (s, t) => heatmap(s, t),
+  corr: (s, t) => corr(s, t),
+  pairplot: (s, t) => pairplot(s, t),
   sankey: (s, t) => sankey(s, t),
   kpi: (s, t) => kpi(s, t),
+  table: (s, t) => table(s, t),
   hist: (s, t) => hist(s, t),
   kde: (s, t) => kde(s, t),
   ecdf: (s, t) => ecdf(s, t),
@@ -104,6 +110,9 @@ function resolve(spec = {}) {
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   s.type = type;
+  if (s.locale === 'auto' || (s.locale === undefined && type === 'table')) {
+    s.locale = autoLocale(s, Array.isArray(s.data) ? s.data : []);
+  }
   const cs = resolveColorScale(s.colorScale ?? s.cmap ?? s.colormap);
   if (cs && cs.kind === 'diverging' && s.midpoint === undefined && s.diverging === undefined) {
     const vf = typeof s.colorScale === 'object' && s.colorScale.mid !== undefined ? null : s.value;
@@ -324,7 +333,7 @@ _setProbe((s) => plot(s));
 
 
 
-return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "countWords": countWords, "dashboardSchema": dashboardSchema, "resolveColorScale": resolveColorScale, "colorScaleNames": colorScaleNames, "interpolateColor": interpolateColor, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "dashboard": dashboard, "renderDashboard": renderDashboard, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "safeDashboard": safeDashboard, "mountDashboard": mountDashboard, "packRows": packRows, "balancedRows": balancedRows, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "registerTheme": registerTheme, "resolveDefaults": withDefaults, "embedTiles": embedTiles, "TILE_PROVIDERS": TILE_PROVIDERS, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
+return { "resolve": resolve, "plot": plot, "configure": configure, "timeValues": timeValues, "safePlot": safePlot, "describe": describe, "toHTML": toHTML, "bundleSource": bundleSource, "default": plot, "render": render, "countWords": countWords, "dashboardSchema": dashboardSchema, "detectLocale": detectLocale, "correlations": correlations, "resolveColorScale": resolveColorScale, "colorScaleNames": colorScaleNames, "interpolateColor": interpolateColor, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "dashboard": dashboard, "renderDashboard": renderDashboard, "planDashboard": planDashboard, "lintDashboard": lintDashboard, "safeDashboard": safeDashboard, "mountDashboard": mountDashboard, "packRows": packRows, "balancedRows": balancedRows, "RENDERERS": RENDERERS, "ALIASES": ALIASES, "registerGeo": registerGeo, "getGeo": getGeo, "registeredGeo": registeredGeo, "toFeatureCollection": toFeatureCollection, "loadGeo": loadGeo, "registerTheme": registerTheme, "resolveDefaults": withDefaults, "embedTiles": embedTiles, "TILE_PROVIDERS": TILE_PROVIDERS, "lint": lint, "schema": schema, "toolDefinition": toolDefinition, "themes": themes, "palettes": palettes, "ramps": ramps, "validatePalette": validatePalette, "getTheme": getTheme, "themeFor": themeFor, "attach": attach, "PlotError": PlotError, "TYPES": TYPES, "squarify": squarify, "makeFormat": makeFormat, "formatNumber": formatNumber, "formatCompact": formatCompact };
 });
 __def("src/theme.js", function () {
 
@@ -1299,6 +1308,11 @@ set('—', 0.9);
 set('▲▼■●', 0.9);
 set('·', 0.3);
 set('→', 0.9);
+set('\u202F', 0.17); // espacio fino (miles en francés)
+set('\u00A0', 0.27);
+set('✓✗', 0.7);
+set('‹›', 0.32);
+set('#', 0.6);
 
 function measure(str, size = 12, weight = 400) {
   let w = 0;
@@ -1342,19 +1356,29 @@ __def("src/format.js", function () {
 const SEP = {
   es: { group: '.', dec: ',' },
   en: { group: ',', dec: '.' },
+  pt: { group: '.', dec: ',' },
+  de: { group: '.', dec: ',' },
+  fr: { group: '\u202F', dec: ',' }, // espacio fino: 1 234,5
 };
 
 const COMPACT = {
   es: [[1e12, ' B'], [1e6, ' M'], [1e3, ' mil']],
   en: [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']],
+  pt: [[1e12, ' tri'], [1e9, ' bi'], [1e6, ' mi'], [1e3, ' mil']],
+  fr: [[1e12, ' Bn'], [1e9, ' Md'], [1e6, ' M'], [1e3, ' k']],
+  de: [[1e12, ' Bio.'], [1e9, ' Mrd.'], [1e6, ' Mio.'], [1e3, ' Tsd.']],
 };
 
 const MONTHS = {
   es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  pt: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+  fr: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+  de: ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'],
 };
 
-const loc = (l) => (l && String(l).toLowerCase().startsWith('en') ? 'en' : 'es');
+/** Idioma de formato: es, en, pt, fr o de ("pt-BR" → pt); cualquier otro, es. */
+const loc = (l) => { const k = String(l || 'es').toLowerCase().slice(0, 2); return k in SEP ? k : 'es'; };
 
 /** Número con separadores. `decimals` fijo; `trim` quita ceros finales. */
 function formatNumber(v, decimals = 0, locale = 'es', trim = false) {
@@ -1526,13 +1550,15 @@ function formatDate(ms, unit, locale = 'es', withYear = true) {
     return formatDate(ms, 'day', l, withYear !== 'day') + ' ' + hm;
   }
   if (unit === 'year') return String(y);
-  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' ? 'Q' : 'T');
+  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' || l === 'de' ? 'Q' : 'T');
   if (unit === 'month') return withYear ? `${m} ${y}` : m;
   const day = d.getUTCDate();
-  return l === 'en' ? `${m} ${day}${withYear ? ', ' + y : ''}` : `${day} ${m}${withYear ? ' ' + y : ''}`;
+  if (l === 'en') return `${m} ${day}${withYear ? ', ' + y : ''}`;
+  if (l === 'de') return `${day}. ${m}${withYear ? ' ' + y : ''}`;
+  return `${day} ${m}${withYear ? ' ' + y : ''}`;
 }
 
-return { "formatNumber": formatNumber, "smartDecimals": smartDecimals, "formatCompact": formatCompact, "makeFormat": makeFormat, "parseDate": parseDate, "formatDate": formatDate, "MONTHS": MONTHS, "isDateLike": isDateLike };
+return { "formatNumber": formatNumber, "smartDecimals": smartDecimals, "formatCompact": formatCompact, "makeFormat": makeFormat, "currencyPrefix": currencyPrefix, "parseDate": parseDate, "formatDate": formatDate, "MONTHS": MONTHS, "isDateLike": isDateLike };
 });
 __def("src/scale.js", function () {
 const { formatDate } = __req("src/format.js");
@@ -2062,6 +2088,7 @@ const { el, esc, g, text, r2 } = __req("src/svg.js");
 const { measure, wrap, truncate } = __req("src/text.js");
 const { FONT, FONT_CSS } = __req("src/theme.js");
 const { ctx } = __req("src/context.js");
+const { words } = __req("src/i18n.js");
 
 const SIZES = {
   title: 22,
@@ -2102,7 +2129,7 @@ function createFrame(spec, theme, defaults = {}) {
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
 
-  const srcText = spec.source ? (/^fuente|^source/i.test(spec.source) ? spec.source : (String(spec.locale || 'es').startsWith('en') ? 'Source: ' : 'Fuente: ') + spec.source) : '';
+  const srcText = spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   const srcLines = srcText ? wrap(srcText, innerW, T.source, 400, 2) : [];
   const srcLH = Math.round(T.source * X * 1.35);
   const sourceH = srcText ? Math.round(18 * Math.max(1, X * 0.95)) + (srcLines.length - 1) * srcLH : 0;
@@ -2148,7 +2175,7 @@ function createFrame(spec, theme, defaults = {}) {
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
-    finish(body, { desc = '', type = 'chart', defs = '' } = {}) {
+    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '' } = {}) {
       if (legendBottom) {
         const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
@@ -2158,7 +2185,8 @@ function createFrame(spec, theme, defaults = {}) {
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
-        + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '');
+        + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '')
+        + css;
       return el(
         'svg',
         {
@@ -2166,8 +2194,9 @@ function createFrame(spec, theme, defaults = {}) {
           viewBox: `0 0 ${width} ${r2(height)}`,
           width,
           height: r2(height),
-          role: 'img',
-          'aria-labelledby': `${id}-t ${id}-d`,
+          role,
+          'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
+          'aria-describedby': role === 'img' ? null : `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
           class: 'pa-chart',
           'data-pa-type': type,
@@ -2274,6 +2303,105 @@ function hash(s) {
 }
 
 return { "createFrame": createFrame, "legendPosition": legendPosition, "hash": hash, "SIZES": SIZES };
+});
+__def("src/i18n.js", function () {
+
+const LANGS = ['es', 'en', 'pt', 'fr', 'de'];
+
+const WORDS = {
+  es: { source: 'Fuente: ', total: 'Total', search: 'Buscar', none: 'Sin resultados', clear: 'Borrar', page: 'Página', prev: 'Anterior', next: 'Siguiente', sort: 'Ordenar por', yes: 'Sí', no: 'No', rows: 'filas', table: 'Tabla', of: 'de' },
+  en: { source: 'Source: ', total: 'Total', search: 'Search', none: 'No results', clear: 'Clear', page: 'Page', prev: 'Previous', next: 'Next', sort: 'Sort by', yes: 'Yes', no: 'No', rows: 'rows', table: 'Table', of: 'of' },
+  pt: { source: 'Fonte: ', total: 'Total', search: 'Buscar', none: 'Sem resultados', clear: 'Limpar', page: 'Página', prev: 'Anterior', next: 'Próxima', sort: 'Ordenar por', yes: 'Sim', no: 'Não', rows: 'linhas', table: 'Tabela', of: 'de' },
+  fr: { source: 'Source : ', total: 'Total', search: 'Rechercher', none: 'Aucun résultat', clear: 'Effacer', page: 'Page', prev: 'Précédente', next: 'Suivante', sort: 'Trier par', yes: 'Oui', no: 'Non', rows: 'lignes', table: 'Tableau', of: 'sur' },
+  de: { source: 'Quelle: ', total: 'Gesamt', search: 'Suchen', none: 'Keine Treffer', clear: 'Löschen', page: 'Seite', prev: 'Zurück', next: 'Weiter', sort: 'Sortieren nach', yes: 'Ja', no: 'Nein', rows: 'Zeilen', table: 'Tabelle', of: 'von' },
+};
+
+/** Código de idioma soportado ('es', 'en', 'pt', 'fr', 'de') a partir de cualquier etiqueta ('pt-BR', 'en_US'…). */
+function langOf(locale) {
+  const k = String(locale || 'es').toLowerCase().slice(0, 2);
+  return LANGS.includes(k) ? k : 'es';
+}
+
+/** Palabras de interfaz en el idioma del gráfico. */
+const words = (locale) => WORDS[langOf(locale)];
+
+const STOP = {
+  es: 'de la el los las y en por con para del que una un se al más es son sus su según entre como año años sin hasta desde ventas región regiones total mil millones porcentaje hogares personas este esta sobre cada ha han fue lidera mayor menor tasa crecimiento meta comuna comunas mes meses semana proyecto estado avance',
+  en: 'the of and in by for with to is are from on at than more its as per was were this that which share sales region regions total thousand million percent households people over each has have had leads largest smallest rate growth target month months week project status progress revenue year years',
+  pt: 'de da do das dos e em por com para que uma um ao mais é são sua seu entre como ano anos não até desde pelo pela no na nos nas vendas região total mil milhões taxa crescimento meta mês meses projeto estado cada foi tem',
+  fr: 'de la le les et en par pour avec du des que une un au aux plus est sont sa son ses entre comme année années sans jusqu depuis sur dans ventes région total mille millions taux croissance objectif mois semaine projet état chaque été',
+  de: 'der die das und in von mit für zu ist sind den dem des ein eine einer im am mehr als nach bei auf aus nicht jahr jahre umsatz region gesamt tausend millionen anteil wachstum ziel monat monate woche projekt status jede wurde hat',
+};
+const INDEX = new Map();
+for (const [lang, list] of Object.entries(STOP)) for (const w of list.split(' ')) { if (!INDEX.has(w)) INDEX.set(w, []); INDEX.get(w).push(lang); }
+
+const CHARS = [
+  [/[ñ¿¡]/g, { es: 3 }],
+  [/[ãõ]/g, { pt: 3 }],
+  [/ç/g, { pt: 1.5, fr: 1.5 }],
+  [/[èêëàâùûœî]/g, { fr: 2 }],
+  [/[äöüß]/g, { de: 3 }],
+  [/[áíóú]/g, { es: 1, pt: 1 }],
+  [/é/g, { es: 0.5, pt: 0.5, fr: 0.8 }],
+];
+
+/**
+ * Idioma más probable de unos textos (títulos, encabezados, categorías), o
+ * null si no hay señal suficiente. Determinista y sin diccionarios grandes.
+ */
+function detectLocale(texts) {
+  const s = [].concat(texts || []).filter((t) => typeof t === 'string' && t).join(' \n ').toLowerCase().slice(0, 6000);
+  if (!s) return null;
+  const score = { es: 0, en: 0, pt: 0, fr: 0, de: 0 };
+  for (const tok of s.split(/[^\p{L}]+/u)) {
+    const langs = tok && INDEX.get(tok);
+    if (langs) for (const l of langs) score[l] += 1 / langs.length;
+  }
+  for (const [re, w] of CHARS) {
+    const n = (s.match(re) || []).length;
+    if (n) for (const [l, v] of Object.entries(w)) score[l] += Math.min(6, n) * v;
+  }
+  const ranked = Object.entries(score).sort((a, b) => b[1] - a[1]);
+  const [[best, a], [, b]] = ranked;
+  if (a < 1 || a < b * 1.25 + 0.25) return null;
+  return best;
+}
+
+/** Idioma del documento en el navegador (`<html lang>` o el del sistema), o null. */
+function browserLocale() {
+  if (typeof document === 'undefined') return null;
+  try {
+    const l = (document.documentElement && document.documentElement.lang) || (typeof navigator !== 'undefined' && navigator.language) || '';
+    const k = String(l).toLowerCase().slice(0, 2);
+    return LANGS.includes(k) ? k : null;
+  } catch { return null; }
+}
+
+/**
+ * Textos de un spec que delatan su idioma: título, bajada, fuente, nombres de
+ * columna y algunas categorías.
+ */
+function specTexts(spec, data) {
+  const out = [spec.title, spec.subtitle, spec.source, spec.dashedLabel];
+  for (const c of [].concat(Array.isArray(spec.columns) ? spec.columns : [])) {
+    if (typeof c === 'string') out.push(c);
+    else if (c && typeof c === 'object') out.push(c.label, c.field);
+  }
+  if (Array.isArray(data)) {
+    const rows = data.slice(0, 40);
+    const keys = new Set();
+    for (const r of rows) if (r && typeof r === 'object') for (const [k, v] of Object.entries(r)) { keys.add(k); if (typeof v === 'string' && v.length > 2 && !/^[\d\s.,%$€£-]+$/.test(v)) out.push(v); }
+    for (const k of keys) out.push(String(k).replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'));
+  }
+  return out;
+}
+
+/** Resuelve `locale: "auto"`: idioma del texto, luego el del navegador, luego español. */
+function autoLocale(spec, data) {
+  return detectLocale(specTexts(spec, data)) || browserLocale() || 'es';
+}
+
+return { "langOf": langOf, "detectLocale": detectLocale, "browserLocale": browserLocale, "specTexts": specTexts, "autoLocale": autoLocale, "LANGS": LANGS, "words": words };
 });
 __def("src/stats.js", function () {
 
@@ -9224,6 +9352,462 @@ function heatmap(spec, theme) {
 
 return { "heatmap": heatmap };
 });
+__def("src/charts/corr.js", function () {
+const { el, g, text, tip, barPath, dotLayer } = __req("src/svg.js");
+const { measure, truncate } = __req("src/text.js");
+const { makeFormat, formatNumber } = __req("src/format.js");
+const { ramp, textOn, colorMap, readable } = __req("src/theme.js");
+const { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
+const { pearson, polyfit, histogram, kde: kdeEst } = __req("src/stats.js");
+const { hueField, axisDomain, tickFmt } = __req("src/charts/dist.js");
+
+const isEN = (spec) => String(spec.locale || 'es').startsWith('en');
+const halo = (theme) => ({ stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' });
+
+
+/** Rangos con empates promediados (para Spearman). */
+function ranks(vs) {
+  const idx = vs.map((_, i) => i).sort((a, b) => vs[a] - vs[b]);
+  const out = new Array(vs.length);
+  for (let i = 0; i < idx.length;) {
+    let j = i;
+    while (j + 1 < idx.length && vs[idx[j + 1]] === vs[idx[i]]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let t = i; t <= j; t++) out[idx[t]] = avg;
+    i = j + 1;
+  }
+  return out;
+}
+
+/** Φ(z) (Abramowitz–Stegun 7.1.26, error < 1,5e-7). */
+function normCdf(z) {
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
+}
+
+/** p bilateral de H0: ρ = 0, por la transformación z de Fisher (Spearman con la corrección de Fieller). */
+function pValue(r, n, method) {
+  if (!Number.isFinite(r) || n <= 3) return NaN;
+  if (Math.abs(r) >= 1) return 0;
+  const se = Math.sqrt((method === 'spearman' ? 1.06 : 1) / (n - 3));
+  return 2 * (1 - normCdf(Math.abs(Math.atanh(r)) / se));
+}
+
+/** Campos numéricos a correlacionar: `vars`, `y: [...]` o todas las medidas. */
+function corrVars(spec, data) {
+  const list = spec.vars ?? (Array.isArray(spec.y) ? spec.y : null);
+  if (list) {
+    for (const f of list) requireField(data, f, 'vars');
+    return uniq(list.map(String));
+  }
+  const hue = hueField(spec);
+  return fieldsOf(data).filter((f) => f !== hue && f !== spec.label && fieldKind(data, f) === 'number');
+}
+
+/**
+ * Correlaciones por pares (casos completos de cada par).
+ * Devuelve { r, n, p } como matrices k × k. Un par sin variación da NaN.
+ */
+function correlations(data, vars, method = 'pearson') {
+  const cols = vars.map((f) => data.map((row) => num(row[f])));
+  const k = vars.length;
+  const M = () => Array.from({ length: k }, () => new Array(k).fill(NaN));
+  const r = M(), n = M(), p = M();
+  for (let i = 0; i < k; i++) {
+    const c = cols[i].filter(Number.isFinite);
+    const varies = c.some((v) => v !== c[0]);
+    r[i][i] = varies ? 1 : NaN; n[i][i] = c.length; p[i][i] = varies ? 0 : NaN;
+    for (let j = i + 1; j < k; j++) {
+      const xs = [], ys = [];
+      for (let t = 0; t < data.length; t++) {
+        const a = cols[i][t], b = cols[j][t];
+        if (Number.isFinite(a) && Number.isFinite(b)) { xs.push(a); ys.push(b); }
+      }
+      const m = xs.length;
+      let v = NaN;
+      if (m >= 3 && xs.some((x) => x !== xs[0]) && ys.some((y) => y !== ys[0])) {
+        v = method === 'spearman' ? pearson(ranks(xs), ranks(ys)) : pearson(xs, ys);
+        v = Math.max(-1, Math.min(1, v));
+      }
+      r[i][j] = r[j][i] = v;
+      n[i][j] = n[j][i] = m;
+      p[i][j] = p[j][i] = pValue(v, m, method);
+    }
+  }
+  return { r, n, p };
+}
+
+/**
+ * Agrupamiento jerárquico aglomerativo (enlace promedio, distancia 1 − r),
+ * como el de sns.clustermap. Devuelve el árbol: hojas { leaf }, nodos { left, right, h }.
+ */
+function clusterTree(r, idx = r.map((_, i) => i)) {
+  let nodes = idx.map((i) => ({ leaf: i, members: [i], h: 0 }));
+  const dist = (A, B) => {
+    let s = 0, c = 0;
+    for (const a of A.members) for (const b of B.members) { const v = r[a][b]; if (Number.isFinite(v)) { s += 1 - v; c++; } }
+    return c ? s / c : 2;
+  };
+  while (nodes.length > 1) {
+    let best = [0, 1, Infinity];
+    for (let a = 0; a < nodes.length; a++) for (let b = a + 1; b < nodes.length; b++) {
+      const d = dist(nodes[a], nodes[b]);
+      if (d < best[2] - 1e-12) best = [a, b, d];
+    }
+    const [a, b, d] = best;
+    const node = { left: nodes[a], right: nodes[b], h: Math.max(d, nodes[a].h, nodes[b].h), members: [...nodes[a].members, ...nodes[b].members] };
+    nodes = nodes.filter((_, i) => i !== a && i !== b);
+    nodes.splice(a, 0, node);
+  }
+  return nodes[0];
+}
+
+const leaves = (node) => (node.left ? [...leaves(node.left), ...leaves(node.right)] : [node.leaf]);
+
+
+/**
+ * Matriz de correlación. Desde filas crudas (`vars` o todas las medidas) o
+ * desde una matriz ya calculada en formato largo (`x`, `y`, `value`).
+ * Opciones: method ("pearson" | "spearman"), triangle ("lower" | "full"),
+ * cluster (reordena y dibuja el dendrograma), alpha (apaga las no significativas),
+ * highlight (una variable), labels, cellSize.
+ */
+function corr(spec, theme) {
+  const data = ensureData(spec);
+  const en = isEN(spec);
+  const locale = spec.locale || 'es';
+  const method = String(spec.method || 'pearson').toLowerCase() === 'spearman' ? 'spearman' : 'pearson';
+  const long = typeof spec.x === 'string' && typeof spec.y === 'string' && typeof spec.value === 'string';
+
+  let vars, R, N, P;
+  if (long) {
+    requireField(data, spec.x, 'x'); requireField(data, spec.y, 'y'); requireField(data, spec.value, 'value');
+    vars = uniq([...data.map((row) => String(row[spec.x])), ...data.map((row) => String(row[spec.y]))]);
+    const at = new Map(vars.map((v, i) => [v, i]));
+    const k = vars.length;
+    R = Array.from({ length: k }, (_, i) => Array.from({ length: k }, (_, j) => (i === j ? 1 : NaN)));
+    N = R.map((row) => row.map(() => NaN));
+    P = N.map((row) => [...row]);
+    for (const row of data) {
+      const i = at.get(String(row[spec.x])), j = at.get(String(row[spec.y])), v = num(row[spec.value]);
+      if (!Number.isFinite(v)) continue;
+      R[i][j] = v;
+      if (!Number.isFinite(R[j][i]) || i === j) R[j][i] = v;
+    }
+  } else {
+    vars = corrVars(spec, data);
+    ({ r: R, n: N, p: P } = correlations(data, vars, method));
+  }
+  if (vars.length < 2) {
+    throw en
+      ? new PlotError('A correlation matrix needs at least two numeric fields.', 'Pass rows with two or more measures, or list them in `vars: ["price", "area", "age"]`.')
+      : new PlotError('La matriz de correlación necesita al menos dos campos numéricos.', 'Entrega filas con dos o más medidas, o indícalas en `vars: ["precio", "superficie", "antiguedad"]`.');
+  }
+  const name = (i) => (spec.labelsFor && spec.labelsFor[vars[i]]) || (long ? vars[i] : humanize(vars[i]));
+
+  const k = vars.length;
+  let tree = null;
+  let order = vars.map((_, i) => i);
+  if (spec.cluster && k > 2) { tree = clusterTree(R); order = leaves(tree); }
+  else if (Array.isArray(spec.order)) {
+    const pos = (i) => { const a = spec.order.indexOf(vars[i]); return a < 0 ? spec.order.indexOf(name(i)) : a; };
+    order = [...order].sort((a, b) => ((pos(a) + 1 || 1e9) - (pos(b) + 1 || 1e9)) || a - b);
+  }
+  const triangle = spec.triangle === false ? 'full' : spec.triangle === true ? 'lower' : (spec.triangle ?? (spec.cluster ? 'full' : 'lower'));
+  const full = triangle === 'full' || k === 2 && triangle !== 'lower';
+  const rows = full ? order : order.slice(1);
+  const cols = full ? order : order.slice(0, -1);
+  const showDendro = !!tree && full && spec.dendrogram !== false;
+
+  const vals = R.flat().filter(Number.isFinite);
+  const span = long ? Math.max(1, ...vals.map(Math.abs)) : 1;
+  const stops = theme.diverging;
+  const colorOf = (v) => (Number.isFinite(v) ? ramp(stops, 0.5 + v / span / 2) : theme.tint);
+  const dec = (v) => formatNumber(v, span > 1 ? 1 : 2, locale);
+  const fmt = long && span > 1 ? makeFormat(spec.format, locale, vals) : dec;
+  const endFmt = (v) => (span === 1 ? formatNumber(v, 0, locale) : fmt(v));
+  const alpha = Number.isFinite(+spec.alpha) && +spec.alpha > 0 && +spec.alpha < 1 ? +spec.alpha : null;
+  const insignificant = (i, j) => alpha !== null && i !== j && Number.isFinite(P[i][j]) && P[i][j] >= alpha;
+  const sym = method === 'spearman' ? 'ρ' : 'r';
+  const pText = (p) => (Number.isFinite(p) ? (p < 0.001 ? `p < ${formatNumber(0.001, 3, locale)}` : `p = ${formatNumber(p, p < 0.01 ? 3 : 2, locale)}`) : '');
+
+  const hl = new Set([].concat(spec.highlight ?? []).map(String));
+  const isHL = (i) => hl.has(vars[i]) || hl.has(name(i));
+  const anyHL = hl.size > 0 && vars.some((_, i) => isHL(i));
+
+  const rampTitle = spec.legendTitle ?? (long ? humanize(spec.value) : method === 'spearman' ? (en ? 'Spearman ρ' : 'ρ de Spearman') : (en ? 'Pearson r' : 'r de Pearson'));
+  const legend = spec.legend === false ? [] : [
+    { type: 'ramp', stops, min: endFmt(-span), max: endFmt(span), title: rampTitle },
+    ...(alpha !== null ? [{ label: en ? `p ≥ ${formatNumber(alpha, 2, locale)}: not significant` : `p ≥ ${formatNumber(alpha, 2, locale)}: no significativa`, color: theme.tint }] : []),
+  ];
+  const frame = createFrame(spec, theme, { height: 520 });
+  const area = frame.layout(legend);
+
+  const X = ctx.textScale;
+  const fs = 12;
+  const rowW = Math.min(area.w * 0.34, Math.max(...rows.map((i) => measure(name(i), fs)))) + 12;
+  const dendroH = showDendro ? 48 : 0;
+  const colW = Math.max(...cols.map((i) => measure(name(i), fs)));
+  const colLabMax = Math.min(colW, 150, spec.height ? Math.max(40, area.h * 0.28) : 150);
+  const labH = (ang) => (ang === 90 ? colLabMax + 14 * X : ang ? colLabMax * 0.71 + 14 * X : 20 * X);
+  const fitCell = (reserve) => Math.max(14, Math.min(+spec.cellSize || 96, (area.w - rowW) / cols.length, (spec.height ? Math.max(80, area.h - dendroH - reserve) : 600) / rows.length));
+  const angleFor = (c) => (colW + 8 <= c ? 0 : c * 0.71 < fs * X + 3 ? 90 : 45);
+  let cell = fitCell(labH(0));
+  let angle = angleFor(cell);
+  if (spec.height && angle) {
+    cell = fitCell(labH(angle));
+    angle = angleFor(cell);
+    if (angle === 90) cell = fitCell(labH(90));
+  }
+  const colLabH = labH(angle);
+  const gx = area.x + rowW, gy = area.y + dendroH;
+  const gw = cell * cols.length, gh = cell * rows.length;
+  if (spec.height === undefined) frame.setHeight(gy + gh + colLabH + 8 + frame.chrome);
+
+  const lab = cell >= 70 ? 13 : 11;
+  const showLabels = spec.labels ?? cell >= measure(dec(-0.88), lab) + 8;
+  const body = [];
+
+  if (showDendro) {
+    const cx = new Map(cols.map((i, c) => [i, gx + c * cell + cell / 2]));
+    const maxH = tree.h || 1;
+    const yOf = (h) => gy - 6 - (h / maxH) * (dendroH - 12);
+    const segs = [];
+    const walk = (nd) => {
+      if (!nd.left) return [cx.get(nd.leaf), gy - 6];
+      const [xl, yl] = walk(nd.left), [xr, yr] = walk(nd.right);
+      const y = yOf(nd.h);
+      segs.push(`M${xl.toFixed(1)},${yl.toFixed(1)}V${y.toFixed(1)}H${xr.toFixed(1)}V${yr.toFixed(1)}`);
+      return [(xl + xr) / 2, y];
+    };
+    walk(tree);
+    body.push(el('path', { d: segs.join(''), fill: 'none', stroke: theme.muted, strokeWidth: 1.1, strokeLinejoin: 'round' }));
+  }
+
+  rows.forEach((i, ri) => {
+    const on = !anyHL || isHL(i);
+    body.push(text(gx - 10, gy + ri * cell + cell / 2 + 4, truncate(name(i), rowW - 12, fs), { fill: anyHL && on ? theme.ink : theme.lede, fontSize: fs, textAnchor: 'end', fontWeight: anyHL && on ? 600 : null }));
+    cols.forEach((j, ci) => {
+      if (!full && order.indexOf(i) <= order.indexOf(j)) return;
+      const v = R[i][j];
+      const ns = insignificant(i, j);
+      const fill = ns ? theme.tint : colorOf(v);
+      const x = gx + ci * cell + 1, y = gy + ri * cell + 1, w = Math.max(0, cell - 2);
+      const dim = anyHL && !isHL(i) && !isHL(j);
+      const parts = [el('rect', { x, y, width: w, height: w, rx: Math.min(4, cell / 8), fill, opacity: dim ? 0.22 : null })];
+      if (showLabels && Number.isFinite(v) && i !== j) {
+        parts.push(text(x + w / 2, y + w / 2 + lab * 0.36, fmt(v), { fill: ns || dim ? theme.muted : textOn(fill, theme), fontSize: lab, textAnchor: 'middle', fontWeight: 500, opacity: dim ? 0.7 : null }));
+      }
+      const lines = Number.isFinite(v)
+        ? [`${long ? humanize(spec.value) : sym} = ${fmt(v)}`, i !== j && Number.isFinite(N[i][j]) ? `n = ${formatNumber(N[i][j], 0, locale)}${Number.isFinite(P[i][j]) ? ' · ' + pText(P[i][j]) : ''}` : '']
+        : [en ? 'No variation or too few rows' : 'Sin variación o muy pocas filas'];
+      body.push(g({ class: 'pa-m', 'data-tip': tip(`${name(i)} · ${name(j)}`, ...lines) }, parts));
+    });
+  });
+
+  cols.forEach((j, ci) => {
+    const on = !anyHL || isHL(j);
+    const cx = gx + ci * cell + cell / 2;
+    const attrs = { fill: anyHL && on ? theme.ink : theme.lede, fontSize: fs, fontWeight: anyHL && on ? 600 : null };
+    if (angle) {
+      const y = gy + gh + (angle === 90 ? 8 : 12);
+      const ax = angle === 90 ? cx + fs * 0.35 : cx + 4;
+      body.push(text(ax, y, truncate(name(j), colLabMax, fs), { ...attrs, textAnchor: 'end', transform: `rotate(-${angle} ${ax.toFixed(1)} ${y.toFixed(1)})` }));
+    } else body.push(text(cx, gy + gh + 16 * X, name(j), { ...attrs, textAnchor: 'middle' }));
+  });
+
+  const pairs = [];
+  for (let a = 0; a < k; a++) for (let b = a + 1; b < k; b++) if (Number.isFinite(R[a][b])) pairs.push([a, b, R[a][b]]);
+  pairs.sort((p, q) => q[2] - p[2]);
+  const pos = pairs.find((p) => p[2] > 0), neg = [...pairs].reverse().find((p) => p[2] < 0);
+  const kind = long ? '' : method === 'spearman' ? ' (Spearman)' : ' (Pearson)';
+  const say = (p) => `${name(p[0])} ${en ? 'and' : 'y'} ${name(p[1])} (${fmt(p[2])})`;
+  const desc = en
+    ? `Correlation matrix${kind} of ${k} variables${tree ? ', ordered by hierarchical clustering' : ''}.` + (pos ? ` Strongest positive: ${say(pos)}.` : '') + (neg ? ` Strongest negative: ${say(neg)}.` : '') + (!pairs.length ? ' No pair has enough data.' : '')
+    : `Matriz de correlación${kind} de ${k} variables${tree ? ', ordenadas por agrupamiento jerárquico' : ''}.` + (pos ? ` Más fuerte positiva: ${say(pos)}.` : '') + (neg ? ` Más fuerte negativa: ${say(neg)}.` : '') + (!pairs.length ? ' Ningún par tiene datos suficientes.' : '');
+  return frame.finish(body, { desc, type: 'corr' });
+}
+
+
+/**
+ * Matriz de dispersión (sns.pairplot). Abajo de la diagonal, dispersión de
+ * cada par; en la diagonal, la distribución de cada variable; arriba, el r
+ * de Pearson (o dispersión con `upper: "scatter"`, nada con `corner: true`).
+ * Opciones: vars, hue, diag ("hist" | "kde"), kind ("scatter" | "reg"), bins, radius.
+ */
+function pairplot(spec, theme) {
+  const data = ensureData(spec);
+  const en = isEN(spec);
+  const locale = spec.locale || 'es';
+  let vars = corrVars(spec, data);
+  const explicit = spec.vars || Array.isArray(spec.y);
+  if (!explicit && vars.length > 6) vars = vars.slice(0, 6);
+  if (vars.length < 2) {
+    throw en
+      ? new PlotError('A pair plot needs at least two numeric fields.', 'Pass rows with two or more measures, or list them in `vars: ["price", "area"]`.')
+      : new PlotError('La matriz de dispersión necesita al menos dos campos numéricos.', 'Entrega filas con dos o más medidas, o indícalas en `vars: ["precio", "superficie"]`.');
+  }
+  const hue = hueField(spec);
+  if (hue) requireField(data, hue, 'hue');
+  const k = vars.length;
+  const name = (i) => (spec.labelsFor && spec.labelsFor[vars[i]]) || humanize(vars[i]);
+  const cols = vars.map((f) => data.map((row) => num(row[f])));
+  const hk = data.map((row) => (hue ? String(row[hue] ?? '') : ''));
+  const keys = hue ? uniq(hk) : [''];
+  const K = keys.length;
+  const cmap = colorMap(keys, theme, spec.colors);
+  const colorOf = (key) => (K === 1 ? (spec.colors && spec.colors['']) || theme.categorical[0] : cmap.get(key));
+  const legend = K > 1 && spec.legend !== false ? keys.map((key) => ({ label: key, color: colorOf(key) })) : [];
+
+  const frame = createFrame(spec, theme, { height: 640 });
+  const area = frame.layout(legend);
+  const X = ctx.textScale;
+  const fmts = vars.map((_, i) => makeFormat(spec.format, locale, cols[i].filter(Number.isFinite)));
+  const axes = vars.map((_, i) => axisDomain(cols[i], { nice: 'tight', count: 3 }));
+  const tfs = vars.map((_, i) => tickFmt(fmts[i], axes[i]));
+  const ticksIn = (ax) => ax.ticks.filter((t) => t >= ax.min && t <= ax.max);
+  const fs = 11;
+  const leftM = Math.max(...vars.slice(1).map((_, i) => Math.max(0, ...ticksIn(axes[i + 1]).map((t) => measure(tfs[i + 1](t), fs))))) + 8;
+  const gap = 8;
+  const bottom = 20 * X;
+  const fitW = (area.w - leftM - gap * (k - 1)) / k;
+  const fitH = spec.height ? (area.h - bottom - gap * (k - 1)) / k : Infinity;
+  const s = Math.max(40, Math.min(fitW, fitH, +spec.panelSize || 220));
+  const px = (j) => area.x + leftM + j * (s + gap);
+  const py = (i) => area.y + i * (s + gap);
+  if (spec.height === undefined) frame.setHeight(py(k - 1) + s + bottom + 6 + frame.chrome);
+
+  const { r: R, n: N } = correlations(data, vars, 'pearson');
+  const upper = spec.corner ? 'none' : spec.upper === false ? 'none' : (spec.upper ?? 'corr');
+  const diag = spec.diag === 'kde' || spec.diag === 'hist' ? spec.diag : hue ? 'kde' : 'hist';
+  const n = data.length;
+  const rad = spec.radius ?? (n > 600 ? 1.5 : n > 200 ? 2 : n > 60 ? 2.6 : 3.2);
+  const M = theme.marks || {};
+  const body = [];
+  const frameRect = (x, y) => el('rect', { x, y, width: s, height: s, fill: 'none', stroke: theme.grid, strokeWidth: 1 });
+  const gridLines = (i, j) => {
+    const xs = axes[j].scale(px(j) + 4, px(j) + s - 4), ys = axes[i].scale(py(i) + s - 4, py(i) + 4);
+    const out = [];
+    for (const t of ticksIn(axes[j])) out.push(el('line', { x1: xs(t), x2: xs(t), y1: py(i), y2: py(i) + s, stroke: theme.grid, strokeWidth: 0.75 }));
+    for (const t of ticksIn(axes[i])) out.push(el('line', { x1: px(j), x2: px(j) + s, y1: ys(t), y2: ys(t), stroke: theme.grid, strokeWidth: 0.75 }));
+    return out;
+  };
+
+  const scatterPanel = (i, j) => {
+    const xs = axes[j].scale(px(j) + 4, px(j) + s - 4), ys = axes[i].scale(py(i) + s - 4, py(i) + 4);
+    const pts = [];
+    for (let t = 0; t < n; t++) {
+      const a = cols[j][t], b = cols[i][t];
+      if (Number.isFinite(a) && Number.isFinite(b)) pts.push({ x: a, y: b, key: hk[t], label: spec.label ? String(data[t][spec.label] ?? '') : '' });
+    }
+    const out = [...gridLines(i, j)];
+    out.push(g({}, dotLayer(pts.map((p) => ({
+      class: 'pa-m', cx: xs(p.x), cy: ys(p.y), r: rad, fill: colorOf(p.key), fillOpacity: M.dotOpacity ?? 0.72,
+      stroke: pts.length > 300 ? 'none' : theme.surface, strokeWidth: 0.75,
+      'data-tip': tip(p.label || p.key || `${name(i)} · ${name(j)}`, `${name(j)}: ${fmts[j](p.x)}`, `${name(i)}: ${fmts[i](p.y)}`, p.label && p.key ? p.key : ''),
+    })))));
+    if (spec.kind === 'reg') {
+      for (const key of keys) {
+        const gp = pts.filter((p) => p.key === key);
+        if (gp.length < 3) continue;
+        const f = polyfit(gp.map((p) => p.x), gp.map((p) => p.y));
+        const lo = Math.min(...gp.map((p) => p.x)), hi = Math.max(...gp.map((p) => p.x));
+        const clampY = (v) => Math.max(py(i), Math.min(py(i) + s, ys(v)));
+        out.push(el('line', { x1: xs(lo), y1: clampY(f.predict(lo)), x2: xs(hi), y2: clampY(f.predict(hi)), stroke: K === 1 ? theme.ink : colorOf(key), strokeWidth: 1.75, opacity: 0.9 }));
+      }
+    }
+    return out;
+  };
+
+  const diagPanel = (i) => {
+    const ax = axes[i];
+    const xs = ax.scale(px(i) + 4, px(i) + s - 4);
+    const base = py(i) + s, top = py(i) + 22 * X;
+    const out = [];
+    const groups = keys.map((key) => cols[i].filter((v, t) => Number.isFinite(v) && hk[t] === key));
+    const allV = cols[i].filter(Number.isFinite);
+    if (diag === 'kde') {
+      const curves = groups.map((vs) => (vs.length > 1 && vs.some((v) => v !== vs[0]) ? kdeEst(vs, { extent: [ax.min, ax.max], gridSize: 90 }).map(([x, d]) => [x, (d * vs.length) / allV.length]) : []));
+      const mx = Math.max(1e-12, ...curves.flat().map((p) => p[1]));
+      curves.forEach((c, gi) => {
+        if (!c.length) return;
+        const yOf = (d) => base - (d / mx) * (base - top);
+        const line = c.map(([x, d], t) => `${t ? 'L' : 'M'}${xs(x).toFixed(2)},${yOf(d).toFixed(2)}`).join('');
+        out.push(el('path', { d: `${line}L${xs(c[c.length - 1][0]).toFixed(2)},${base}L${xs(c[0][0]).toFixed(2)},${base}Z`, fill: colorOf(keys[gi]), fillOpacity: (M.areaOpacity ?? 0.12) * 1.6 }));
+        out.push(el('path', { d: line, fill: 'none', stroke: colorOf(keys[gi]), strokeWidth: 1.6 }));
+      });
+    } else {
+      const nb = spec.bins ?? Math.max(6, Math.min(s < 120 ? 14 : 22, histogram(allV).length));
+      const bins = histogram(allV, { bins: nb, domain: [ax.min, ax.max] });
+      const counts = groups.map((vs) => bins.map((b, bi) => vs.filter((v) => v >= b.x0 && (v < b.x1 || (bi === bins.length - 1 && v <= b.x1))).length));
+      const mx = Math.max(1, ...counts.flat());
+      const op = K > 1 ? 0.55 : 0.85;
+      counts.forEach((cs, gi) => bins.forEach((b, bi) => {
+        const h = (cs[bi] / mx) * (base - top);
+        const a0 = xs(b.x0) + 0.5, a1 = xs(b.x1) - 0.5;
+        if (h <= 0 || a1 <= a0) return;
+        out.push(el('path', { class: 'pa-m', d: barPath(a0, base - h, a1 - a0, h, 'up', 1.5), fill: colorOf(keys[gi]), fillOpacity: op, 'data-tip': tip(name(i), `${fmts[i](b.x0)} – ${fmts[i](b.x1)}`, `${keys[gi] ? keys[gi] + ': ' : ''}${cs[bi]}`) }));
+      }));
+    }
+    out.push(el('line', { x1: px(i), x2: px(i) + s, y1: base - 0.5, y2: base - 0.5, stroke: theme.axis }));
+    out.push(text(px(i) + 6, py(i) + 14 * X, truncate(name(i), s - 12, 12, 600), { fill: theme.ink, fontSize: 12, fontWeight: 600, ...halo(theme) }));
+    return out;
+  };
+
+  const corrPanel = (i, j) => {
+    const v = R[i][j];
+    const cx = px(j) + s / 2, cy = py(i) + s / 2;
+    const out = [el('rect', { x: px(j), y: py(i), width: s, height: s, fill: Number.isFinite(v) ? ramp(theme.diverging, 0.5 + v / 2) : theme.tint, fillOpacity: Number.isFinite(v) ? 0.08 + 0.32 * Math.abs(v) : 0.5 })];
+    if (Number.isFinite(v)) {
+      const size = Math.min(s * 0.24, 13 + 15 * Math.abs(v));
+      const showGroups = K > 1 && K <= 4 && s >= 110;
+      const y0 = showGroups ? cy - (K * 14) / 2 + 2 : cy + size * 0.36;
+      out.push(text(cx, y0, formatNumber(v, 2, locale), { fill: readable(ramp(theme.diverging, 0.5 + v / 2), theme, 4.5), fontSize: size, fontWeight: 600, textAnchor: 'middle' }));
+      if (showGroups) {
+        keys.forEach((key, gi) => {
+          const sub = correlations(data.filter((_, t) => hk[t] === key), [vars[i], vars[j]]).r[0][1];
+          out.push(text(cx, y0 + 18 + gi * 14, `${truncate(key, s * 0.55, 10.5)}: ${Number.isFinite(sub) ? formatNumber(sub, 2, locale) : '—'}`, { fill: readable(colorOf(key), theme, 3), fontSize: 10.5, textAnchor: 'middle' }));
+        });
+      }
+    }
+    return [g({ class: 'pa-m', 'data-tip': tip(`${name(i)} · ${name(j)}`, `r = ${Number.isFinite(v) ? formatNumber(v, 2, locale) : '—'}`, `n = ${formatNumber(N[i][j], 0, locale)}`) }, out)];
+  };
+
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j < k; j++) {
+      if (i < j && upper === 'none') continue;
+      const part = i === j ? diagPanel(i) : i > j || upper === 'scatter' ? scatterPanel(i, j) : corrPanel(i, j);
+      body.push(g({}, [...part, frameRect(px(j), py(i))]));
+    }
+  }
+
+  for (let j = 0; j < k; j++) {
+    const xs = axes[j].scale(px(j) + 4, px(j) + s - 4);
+    let ts = ticksIn(axes[j]);
+    if (ts.length > 2 && ts.some((t, ti) => ti && xs(t) - xs(ts[ti - 1]) < Math.max(...ts.map((u) => measure(tfs[j](u), fs))) + 6)) ts = ts.filter((_, ti) => ti % 2 === 0);
+    for (const t of ts) body.push(text(xs(t), py(k - 1) + s + 14 * X, tfs[j](t), { fill: theme.muted, fontSize: fs, textAnchor: 'middle' }));
+  }
+  for (let i = 1; i < k; i++) {
+    const ys = axes[i].scale(py(i) + s - 4, py(i) + 4);
+    for (const t of ticksIn(axes[i])) body.push(text(px(0) - 6, ys(t) + 4, tfs[i](t), { fill: theme.muted, fontSize: fs, textAnchor: 'end' }));
+  }
+
+  const pairs = [];
+  for (let a = 0; a < k; a++) for (let b = a + 1; b < k; b++) if (Number.isFinite(R[a][b])) pairs.push([a, b, R[a][b]]);
+  pairs.sort((p, q) => Math.abs(q[2]) - Math.abs(p[2]));
+  const top = pairs[0];
+  const desc = en
+    ? `Pair plot of ${k} variables (${formatNumber(n, 0, locale)} rows)${hue ? ` colored by ${humanize(hue)}` : ''}: scatter plots below the diagonal, distributions on it.` + (top ? ` Strongest correlation: ${name(top[0])} and ${name(top[1])} (r = ${formatNumber(top[2], 2, locale)}).` : '')
+    : `Matriz de dispersión de ${k} variables (${formatNumber(n, 0, locale)} filas)${hue ? ` por ${humanize(hue).toLowerCase()}` : ''}: dispersión bajo la diagonal y distribuciones en ella.` + (top ? ` Correlación más fuerte: ${name(top[0])} y ${name(top[1])} (r = ${formatNumber(top[2], 2, locale)}).` : '');
+  return frame.finish(body, { desc, type: 'pairplot' });
+}
+
+return { "corrVars": corrVars, "correlations": correlations, "clusterTree": clusterTree, "corr": corr, "pairplot": pairplot };
+});
 __def("src/charts/sankey.js", function () {
 const { el, g, text, tip } = __req("src/svg.js");
 const { measure, truncate } = __req("src/text.js");
@@ -9484,6 +10068,850 @@ function kpi(spec, theme) {
 
 return { "kpi": kpi };
 });
+__def("src/charts/table.js", function () {
+const { el, g, text, tip, esc } = __req("src/svg.js");
+const { measure, truncate, wrap } = __req("src/text.js");
+const { makeFormat, formatDate, parseDate, currencyPrefix } = __req("src/format.js");
+const { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } = __req("src/data.js");
+const { createFrame } = __req("src/frame.js");
+const { ctx } = __req("src/context.js");
+const { ramp, textOn, readable, hexToRgb, rgbToHex, contrast } = __req("src/theme.js");
+const { dateUnit } = __req("src/scale.js");
+const { resolveColorScale, sample } = __req("src/colorscales.js");
+const { words, langOf } = __req("src/i18n.js");
+
+const TYPE_ALIAS = {
+  text: 'text', string: 'text', label: 'text', category: 'text',
+  number: 'number', numeric: 'number', value: 'number',
+  bar: 'bar', bars: 'bar', databar: 'bar',
+  heat: 'heat', heatmap: 'heat', color: 'heat', colour: 'heat', scale: 'heat',
+  delta: 'delta', change: 'delta', variation: 'delta', variacion: 'delta', 'variación': 'delta', arrow: 'delta', diff: 'delta',
+  sparkline: 'sparkline', spark: 'sparkline', trend: 'sparkline', line: 'sparkline', tendencia: 'sparkline',
+  progress: 'progress', meter: 'progress', target: 'progress', bullet: 'progress', avance: 'progress', goal: 'progress',
+  badge: 'badge', pill: 'badge', tag: 'badge', status: 'badge', estado: 'badge', chip: 'badge',
+  check: 'check', boolean: 'check', bool: 'check', icon: 'check',
+  date: 'date', fecha: 'date', time: 'date',
+  link: 'link', url: 'link',
+  rank: 'rank',
+};
+const COLUMN_TYPES = [...new Set(Object.values(TYPE_ALIAS))];
+const columnType = (t) => TYPE_ALIAS[String(t || '').toLowerCase()] || null;
+
+const DELTA_RE = /(^|[\s_.-])(var|vars|delta|change|chg|cambio|crec|growth|yoy|mom|qoq|diff|dif|difference|diferencia|variaci[oó]n|varia[cç][aã]o|ver[äa]nderung|[ée]volution|evoluci[oó]n|\+\/-)/i;
+const PCT_NAME_RE = /(%|pct|percent|porc|porcentaje|tasa|rate|share|participaci|anteil|taux|part\b)/i;
+const PROGRESS_RE = /(progress|avance|progreso|complet|cumplim|ejecuci[oó]n|achiev|logro|fortschritt|avancement|andamento)/i;
+const GOAL_RE = /^(meta|metas|target|goal|objetivo|objective|ziel|objectif|cumplimiento|attainment|ratio)$|(^|[\s_.-])(meta|target|goal|objetivo)([\s_.-]|$)/i;
+const ID_RE = /^(id|_id|code|c[oó]d(igo)?|cod_.*|n[°º.]?|no\.?|nro|num(ero|ber)?|#|rut|dni|zip|cp|phone|tel[eé]fono|tel)$/i;
+
+const STATUS = [
+  ['good', /^(ok|okay|done|complete|completed|finished|approved|active|paid|delivered|resolved|success|successful|on track|healthy|passed|closed|won|live|listo|lista|hecho|hecha|completad[oa]|terminad[oa]|finalizad[oa]|aprobad[oa]|activ[oa]|pagad[oa]|entregad[oa]|resuelt[oa]|al d[ií]a|cumplid[oa]|exitos[oa]|vigente|logrado|ganad[oa]|conclu[ií]d[oa]|pago|ativo|aprovad[oa]|fertig|erledigt|abgeschlossen|aktiv|bezahlt|genehmigt|termin[ée]e?|valid[ée]e?|pay[ée]e?|actif|active|r[ée]ussi)$/i],
+  ['warning', /^(at risk|pending|on hold|in review|under review|review|delayed|warning|paused|draft|waiting|medium|en riesgo|pendiente|en espera|en revisi[oó]n|pausad[oa]|borrador|demorad[oa]|retrasad[oa]|observad[oa]|em risco|pendente|em an[aá]lise|em espera|en attente|[àa] risque|en retard|brouillon|ausstehend|verz[öo]gert|gef[äa]hrdet|in pr[üu]fung|entwurf)$/i],
+  ['critical', /^(late|overdue|failed|fail|failing|error|blocked|cancell?ed|rejected|lost|critical|down|off track|expired|atrasad[oa]|vencid[oa]|bloquead[oa]|cancelad[oa]|rechazad[oa]|fallid[oa]|perdid[oa]|cr[ií]tic[oa]|ca[ií]d[oa]|expirad[oa]|reprovad[oa]|falh[ao]u?|[ée]chou[ée]e?|bloqu[ée]e?|annul[ée]e?|rejet[ée]e?|perdu|fehlgeschlagen|blockiert|abgelehnt|storniert|[üu]berf[äa]llig|verloren)$/i],
+  ['info', /^(in progress|ongoing|open|new|started|running|planned|scheduled|en curso|en progreso|en proceso|en ejecuci[oó]n|abiert[oa]|nuev[oa]|iniciad[oa]|planificad[oa]|programad[oa]|em andamento|em curso|aberto|novo|planejado|en cours|ouvert|nouveau|planifi[ée]e?|in bearbeitung|offen|neu|geplant|l[äa]uft)$/i],
+];
+const statusOf = (v) => { const s = String(v ?? '').trim(); for (const [k, re] of STATUS) if (re.test(s)) return k; return null; };
+
+const YES = /^(true|yes|y|s[ií]|sim|oui|ja|x|✓|✔|☑)$/i;
+const NO = /^(false|no|n|não|nao|non|nein|✗|✘|☐|-|–|—)$/i;
+const SAFE_URL = /^(https?:\/\/|mailto:)[^\s"'<>]+$/i;
+
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const isNil = (v) => v === null || v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v));
+const decimalsOf = (v) => { if (!Number.isFinite(v) || Number.isInteger(v)) return 0; const s = String(+v.toPrecision(12)); const m = /\.(\d+)$/.exec(s) || /e-(\d+)/.exec(s); return m ? Math.min(6, m[1].length) : 0; };
+
+function mix(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
+}
+/** Acerca `fg` a `toward` hasta lograr contraste ≥ min sobre `bg`. */
+function legible(fg, bg, toward, min = 4.5) {
+  let c = fg;
+  for (let t = 0.05; contrast(c, bg) < min && t <= 1.0001; t += 0.05) c = mix(fg, toward, t);
+  return c;
+}
+const hexOr = (c, d) => (typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c.trim()) ? c.trim() : d);
+
+/** Lista de columnas: la que da el agente o una inferida de los datos. */
+function columnList(spec, data) {
+  const fields = fieldsOf(data);
+  const groupF = typeof spec.group === 'string' && fields.includes(spec.group) ? spec.group : null;
+  if (Array.isArray(spec.columns) && spec.columns.length) {
+    return spec.columns.map((c) => (typeof c === 'string' ? { field: c } : c && typeof c === 'object' ? { ...c, field: c.field ?? c.key ?? c.name ?? c.id } : null)).filter((c) => c && (c.field !== undefined || columnType(c.type) === 'rank'));
+  }
+  const labelF = spec.label ?? spec.x;
+  let list;
+  if (spec.y !== undefined || spec.value !== undefined) {
+    list = [labelF, ...[].concat(spec.y ?? []), ...[].concat(spec.value ?? [])].filter((f) => f !== undefined && f !== null);
+    if (!labelF) { const first = fields.find((f) => fieldKind(data, f) === 'category' && f !== groupF); if (first) list.unshift(first); }
+  } else {
+    list = fields.filter((f) => f !== groupF && !String(f).startsWith('_'));
+    if (labelF && list.includes(labelF)) list = [labelF, ...list.filter((f) => f !== labelF)];
+  }
+  if (typeof spec.dashed === 'string') list = list.filter((f) => f !== spec.dashed);
+  return uniq(list).map((f) => ({ field: f }));
+}
+
+/** Pista de formato a partir del texto crudo: "12%" → porcentaje, "$ 3.000" → moneda. */
+function rawHint(values) {
+  const strs = values.filter((v) => typeof v === 'string' && v.trim());
+  if (!strs.length || strs.length < values.length * 0.6) return null;
+  if (strs.filter((s) => /%\s*$/.test(s)).length >= strs.length * 0.6) return { type: 'percent', scale: 1 };
+  const cur = strs.map((s) => (/^\s*[-−]?\s*(US\$|\$|€|£|R\$|S\/|UF)/.exec(s) || [])[1]).filter(Boolean);
+  if (cur.length >= strs.length * 0.6) return { type: 'number', prefix: cur[0] === 'UF' ? 'UF ' : cur[0] };
+  return null;
+}
+
+/**
+ * Formateador de una columna numérica: mismos decimales en toda la columna
+ * (los números se leen alineados) y cifras completas; nada de "1,2 M" en una
+ * tabla salvo que se pida `format: "compact"`.
+ */
+function columnFormat(fmt, values, locale, hint) {
+  let o = typeof fmt === 'string' ? { type: fmt } : fmt && typeof fmt === 'object' ? { ...fmt } : hint ? { ...hint } : { type: 'number' };
+  if (!o.type) o.type = 'number';
+  const nums = values.filter(Number.isFinite);
+  const maxAbs = nums.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+  if (o.type === 'currency') { o = { ...o, type: 'number', prefix: o.prefix ?? currencyPrefix(o.currency, langOf(locale)) }; if (o.decimals === undefined) o.decimals = maxAbs >= 100 || nums.every(Number.isInteger) ? 0 : 2; }
+  if (o.type === 'number' && o.decimals === undefined) {
+    const cap = maxAbs >= 1000 ? 0 : maxAbs >= 100 ? 1 : maxAbs >= 1 ? 2 : 3;
+    o.decimals = Math.min(cap, Math.max(0, ...nums.map(decimalsOf)));
+  }
+  if (o.type === 'percent' && o.decimals === undefined) {
+    const scale = o.scale ?? (maxAbs > 1.5 ? 1 : 100);
+    o.scale = scale;
+    const sc = nums.map((v) => v * scale);
+    const m = sc.reduce((a, v) => Math.max(a, Math.abs(v)), 0);
+    o.decimals = Math.min(m >= 10 ? 1 : 2, Math.max(0, ...sc.map((v) => decimalsOf(+v.toPrecision(10)))));
+  }
+  return makeFormat(o, locale, nums);
+}
+
+/** Prepara cada columna: tipo, alineación, formato y estadísticas sobre TODAS las filas. */
+function prepareColumns(spec, data, theme, locale) {
+  const W = words(locale);
+  const list = columnList(spec, data);
+  const fields = fieldsOf(data);
+  for (const c of list) {
+    if (c.field !== undefined && columnType(c.type) !== 'rank' && !fields.includes(c.field)) {
+      throw new PlotError(`La columna "${c.field}" no existe en los datos.`, `Campos disponibles: ${fields.map((f) => `"${f}"`).join(', ') || '(ninguno)'}`);
+    }
+  }
+  const labelF = spec.label ?? spec.x ?? (list.find((c) => c.field !== undefined && fieldKind(data, c.field) === 'category') || list[0] || {}).field;
+  const mainF = spec.bars === false ? null : spec.value ?? (typeof spec.y === 'string' ? spec.y : undefined);
+  let barGiven = false;
+  const cols = list.map((c0, i) => {
+    const c = { ...c0, index: i };
+    const t = columnType(c.type);
+    if (c.type !== undefined && !t) c.type = undefined;
+    c.label = c.label ?? c.title ?? c.header ?? (t === 'rank' && c.field === undefined ? '#' : humanize(c.field));
+    if (t === 'rank') { c.type = 'rank'; c.align = c.align ?? 'right'; return c; }
+    const raw = data.map((r) => r[c.field]);
+    const present = raw.filter((v) => !isNil(v));
+    const kind = present.length ? fieldKind(data, c.field) : 'empty';
+    const isArr = present.length && present.filter((v) => Array.isArray(v)).length >= present.length * 0.5;
+    const isBool = present.length && (present.every((v) => typeof v === 'boolean') || (present.every((v) => typeof v === 'string' && (YES.test(v.trim()) || NO.test(v.trim()))) && present.some((v) => YES.test(String(v).trim())) && present.some((v) => NO.test(String(v).trim())) && uniq(present.map((v) => String(v).trim().toLowerCase())).length <= 3));
+    const nums = kind === 'number' || kind === 'year' ? raw.map(num) : [];
+    const finite = nums.filter(Number.isFinite);
+    c.isLabel = c.field === labelF;
+    let type = t;
+    if (!type) {
+      if (isArr) type = 'sparkline';
+      else if (isBool) type = 'check';
+      else if (kind === 'date') type = 'date';
+      else if (kind === 'number' || (kind === 'year' && !c.isLabel)) {
+        const lo = Math.min(...finite), hi = Math.max(...finite);
+        if (ID_RE.test(String(c.field))) type = 'text';
+        else if (kind === 'year') type = 'number';
+        else if (DELTA_RE.test(String(c.field)) || DELTA_RE.test(String(c.label))) type = 'delta';
+        else if ((PROGRESS_RE.test(String(c.field)) || PROGRESS_RE.test(String(c.label))) && lo >= 0 && hi <= 150) type = 'progress';
+        else if ((GOAL_RE.test(String(c.field)) || GOAL_RE.test(String(c.label))) && lo >= 0 && hi <= 1.5 && !finite.every(Number.isInteger)) type = 'progress';
+        else type = 'number';
+      } else if (present.length && present.filter((v) => typeof v === 'string' && SAFE_URL.test(v.trim())).length >= present.length * 0.8) type = 'link';
+      else if (present.length >= 2 && present.filter((v) => statusOf(v)).length >= present.length * 0.8) type = 'badge';
+      else type = 'text';
+    }
+    if (type === 'bar' || type === 'heat' || type === 'progress') barGiven = barGiven || type === 'bar';
+    c.type = type;
+    c.kind = kind;
+    c.values = nums;
+    c.finite = finite;
+    const numeric = ['number', 'bar', 'heat', 'delta', 'progress'].includes(type);
+    if (numeric && !finite.length && !(type === 'number' && kind === 'year')) c.type = type = 'text';
+    const hint = rawHint(raw);
+    if (type === 'delta') {
+      const pctLike = hint?.type === 'percent' || PCT_NAME_RE.test(String(c.field)) || PCT_NAME_RE.test(String(c.label)) || (finite.length && finite.every((v) => Math.abs(v) <= 1.5) && !finite.every(Number.isInteger));
+      c.fmt = columnFormat(c.format ?? (pctLike ? (hint?.type === 'percent' ? hint : { type: 'percent' }) : hint), finite.map(Math.abs), locale, null);
+    } else if (type === 'progress') {
+      const target = c.target ?? c.max;
+      c.targetOf = (r) => { const t = typeof target === 'string' ? num(r[target]) : Number.isFinite(+target) && target !== null && target !== undefined ? +target : NaN; return t; };
+      c.hasTarget = target !== undefined && target !== null;
+      const hi = Math.max(0, ...finite);
+      c.scale100 = !c.hasTarget && hi > 1.5;
+      c.fmt = c.hasTarget ? columnFormat(c.format ?? spec.format ?? hint, finite, locale, null) : makeFormat({ type: 'percent', scale: c.scale100 ? 1 : 100, decimals: 0 }, locale, finite);
+      c.pctFmt = makeFormat({ type: 'percent', scale: 100, decimals: 0 }, locale, []);
+    } else if (numeric || (type === 'number' && kind === 'year')) {
+      c.fmt = kind === 'year' && !c.format ? (v) => String(Math.round(v)) : columnFormat(c.format ?? spec.format ?? hint, finite, locale, null);
+    } else if (type === 'sparkline') {
+      const all = present.flatMap((v) => (Array.isArray(v) ? v.map(num).filter(Number.isFinite) : []));
+      c.fmt = columnFormat(c.format ?? spec.format, all, locale, null);
+      c.sparkAll = all;
+    } else if (type === 'date') {
+      const ts = present.map(parseDate).filter(Number.isFinite);
+      c.unit = ts.length ? dateUnit(ts) : 'day';
+      c.withYear = c.yearless !== true;
+    }
+    c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
+    if (type === 'bar' || type === 'heat') {
+      c.lo = Math.min(0, ...finite);
+      c.hi = Math.max(0, ...finite);
+      if (type === 'heat') {
+        c.hlo = Math.min(...finite); c.hhi = Math.max(...finite);
+        const cs = resolveColorScale(c.colorScale ?? c.cmap);
+        c.mid = c.midpoint ?? spec.midpoint ?? (cs && typeof c.colorScale === 'object' && c.colorScale.mid !== undefined ? +c.colorScale.mid : undefined) ?? ((!cs || cs.kind === 'diverging') && c.hlo < 0 && c.hhi > 0 ? 0 : undefined);
+        c.stops = cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
+        if (c.stops && cs.kind === 'diverging' && c.mid === undefined) c.mid = (c.hlo + c.hhi) / 2;
+      }
+    }
+    if (type === 'badge') {
+      const vals = uniq(present.map(String));
+      const fixed = { ...(spec.colors || {}), ...(c.colors || {}) };
+      c.badge = new Map(vals.map((v) => {
+        const st = statusOf(v);
+        const base = hexOr(fixed[v], st === 'good' ? theme.status.good : st === 'warning' ? theme.status.warning : st === 'critical' ? theme.status.critical : st === 'info' ? theme.categorical[0] : null);
+        return [v, base];
+      }));
+    }
+    c.good = c.good ?? spec.good ?? 'up';
+    return c;
+  });
+  if (!barGiven && spec.bars !== false && data.length >= 3 && !(Array.isArray(spec.columns) && spec.columns.some((c) => c && typeof c === 'object' && c.type))) {
+    const main = cols.find((c) => c.field === mainF && c.type === 'number' && c.kind === 'number') || (mainF === undefined || mainF === null ? cols.find((c) => c.type === 'number' && c.kind === 'number' && !c.isLabel) : null);
+    if (main && main.finite.length >= 2) { main.type = 'bar'; main.lo = Math.min(0, ...main.finite); main.hi = Math.max(0, ...main.finite); main.auto = true; }
+  }
+  if (spec.rank && !cols.some((c) => c.type === 'rank')) cols.unshift({ type: 'rank', label: '#', align: 'right', index: -1 });
+  return { cols, labelF, W };
+}
+
+/** Texto visible de una celda (y su valor para ordenar). */
+function cellText(c, r, locale, W) {
+  const v = r[c.field];
+  if (c.type === 'rank') return String(r.__rank ?? '');
+  if (isNil(v)) return '';
+  switch (c.type) {
+    case 'number': case 'bar': case 'heat': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
+    case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = c.fmt(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
+    case 'progress': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
+    case 'date': { const t = parseDate(v); return Number.isFinite(t) ? formatDate(t, c.unit, locale, c.withYear) : String(v); }
+    case 'check': return v === true || YES.test(String(v).trim()) ? W.yes : W.no;
+    case 'sparkline': { const a = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : []; return a.length ? c.fmt(a[a.length - 1]) : ''; }
+    case 'link': { const s = String(v).trim(); if (c.text && r[c.text] !== undefined) return String(r[c.text]); return s.replace(/^mailto:/i, '').replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''); }
+    default:
+      if (Array.isArray(v)) return v.map((x) => (x && typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ');
+      if (typeof v === 'object') { try { return JSON.stringify(v); } catch { return '…'; } }
+      return String(v);
+  }
+}
+
+function sortKey(c, r) {
+  const v = r[c.field];
+  if (c.type === 'rank') return r.__rank;
+  if (isNil(v)) return null;
+  switch (c.type) {
+    case 'number': case 'bar': case 'heat': case 'delta': case 'progress': { const n = num(v); return Number.isFinite(n) ? n : null; }
+    case 'date': { const t = parseDate(v); return Number.isFinite(t) ? t : String(v); }
+    case 'check': return v === true || YES.test(String(v).trim()) ? 1 : 0;
+    case 'sparkline': { const a = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : []; return a.length ? a[a.length - 1] : null; }
+    default: return String(v);
+  }
+}
+
+const collatorCache = new Map();
+function compareText(locale) {
+  const k = langOf(locale);
+  if (!collatorCache.has(k)) {
+    let cmp;
+    try { const col = new Intl.Collator(k, { numeric: true, sensitivity: 'base' }); cmp = (a, b) => col.compare(a, b); } catch { cmp = (a, b) => (norm(a) < norm(b) ? -1 : norm(a) > norm(b) ? 1 : 0); }
+    collatorCache.set(k, cmp);
+  }
+  return collatorCache.get(k);
+}
+
+/** Orden actual: `sortBy` (campo o etiqueta) y `sort` ("desc"/"asc"). También `sort: "-ventas"`. */
+function sortState(spec, cols) {
+  let by = spec.sortBy ?? spec.orderBy;
+  let dir = spec.sortOrder ?? (['asc', 'desc'].includes(spec.sort) ? spec.sort : undefined);
+  if (by === undefined && typeof spec.sort === 'string' && !['asc', 'desc', 'none', 'alpha', 'start'].includes(spec.sort)) {
+    by = spec.sort.replace(/^[-+]/, '');
+    if (dir === undefined) dir = spec.sort.startsWith('-') ? 'desc' : spec.sort.startsWith('+') ? 'asc' : undefined;
+  }
+  if (spec.sort && typeof spec.sort === 'object') { by = spec.sort.by ?? spec.sort.field; dir = spec.sort.order ?? spec.sort.dir; }
+  if (by === undefined && dir) by = (cols.find((c) => c.type === 'bar') || cols.find((c) => ['number', 'heat', 'progress'].includes(c.type)) || {}).field;
+  if (by === undefined || spec.sort === 'none') return null;
+  const col = cols.find((c) => c.field === by) || cols.find((c) => String(c.label) === String(by)) || (by === '#' || by === 'rank' ? cols.find((c) => c.type === 'rank') : null);
+  if (!col) return null;
+  const numericish = ['number', 'bar', 'heat', 'delta', 'progress', 'sparkline', 'check'].includes(col.type);
+  return { col, dir: dir === 'asc' || dir === 'desc' ? dir : numericish ? 'desc' : 'asc' };
+}
+
+const BASE = { cell: 13, head: 12, pad: 10 };
+
+function table(spec, theme) {
+  const locale = spec.locale || 'es';
+  const lang = langOf(locale);
+  const all = ensureData(spec).map((r, i) => ({ ...r, __i: i }));
+  const { cols, labelF, W } = prepareColumns(spec, all, theme, locale);
+  if (!cols.length) throw new PlotError('La tabla no tiene columnas.', 'Pasa filas con campos, o `columns: ["region", "ventas"]`.');
+  const X = ctx.textScale;
+  const frame = createFrame(spec, theme, { height: 400 });
+  const area = frame.layout([]);
+  const density = spec.density === 'compact' ? 0.65 : spec.density === 'comfortable' ? 1.3 : 1;
+  const padY = Math.round(9 * density);
+  const FS = BASE.cell, HS = BASE.head;
+  const LH = Math.round(FS * X * 1.38);
+  const groupF = typeof spec.group === 'string' && all.length && spec.group in all[0] ? spec.group : null;
+  const hl = spec.highlight === undefined || spec.highlight === null || spec.highlight === false ? null : new Set([].concat(spec.highlight).map(String));
+  const isHL = (r) => hl && labelF !== undefined && hl.has(String(r[labelF]));
+
+  let rows = all;
+  const query = typeof spec.query === 'string' ? spec.query.trim() : '';
+  if (query) {
+    const terms = norm(query).split(/\s+/).filter(Boolean);
+    rows = rows.filter((r) => {
+      const hay = norm(cols.map((c) => (c.type === 'rank' ? '' : cellText(c, r, locale, W) + ' ' + (r[c.field] ?? ''))).join(' ') + ' ' + (groupF ? r[groupF] : ''));
+      return terms.every((t) => hay.includes(t));
+    });
+  }
+  const st = sortState(spec, cols);
+  if (st && st.col.type !== 'rank') {
+    const cmpT = compareText(locale);
+    const sgn = st.dir === 'asc' ? 1 : -1;
+    rows = [...rows].sort((a, b) => {
+      const ka = sortKey(st.col, a), kb = sortKey(st.col, b);
+      if (ka === null && kb === null) return a.__i - b.__i;
+      if (ka === null) return 1;
+      if (kb === null) return -1;
+      const d = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : cmpT(String(ka), String(kb));
+      return d * sgn || a.__i - b.__i;
+    });
+  } else if (st && st.col.type === 'rank' && st.dir === 'desc') rows = [...rows].reverse();
+  if (groupF) {
+    const order = new Map(uniq(all.map((r) => String(r[groupF] ?? ''))).map((k, i) => [k, i]));
+    rows = [...rows].sort((a, b) => order.get(String(a[groupF] ?? '')) - order.get(String(b[groupF] ?? '')));
+  }
+  if (Number.isFinite(+spec.top) && +spec.top > 0) rows = rows.slice(0, +spec.top);
+  rows = rows.map((r, i) => ({ ...r, __rank: i + 1 }));
+
+  const nRows = rows.length;
+  const psRaw = spec.pageSize ?? spec.perPage ?? (spec.paginate === false ? Infinity : undefined);
+  const pageSize = psRaw === false || psRaw === 0 || psRaw === Infinity ? Infinity : Number.isFinite(+psRaw) && +psRaw > 0 ? Math.round(+psRaw) : nRows > 15 ? 10 : Infinity;
+  const pages = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(nRows / pageSize));
+  const page = Math.max(1, Math.min(pages, Math.round(+spec.page || 1)));
+  const pageRows = pageSize === Infinity ? rows : rows.slice((page - 1) * pageSize, page * pageSize);
+
+  const totalOf = (c) => {
+    const pick = c.total ?? (spec.total === true || typeof spec.total === 'string' ? (typeof spec.total === 'string' && spec.total !== 'true' ? spec.total : 'auto') : spec.total && typeof spec.total === 'object' ? spec.total[c.field] ?? 'auto' : undefined);
+    if (pick === undefined || pick === false || c.isLabel || c.type === 'rank') return null;
+    if (!['number', 'bar', 'heat', 'progress', 'delta'].includes(c.type) || c.kind === 'year') return null;
+    const how = pick === true || pick === 'auto' ? (c.type === 'delta' ? null : c.type === 'progress' || c.fmt?.type === 'percent' ? 'mean' : 'sum') : pick;
+    if (!how) return null;
+    const v = aggregate(rows.map((r) => num(r[c.field])), how);
+    return Number.isFinite(v) ? v : null;
+  };
+  const hasTotal = spec.total !== undefined && spec.total !== false && cols.some((c) => totalOf(c) !== null);
+  const totalLabel = spec.totalLabel ?? (spec.total && typeof spec.total === 'object' ? spec.total.label : undefined) ?? W.total;
+
+  const edge = Math.min(BASE.pad, Math.max(4, frame.pad - 6));
+  const tableX = area.x - edge, tableW = area.w + edge * 2;
+  const sample = all.length > 1500 ? all.filter((_, i) => i % Math.ceil(all.length / 1500) === 0) : all;
+  const P = BASE.pad;
+  const pillH = Math.round(Math.min(22, LH + 3));
+  for (const c of cols) {
+    const texts = c.type === 'rank' ? [String(Math.max(1, nRows))] : sample.map((r) => cellText(c, r, locale, W));
+    const weight = c.isLabel ? 500 : 400;
+    const widths = texts.map((t) => measure(t, FS, weight));
+    let tw = Math.max(0, ...widths);
+    if (hasTotal && c.isLabel) tw = Math.max(tw, measure(totalLabel, FS, 600));
+    const tot = hasTotal ? totalOf(c) : null;
+    if (tot !== null) tw = Math.max(tw, measure(c.type === 'progress' && !c.hasTarget ? c.pctFmt(tot / (c.scale100 ? 100 : 1)) : c.fmt(tot), FS, 600));
+    const longest = Math.max(0, ...texts.map((t) => Math.max(0, ...String(t).split(/\s+/).map((w) => measure(w, FS, weight)))));
+    const avgLen = texts.reduce((a, t) => a + String(t).length, 0) / Math.max(1, texts.length);
+    c.lines = c.lines ?? (c.type === 'text' || c.type === 'link' ? (avgLen > 36 ? 3 : 2) : 1);
+    c.valueW = tw;
+    let nat, min;
+    switch (c.type) {
+      case 'bar': nat = tw + 8 + 120; min = tw + 8 + 36; break;
+      case 'heat': nat = tw + 16; min = nat; break;
+      case 'delta': nat = tw + 13; min = nat; break;
+      case 'sparkline': nat = 104; min = 56; break;
+      case 'progress': nat = tw + 8 + 96; min = tw + 8 + 40; break;
+      case 'badge': { const pw = Math.max(0, ...texts.map((t) => measure(t, 12, 500) + 18)); nat = pw; min = Math.min(pw, 84); break; }
+      case 'check': nat = 18; min = 18; break;
+      case 'text': case 'link': nat = tw; min = Math.min(tw, Math.max(longest, Math.min(tw, 96))); break;
+      default: nat = tw; min = tw;
+    }
+    const hw = measure(c.label, HS, 600) + (c.type === 'rank' ? 0 : 12); // + flecha de orden
+    const hmin = Math.max(...String(c.label).split(/\s+/).map((w) => measure(w, HS, 600))) + 12;
+    c.nat = Math.max(nat, Math.min(hw, Math.max(nat, hw))) + 2 * P;
+    c.min = Math.max(min, Math.min(hmin, hw)) + 2 * P;
+    if (Number.isFinite(+c.width) && +c.width > 0) { c.nat = c.min = +c.width; c.fixed = true; }
+    c.minW = Math.min(c.min, c.nat);
+  }
+  const sumMin = cols.reduce((a, c) => a + c.minW, 0);
+  const sumNat = cols.reduce((a, c) => a + c.nat, 0);
+  const cardsOpt = spec.cards ?? spec.stacked ?? 'auto';
+  const cards = cardsOpt === true || cardsOpt === 'always' || (cardsOpt !== false && cardsOpt !== 'never' && (sumMin > tableW + 0.5 || (tableW < 360 && cols.length > 3)));
+
+  if (!cards) {
+    for (const c of cols) c.w = c.nat;
+    if (sumNat <= tableW) {
+      let extra = tableW - sumNat;
+      const tracks = cols.filter((c) => !c.fixed && (c.type === 'bar' || c.type === 'progress'));
+      for (const c of tracks) { const add = Math.min(extra / tracks.length, 110); c.w += add; }
+      extra = tableW - cols.reduce((a, c) => a + c.w, 0);
+      const flex = cols.filter((c) => !c.fixed && (c.type === 'text' || c.type === 'link' || c.isLabel));
+      const share = flex.length ? flex : cols.filter((c) => !c.fixed);
+      const base = share.reduce((a, c) => a + c.w, 0) || 1;
+      for (const c of share) c.w += (extra * c.w) / base;
+    } else {
+      let need = sumNat - tableW;
+      const ORDER = [['sparkline', 'bar', 'progress'], ['text', 'link'], null];
+      for (const group of ORDER) {
+        if (need <= 0) break;
+        const take = cols.filter((c) => !c.fixed && (group ? group.includes(c.type) : true));
+        const slack = take.reduce((a, c) => a + (c.w - c.minW), 0);
+        if (slack <= 0) continue;
+        const k = Math.min(1, need / slack);
+        for (const c of take) { const d = (c.w - c.minW) * k; c.w -= d; need -= d; }
+      }
+      if (need > 0.5) { const k = tableW / cols.reduce((a, c) => a + c.w, 0); for (const c of cols) c.w *= k; }
+    }
+    let x = tableX;
+    for (const c of cols) { c.x = x; x += c.w; }
+  }
+
+  const body = [];
+  const accent = theme.categorical[0];
+  const negColor = theme.categorical[1] || theme.status.critical;
+  const isDark = theme.mode === 'dark';
+  const goodC = readable(theme.status.good, theme), badC = readable(theme.status.critical, theme);
+  const ink = theme.ink;
+  const dimC = mix(theme.muted, theme.surface, isDark ? 0.4 : 0.45);
+  const baseline = (top) => top + padY + Math.round(FS * X * 0.96);
+  const midLine = (top) => top + padY + LH / 2;
+
+  const pill = (x, cy, label, color, maxW, align = 'left') => {
+    const bg = color ? mix(color, theme.surface, isDark ? 0.72 : 0.86) : theme.tint;
+    const fg = color ? legible(isDark ? mix(color, '#FFFFFF', 0.25) : color, bg, isDark ? '#FFFFFF' : ink) : theme.lede;
+    const t = truncate(label, maxW - 18, 12, 500);
+    const w = Math.min(maxW, measure(t, 12, 500) + 18);
+    const x0 = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+    return [
+      el('rect', { x: x0, y: cy - pillH / 2, width: w, height: pillH, rx: pillH / 2, fill: bg }),
+      color ? el('circle', { cx: x0 + 9, cy, r: 3, fill: fg }) : '',
+      text(x0 + (color ? 16 : 9), cy + 4.2 * X, t, { fill: fg, fontSize: 12, fontWeight: 500 }),
+    ];
+  };
+  const heatColor = (c, v) => {
+    if (c.mid !== undefined) { const span = Math.max(c.hhi - c.mid, c.mid - c.hlo) || 1; return ramp(c.stops || theme.diverging, 0.5 + 0.85 * ((v - c.mid) / span / 2)); }
+    const t = (v - c.hlo) / (c.hhi - c.hlo || 1);
+    return c.stops ? ramp(c.stops, 0.05 + 0.75 * t) : ramp(theme.sequential.slice(0, -1), 0.04 + 0.72 * t);
+  };
+  const arrow = (x, cy, up, color) => el('path', { d: up ? `M${x},${cy + 3}L${x + 3.5},${cy - 3}L${x + 7},${cy + 3}Z` : `M${x},${cy - 3}L${x + 3.5},${cy + 3}L${x + 7},${cy - 3}Z`, fill: color, 'aria-hidden': 'true' });
+  const deltaColor = (c, n) => (n === 0 ? theme.muted : (n > 0) === (c.good !== 'down') ? goodC : badC);
+  const check = (cx, cy, yes) => yes
+    ? el('path', { d: `M${cx - 4.5},${cy + 0.2}L${cx - 1.4},${cy + 3.3}L${cx + 4.8},${cy - 3.6}`, fill: 'none', stroke: goodC, strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' })
+    : el('path', { d: `M${cx - 3.5},${cy}H${cx + 3.5}`, stroke: theme.muted, strokeWidth: 1.6, strokeLinecap: 'round' });
+  const spark = (x, cy, w, h, vals, muted) => {
+    if (vals.length < 2) return '';
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    const pts = vals.map((v, k) => [x + (k / (vals.length - 1)) * (w - 4) + 1, cy + h / 2 - ((v - mn) / (mx - mn || 1)) * h]);
+    const d = pts.map(([a, b], k) => (k ? 'L' : 'M') + a.toFixed(1) + ',' + b.toFixed(1)).join('');
+    const [lx, ly] = pts[pts.length - 1];
+    return [
+      el('path', { d: d + `L${lx.toFixed(1)},${(cy + h / 2).toFixed(1)}L${pts[0][0].toFixed(1)},${(cy + h / 2).toFixed(1)}Z`, fill: muted ? dimC : accent, fillOpacity: 0.08, stroke: 'none' }),
+      el('path', { d, fill: 'none', stroke: muted ? dimC : theme.muted, strokeWidth: 1.5, strokeLinejoin: 'round', strokeLinecap: 'round' }),
+      el('circle', { cx: lx, cy: ly, r: 2.6, fill: muted ? dimC : accent }),
+    ];
+  };
+  const sparkTip = (c, vals) => (vals.length ? `${c.fmt(vals[0])} → ${c.fmt(vals[vals.length - 1])}` + (vals.length > 2 ? ` (min ${c.fmt(Math.min(...vals))}, max ${c.fmt(Math.max(...vals))})` : '') : '');
+  const anyHL = hl && rows.some(isHL);
+
+  /** Contenido de una celda dentro de una caja (x, w) y una fila (top, alto). */
+  function cell(c, r, x, w, top, h, opts = {}) {
+    const out = [];
+    const ix = x + P, iw = Math.max(4, w - 2 * P);
+    const by = baseline(top), my = midLine(top);
+    const v = c.type === 'rank' ? r.__rank : r[c.field];
+    const weight = opts.total ? 600 : c.isLabel ? (opts.hl ? 600 : 500) : 400;
+    const muted = anyHL && !opts.hl && !opts.total;
+    const tx = c.align === 'right' ? x + w - P : c.align === 'center' ? x + w / 2 : ix;
+    const anchor = c.align === 'right' ? 'end' : c.align === 'center' ? 'middle' : null;
+    const put = (s, { x: px, ...attrs } = {}) => out.push(text(px ?? tx, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: anchor, ...attrs }));
+    if (opts.total && c.isLabel) { put(truncate(totalLabel, iw, FS, 600)); return { out }; }
+    if (opts.total) {
+      const tv = totalOf(c);
+      if (tv === null) return { out };
+      const ts = c.type === 'delta' ? (tv > 0 ? '+' : tv < 0 ? '−' : '') + c.fmt(Math.abs(tv)) : c.fmt(tv);
+      if ((c.type === 'bar' || c.type === 'progress') && c.align === 'right') put(ts, { x: ix + c.valueW, textAnchor: 'end' });
+      else put(ts);
+      return { out };
+    }
+    if (c.type !== 'rank' && isNil(v)) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+    const s = cellText(c, r, locale, W);
+    switch (c.type) {
+      case 'rank': put(s, { fill: theme.muted, fontWeight: 400 }); break;
+      case 'bar': {
+        const n = num(v);
+        if (!Number.isFinite(n)) { put(s); break; }
+        const vw = c.valueW;
+        const trackX = ix + vw + 8, trackW = Math.max(12, ix + iw - trackX);
+        const span = c.hi - c.lo || 1;
+        const z = trackX + (-c.lo / span) * trackW;
+        const len = (Math.abs(n) / span) * trackW;
+        const bh = Math.max(6, Math.min(12, Math.round(LH * 0.58)));
+        const fill = muted ? dimC : n < 0 ? negColor : accent;
+        out.push(text(ix + vw, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        if (c.lo < 0) out.push(el('line', { x1: z, x2: z, y1: my - bh / 2 - 3, y2: my + bh / 2 + 3, stroke: theme.axis, strokeWidth: 1 }));
+        if (len > 0.3) out.push(el('rect', { x: n < 0 ? z - len : z, y: my - bh / 2, width: Math.max(1.5, len), height: bh, rx: Math.min(2, len / 2), fill }));
+        break;
+      }
+      case 'heat': {
+        const n = num(v);
+        if (!Number.isFinite(n)) { put(s); break; }
+        const fill = heatColor(c, n);
+        if (opts.chip) {
+          const bw = Math.min(w - P, measure(s, FS, weight) + 16), right = x + w - P;
+          out.push(el('rect', { x: right - bw, y: top + 5, width: bw, height: Math.max(0, h - 10), rx: 5, fill }));
+          put(s, { fill: textOn(fill, theme), x: right - 8 });
+          break;
+        }
+        out.push(el('rect', { x: x + 3, y: top + 4, width: Math.max(0, w - 6), height: Math.max(0, h - 8), rx: 5, fill }));
+        put(s, { fill: textOn(fill, theme) });
+        break;
+      }
+      case 'delta': {
+        const n = num(v);
+        if (!Number.isFinite(n)) { put(s); break; }
+        const color = deltaColor(c, n);
+        const tw = measure(s, FS, 500);
+        const right = c.align === 'right' ? x + w - P : c.align === 'center' ? x + w / 2 + (tw + 11) / 2 : ix + tw + 11;
+        out.push(text(right, by, s, { fill: color, fontSize: FS, fontWeight: 500, textAnchor: 'end' }));
+        if (n !== 0) out.push(arrow(right - tw - 11, my, n > 0, color));
+        break;
+      }
+      case 'progress': {
+        const n = num(v);
+        if (!Number.isFinite(n)) { put(s); break; }
+        const t = c.hasTarget ? c.targetOf(r) : c.scale100 ? 100 : 1;
+        const ratio = Number.isFinite(t) && t ? n / t : NaN;
+        const vw = c.valueW;
+        const shown = c.hasTarget && Number.isFinite(ratio) ? c.pctFmt(ratio) : s;
+        out.push(text(ix + vw, by, shown, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        const trackX = ix + vw + 8, trackW = Math.max(12, ix + iw - trackX);
+        out.push(el('rect', { x: trackX, y: my - 3, width: trackW, height: 6, rx: 3, fill: theme.tint2 }));
+        if (Number.isFinite(ratio) && ratio > 0) {
+          const goodUp = c.good !== 'down';
+          const fill = muted ? dimC : goodUp ? (ratio >= 1 ? theme.status.good : accent) : ratio > 1 ? theme.status.critical : theme.status.good;
+          out.push(el('rect', { x: trackX, y: my - 3, width: Math.max(6, trackW * Math.min(1, ratio)), height: 6, rx: 3, fill }));
+        }
+        return { out, tip: c.hasTarget && Number.isFinite(t) ? `${c.label}: ${c.fmt(n)} / ${c.fmt(t)} (${c.pctFmt(ratio)})` : null };
+      }
+      case 'sparkline': {
+        const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
+        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : '—', { fill: theme.muted }); break; }
+        const sw = Math.min(iw, 120), sh = Math.max(10, Math.min(18, h - 2 * padY - 2));
+        const sx = c.align === 'right' ? x + w - P - sw : c.align === 'center' ? x + (w - sw) / 2 : ix;
+        out.push(spark(sx, my, sw, sh, vals, muted));
+        return { out, tip: `${c.label}: ${sparkTip(c, vals)}` };
+      }
+      case 'badge': {
+        const color = c.badge.get(String(v));
+        out.push(...pill(c.align === 'right' ? x + w - P : c.align === 'center' ? x + w / 2 : ix, my, s, color, iw, c.align));
+        return { out, tip: measure(s, 12, 500) + 18 > iw ? s : null };
+      }
+      case 'check': {
+        const yes = v === true || YES.test(String(v).trim());
+        const cx = c.align === 'right' ? x + w - P - 5 : c.align === 'center' ? x + w / 2 : ix + 5;
+        out.push(g({ role: 'img', 'aria-label': s }, [check(cx, my, yes), el('title', {}, esc(s))]));
+        break;
+      }
+      case 'link': {
+        const href = String(v).trim();
+        const lines = wrap(s, iw, FS, 400, c.lines);
+        const color = readable(accent, theme);
+        const t = lines.map((l, k) => text(tx, by + k * LH, l, { fill: color, fontSize: FS, textAnchor: anchor, textDecoration: 'underline' })).join('');
+        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : t);
+        return { out, lines: lines.length, tip: lines.join(' ') !== s ? s : null };
+      }
+      case 'text': case 'date': default: {
+        const lines = c.type === 'text' ? wrap(s, iw, FS, weight, c.lines) : [truncate(s, iw, FS, weight)];
+        lines.forEach((l, k) => out.push(text(tx, by + k * LH, l, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: anchor })));
+        return { out, lines: lines.length, tip: lines.join(' ').replace(/…$/, '') !== s ? s : null };
+      }
+    }
+    return { out };
+  }
+
+  const groupCounts = new Map();
+  if (groupF) for (const r of rows) groupCounts.set(String(r[groupF] ?? ''), (groupCounts.get(String(r[groupF] ?? '')) || 0) + 1);
+  const groupH = Math.round(LH + 12 * density + 4);
+  const groupRow = (name, top) => {
+    const n = groupCounts.get(name) || 0;
+    const lab = truncate(name || '—', area.w - 60, 12.5, 600);
+    return g({ class: 'pa-tgroup', role: 'row' }, [
+      el('rect', { x: tableX, y: top + 4, width: tableW, height: groupH - 6, rx: 6, fill: theme.tint }),
+      text(area.x, top + 4 + (groupH - 6) / 2 + 4.3 * X, lab, { fill: ink, fontSize: 12.5, fontWeight: 600, role: 'rowheader' }),
+      text(area.x + measure(lab, 12.5, 600) + 8, top + 4 + (groupH - 6) / 2 + 4.3 * X, String(n), { fill: theme.muted, fontSize: 12 }),
+    ]);
+  };
+
+  const tableRows = [];
+  let y = area.y;
+  if (spec._search) {
+    body.push(el('rect', { class: 'pa-search-slot', x: area.x, y, width: Math.min(area.w, 300), height: Math.round(32 * Math.max(1, 0.6 + 0.4 * X)), fill: 'transparent' }));
+    y += Math.round(32 * Math.max(1, 0.6 + 0.4 * X)) + 12;
+  }
+  const label = labelF !== undefined ? cols.find((c) => c.field === labelF) : null;
+  const rowAttrs = (r, i) => ({ class: 'pa-tr' + (isHL(r) ? ' pa-tr-hl' : ''), role: 'row', 'aria-rowindex': (page - 1) * (pageSize === Infinity ? 0 : pageSize) + i + 2, 'data-row': r.__i });
+
+  if (!cards) {
+    const HLH = Math.round(HS * X * 1.3);
+    const headLines = cols.map((c) => wrap(c.label, Math.max(10, c.w - 2 * P - (c.type === 'rank' ? 0 : 10)), HS, 600, 2));
+    const nHead = Math.max(1, ...headLines.map((l) => l.length));
+    const headH = nHead * HLH + Math.round(10 * Math.max(0.8, density)) + 4;
+    const heads = cols.map((c, i) => {
+      const lines = headLines[i];
+      const sorted = st && st.col === c;
+      const overValue = (c.type === 'bar' || c.type === 'progress') && c.align === 'right';
+      const headW = Math.max(...lines.map((l) => measure(l, HS, 600)));
+      const ax = overValue ? Math.min(c.x + c.w - P, c.x + P + Math.max(c.valueW, headW + (sorted ? 10 : 0))) : c.align === 'right' ? c.x + c.w - P : c.align === 'center' ? c.x + c.w / 2 : c.x + P;
+      const anchor = c.align === 'right' ? 'end' : c.align === 'center' ? 'middle' : null;
+      const y0 = y + headH - 9 - (lines.length - 1) * HLH;
+      const parts = [el('rect', { class: 'pa-thbg', x: c.x, y, width: c.w, height: headH, fill: 'transparent' })];
+      lines.forEach((l, k) => parts.push(text(ax, y0 + k * HLH, l, { fill: sorted ? ink : theme.lede, fontSize: HS, fontWeight: 600, textAnchor: anchor })));
+      const lw = measure(lines[lines.length - 1], HS, 600);
+      const ly = y0 + (lines.length - 1) * HLH - HS * X * 0.36;
+      const axx = c.align === 'right' ? ax - lw - 9 : c.align === 'center' ? ax + lw / 2 + 3 : ax + lw + 3;
+      if (c.type !== 'rank' && c.sortable !== false) {
+        const up = sorted ? st.dir === 'asc' : false;
+        const d = up ? `M${axx},${ly + 2}L${axx + 3},${ly - 2}L${axx + 6},${ly + 2}Z` : `M${axx},${ly - 2}L${axx + 3},${ly + 2}L${axx + 6},${ly - 2}Z`;
+        parts.push(el('path', { class: sorted ? 'pa-sort-on' : 'pa-sorthint', d, fill: sorted ? ink : theme.muted }));
+      }
+      const attrs = { class: 'pa-th', role: 'columnheader' };
+      if (c.type !== 'rank' && c.sortable !== false && spec.sortable !== false) {
+        attrs['data-sort'] = c.field;
+        attrs['aria-sort'] = sorted ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+        attrs['data-num'] = ['number', 'bar', 'heat', 'delta', 'progress', 'sparkline', 'check'].includes(c.type) ? '1' : null;
+      }
+      return g(attrs, parts);
+    });
+    tableRows.push(g({ class: 'pa-thead', role: 'row', 'aria-rowindex': 1 }, heads));
+    y += headH;
+    tableRows.push(el('line', { x1: area.x, x2: area.x + area.w, y1: y - 0.5, y2: y - 0.5, stroke: theme.axis, strokeWidth: 1 }));
+
+    let lastGroup = null;
+    if (!pageRows.length) {
+      tableRows.push(text(area.x + area.w / 2, y + 30, query ? W.none : '—', { fill: theme.muted, fontSize: FS, textAnchor: 'middle' }));
+      y += 48;
+    }
+    pageRows.forEach((r, i) => {
+      if (groupF) {
+        const gname = String(r[groupF] ?? '');
+        if (gname !== lastGroup) { tableRows.push(groupRow(gname, y)); y += groupH; lastGroup = gname; }
+      }
+      const h0 = LH + 2 * padY;
+      const made = cols.map((c) => cell(c, r, c.x, c.w, y, h0, { hl: isHL(r) }));
+      const nLines = Math.max(1, ...made.map((m) => m.lines || 1));
+      const h = h0 + (nLines - 1) * LH;
+      const made2 = nLines > 1 ? cols.map((c, k) => (c.type === 'heat' ? cell(c, r, c.x, c.w, y, h, { hl: isHL(r) }) : made[k])) : made;
+      const zebra = spec.striped && i % 2 === 1;
+      const parts = [el('rect', { class: 'pa-trbg', x: tableX, y: y + 1, width: tableW, height: h - 2, rx: 6, fill: isHL(r) ? theme.tint : zebra ? theme.tint : 'transparent', fillOpacity: zebra && !isHL(r) ? 0.55 : null })];
+      if (isHL(r)) parts.push(el('rect', { x: tableX, y: y + 5, width: 3, height: h - 10, rx: 1.5, fill: accent }));
+      made2.forEach((m, k) => {
+        const c = cols[k];
+        parts.push(g({ role: c.isLabel ? 'rowheader' : 'cell', 'data-tip': m.tip ? tip(label ? String(r[labelF] ?? '') : '', m.tip) : null }, m.out));
+      });
+      tableRows.push(g(rowAttrs(r, i), parts));
+      y += h;
+      if (i < pageRows.length - 1 || hasTotal) tableRows.push(el('line', { x1: area.x, x2: area.x + area.w, y1: y - 0.5, y2: y - 0.5, stroke: theme.grid, strokeWidth: 1 }));
+    });
+    if (hasTotal) {
+      const h = LH + 2 * padY + 2;
+      tableRows.push(el('line', { x1: area.x, x2: area.x + area.w, y1: y + 0.5, y2: y + 0.5, stroke: theme.axis, strokeWidth: 1.25 }));
+      const firstText = cols.find((c) => c.isLabel) || cols.find((c) => c.type === 'text') || cols[0];
+      const made = cols.map((c) => (c === firstText ? cell({ ...c, isLabel: true }, {}, c.x, c.w, y + 2, h, { total: true }) : cell(c, {}, c.x, c.w, y + 2, h, { total: true })));
+      tableRows.push(g({ class: 'pa-ttotal', role: 'row' }, made.map((m, k) => g({ role: cols[k] === firstText ? 'rowheader' : 'cell' }, m.out))));
+      y += h + 2;
+    }
+  } else {
+    const labelCol = label || cols.find((c) => c.type === 'text') || null;
+    const rankCol = cols.find((c) => c.type === 'rank');
+    const mainCol = cols.find((c) => c.type === 'bar');
+    const rest = cols.filter((c) => c !== labelCol && c !== rankCol && c !== mainCol);
+    const KL = 12.5; // tamaño de las etiquetas
+    const lineH = Math.round(Math.max(LH, pillH) + 6);
+    const CP = 12;
+    const keyW = Math.min(area.w * 0.46, Math.max(60, ...rest.map((c) => measure(c.label, KL) + 12)));
+    if (!pageRows.length) { body.push(text(area.x + area.w / 2, y + 30, query ? W.none : '—', { fill: theme.muted, fontSize: FS, textAnchor: 'middle' })); y += 48; }
+    let lastGroup = null;
+    const cardOf = (r, i, total = false) => {
+      const top = y;
+      const parts = [];
+      const hlr = !total && isHL(r);
+      const muted = anyHL && !hlr && !total;
+      let cy = top + CP;
+      const rankW = rankCol && !total ? measure(String(r.__rank), 12) + 8 : 0;
+      const mainS = mainCol ? (total ? (totalOf(mainCol) !== null ? mainCol.fmt(totalOf(mainCol)) : '') : cellText(mainCol, r, locale, W)) : '';
+      const mainW = mainS ? measure(mainS, 14, 600) + 12 : 0;
+      const titleS = total ? totalLabel : labelCol ? cellText(labelCol, r, locale, W) || '—' : `#${r.__rank}`;
+      const tl = wrap(titleS, area.w - rankW - mainW, 14, 600, 2);
+      const TLH = Math.round(14 * X * 1.3);
+      if (rankW) parts.push(text(area.x, cy + 14 * X * 0.92, String(r.__rank), { fill: theme.muted, fontSize: 12 }));
+      tl.forEach((l, k) => parts.push(text(area.x + rankW, cy + 14 * X * 0.92 + k * TLH, l, { fill: ink, fontSize: 14, fontWeight: 600, role: k ? null : 'rowheader' })));
+      if (mainS) parts.push(text(area.x + area.w, cy + 14 * X * 0.92, mainS, { fill: ink, fontSize: 14, fontWeight: 600, textAnchor: 'end' }));
+      cy += tl.length * TLH;
+      if (mainCol && !total) {
+        const n = num(r[mainCol.field]);
+        if (Number.isFinite(n)) {
+          const span = mainCol.hi - mainCol.lo || 1;
+          const z = area.x + (-mainCol.lo / span) * area.w;
+          const len = (Math.abs(n) / span) * area.w;
+          cy += 5;
+          parts.push(el('rect', { x: area.x, y: cy, width: area.w, height: 5, rx: 2.5, fill: theme.tint }));
+          if (len > 0.3) parts.push(el('rect', { x: n < 0 ? z - len : z, y: cy, width: Math.max(2, len), height: 5, rx: 2.5, fill: muted ? dimC : n < 0 ? negColor : accent }));
+          cy += 5;
+        }
+      }
+      cy += 6;
+      for (const c of rest) {
+        if (total && totalOf(c) === null) continue;
+        const long = c.type === 'text' && !total && measure(cellText(c, r, locale, W), FS) > area.w - keyW;
+        const rowTop = cy + (lineH - (LH + 2 * padY)) / 2;
+        parts.push(text(area.x, baseline(rowTop), truncate(c.label, long ? area.w : keyW - 8, KL), { fill: theme.lede, fontSize: KL }));
+        if (long) {
+          const lines = wrap(cellText(c, r, locale, W), area.w, FS, 400, 4);
+          lines.forEach((l, k) => parts.push(text(area.x, cy + lineH + LH * (k + 0.75), l, { fill: ink, fontSize: FS })));
+          cy += lineH + lines.length * LH + 2;
+          continue;
+        }
+        const cc = { ...c, align: 'right' };
+        const boxW = cc.type === 'progress' || cc.type === 'bar' ? Math.min(area.w - keyW, cc.valueW + 8 + 110) : area.w - keyW;
+        const vx = area.x + area.w - boxW - P, vw = boxW + 2 * P;
+        const m = cell(cc, r, vx, vw, rowTop, LH + 2 * padY, { total, hl: hlr, chip: true });
+        parts.push(g({ role: 'cell', 'data-tip': m.tip ? tip(titleS, m.tip) : null }, m.out));
+        cy += lineH;
+      }
+      cy += CP - 4;
+      const h = cy - top;
+      const bg = el('rect', { class: 'pa-trbg', x: tableX, y: top + 2, width: tableW, height: h - 4, rx: 8, fill: hlr ? theme.tint : 'transparent' });
+      const mark = hlr ? el('rect', { x: tableX, y: top + 8, width: 3, height: h - 16, rx: 1.5, fill: accent }) : '';
+      y = cy;
+      return g(total ? { class: 'pa-ttotal', role: 'row' } : rowAttrs(r, i), [bg, mark, ...parts]);
+    };
+    pageRows.forEach((r, i) => {
+      if (groupF) {
+        const gname = String(r[groupF] ?? '');
+        if (gname !== lastGroup) { tableRows.push(groupRow(gname, y)); y += groupH; lastGroup = gname; }
+      }
+      tableRows.push(cardOf(r, i));
+      if (i < pageRows.length - 1 || hasTotal) tableRows.push(el('line', { x1: area.x, x2: area.x + area.w, y1: y - 0.5, y2: y - 0.5, stroke: hasTotal && i === pageRows.length - 1 ? theme.axis : theme.grid, strokeWidth: hasTotal && i === pageRows.length - 1 ? 1.25 : 1 }));
+    });
+    if (hasTotal) tableRows.push(cardOf({}, -1, true));
+  }
+
+  const colCount = cols.length;
+  body.push(g({ class: 'pa-table' + (cards ? ' pa-cards' : ''), role: 'table', 'aria-label': spec.title || W.table, 'aria-rowcount': nRows + 1, 'aria-colcount': colCount, style: 'font-variant-numeric:tabular-nums' }, tableRows));
+
+  if (pages > 1) {
+    y += 14;
+    const B = Math.round(28 * Math.max(1, 0.55 + 0.45 * X));
+    const cy = y + B / 2;
+    const from = (page - 1) * pageSize + 1, to = Math.min(nRows, page * pageSize);
+    const fmtI = makeFormat({ type: 'number', decimals: 0 }, locale, []);
+    const rangeS = `${fmtI(from)}–${fmtI(to)} / ${fmtI(nRows)}`;
+    const items = pagerItems(page, pages);
+    const rangeW = measure(rangeS, 12);
+    const btnW = (s) => Math.max(B, measure(s, 12.5, 600) + 14);
+    const full = items.reduce((a, it) => a + (it === '…' ? 14 : btnW(fmtI(it)) + 2), 0) + 2 * (B + 2);
+    const compact = full + rangeW + 16 > area.w;
+    const parts = [];
+    if (!compact || rangeW + 16 + 2 * B + measure(`${page} / ${pages}`, 12.5, 600) + 16 < area.w) {
+      parts.push(text(area.x, cy + 4.2 * X, rangeS, { fill: theme.muted, fontSize: 12 }));
+    }
+    let x = area.x + area.w;
+    const btn = (n, content, label, opts = {}) => {
+      const w = opts.w ?? B;
+      x -= w;
+      const disabled = n === null;
+      const attrs = disabled ? { class: 'pa-pg pa-pg-off', opacity: 0.32, 'aria-hidden': 'true' } : { class: 'pa-pg' + (opts.current ? ' pa-pg-on' : ''), 'data-page': n, 'data-arrow': opts.arrow, 'aria-label': label, 'aria-current': opts.current ? 'page' : null };
+      const out = g(attrs, [el('rect', { class: 'pa-pgbg', x, y, width: w, height: B, rx: 7, fill: opts.current ? theme.tint2 : 'transparent' }), content(x, w)]);
+      x -= 2;
+      return out;
+    };
+    const chev = (dir) => (x0, w) => el('path', { d: dir < 0 ? `M${x0 + w / 2 + 2.5},${cy - 5}L${x0 + w / 2 - 2.5},${cy}L${x0 + w / 2 + 2.5},${cy + 5}` : `M${x0 + w / 2 - 2.5},${cy - 5}L${x0 + w / 2 + 2.5},${cy}L${x0 + w / 2 - 2.5},${cy + 5}`, fill: 'none', stroke: ink, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' });
+    const num0 = (s, cur) => (x0, w) => text(x0 + w / 2, cy + 4.3 * X, s, { fill: cur ? ink : theme.lede, fontSize: 12.5, fontWeight: cur ? 600 : 400, textAnchor: 'middle' });
+    const out = [];
+    out.push(btn(page < pages ? page + 1 : null, chev(1), `${W.next} (${W.page} ${page + 1})`, { arrow: 'next' }));
+    if (compact) {
+      const s = `${fmtI(page)} / ${fmtI(pages)}`;
+      const w = measure(s, 12.5, 600) + 16;
+      x -= w;
+      out.push(text(x + w / 2, cy + 4.3 * X, s, { fill: ink, fontSize: 12.5, fontWeight: 600, textAnchor: 'middle' }));
+      x -= 2;
+    } else {
+      for (const it of [...items].reverse()) {
+        if (it === '…') { x -= 14; out.push(text(x + 7, cy + 4.3 * X, '…', { fill: theme.muted, fontSize: 12.5, textAnchor: 'middle' })); x -= 2; continue; }
+        const s = fmtI(it);
+        out.push(btn(it, num0(s, it === page), `${W.page} ${it}`, { current: it === page, w: btnW(s) }));
+      }
+    }
+    out.push(btn(page > 1 ? page - 1 : null, chev(-1), `${W.prev} (${W.page} ${page - 1})`, { arrow: 'prev' }));
+    parts.push(...out);
+    body.push(g({ class: 'pa-pager', role: 'navigation', 'aria-label': `${W.page} ${page} ${W.of} ${pages}` }, parts));
+    y += B;
+  }
+  if (spec.height === undefined) frame.setHeight(y + 12 + frame.chrome);
+
+  const desc = describeTable({ lang, cols, rows, nRows, page, pages, st, label, query });
+  const css = `.pa-live .pa-th[data-sort]{cursor:pointer}.pa-sorthint{opacity:0;transition:opacity .15s}.pa-live .pa-th[data-sort]:hover .pa-sorthint,.pa-live .pa-th[data-sort]:focus-visible .pa-sorthint{opacity:.7}`
+    + `.pa-live .pa-th[data-sort]:hover .pa-thbg{fill:${theme.tint};fill-opacity:.6}.pa-tr .pa-trbg{transition:fill .12s}.pa-live .pa-tr:hover .pa-trbg{fill:${theme.tint}}`
+    + `.pa-live .pa-pg{cursor:pointer}.pa-live .pa-pg:hover .pa-pgbg{fill:${theme.tint}}.pa-live .pa-pg-on:hover .pa-pgbg{fill:${theme.tint2}}`
+    + `.pa-th:focus-visible,.pa-pg:focus-visible{outline:2px solid ${accent};outline-offset:-2px}@media (prefers-reduced-motion:reduce){.pa-sorthint,.pa-tr .pa-trbg{transition:none}}`;
+  return frame.finish(body, { desc, type: 'table', role: 'figure', css });
+}
+
+/** Botones de página: 1 … 4 5 6 … 20 (como mucho 7 entradas). */
+function pagerItems(page, pages) {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  if (page <= 4) return [1, 2, 3, 4, 5, '…', pages];
+  if (page >= pages - 3) return [1, '…', pages - 4, pages - 3, pages - 2, pages - 1, pages];
+  return [1, '…', page - 1, page, page + 1, '…', pages];
+}
+
+function describeTable({ lang, cols, rows, nRows, page, pages, st, label, query }) {
+  const T = {
+    es: { t: 'Tabla de', and: 'y', r: 'filas', c: 'columnas', p: 'Página', of: 'de', s: 'Ordenada por', desc: 'de mayor a menor', asc: 'de menor a mayor', hi: 'Mayor', lo: 'menor', q: 'Filtrada por' },
+    en: { t: 'Table with', and: 'and', r: 'rows', c: 'columns', p: 'Page', of: 'of', s: 'Sorted by', desc: 'high to low', asc: 'low to high', hi: 'Highest', lo: 'lowest', q: 'Filtered by' },
+    pt: { t: 'Tabela com', and: 'e', r: 'linhas', c: 'colunas', p: 'Página', of: 'de', s: 'Ordenada por', desc: 'do maior para o menor', asc: 'do menor para o maior', hi: 'Maior', lo: 'menor', q: 'Filtrada por' },
+    fr: { t: 'Tableau de', and: 'et', r: 'lignes', c: 'colonnes', p: 'Page', of: 'sur', s: 'Trié par', desc: 'décroissant', asc: 'croissant', hi: 'Maximum', lo: 'minimum', q: 'Filtré par' },
+    de: { t: 'Tabelle mit', and: 'und', r: 'Zeilen', c: 'Spalten', p: 'Seite', of: 'von', s: 'Sortiert nach', desc: 'absteigend', asc: 'aufsteigend', hi: 'Höchster Wert', lo: 'niedrigster', q: 'Gefiltert nach' },
+  }[lang];
+  const names = cols.filter((c) => c.type !== 'rank').map((c) => c.label);
+  let s = `${T.t} ${nRows} ${T.r} ${T.and} ${names.length} ${T.c}: ${names.join(', ')}.`;
+  if (query) s += ` ${T.q} "${query}".`;
+  if (pages > 1) s += ` ${T.p} ${page} ${T.of} ${pages}.`;
+  if (st) s += ` ${T.s} ${st.col.label}, ${st.dir === 'desc' ? T.desc : T.asc}.`;
+  const m = cols.find((c) => c.type === 'bar') || cols.find((c) => ['number', 'heat'].includes(c.type) && !c.isLabel && c.kind === 'number');
+  if (m && label && rows.length > 1) {
+    let best = null, worst = null;
+    for (const r of rows) { const v = num(r[m.field]); if (!Number.isFinite(v)) continue; if (!best || v > best[1]) best = [r, v]; if (!worst || v < worst[1]) worst = [r, v]; }
+    if (best && worst && best[0] !== worst[0]) s += ` ${T.hi} ${m.label}: ${best[0][label.field]} (${m.fmt(best[1])}); ${T.lo}: ${worst[0][label.field]} (${m.fmt(worst[1])}).`;
+  }
+  return s;
+}
+
+return { "sortState": sortState, "table": table, "pagerItems": pagerItems, "COLUMN_TYPES": COLUMN_TYPES, "columnType": columnType, "statusOf": statusOf };
+});
 __def("src/facet.js", function () {
 const { el, g } = __req("src/svg.js");
 const { createFrame } = __req("src/frame.js");
@@ -9516,7 +10944,7 @@ function facet(spec, theme, renderOne) {
   const area = frame.layout(legend);
   const gap = spec.panelGap ?? 14;
   const fit = Math.max(1, Math.floor((area.w + gap) / 150));
-  const want = spec.columns ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
+  const want = (typeof spec.columns === 'number' ? spec.columns : undefined) ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
   const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;
   const ph = spec.panelHeight ?? Math.round(Math.min(300, Math.max(160, pw * 0.66)));
@@ -9568,7 +10996,7 @@ return { "facet": facet };
 __def("src/infer.js", function () {
 const { fieldsOf, fieldKind } = __req("src/data.js");
 
-const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap'];
+const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot'];
 
 const ALIASES = {
   barplot: ['bar', { ci: true }], countplot: 'count', columns: 'column', lineplot: 'line', areaplot: 'area',
@@ -9582,6 +11010,11 @@ const ALIASES = {
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
   words: 'wordcloud', 'word-cloud': 'wordcloud', wordclouds: 'wordcloud', tagcloud: 'wordcloud', 'tag-cloud': 'wordcloud', nube: 'wordcloud', 'nube-de-palabras': 'wordcloud', cloud: 'wordcloud',
   timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',
+  tabla: 'table', tables: 'table', datatable: 'table', 'data-table': 'table', grid: 'table', tableau: 'table', tabelle: 'table', tabela: 'table', spreadsheet: 'table', planilla: 'table',
+  correlation: 'corr', correlations: 'corr', corrplot: 'corr', corrmatrix: 'corr', 'corr-matrix': 'corr', 'correlation-matrix': 'corr', correlogram: 'corr', correlograma: 'corr',
+  correlacion: 'corr', 'correlación': 'corr', 'matriz-correlacion': 'corr', 'matriz-de-correlacion': 'corr', 'matriz-de-correlación': 'corr',
+  clustermap: ['corr', { cluster: true }], 'cluster-map': ['corr', { cluster: true }],
+  pairs: 'pairplot', pairgrid: 'pairplot', splom: 'pairplot', scattermatrix: 'pairplot', 'scatter-matrix': 'pairplot', 'scatterplot-matrix': 'pairplot', 'matriz-de-dispersion': 'pairplot', 'matriz-de-dispersión': 'pairplot',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -9595,6 +11028,7 @@ function normalizeType(t) {
 
 function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
+  if (Array.isArray(spec.columns) || spec.pageSize !== undefined) return 'table';
   if (spec.geo) return 'choropleth';
   if (spec.lat || spec.lon || spec.tiles !== undefined) return 'pointmap';
   { const f = fieldsOf(data); if (f.some((k) => /^(lat|latitude|latitud)$/i.test(k)) && f.some((k) => /^(lon|lng|long|longitude|longitud)$/i.test(k))) return 'pointmap'; }
@@ -9605,6 +11039,8 @@ function inferType(spec, data = []) {
   if (spec.matrix) return 'chord';
   if (spec.from || spec.to) return 'sankey';
   if (spec.path || spec.group) return 'treemap';
+  if (spec.triangle !== undefined || spec.cluster !== undefined || spec.method !== undefined) return 'corr';
+  if (spec.diag !== undefined || spec.corner !== undefined || spec.upper !== undefined) return 'pairplot';
   if (spec.size) return 'bubble';
   const fields = fieldsOf(data);
   if ((fields.includes('source') && fields.includes('target')) || (fields.includes('from') && fields.includes('to'))) return 'sankey';
@@ -9632,6 +11068,8 @@ const { themeFor, themes, palettes, ramps } = __req("src/theme.js");
 const { resolveColorScale, colorScaleNames, RAINBOW } = __req("src/colorscales.js");
 const { schema } = __req("src/schema.js");
 const { parseDate } = __req("src/format.js");
+const { autoLocale } = __req("src/i18n.js");
+const { COLUMN_TYPES, columnType } = __req("src/charts/table.js");
 
 /** El índice registra aquí un dibujo de prueba (para revisar coincidencias de mapas). */
 let RENDER_PROBE = null;
@@ -9639,7 +11077,8 @@ const _setProbe = (fn) => { RENDER_PROBE = fn; };
 
 function lint(spec = {}) {
   if (!spec || typeof spec !== 'object') spec = {};
-  const en = String(spec.locale || '').toLowerCase().startsWith('en');
+  const autoLang = spec.locale === 'auto' || (spec.locale === undefined && /^(table|tabla|tables|datatable|data-table|grid)$/i.test(String(spec.type || '')));
+  const en = (autoLang ? autoLocale(spec, Array.isArray(spec.data) ? spec.data : []) : String(spec.locale || '')).toLowerCase().startsWith('en');
   /** Mensajes nuevos: se escriben directo en ambos idiomas. */
   const L = (es, english) => (en ? english : es);
   const errors = [];
@@ -9734,6 +11173,26 @@ function lint(spec = {}) {
     for (const f of [spec.x, spec.y]) if (f && fields.includes(f) && !numericIn(f)) err('numeric', `"${f}" no es numérico: la regresión necesita dos medidas.`, 'Usa `type: "box"` para comparar una medida entre categorías.');
     if (data.length < 8) warn('few-obs', `Solo ${data.length} puntos: la recta y su intervalo son poco confiables.`, 'Muestra los puntos con `type: "scatter"`.');
   }
+  if ((type === 'corr' || type === 'pairplot') && data.length) {
+    const longForm = type === 'corr' && typeof spec.x === 'string' && typeof spec.y === 'string' && typeof spec.value === 'string';
+    if (!longForm) {
+      const list = spec.vars ?? (Array.isArray(spec.y) ? spec.y : null);
+      if (spec.vars !== undefined && !Array.isArray(spec.vars)) err('corr-vars', L('`vars` debe ser una lista de campos.', '`vars` must be a list of fields.'), 'vars: ["precio", "superficie", "antiguedad"]');
+      if (Array.isArray(spec.vars)) check(spec.vars, 'vars');
+      const hueF = spec.hue ?? spec.series;
+      const nums = (Array.isArray(list) ? list : fields.filter((f) => f !== hueF && f !== spec.label && fieldKind(data, f) === 'number')).filter((f) => fields.includes(f));
+      if (Array.isArray(list)) for (const f of list) if (fields.includes(f) && fieldKind(data, f) !== 'number') err('corr-numeric', L(`"${f}" no es numérico: una correlación necesita medidas.`, `"${f}" is not numeric: a correlation needs measures.`), L('Quítalo de `vars`; para comparar una medida entre categorías usa `type: "box"`.', 'Drop it from `vars`; to compare a measure across categories use `type: "box"`.'));
+      if (nums.length < 2) err('corr-vars', L(`Hay ${nums.length} campo(s) numérico(s): se necesitan al menos dos.`, `There are ${nums.length} numeric field(s): at least two are needed.`), L('Entrega filas con dos o más medidas, o indícalas en `vars: [...]`.', 'Pass rows with two or more measures, or list them in `vars: [...]`.'));
+      const constant = nums.filter((f) => { const vs = data.map((r) => num(r[f])).filter(Number.isFinite); return vs.length > 1 && vs.every((v) => v === vs[0]); });
+      if (constant.length) warn('corr-constant', L(`Sin variación: ${constant.join(', ')}. Su correlación no está definida (celda vacía).`, `No variation: ${constant.join(', ')}. Its correlation is undefined (empty cell).`), L('Quítalos de `vars`.', 'Drop them from `vars`.'));
+      if (data.length < 10) warn('corr-few-rows', L(`Solo ${data.length} filas: una correlación con tan pocos casos es inestable.`, `Only ${data.length} rows: a correlation from so few cases is unstable.`), L('Muestra los puntos con `type: "scatter"`, o agrega `alpha: 0.05` para apagar lo no significativo.', 'Show the points with `type: "scatter"`, or add `alpha: 0.05` to grey out what is not significant.'));
+      if (type === 'corr' && nums.length > 12 && !spec.cluster) sug('corr-many', L(`${nums.length} variables: el orden de los datos esconde los grupos que se mueven juntos.`, `${nums.length} variables: data order hides the groups that move together.`), L('Agrega `cluster: true` (o usa `type: "clustermap"`).', 'Add `cluster: true` (or use `type: "clustermap"`).'));
+      if (type === 'corr' && nums.length > 30) warn('corr-too-many', L(`${nums.length} variables: las celdas quedan demasiado chicas para leerse.`, `${nums.length} variables: cells get too small to read.`), L('Elige las que importan con `vars: [...]`.', 'Pick the ones that matter with `vars: [...]`.'));
+      if (type === 'pairplot' && !Array.isArray(list) && nums.length > 6) warn('pairplot-many', L(`${nums.length} campos numéricos: se dibujan solo los 6 primeros (${nums.slice(0, 6).join(', ')}).`, `${nums.length} numeric fields: only the first 6 are drawn (${nums.slice(0, 6).join(', ')}).`), L('Elige con `vars: [...]`, o usa `type: "corr"` para verlos todos.', 'Choose with `vars: [...]`, or use `type: "corr"` to see them all.'));
+      if (type === 'pairplot' && Array.isArray(list) && list.length > 7) warn('pairplot-many', L(`${list.length} variables son ${list.length * list.length} paneles diminutos.`, `${list.length} variables make ${list.length * list.length} tiny panels.`), L('Deja 3–6 en `vars`, o usa `type: "corr"`.', 'Keep 3–6 in `vars`, or use `type: "corr"`.'));
+      if (type === 'pairplot' && data.length > 3000) sug('pairplot-dense', L(`${data.length} filas: los puntos se tapan en cada panel.`, `${data.length} rows: points hide each other in every panel.`), L('Usa `type: "corr"`, o `radius: 1` con una muestra.', 'Use `type: "corr"`, or `radius: 1` with a sample.'));
+    }
+  }
   if (['box', 'violin'].includes(type) && data.length && spec.x && fields.includes(spec.x)) {
     const counts = new Map();
     for (const r of data) counts.set(String(r[spec.x]), (counts.get(String(r[spec.x])) || 0) + 1);
@@ -9785,6 +11244,29 @@ function lint(spec = {}) {
       }
       if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
     }
+  }
+  if (type === 'table' && data.length) {
+    const cols = Array.isArray(spec.columns) ? spec.columns : [];
+    for (const c of cols) {
+      const f = typeof c === 'string' ? c : c && typeof c === 'object' ? c.field ?? c.key ?? c.name : undefined;
+      if (c && typeof c === 'object' && c.type !== undefined && !columnType(c.type)) {
+        const near = didYouMean(String(c.type), COLUMN_TYPES);
+        err('table-column-type', L(`Tipo de columna "${c.type}" desconocido${f ? ` (columna "${f}")` : ''}.`, `Unknown column type "${c.type}"${f ? ` (column "${f}")` : ''}.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Tipos: ${COLUMN_TYPES.join(', ')}.`, `Types: ${COLUMN_TYPES.join(', ')}.`));
+      }
+      if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
+      else if (f !== undefined) check(f, 'columns');
+      if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+    }
+    const by = spec.sortBy ?? spec.orderBy;
+    if (by !== undefined && !fields.includes(by) && !cols.some((c) => c && typeof c === 'object' && String(c.label) === String(by)) && !['#', 'rank'].includes(String(by))) {
+      const near = didYouMean(String(by), fields);
+      err('table-sort', L(`\`sortBy: "${by}"\` no es una columna.`, `\`sortBy: "${by}"\` is not a column.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Campos: ${fields.join(', ')}.`, `Fields: ${fields.join(', ')}.`));
+    }
+    if (spec.pageSize !== undefined && spec.pageSize !== false && !(Number.isFinite(+spec.pageSize) && +spec.pageSize >= 1)) err('table-page-size', L('`pageSize` debe ser un entero positivo (o false).', '`pageSize` must be a positive integer (or false).'), 'pageSize: 10');
+    const nCols = cols.length || fields.length;
+    if (nCols > 8) warn('table-wide', L(`${nCols} columnas: en pantallas angostas la tabla pasa a tarjetas largas y en escritorio se aprieta.`, `${nCols} columns: on narrow screens the table turns into long cards, and it gets cramped on desktop.`), L('Deja las 4–7 columnas que responden la pregunta del título con `columns: [...]`.', 'Keep the 4–7 columns that answer the title\'s question with `columns: [...]`.'));
+    if (data.length > 15 && spec.pageSize === false) sug('table-long', L(`${data.length} filas sin paginar hacen una imagen muy alta.`, `${data.length} unpaginated rows make a very tall image.`), L('Quita `pageSize: false` (páginas de 10), o usa `top: 15` con un orden.', 'Drop `pageSize: false` (pages of 10), or use `top: 15` with a sort.'));
+    if (data.length > 0 && data.length <= 3 && nCols <= 2) sug('table-tiny', L('Una tabla de pocas cifras dice más como indicadores.', 'A table with so few numbers works better as indicators.'), L('Usa `type: "kpi"` con `items`.', 'Use `type: "kpi"` with `items`.'));
   }
   if (type === 'kpi' && ![].concat(spec.items || spec.data || []).length) err('items', 'El KPI necesita `items`.', 'items: [{ label: "Ventas", value: 1250, delta: 0.12, period: "vs 2025" }]');
 
@@ -9870,6 +11352,7 @@ const EXTRA_OPTIONS = `
   tileOpacity tileStyle tiles tilesKey todayColor truncate unit valueDomain valueFormat valueScale weekends word
   xFormat yFormat yTicks zoom curveness exclude colorScale filters kpis charts updated primary layout
   after area good minLength sizeKey x2
+  orderBy perPage paginate stacked totalLabel
   id name description notes meta alt $schema comment
 `.trim().split(/\s+/);
 
@@ -9954,6 +11437,11 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
   if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid"');
+  if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
+  if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);
+  if (type === 'corr' && spec.alpha !== undefined && !(+spec.alpha > 0 && +spec.alpha < 1)) err('corr-alpha', L('`alpha` es un nivel de significancia entre 0 y 1.', '`alpha` is a significance level between 0 and 1.'), 'alpha: 0.05');
+  if (type === 'pairplot' && spec.diag !== undefined) enumCheck('diag', spec.diag, ['hist', 'kde']);
+  if (type === 'pairplot' && typeof spec.upper === 'string') enumCheck('upper', spec.upper, ['corr', 'scatter']);
   if (type === 'pointmap') {
     if (typeof spec.tiles === 'string') enumCheck('tiles', spec.tiles.toLowerCase(), TILES, '"osm", "esri-gray", "esri-dark", "carto-light", "carto-dark", "mapbox-light", "mapbox-dark", { url, attribution } o false');
     if (spec.tileStyle !== undefined) enumCheck('tileStyle', spec.tileStyle, ['muted', 'original']);
@@ -10064,7 +11552,7 @@ const schema = {
       type: 'string',
       enum: [...new Set(['auto', ...TYPES, 'pointmap', ...Object.keys(ALIASES)])],
       description:
-        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -10073,7 +11561,7 @@ const schema = {
     title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
     subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
     source: { type: 'string', description: 'Data source, shown at the bottom right.' },
-    locale: { type: 'string', enum: ['es', 'en'], description: 'Language and number format. Default "es" (1.234,5); use "en" for 1,234.5.' },
+    locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'], description: 'Language and number format. Default "es" (1.234,5); "en" for 1,234.5; also "pt", "fr", "de". "auto" recognizes the language from the title, subtitle, column names and categories (tables do this when `locale` is omitted).' },
     x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
     y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
     series: field('Field that splits the data into colored series. Alias: hue.'),
@@ -10081,7 +11569,7 @@ const schema = {
     hue: field('Alias of series (seaborn naming).'),
     value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
-    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase).'),
+    group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value.'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
     size: field('Bubble size field (area-proportional).'),
     from: field('Sankey source field.'),
@@ -10180,7 +11668,33 @@ const schema = {
     facet: field('One panel per value of this field (small multiples, seaborn col). Shared scales and colors.'),
     col: field('Alias of facet (seaborn naming).'),
     facetOrder: { type: 'array', items: { type: 'string' }, description: 'facet: panel order (values of the facet field; the rest follow).' },
-    columns: { type: 'integer', description: 'facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens. kpi: tiles per row.' },
+    columns: {
+      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank. Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.',
+      anyOf: [
+        { type: 'integer' },
+        { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+          field: { type: 'string' }, label: { type: 'string' },
+          type: { type: 'string', enum: ['text', 'number', 'bar', 'heat', 'delta', 'sparkline', 'progress', 'badge', 'check', 'date', 'link', 'rank'] },
+          format: { anyOf: [{ type: 'string' }, { type: 'object' }] }, align: { type: 'string', enum: ['left', 'right', 'center'] }, width: { type: 'number' },
+          good: { type: 'string', enum: ['up', 'down'] }, target: { anyOf: [{ type: 'string' }, { type: 'number' }] }, colorScale: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }, { type: 'object' }] },
+          total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
+        } }] } },
+      ],
+    },
+    sortBy: field('table: column to sort by (field or label). Numbers sort high→low by default, text A→Z. In the browser a click on a header sorts.'),
+    sortOrder: { type: 'string', enum: ['asc', 'desc'], description: 'table: sort direction (same as `sort: "asc" | "desc"`).' },
+    pageSize: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'boolean', enum: [false] }], description: 'table: rows per page. Default: all rows up to 15, then pages of 10. false shows every row.' },
+    page: { type: 'integer', minimum: 1, description: 'table: page to show (1-based). In the browser the pager changes it.' },
+    query: { type: 'string', description: 'table: show only rows that contain these words (accent- and case-insensitive).' },
+    search: { type: 'boolean', description: 'table: search box in the browser (default: on above 20 rows).' },
+    total: { description: 'table: totals row. true sums numbers (and averages percents and progress); "mean"/"sum"; or { field: "sum" | "mean" | false, label }.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max'] }, { type: 'object' }] },
+    totalLabel: { type: 'string', description: 'table: label of the totals row (default "Total"/"Gesamt").' },
+    rank: { type: 'boolean', description: 'table: add a "#" column with the position under the current sort.' },
+    cards: { description: 'table: one card per row. "auto" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['auto'] }] },
+    density: { type: 'string', enum: ['compact', 'normal', 'comfortable'], description: 'table: row height.' },
+    striped: { type: 'boolean', description: 'table: tint every other row (helps on very wide tables).' },
+    bars: { type: 'boolean', description: 'table: false turns off the automatic data bar on the main numeric column.' },
+    sortable: { type: 'boolean', description: 'table: false disables click-to-sort on headers in the browser.' },
     sharex: bool('facet: same x scale in every panel (default true).'),
     panelHeight: number('facet: height of each panel in px.'),
     sharey: { type: 'boolean', description: 'facet: same y scale in every panel (default true).' },
@@ -10214,7 +11728,7 @@ const schema = {
     xFormat: formatSpec('Format of x values when x is a measure (scatter, regplot, hist).'),
     yFormat: formatSpec('Format of y values (overrides `format` on the y axis).'),
 
-    highlight: { description: 'Emphasize one or more categories/series and mute the rest.', ...strOrList },
+    highlight: { description: 'Emphasize one or more categories/series and mute the rest. table: the rows whose label matches.', ...strOrList },
     dashed: { description: 'Draw some shapes dashed (hatched fill + dashed outline; dashed stroke for lines) to mark estimates, projections or provisional figures. A category/series/region name or a list of them, a data field whose truthy rows are dashed, { field, equals }, or true for all.', anyOf: [{ type: 'string' }, { type: 'boolean' }, { type: 'array', items: { type: 'string' } }, { type: 'object', properties: { field: { type: 'string' }, equals: {} } }] },
     dashedFrom: { description: 'line/area/bar on a time axis: x value from which marks are dashed (a projection). Lines turn dashed from the last firm point, over a soft labeled band.', anyOf: [{ type: 'string' }, { type: 'number' }] },
     dashedLabel: { description: 'What the dashed shapes mean ("Projection", "Preliminary"): legend entry, band label and tooltip line. false hides the band label.', anyOf: [{ type: 'string' }, { type: 'boolean' }] },
@@ -10224,7 +11738,7 @@ const schema = {
 
     stack: { description: 'bar/area: true stacks; "percent" stacks to 100%.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['percent'] }] },
     horizontal: { type: 'boolean', description: 'Force horizontal orientation (otherwise chosen from label length and count).' },
-    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other".' },
+    top: { type: 'integer', description: 'bar: keep the N largest and fold the rest into "Other". table: keep the first N rows after sorting.' },
     endLabels: bool('line/regplot: false removes the series names at the end of each line (a legend is drawn instead).'),
     labelsFor: { type: 'object', additionalProperties: { type: 'string' }, description: 'Wide table (y as a list): display names per column, e.g. { "rev": "Revenue" }.' },
     index: { type: 'boolean', description: 'line: rebase each series to 100 at its first value (compare growth without a dual axis).' },
@@ -10240,12 +11754,12 @@ const schema = {
     kde: { type: 'boolean', description: 'hist: overlay a density curve.' },
     multiple: { type: 'string', enum: ['layer', 'stack', 'dodge', 'fill'], description: 'hist/kde with hue: how groups are combined.' },
     fill: { type: 'boolean', description: 'kde: fill the area. line: false removes the gradient under a single line.' },
-    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
+    order: { description: 'regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list). corr: variable order (list).', anyOf: [{ type: 'integer' }, { type: 'array', items: { type: 'string' } }] },
     lowess: { type: 'boolean', description: 'regplot: local regression instead of a straight line.' },
     logx: { type: 'boolean', description: 'regplot: fit y ~ log(x) with a log x axis.' },
     trend: { type: 'boolean', description: 'scatter: add a least-squares line and R².' },
     annotate: { type: 'boolean', description: 'regplot: show R² and n.' },
-    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot.' },
+    kind: { type: 'string', enum: ['scatter', 'reg'], description: 'jointplot: center plot. pairplot: "reg" adds a least-squares line to every scatter panel.' },
     marginal: { type: 'string', enum: ['hist', 'kde'], description: 'jointplot: marginal plots.' },
     inner: { type: 'string', enum: ['box', 'quartiles', 'points', 'stick', 'none'], description: 'violin: what goes inside.' },
     bandwidth: number('violin: KDE bandwidth (default Scott\'s rule).'),
@@ -10269,6 +11783,17 @@ const schema = {
     centerValue: { type: 'string', description: 'donut/sunburst: text in the center (default: the total).' },
     centerLabel: { type: 'string', description: 'donut/sunburst: caption under the center value.' },
     cellHeight: number('heatmap: maximum cell height in px.'),
+    vars: { type: 'array', items: { type: 'string' }, description: 'corr/pairplot: the numeric fields to relate, in order (seaborn `vars`). Default: every numeric field (pairplot: the first 6). `y: [...]` works too.' },
+    method: { type: 'string', enum: ['pearson', 'spearman'], description: 'corr: correlation coefficient. "pearson" (default, linear) or "spearman" (ranks: monotonic relations, robust to outliers).' },
+    triangle: { anyOf: [{ type: 'string', enum: ['lower', 'full'] }, { type: 'boolean' }], description: 'corr: "lower" (default) shows each pair once, below the diagonal; "full" shows the whole symmetric matrix (default with `cluster`).' },
+    cluster: bool('corr: reorder variables by hierarchical clustering (average linkage on 1 − r) and draw the dendrogram on top, like sns.clustermap. `type: "clustermap"` sets it.'),
+    dendrogram: bool('corr with `cluster`: false hides the dendrogram but keeps the clustered order.'),
+    alpha: { type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1, description: 'corr: significance level (e.g. 0.05). Cells with p ≥ alpha are greyed out and a legend key explains it. p-values use Fisher\'s z.' },
+    cellSize: number('corr: maximum cell size in px (cells are square).'),
+    diag: { type: 'string', enum: ['hist', 'kde'], description: 'pairplot: what goes on the diagonal. Default "hist", or "kde" when `hue` is set.' },
+    upper: { anyOf: [{ type: 'string', enum: ['corr', 'scatter'] }, { type: 'boolean', enum: [false] }], description: 'pairplot: above the diagonal, "corr" (default: Pearson r, tinted by strength, per `hue` group when there is room), "scatter" (mirror), or false (empty).' },
+    corner: bool('pairplot: draw only the lower triangle and the diagonal (seaborn corner=True).'),
+    panelSize: number('pairplot: maximum panel size in px.'),
     diverging: bool('heatmap/choropleth: diverging color scale around 0 (or `midpoint`).'),
 
     colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities: { "Biobío": "#3A47B8" }.' },
@@ -10315,7 +11840,7 @@ const dashboardSchema = {
     subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
     source: { type: 'string', description: 'Data source, shown once at the bottom.' },
     updated: { type: 'string', description: 'Last update, e.g. "2026-01-05".' },
-    locale: { type: 'string', enum: ['es', 'en'] },
+    locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'] },
     theme: { description: 'One theme for every chart: "papel" (light) or "noche" (dark), or a theme object.', anyOf: [{ type: 'string' }, { type: 'object' }] },
     data: { type: 'array', items: { type: 'object' }, description: 'Shared rows: charts without their own `data` use these, and computed KPIs and filters work on them.' },
     kpis: {
@@ -10346,7 +11871,7 @@ function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = {}) {
   }
   name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };
@@ -10812,6 +12337,7 @@ const { ensureData, fieldKind, uniq, num, PlotError } = __req("src/data.js");
 const { parseDate, formatDate } = __req("src/format.js");
 const { dateUnit } = __req("src/scale.js");
 const { isGeoUrl } = __req("src/geo/registry.js");
+const { words } = __req("src/i18n.js");
 
 let plotFn = null;
 let resolveFn = null;
@@ -10861,7 +12387,12 @@ function ensureAssets() {
 .pa-live .pa-chev{opacity:1!important}
 .pa-chart .pa-gh:hover .pa-hit{fill:var(--pa-tint,#ECEEF8);fill-opacity:.5}
 .pa-chart [data-node]:focus-visible{outline:none;stroke:var(--pa-accent);stroke-width:3px}
-@media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}}`;
+.pa-search{position:absolute;z-index:2;box-sizing:border-box;margin:0;font:inherit;font-size:13px;color:var(--pa-ink);background-color:var(--pa-surface);background-repeat:no-repeat;background-position:10px center;border:1px solid var(--pa-line);border-radius:8px;padding:0 10px 0 32px;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.pa-search::placeholder{color:var(--pa-muted);opacity:1}
+.pa-search:hover{border-color:var(--pa-muted)}
+.pa-search:focus-visible,.pa-search:focus{border-color:var(--pa-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--pa-accent) 22%,transparent)}
+.pa-chart .pa-th[data-sort]:focus-visible,.pa-chart .pa-pg:focus-visible{outline:2px solid var(--pa-accent);outline-offset:-2px}
+@media (prefers-reduced-motion: reduce){.pa-m{transition:none!important}.pa-search{transition:none}}`;
   document.head.appendChild(st);
 }
 
@@ -10921,6 +12452,38 @@ function render(target, spec, opts = {}) {
   let timer = null, ro = null, raf = 0;
 
   const width = () => state.width ?? Math.max(280, Math.round(chart.clientWidth || host.clientWidth || 720));
+  let search = null, searchTimer = 0;
+  if (state.type === 'table' && state.search !== false) {
+    let n = 0;
+    try { n = ensureData(state).length; } catch { n = 0; }
+    if (state.search === true || n > 20) {
+      const th = themeFor(state);
+      const W = words(state.locale);
+      search = document.createElement('input');
+      search.type = 'search'; search.className = 'pa-search';
+      search.placeholder = W.search + '…'; search.setAttribute('aria-label', W.search);
+      search.autocomplete = 'off'; search.spellcheck = false;
+      if (state.query) search.value = state.query;
+      const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.25" fill="none" stroke="${th.muted}" stroke-width="1.5"/><path d="M9.2 9.2l3.3 3.3" stroke="${th.muted}" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+      search.style.cssText = `--pa-accent:${th.categorical[0]};--pa-surface:${th.surface};--pa-ink:${th.ink};--pa-muted:${th.muted};--pa-line:${th.axis};font-family:${(th.font?.family || 'system-ui').replace(/"/g, "'")};background-image:url("data:image/svg+xml,${encodeURIComponent(icon)}")`;
+      search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { state = { ...state, query: search.value.trim() || undefined, page: 1 }; draw(); }, 120);
+      });
+      search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; state = { ...state, query: undefined, page: 1 }; draw(); } });
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(search);
+    }
+  }
+  const placeSearch = () => {
+    if (!search) return;
+    const slot = chart.querySelector('.pa-search-slot');
+    if (!slot) { search.hidden = true; return; }
+    search.hidden = false;
+    const r = slot.getBoundingClientRect(), h = host.getBoundingClientRect();
+    search.style.left = r.left - h.left + 'px'; search.style.top = r.top - h.top + 'px';
+    search.style.width = r.width + 'px'; search.style.height = r.height + 'px';
+  };
   const nodePos = () => {
     const m = new Map();
     for (const c of chart.querySelectorAll('circle[data-node]')) m.set(c.getAttribute('data-node'), [+c.getAttribute('cx'), +c.getAttribute('cy')]);
@@ -10980,7 +12543,7 @@ function render(target, spec, opts = {}) {
   const draw = () => {
     const before = nodePos();
     const fills = regionFills();
-    chart.innerHTML = plotFn({ ...state, width: width() });
+    chart.innerHTML = plotFn({ ...state, width: width(), _search: !!search });
     animateFrom(before);
     tweenFills(fills);
     chart.__pa = false;
@@ -11021,6 +12584,49 @@ function render(target, spec, opts = {}) {
         draw();
         const again = [...chart.querySelectorAll('[data-group]')].find((m) => m.getAttribute('data-group') === name);
         if (again && e && e.type === 'keydown') again.focus();
+      };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
+    }
+    placeSearch();
+    const refocus = (sel) => { const m = chart.querySelector(sel); if (m) m.focus(); return !!m; };
+    const refocusSame = (arrow, p) => (arrow ? refocus(`[data-arrow="${arrow}"][data-page]`) : refocus(`[data-page="${p}"]:not([data-arrow])`));
+    for (const n of chart.querySelectorAll('[data-page]')) {
+      const p = +n.getAttribute('data-page');
+      const arrow = n.getAttribute('data-arrow');
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('role', 'button');
+      const go = (e) => {
+        state = { ...state, page: p };
+        draw();
+        if (e && e.type === 'keydown' && !refocusSame(arrow, p)) refocus('.pa-pg-on');
+      };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); return; }
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        const pages = [...chart.querySelectorAll('[data-page]')];
+        const k = pages.indexOf(n) + d;
+        if (pages[k]) { e.preventDefault(); pages[k].focus(); }
+      });
+    }
+    for (const n of chart.querySelectorAll('.pa-th[data-sort]')) {
+      const f = n.getAttribute('data-sort');
+      n.setAttribute('tabindex', '0');
+      n.setAttribute('aria-label', `${words(state.locale).sort} ${n.textContent}`);
+      const go = (e) => {
+        const cur = n.getAttribute('aria-sort');
+        const numeric = n.getAttribute('data-num') === '1';
+        const first = numeric ? 'desc' : 'asc';
+        const firstAria = first === 'desc' ? 'descending' : 'ascending';
+        let next;
+        if (cur === 'none' || !cur) next = { sortBy: f, sort: first };
+        else if (cur === firstAria) next = { sortBy: f, sort: first === 'desc' ? 'asc' : 'desc' };
+        else next = { sortBy: undefined, sort: undefined };
+        state = { ...state, ...next, sortOrder: undefined, page: 1 };
+        draw();
+        if (e && e.type === 'keydown') refocus(`.pa-th[data-sort="${CSS.escape ? CSS.escape(f) : f}"]`);
       };
       n.addEventListener('click', go);
       n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
@@ -11151,8 +12757,8 @@ function render(target, spec, opts = {}) {
   return {
     get svg() { return chart.querySelector('svg'); },
     get spec() { return state; },
-    update(next) { clearInterval(timer); ro && ro.disconnect(); return render(host, next, opts); },
-    destroy() { clearInterval(timer); ro && ro.disconnect(); host.innerHTML = ''; },
+    update(next) { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); return render(host, next, opts); },
+    destroy() { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.innerHTML = ''; },
   };
 }
 
@@ -11220,7 +12826,7 @@ const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es
 
 const WIDE = new Set(['line', 'area', 'gantt', 'heatmap', 'sankey', 'flowchart', 'network', 'jointplot']);
 const NARROW = new Set(['donut', 'pie', 'radar', 'kpi', 'hist', 'kde', 'ecdf', 'count']);
-const AUTO_HEIGHT = new Set(['kpi', 'gantt', 'flowchart']);
+const AUTO_HEIGHT = new Set(['kpi', 'gantt', 'flowchart', 'table']);
 
 function spanFor(s) {
   if (s.size === 'full' || s.span === 12) return 12;

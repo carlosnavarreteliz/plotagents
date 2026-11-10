@@ -25,6 +25,7 @@
     "src",
     "dist",
     "docs",
+    "skills",
     "bin",
     "index.d.ts",
     "schema.json",

@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { hist, kde, ecdf } from '../src/charts/dist.js';
 import { regplot, residplot, jointplot } from '../src/charts/regplot.js';
 import { themeFor } from '../src/theme.js';
+import { plot } from '../src/index.js';
 import { statsGallery, notas, salarios, estudio, paisesSint } from '../examples/specs-stats.js';
 
 const R = { hist, kde, ecdf, regplot, residplot, jointplot };
-const draw = (s) => R[s.type](s, themeFor(s));
+const draw = (s) => (R[s.type] ? R[s.type](s, themeFor(s)) : plot(s));
 
 function valid(svg, id) {
   assert.match(svg, /^<svg[^>]+viewBox="0 0 \d+ [\d.]+"/, id);

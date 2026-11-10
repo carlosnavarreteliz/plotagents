@@ -35,7 +35,7 @@ const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es
 // Ancho (de 12) según el tipo: lo que se lee de izquierda a derecha, ancho.
 const WIDE = new Set(['line', 'area', 'gantt', 'heatmap', 'sankey', 'flowchart', 'network', 'jointplot']);
 const NARROW = new Set(['donut', 'pie', 'radar', 'kpi', 'hist', 'kde', 'ecdf', 'count']);
-const AUTO_HEIGHT = new Set(['kpi', 'gantt', 'flowchart']);
+const AUTO_HEIGHT = new Set(['kpi', 'gantt', 'flowchart', 'table']);
 
 function spanFor(s) {
   if (s.size === 'full' || s.span === 12) return 12;

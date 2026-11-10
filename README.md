@@ -55,7 +55,7 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 |---|---|
 | Compare categories | `bar` (`barplot` with confidence intervals), `count` (`countplot`) |
 | Change over time | `line` (`lineplot`, `ci` for a confidence band), `area` |
-| Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot` |
+| Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot`, `corr` (correlation matrix; `clustermap` with a dendrogram), `pairplot` (`splom`) |
 | Profiles | `radar` (`spider`) |
 | Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
 | Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie` |
@@ -65,6 +65,7 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Populations | `pyramid` |
 | Grids | `heatmap` |
 | Numbers | `kpi` |
+| Exact values | `table`: an indicator per column (data bars, ▲/▼ changes, cell colors, sparklines, progress against a target, status pills, ✓), pages of 10, cards on phones, click-to-sort and search in the browser, language recognized from the text |
 | Text | `wordcloud` (words sized by frequency, or raw text to count) |
 | Dashboards | `dashboard({ title, kpis, charts, filters })`: a whole HTML dashboard with best-practice layout ([guide](docs/dashboards.md)) |
 
@@ -167,6 +168,22 @@ import { plot, safePlot, lint, describe, render, toHTML, schema, toolDefinition,
 | `validatePalette(colors, opts)` | `{ ok, checks }`. |
 
 In the browser without a bundler, `<script src="dist/plotagents.js"></script>` defines `window.plotagents`. Full types are in [`index.d.ts`](index.d.ts) and every option in [`schema.json`](schema.json).
+
+## Teach your AI to use it (Agent Skill)
+
+[`skills/plotagents/SKILL.md`](skills/plotagents/SKILL.md) tells any AI assistant to make its charts with plotagents, with the essentials built in. It also checks npm for a newer release and reads the latest guide when there is one.
+
+```bash
+npx skills add carlosnavarreteliz/plotagents
+```
+
+That works for Claude Code, Cursor, Codex and other agents that read skills. By hand, for Claude Code:
+
+```bash
+mkdir -p ~/.claude/skills/plotagents && curl -sL https://raw.githubusercontent.com/carlosnavarreteliz/plotagents/master/skills/plotagents/SKILL.md -o ~/.claude/skills/plotagents/SKILL.md
+```
+
+In the Claude app, zip the `skills/plotagents` folder and upload it under Settings → Capabilities → Skills.
 
 ## As an agent tool
 

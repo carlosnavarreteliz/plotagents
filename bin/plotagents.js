@@ -8,6 +8,8 @@ import { plot, toHTML, lint, schema, toolDefinition, describe, dashboard, lintDa
 // `plotagents … | head` closes the pipe early: exit quietly instead of crashing.
 for (const stream of [process.stdout, process.stderr]) {
   stream.on('error', (e) => { if (e && e.code === 'EPIPE') process.exit(0); throw e; });
+  // Escritura bloqueante: process.exit() no corta una salida larga (> 64 KB) en un pipe.
+  stream._handle?.setBlocking?.(true);
 }
 
 const args = process.argv.slice(2);

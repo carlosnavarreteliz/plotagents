@@ -44,6 +44,9 @@
         "choropleth",
         "symbolmap",
         "pointmap",
+        "table",
+        "corr",
+        "pairplot",
         "barplot",
         "countplot",
         "columns",
@@ -109,13 +112,46 @@
         "ganttchart",
         "gantt-chart",
         "planning",
+        "tabla",
+        "tables",
+        "datatable",
+        "data-table",
+        "grid",
+        "tableau",
+        "tabelle",
+        "tabela",
+        "spreadsheet",
+        "planilla",
+        "correlation",
+        "correlations",
+        "corrplot",
+        "corrmatrix",
+        "corr-matrix",
+        "correlation-matrix",
+        "correlogram",
+        "correlograma",
+        "correlacion",
+        "correlación",
+        "matriz-correlacion",
+        "matriz-de-correlacion",
+        "matriz-de-correlación",
+        "clustermap",
+        "cluster-map",
+        "pairs",
+        "pairgrid",
+        "splom",
+        "scattermatrix",
+        "scatter-matrix",
+        "scatterplot-matrix",
+        "matriz-de-dispersion",
+        "matriz-de-dispersión",
         "tree",
         "stat",
         "stats",
         "number",
         "heat"
       ],
-      "description": "Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar. Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). \"auto\" (default) picks from the data."
+      "description": "Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). \"auto\" (default) picks from the data."
     },
     "data": {
       "description": "Array of rows, e.g. [{ \"region\": \"Biobío\", \"sales\": 1240 }]. For kpi it can be omitted in favor of `items`.",
@@ -147,9 +183,13 @@
       "type": "string",
       "enum": [
         "es",
-        "en"
+        "en",
+        "pt",
+        "fr",
+        "de",
+        "auto"
       ],
-      "description": "Language and number format. Default \"es\" (1.234,5); use \"en\" for 1,234.5."
+      "description": "Language and number format. Default \"es\" (1.234,5); \"en\" for 1,234.5; also \"pt\", \"fr\", \"de\". \"auto\" recognizes the language from the title, subtitle, column names and categories (tables do this when `locale` is omitted)."
     },
     "x": {
       "type": "string",
@@ -191,7 +231,7 @@
     },
     "group": {
       "type": "string",
-      "description": "Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase)."
+      "description": "Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value."
     },
     "path": {
       "type": "array",
@@ -803,8 +843,236 @@
       "description": "facet: panel order (values of the facet field; the rest follow)."
     },
     "columns": {
+      "description": "table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank. Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.",
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "number",
+                      "bar",
+                      "heat",
+                      "delta",
+                      "sparkline",
+                      "progress",
+                      "badge",
+                      "check",
+                      "date",
+                      "link",
+                      "rank"
+                    ]
+                  },
+                  "format": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "align": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right",
+                      "center"
+                    ]
+                  },
+                  "width": {
+                    "type": "number"
+                  },
+                  "good": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down"
+                    ]
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "colorScale": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "total": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "sum",
+                          "mean",
+                          "min",
+                          "max",
+                          "count"
+                        ]
+                      }
+                    ]
+                  },
+                  "lines": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "link: field with the text to show instead of the URL."
+                  },
+                  "sortable": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "sortBy": {
+      "type": "string",
+      "description": "table: column to sort by (field or label). Numbers sort high→low by default, text A→Z. In the browser a click on a header sorts."
+    },
+    "sortOrder": {
+      "type": "string",
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "description": "table: sort direction (same as `sort: \"asc\" | \"desc\"`)."
+    },
+    "pageSize": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        }
+      ],
+      "description": "table: rows per page. Default: all rows up to 15, then pages of 10. false shows every row."
+    },
+    "page": {
       "type": "integer",
-      "description": "facet: panels per row (seaborn col_wrap). Reduced automatically on narrow screens. kpi: tiles per row."
+      "minimum": 1,
+      "description": "table: page to show (1-based). In the browser the pager changes it."
+    },
+    "query": {
+      "type": "string",
+      "description": "table: show only rows that contain these words (accent- and case-insensitive)."
+    },
+    "search": {
+      "type": "boolean",
+      "description": "table: search box in the browser (default: on above 20 rows)."
+    },
+    "total": {
+      "description": "table: totals row. true sums numbers (and averages percents and progress); \"mean\"/\"sum\"; or { field: \"sum\" | \"mean\" | false, label }.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "sum",
+            "mean",
+            "min",
+            "max"
+          ]
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "totalLabel": {
+      "type": "string",
+      "description": "table: label of the totals row (default \"Total\"/\"Gesamt\")."
+    },
+    "rank": {
+      "type": "boolean",
+      "description": "table: add a \"#\" column with the position under the current sort."
+    },
+    "cards": {
+      "description": "table: one card per row. \"auto\" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "auto"
+          ]
+        }
+      ]
+    },
+    "density": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "normal",
+        "comfortable"
+      ],
+      "description": "table: row height."
+    },
+    "striped": {
+      "type": "boolean",
+      "description": "table: tint every other row (helps on very wide tables)."
+    },
+    "bars": {
+      "type": "boolean",
+      "description": "table: false turns off the automatic data bar on the main numeric column."
+    },
+    "sortable": {
+      "type": "boolean",
+      "description": "table: false disables click-to-sort on headers in the browser."
     },
     "sharex": {
       "type": "boolean",
@@ -1155,7 +1423,7 @@
       ]
     },
     "highlight": {
-      "description": "Emphasize one or more categories/series and mute the rest.",
+      "description": "Emphasize one or more categories/series and mute the rest. table: the rows whose label matches.",
       "anyOf": [
         {
           "type": "string"
@@ -1290,7 +1558,7 @@
     },
     "top": {
       "type": "integer",
-      "description": "bar: keep the N largest and fold the rest into \"Other\"."
+      "description": "bar: keep the N largest and fold the rest into \"Other\". table: keep the first N rows after sorting."
     },
     "endLabels": {
       "type": "boolean",
@@ -1397,7 +1665,7 @@
       "description": "kde: fill the area. line: false removes the gradient under a single line."
     },
     "order": {
-      "description": "regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list).",
+      "description": "regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list). corr: variable order (list).",
       "anyOf": [
         {
           "type": "integer"
@@ -1432,7 +1700,7 @@
         "scatter",
         "reg"
       ],
-      "description": "jointplot: center plot."
+      "description": "jointplot: center plot. pairplot: \"reg\" adds a least-squares line to every scatter panel."
     },
     "marginal": {
       "type": "string",
@@ -1545,6 +1813,88 @@
     "cellHeight": {
       "type": "number",
       "description": "heatmap: maximum cell height in px."
+    },
+    "vars": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "corr/pairplot: the numeric fields to relate, in order (seaborn `vars`). Default: every numeric field (pairplot: the first 6). `y: [...]` works too."
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "pearson",
+        "spearman"
+      ],
+      "description": "corr: correlation coefficient. \"pearson\" (default, linear) or \"spearman\" (ranks: monotonic relations, robust to outliers)."
+    },
+    "triangle": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "lower",
+            "full"
+          ]
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "description": "corr: \"lower\" (default) shows each pair once, below the diagonal; \"full\" shows the whole symmetric matrix (default with `cluster`)."
+    },
+    "cluster": {
+      "type": "boolean",
+      "description": "corr: reorder variables by hierarchical clustering (average linkage on 1 − r) and draw the dendrogram on top, like sns.clustermap. `type: \"clustermap\"` sets it."
+    },
+    "dendrogram": {
+      "type": "boolean",
+      "description": "corr with `cluster`: false hides the dendrogram but keeps the clustered order."
+    },
+    "alpha": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 1,
+      "description": "corr: significance level (e.g. 0.05). Cells with p ≥ alpha are greyed out and a legend key explains it. p-values use Fisher's z."
+    },
+    "cellSize": {
+      "type": "number",
+      "description": "corr: maximum cell size in px (cells are square)."
+    },
+    "diag": {
+      "type": "string",
+      "enum": [
+        "hist",
+        "kde"
+      ],
+      "description": "pairplot: what goes on the diagonal. Default \"hist\", or \"kde\" when `hue` is set."
+    },
+    "upper": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "corr",
+            "scatter"
+          ]
+        },
+        {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        }
+      ],
+      "description": "pairplot: above the diagonal, \"corr\" (default: Pearson r, tinted by strength, per `hue` group when there is room), \"scatter\" (mirror), or false (empty)."
+    },
+    "corner": {
+      "type": "boolean",
+      "description": "pairplot: draw only the lower triangle and the diagonal (seaborn corner=True)."
+    },
+    "panelSize": {
+      "type": "number",
+      "description": "pairplot: maximum panel size in px."
     },
     "diverging": {
       "type": "boolean",

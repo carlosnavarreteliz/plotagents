@@ -5,11 +5,40 @@ export type ChartType =
   | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
-  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap'
+  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap' | 'table' | 'corr' | 'pairplot'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
-  | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa';
+  | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa' | 'tabla' | 'datatable'
+  | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix';
+
+export type Locale = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'auto';
+
+/** table: one column. A bare field name infers everything. */
+export interface TableColumn {
+  field?: string;
+  label?: string;
+  /** Indicator. Inferred when omitted: bar on the main measure, delta on change fields, sparkline on lists of numbers, progress on 0–1 goals, badge on status words, check on booleans. */
+  type?: 'text' | 'number' | 'bar' | 'heat' | 'delta' | 'sparkline' | 'progress' | 'badge' | 'check' | 'date' | 'link' | 'rank';
+  format?: Format;
+  align?: 'left' | 'right' | 'center';
+  width?: number;
+  /** delta/progress: whether up is good (default) or down (costs). */
+  good?: 'up' | 'down';
+  /** progress: field or number to compare against. */
+  target?: string | number;
+  /** heat: matplotlib colormap or colors. */
+  colorScale?: string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number };
+  /** Totals row for this column. */
+  total?: boolean | 'sum' | 'mean' | 'min' | 'max' | 'count';
+  /** Text: lines before truncating (default 2, 3 for long text). */
+  lines?: number;
+  /** link: field with the text shown instead of the URL. */
+  text?: string;
+  /** badge: { value: "#hex" }. */
+  colors?: Record<string, string>;
+  sortable?: boolean;
+}
 
 export type Row = Record<string, string | number | Date | null | undefined>;
 
@@ -165,7 +194,26 @@ export interface Spec {
   lowess?: boolean;
   logx?: boolean;
   annotate?: boolean;
+  /** jointplot: center plot. pairplot: "reg" adds a fit line to every scatter panel. */
   kind?: 'scatter' | 'reg';
+  /** corr/pairplot: numeric fields to relate (default: all numeric; pairplot: first 6). */
+  vars?: string[];
+  /** corr: "pearson" (default) or "spearman". */
+  method?: 'pearson' | 'spearman';
+  /** corr: "lower" (default) or "full" (default with `cluster`). */
+  triangle?: 'lower' | 'full' | boolean;
+  /** corr: hierarchical clustering order + dendrogram (clustermap). */
+  cluster?: boolean;
+  dendrogram?: boolean;
+  /** corr: grey out cells with p ≥ alpha. */
+  alpha?: number;
+  cellSize?: number;
+  /** pairplot: diagonal panels ("kde" by default with hue). */
+  diag?: 'hist' | 'kde';
+  /** pairplot: above the diagonal. */
+  upper?: 'corr' | 'scatter' | false;
+  corner?: boolean;
+  panelSize?: number;
   marginal?: 'hist' | 'kde';
   inner?: 'box' | 'quartiles' | 'points' | 'stick' | 'none';
   split?: boolean;
@@ -181,7 +229,7 @@ export interface Spec {
   colorScale?: ColorScale;
   cmap?: ColorScale;
   colormap?: ColorScale;
-  locale?: 'es' | 'en';
+  locale?: Locale;
   width?: number;
   height?: number;
   padding?: number;
@@ -299,7 +347,30 @@ export interface Spec {
   /** wordcloud: words field, or raw text to count. */
   text?: string | string[];
   textField?: string;
-  columns?: number;
+  /** facet/kpi: panels or tiles per row. table: the columns. */
+  columns?: number | Array<string | TableColumn>;
+  /** table: column to sort by (field or label). */
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  /** table: rows per page (default: all up to 15, then 10). false shows every row. */
+  pageSize?: number | false;
+  page?: number;
+  /** table: keep rows containing these words (accent- and case-insensitive). */
+  query?: string;
+  /** table: browser search box (default: on above 20 rows). */
+  search?: boolean;
+  /** table: totals row. */
+  total?: boolean | 'sum' | 'mean' | 'min' | 'max' | Record<string, string | boolean>;
+  totalLabel?: string;
+  /** table: "#" column with the position. */
+  rank?: boolean;
+  /** table: one card per row. "auto" (default) when the columns do not fit. */
+  cards?: boolean | 'auto';
+  density?: 'compact' | 'normal' | 'comfortable';
+  striped?: boolean;
+  /** table: false disables the automatic data bar. */
+  bars?: boolean;
+  sortable?: boolean;
   [key: string]: unknown;
 }
 
@@ -330,7 +401,7 @@ export declare const schema: Record<string, unknown>;
 export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
 export interface DashboardSpec {
   title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
-  locale?: 'es' | 'en'; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];
+  locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];
   data?: Row[];
   kpis?: Array<{ label: string; value?: number; delta?: number; period?: string; trend?: number[]; good?: 'up' | 'down'; format?: Format;
     field?: string; agg?: 'sum' | 'mean' | 'median' | 'min' | 'max' | 'count' | 'distinct' | 'ratio'; over?: string; scale?: number;
@@ -378,6 +449,8 @@ export declare const QUALITATIVE: Record<string, string>;
 export declare const TYPES: ChartType[];
 export declare function squarify<T extends { value: number }>(items: T[], x: number, y: number, w: number, h: number): (T & { x: number; y: number; w: number; h: number })[];
 export declare function makeFormat(fmt?: Format, locale?: string, values?: number[]): ((v: number) => string) & { type: string };
+/** Most likely language of some texts ('es' | 'en' | 'pt' | 'fr' | 'de'), or null. */
+export declare function detectLocale(texts: string | string[]): 'es' | 'en' | 'pt' | 'fr' | 'de' | null;
 export declare function formatNumber(v: number, decimals?: number, locale?: string, trim?: boolean): string;
 export declare function formatCompact(v: number, locale?: string, decimals?: number): string;
 

@@ -4,19 +4,29 @@
 const SEP = {
   es: { group: '.', dec: ',' },
   en: { group: ',', dec: '.' },
+  pt: { group: '.', dec: ',' },
+  de: { group: '.', dec: ',' },
+  fr: { group: '\u202F', dec: ',' }, // espacio fino: 1 234,5
 };
 
 const COMPACT = {
   es: [[1e12, ' B'], [1e6, ' M'], [1e3, ' mil']],
   en: [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']],
+  pt: [[1e12, ' tri'], [1e9, ' bi'], [1e6, ' mi'], [1e3, ' mil']],
+  fr: [[1e12, ' Bn'], [1e9, ' Md'], [1e6, ' M'], [1e3, ' k']],
+  de: [[1e12, ' Bio.'], [1e9, ' Mrd.'], [1e6, ' Mio.'], [1e3, ' Tsd.']],
 };
 
 export const MONTHS = {
   es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  pt: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+  fr: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+  de: ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'],
 };
 
-const loc = (l) => (l && String(l).toLowerCase().startsWith('en') ? 'en' : 'es');
+/** Idioma de formato: es, en, pt, fr o de ("pt-BR" → pt); cualquier otro, es. */
+const loc = (l) => { const k = String(l || 'es').toLowerCase().slice(0, 2); return k in SEP ? k : 'es'; };
 
 /** Número con separadores. `decimals` fijo; `trim` quita ceros finales. */
 export function formatNumber(v, decimals = 0, locale = 'es', trim = false) {
@@ -109,7 +119,7 @@ export function makeFormat(fmt, locale = 'es', values = []) {
   return f;
 }
 
-function currencyPrefix(cur, l) {
+export function currencyPrefix(cur, l) {
   if (!cur) return '$';
   const c = String(cur).toUpperCase();
   return { USD: 'US$', CLP: '$', EUR: '€', UF: 'UF ', GBP: '£', PEN: 'S/ ', MXN: 'MX$', BRL: 'R$' }[c] || c + ' ';
@@ -196,8 +206,10 @@ export function formatDate(ms, unit, locale = 'es', withYear = true) {
     return formatDate(ms, 'day', l, withYear !== 'day') + ' ' + hm;
   }
   if (unit === 'year') return String(y);
-  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' ? 'Q' : 'T');
+  if (unit === 'quarter') return `T${Math.floor(d.getUTCMonth() / 3) + 1}${withYear ? ' ' + y : ''}`.replace('T', l === 'en' || l === 'de' ? 'Q' : 'T');
   if (unit === 'month') return withYear ? `${m} ${y}` : m;
   const day = d.getUTCDate();
-  return l === 'en' ? `${m} ${day}${withYear ? ', ' + y : ''}` : `${day} ${m}${withYear ? ' ' + y : ''}`;
+  if (l === 'en') return `${m} ${day}${withYear ? ', ' + y : ''}`;
+  if (l === 'de') return `${day}. ${m}${withYear ? ' ' + y : ''}`;
+  return `${day} ${m}${withYear ? ' ' + y : ''}`;
 }
