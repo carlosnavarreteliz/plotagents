@@ -27,7 +27,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Un plan de proyecto o un cronograma | `gantt` | `task`, `start`, `end` (o `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volumen en el tiempo | `area` | como `line`; se apila con `series` |
 | La forma de una serie en una celda de tabla | `spark` | `x`, `y`, `width`/`height` de cualquier tamaño (p. ej. 108×26), `fill?`, `series?` |
-| Una fila de una distribución en una celda de tabla | `rail` | `value`, `min`, `max`, `band?: [lo, hi]`, `median?`, `refs?: [{ field \| value, label }]`, `clip?` / `domain?` (pasado un extremo → chevrón); 160×18 por defecto |
+| Una fila de una distribución en una celda de tabla | `rail` | `value`, `min`, `max`, `band?: [lo, hi]`, `median?`, `refs?: [{ field \| value, label }]`, `clip?` / `domain?` (pasado un extremo → chevrón); 160×18 por defecto; `bare: true` si la página lo repite en cada fila |
 | Quién pasó a quién en el tiempo | `bump` (`slope` para primero vs último) | `x` periodo, `y` valor (o `rank`), `series`, `top?`, `ends?: "first-last"` |
 | Medidas en escalas distintas | `line` + `index: true`, o `facet` | **no hay doble eje** |
 | Crecimiento exponencial | `line` + `yScale: "log"` | |

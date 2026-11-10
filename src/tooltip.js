@@ -2,6 +2,7 @@
 //
 //   tooltip: ['region', 'share']                       // líneas «Campo: valor» de la fila
 //   tooltip: { title: 'name', fields: [...], text: 'note', replace: true }
+//   tooltip: { omit: ['Escala'] }                      // quita una línea de las de siempre, por su nombre
 //   tooltip: (d) => ({ title: d.title, lines: [...d.lines, 'otra línea'] })   // sólo JS
 //   tooltip: false                                     // sin tooltips
 //
@@ -53,6 +54,11 @@ export function tipper(spec, data, locale) {
     }
     return index.get(sig).get(keys.map((f) => String(match[f])).join('\u0000')) || [];
   };
+  // `omit`: nombres de líneas de las de siempre que no van. Una línea «Escala:
+  // 0–40» se llama «Escala» (lo que va antes de los dos puntos); también vale
+  // la línea entera o, desde JS, una RegExp.
+  const omit = o.omit === undefined || o.omit === null ? [] : [].concat(o.omit);
+  const dropped = (l) => omit.some((p) => (p instanceof RegExp ? p.test(l) : l === String(p) || l.startsWith(String(p) + ':')));
   const fmts = new Map();
   const fmtField = (f, fmt) => {
     if (!fmts.has(f)) fmts.set(f, makeFormat(fmt ?? spec.format, locale, (data || []).map((r) => num(r[f])).filter(Number.isFinite)));
@@ -65,7 +71,7 @@ export function tipper(spec, data, locale) {
   };
   return (match, title, ...lines) => {
     const rows = rowsOf(match);
-    const base = lines.filter((l) => l !== undefined && l !== null && l !== '');
+    const base = lines.filter((l) => l !== undefined && l !== null && l !== '' && !(omit.length && dropped(String(l))));
     if (o.fn) {
       const out = o.fn({ title, lines: base, rows, row: rows[0], match: Array.isArray(match) ? undefined : match });
       if (out === null || out === undefined || out === false) return undefined;

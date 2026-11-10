@@ -10,7 +10,7 @@
 // como un chevrón en el extremo y una referencia como un chevrón abierto, y
 // el tooltip lo dice. Una fila sin mínimo y máximo no tiene riel: no se dibuja
 // un punto solo que parezca un rango.
-import { el } from './svg.js';
+import { el, r2 } from './svg.js';
 import { num } from './data.js';
 
 const F = Number.isFinite;
@@ -73,28 +73,44 @@ export const railExtent = (v, vals) => [v, vals.min, vals.max, vals.lo, vals.hi,
  * Las marcas del riel. `x0` y `w`: dónde va la pista; `my`: su línea media;
  * `[a, b]`: la escala; `clipped`: lo de fuera se marca con un chevrón.
  * `track`: dibujar la pista entera de a a b cuando no hay mínimo y máximo.
+ * `compact` (modo `bare`): el mismo dibujo con menos bytes: cada trazo recto es
+ * un <path> «M x y H x2» y las referencias seguidas del mismo color, uno solo.
  * Devuelve { out: [svg], past: -1 | 0 | 1 } (por dónde se sale el valor).
  */
-export function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, theme, colors = {}, dot, muted, sizes = {} }) {
+export function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = false, theme, colors = {}, dot, muted, sizes = {}, halo = true, compact = false }) {
   const span = b - a || 1;
   const X = (t) => x0 + ((t - a) / span) * w;
   const C = (t) => (clipped ? Math.min(b, Math.max(a, t)) : t);
   const out = [];
   const S = { rail: 2, band: 4, median: 6, ref: 8, dot: 4.5, ...sizes };
   const railC = colors.rail ?? theme.axis, bandC = colors.band ?? theme.tint2, medC = colors.median ?? theme.lede;
-  if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(C(vals.min)), x2: X(C(vals.max)), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
-  else if (track) out.push(el('line', { x1: X(a), x2: X(b), y1: my, y2: my, stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  // Un trazo horizontal (y1 = y2) o vertical (x1 = x2).
+  const seg = (x1, y1, x2, y2, at) => (compact
+    ? el('path', { d: `M${r2(x1)} ${r2(y1)}${y1 === y2 ? 'H' + r2(x2) : 'V' + r2(y2)}`, ...at })
+    : el('line', { x1, x2, y1, y2, ...at }));
+  if (F(vals.min) && F(vals.max)) out.push(seg(X(C(vals.min)), my, X(C(vals.max)), my, { stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
+  else if (track) out.push(seg(X(a), my, X(b), my, { stroke: railC, strokeWidth: S.rail, strokeLinecap: 'round' }));
   if (F(vals.lo) && F(vals.hi)) {
     const l = C(Math.min(vals.lo, vals.hi)), h = C(Math.max(vals.lo, vals.hi));
-    if (!(clipped && l === h && (l === a || l === b))) out.push(el('rect', { x: X(l), y: my - S.band, width: Math.max(1.5, Math.abs(X(h) - X(l))), height: S.band * 2, rx: 2, fill: bandC }));
+    // `colors.bandStroke`: un borde de 1 px, por dentro de la banda (no la ensancha).
+    const bs = colors.bandStroke, k = bs ? 0.5 : 0;
+    if (!(clipped && l === h && (l === a || l === b))) out.push(el('rect', { x: X(l) + k, y: my - S.band + k, width: Math.max(1.5, Math.abs(X(h) - X(l))) - 2 * k, height: S.band * 2 - 2 * k, rx: 2, fill: bandC, stroke: bs, strokeWidth: bs ? 1 : null }));
   }
   const inside = (t) => !clipped || (t >= a && t <= b);
-  if (F(vals.median) && inside(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - S.median, y2: my + S.median, stroke: medC, strokeWidth: 1.5 }));
+  if (F(vals.median) && inside(vals.median)) out.push(seg(X(vals.median), my - S.median, X(vals.median), my + S.median, { stroke: medC, strokeWidth: 1.5 }));
+  let last = null; // compact: la última referencia dibujada, para sumarle la siguiente del mismo color
   for (const ref of vals.refs) {
     if (!F(ref.v)) continue;
     const rc = ref.color ?? colors.ref ?? theme.ink;
-    if (inside(ref.v)) out.push(el('line', { x1: X(ref.v), x2: X(ref.v), y1: my - S.ref, y2: my + S.ref, stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }));
-    else {
+    if (inside(ref.v)) {
+      const d = `M${r2(X(ref.v))} ${r2(my - S.ref)}V${r2(my + S.ref)}`;
+      if (compact && last && last.rc === rc && last.i === out.length - 1) { last.d += d; out[last.i] = el('path', { d: last.d, stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }); }
+      else {
+        out.push(seg(X(ref.v), my - S.ref, X(ref.v), my + S.ref, { stroke: rc, strokeWidth: 2, strokeLinecap: 'round' }));
+        last = { rc, d, i: out.length - 1 };
+      }
+    } else {
+      last = null;
       // Una referencia fuera de la escala: un chevrón abierto en ese extremo.
       const e = ref.v > b ? x0 + w + 2 : x0 - 2, k = ref.v > b ? -1 : 1;
       out.push(el('path', { d: `M${r1(e + k * 5)},${r1(my - S.ref + 2)}L${r1(e)},${r1(my)}L${r1(e + k * 5)},${r1(my + S.ref - 2)}`, fill: 'none', stroke: rc, strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' }));
@@ -103,14 +119,15 @@ export function railMarks({ v, vals, a, b, x0, w, my, clipped = false, track = f
   let past = 0;
   if (F(v)) {
     const fill = dot;
-    if (inside(v)) out.push(el('circle', { cx: X(v), cy: my, r: S.dot, fill, stroke: theme.surface, strokeWidth: 1.5 }));
+    // El halo: un anillo del color del fondo que separa el punto de lo que tapa (`halo: false` lo quita).
+    if (inside(v)) out.push(el('circle', { cx: X(v), cy: my, r: S.dot, fill, stroke: halo ? theme.surface : null, strokeWidth: halo ? 1.5 : null }));
     else {
       // Pasado el extremo: un chevrón que apunta hacia afuera, no un punto en
       // el último píxel (que se leería «en el máximo» y no «más allá»).
       past = v > b ? 1 : -1;
       const e = past > 0 ? x0 + w + 2 : x0 - 2, k = -past;
       const hh = Math.min(5, S.dot + 0.5);
-      out.push(el('path', { d: `M${r1(e)},${r1(my)}L${r1(e + k * 7)},${r1(my - hh)}L${r1(e + k * 7)},${r1(my + hh)}Z`, fill, stroke: theme.surface, strokeWidth: 1, strokeLinejoin: 'round' }));
+      out.push(el('path', { d: `M${r1(e)},${r1(my)}L${r1(e + k * 7)},${r1(my - hh)}L${r1(e + k * 7)},${r1(my + hh)}Z`, fill, stroke: halo ? theme.surface : null, strokeWidth: halo ? 1 : null, strokeLinejoin: halo ? 'round' : null }));
     }
   }
   return { out, past, muted };
@@ -124,7 +141,8 @@ const r1 = (n) => Math.round(n * 10) / 10;
  * escala. Lo que cae fuera de ella lo dice.
  */
 export function railTip({ en, label, s, fr, vals, labels = {}, past = 0, scale = null, row }) {
-  const off = en ? 'beyond the scale' : 'fuera de la escala';
+  // `outsideLabel`: cómo se dice «fuera de la escala» (p. ej. «más allá de la comuna más alta»).
+  const off = textOf(labels.outside, row) ?? (en ? 'beyond the scale' : 'fuera de la escala');
   const parts = [`${label}: ${s}${past ? ` (${off})` : ''}`];
   const minL = textOf(labels.min, row), maxL = textOf(labels.max, row);
   if (F(vals.min) && F(vals.max)) {

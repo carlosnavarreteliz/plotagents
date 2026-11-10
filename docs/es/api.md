@@ -50,6 +50,10 @@ Un dashboard HTML autocontenido con una disposición según buenas prácticas, c
 
 Devuelve una descripción en texto del gráfico, como "Mayor: Biobío con 1.240 (30%)…". El mismo texto va en el `<desc>` del SVG para los lectores de pantalla.
 
+### `skinCSS(specs)`
+
+Las reglas de las pieles de specs `bare` dibujados con `bare: { skinCSS: false }`, para escribirlas una vez en la página en vez de una vez por SVG: `".pa-skins{--pa-k1:#6e86c8}html.classic .pa-skins{--pa-k1:#0b3f8c}"`. Cada variable va una vez aunque la compartan muchos specs; vacío si sólo cambian variables de la página entre pieles. Ver [Marcas livianas](themes.md#marcas-livianas-bare).
+
 ## En el navegador
 
 ### `render(target, spec, opts?)`

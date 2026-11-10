@@ -50,6 +50,10 @@ A self-contained HTML dashboard with best-practice layout, shared colors, KPIs a
 
 Returns a text description of the chart, such as "Highest: Biobío with 1,240 (30%)…". The same text goes into the SVG's `<desc>` for screen readers.
 
+### `skinCSS(specs)`
+
+The skin rules of `bare` specs drawn with `bare: { skinCSS: false }`, to write once in the page instead of once per SVG: `".pa-skins{--pa-k1:#6e86c8}html.classic .pa-skins{--pa-k1:#0b3f8c}"`. Each variable appears once however many specs share it; empty when only page variables change between skins. See [Light marks](themes.md#light-marks-bare).
+
 ## In the browser
 
 ### `render(target, spec, opts?)`

@@ -113,6 +113,7 @@ export function createFrame(spec, theme, defaults = {}) {
       // Id estable pero distinto entre gráficos sin título del mismo tipo (aria-labelledby).
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width + desc)).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
+      if (spec.bare) return bareSvg({ spec, theme, width, height, header, body, parts, defs, css: fontImport + css, root });
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
         + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '')
@@ -151,6 +152,41 @@ export function createFrame(spec, theme, defaults = {}) {
     },
   };
   return frame;
+}
+
+/**
+ * `bare: true`: la marca liviana, para cientos de rieles o sparklines en una
+ * página HTML que ya dice qué son. Sin <style> de interacción (sí el CSS
+ * propio del tipo: vistas de un mapa, fichas de una tabla), sin <title> ni
+ * <desc> y `aria-hidden` (el sentido lo lleva el HTML de alrededor), sin
+ * grupos vacíos, sin fondo (salvo `background: true`), sin data-pa-* (no hay
+ * runtime) y sin `max-width:100%` en línea, que en una tabla automática deja
+ * la columna en cero. `font-family` sólo si hay texto y no es `inherit`.
+ */
+function bareSvg({ spec, theme, width, height, header, body, parts, defs, css, root }) {
+  const h = r2(height);
+  const inner = [
+    defs ? el('defs', {}, defs) : '',
+    spec.background === true ? el('rect', { width, height: h, fill: theme.surface }) : '',
+    header.length ? g({ class: 'pa-header' }, header) : '',
+    body,
+    parts.join(''),
+  ].flat(Infinity).filter(Boolean).join('');
+  const hasText = /<text\b/.test(inner);
+  const family = spec.fontFamily || theme.font?.family || FONT;
+  const { class: cls, ...rest } = root || {};
+  return el('svg', {
+    xmlns: 'http://www.w3.org/2000/svg',
+    viewBox: `0 0 ${width} ${h}`,
+    width,
+    height: h,
+    'aria-hidden': 'true',
+    class: 'pa-chart' + (cls ? ' ' + cls : ''),
+    fontFamily: hasText && family !== 'inherit' ? family : null,
+    style: hasText ? 'font-variant-numeric:lining-nums' : null,
+    'data-pa-tip': theme.tooltip && (theme.tooltip.bg || theme.tooltip.ink) ? `${theme.tooltip.bg || ''},${theme.tooltip.ink || ''}` : null,
+    ...rest,
+  }, (css ? el('style', {}, css) : '') + inner);
 }
 
 /** Posición de la leyenda: `legend: "top" | "bottom" | "left" | "right"` (o { position }). */

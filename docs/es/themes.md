@@ -132,6 +132,30 @@ plot({
 
 Cada piel cambia sólo colores (`theme`, `palette`, `ramp`, `colorScale`, `colors`) y se dibuja aparte; donde dos pieles difieren, la marca recibe una variable CSS definida en el `<style>` del propio SVG bajo el selector `when` de cada piel. Los atributos conservan la primera piel, así que un `<img>` y el resaltado desde la leyenda siguen funcionando. Posiciones, textos y orden tienen que salir iguales en todas las pieles; si no, `plot` lanza un error. Las pieles se combinan con los colores como variables CSS, y `configure({ skins })` las fija para todos los gráficos (`skins: null` las apaga en uno).
 
+## Marcas livianas (`bare`)
+
+Una página que dibuja un riel o una sparkline en cada fila de una tabla (cientos por página, cada uno dos veces para ancho y angosto) paga un marco que una celda no necesita. `bare: true` escribe el SVG más chico que todavía dibuja las mismas marcas:
+
+- sin bloque `<style>` (el CSS propio del tipo se queda: las vistas de un mapa, las fichas de una tabla), sin `role`, `<title>` ni `<desc>` pero con `aria-hidden="true"`: el HTML de alrededor (el nombre de la fila, su cifra) lleva el sentido;
+- sin grupos vacíos, sin fondo (salvo `background: true`), sin atributos `data-pa-*` (no hay runtime), sin `max-width:100%` en línea (que le da al SVG un ancho mínimo de cero y encoge la columna de una tabla automática), y `font-family` sólo si hay texto y no es `inherit`;
+- un riel pone su `data-tip` en la raíz, así que responde la caja entera sin un rectángulo invisible; los trazos rectos son `<path d="M x y H x2">` y las referencias de un mismo color comparten un trazo.
+
+Un color `var(--x, #respaldo)` se escribe una vez, en el style, sin el atributo de presentación: `style="stroke:var(--x, #eee4d4)"`. Es seguro en cualquier página (el style en línea acepta `var()` y el respaldo cubre una variable no definida), pero no en archivos SVG ni rasterizadores que ignoran el CSS: ahí, sin `bare`.
+
+**Pieles.** Con `bare`, cada piel se dibuja aparte y se unen así:
+
+- la misma variable de la página en todas las pieles (`var(--ground-2, #eee4d4)` y `var(--ground-2, #eef2f7)`) es de la página, que ya la reasigna en cada piel: se escribe una vez, con el respaldo de la primera piel, y no necesita reglas;
+- un color que cambia entre pieles (dos literales, o `--azul` en una y `--accent` en otra) pasa a una variable con nombre por sus colores, `--pa-<hash>`, sobre la clase `pa-skins`. Sus reglas van en un `<style>` de cada SVG; con `bare: { skinCSS: false }` no van, y `skinCSS(specs)` las devuelve para escribirlas una vez en la página. Todos los SVG con los mismos colores comparten la variable, así que una hoja sirve a todos.
+
+```js
+import { plot, skinCSS } from 'plotagents';
+const rieles = filas.map((f) => ({ type: 'rail', data: [f], value: 'v', domain: ['lo', 'hi'], bare: { skinCSS: false }, skins }));
+const css = skinCSS(rieles);   // ".pa-skins{--pa-k1:#6e86c8}html.classic .pa-skins{--pa-k1:#0b3f8c}", o "" si sólo cambian variables de la página
+const celdas = rieles.map(plot);
+```
+
+Sin las reglas de las pieles, una marca se ve con la primera piel, nunca con un relleno negro. Un color que es `var()` en una piel y literal en otra no se puede unir y lanza un error: usa una variable en ambas (o en ninguna).
+
 ## El color sigue a la entidad
 
 Los colores se asignan a entidades, nunca a posiciones:

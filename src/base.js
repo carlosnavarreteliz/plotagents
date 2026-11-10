@@ -13,7 +13,7 @@ import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { resolveColorScale } from './colorscales.js';
-import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
+import { expandSkins, mergeSkins, cssVars, plotWithVars, collectSkins, skinRules } from './skins.js';
 
 // Los tipos se registran al importarse (src/types/*.js); el núcleo los trae todos.
 export const RENDERERS = {};
@@ -72,8 +72,14 @@ export function plot(spec) {
   if (spec && typeof spec === 'object') {
     // Antes de withDefaults: ahí `colors` sólo deja pasar colores literales.
     const full = { ...DEFAULTS, ...spec };
+    // `bare` con pieles: cada piel se dibuja aparte, con sus variables, para
+    // que un `var(--x)` de la página quede como tal en todas (src/skins.js).
+    if (full.bare && Array.isArray(full.skins) && full.skins.length) {
+      const [specs, whens] = expandSkins(full);
+      return mergeSkins(specs.map(plot), whens, { bare: true, style: !(typeof full.bare === 'object' && full.bare.skinCSS === false) });
+    }
     const vars = cssVars(full);
-    if (vars.size) return plotWithVars(full, vars, plot);
+    if (vars.size) return plotWithVars(full, vars, plot, !!full.bare);
   }
   const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
   if (Array.isArray(skins) && skins.length) {
@@ -89,6 +95,26 @@ export function plot(spec) {
     if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
     return RENDERERS[s.type](s, theme);
   });
+}
+
+/**
+ * Las reglas de las pieles de unos gráficos `bare`, para escribirlas una vez
+ * en la página (con `bare: { skinCSS: false }` cada SVG no las lleva):
+ *
+ *   const css = skinCSS(specs);   // ".pa-skins{--pa-k:#6e86c8}html.x .pa-skins{--pa-k:#0b3f8c}"
+ *
+ * Dibuja cada spec (en modo `bare`) y junta las variables: cada una va una
+ * vez. Vacío si ningún color literal cambia entre pieles (los `var(--x)` de
+ * la página no necesitan reglas).
+ */
+export function skinCSS(specs) {
+  const list = collectSkins(() => {
+    for (const s of [].concat(specs ?? [])) {
+      if (!s || typeof s !== 'object') continue;
+      plot({ ...s, bare: { ...(s.bare && typeof s.bare === 'object' ? s.bare : {}), skinCSS: false } });
+    }
+  });
+  return skinRules(list);
 }
 
 // ── Configuración global ──────────────────────────────────────────────────

@@ -654,11 +654,11 @@ export function table(spec, theme) {
           const own = railExtent(n, vals);
           a = Math.min(...own); b = Math.max(...own);
         }
-        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
+        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent, halo: c.halo !== false });
         out.push(...rail.out);
         const en = String(locale).startsWith('en');
         const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
-          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
+          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel, outside: c.outsideLabel } });
         return { out, tip: tipText };
       }
       case 'sparkline': {

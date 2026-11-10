@@ -132,6 +132,30 @@ plot({
 
 Each skin patches only colors (`theme`, `palette`, `ramp`, `colorScale`, `colors`) and is drawn on its own; wherever two skins disagree, the mark gets a CSS variable defined in the SVG's own `<style>` under each skin's `when` selector. Attributes keep the first skin, so an `<img>` and the legend highlight still work. Positions, text and order must come out the same in every skin, or `plot` throws. Skins nest with CSS-variable colors, and `configure({ skins })` sets them for every chart (`skins: null` turns them off for one).
 
+## Light marks (`bare`)
+
+A page that draws a rail or a sparkline in every row of a table (hundreds per page, each twice for wide and narrow) pays for chrome a cell does not need. `bare: true` writes the smallest SVG that still draws the same marks:
+
+- no `<style>` block (a type's own functional CSS stays: a map's views, a table's cards), no `role`, `<title>` or `<desc>` but `aria-hidden="true"`: the surrounding HTML (the row's name, its figure) carries the meaning;
+- no empty groups, no background (unless `background: true`), no `data-pa-*` attributes (there is no runtime), no inline `max-width:100%` (which gives the SVG a minimum width of zero and collapses an auto-layout table column), and `font-family` only when there is text and it is not `inherit`;
+- a rail puts its `data-tip` on the root, so the whole box answers without an invisible rectangle; straight strokes are `<path d="M x y H x2">` and references of one colour share one path.
+
+A `var(--x, #fallback)` colour is written once, in the style, without the presentation attribute: `style="stroke:var(--x, #eee4d4)"`. That is safe in any page (inline styles take `var()`, and the fallback covers an undefined variable) but not for SVG files or rasterizers that ignore CSS: there, leave `bare` off.
+
+**Skins.** With `bare`, each skin is drawn on its own and merged so:
+
+- the same page variable in every skin (`var(--ground-2, #eee4d4)` and `var(--ground-2, #eef2f7)`) belongs to the page, which already reassigns it per skin: it is written once, with the first skin's fallback, and needs no rules at all;
+- a colour that changes between skins (two literals, or `--azul` in one and `--accent` in the other) becomes a variable named after its colours, `--pa-<hash>`, on the class `pa-skins`. Its rules go in a `<style>` of each SVG; with `bare: { skinCSS: false }` they are left out, and `skinCSS(specs)` returns them to write once in the page. Every SVG with the same colours shares the variable, so one stylesheet serves all.
+
+```js
+import { plot, skinCSS } from 'plotagents';
+const rails = rows.map((r) => ({ type: 'rail', data: [r], value: 'v', domain: ['lo', 'hi'], bare: { skinCSS: false }, skins }));
+const css = skinCSS(rails);   // ".pa-skins{--pa-k1:#6e86c8}html.classic .pa-skins{--pa-k1:#0b3f8c}", or "" when only page variables change
+const cells = rails.map(plot);
+```
+
+Without the skin rules a mark shows its first skin, never a black fill. A colour that is `var()` in one skin and a literal in another cannot be merged and throws: use a variable in both (or in neither).
+
 ## Color follows the entity
 
 Colors are assigned to entities, never to positions:

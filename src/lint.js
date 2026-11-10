@@ -59,9 +59,10 @@ function lintSpec(spec = {}) {
     check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
   } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
-  if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
-  else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
-  if (!spec.source) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
+  // `bare`: una marca dentro de un HTML que ya la nombra y cita; no lleva título ni fuente dibujados.
+  if (!spec.bare && !spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
+  else if (!spec.bare && typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
+  if (!spec.source && !spec.bare) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
 
   const series = spec.series ?? spec.color;
   const nSeries = series && fields.includes(series) ? uniq(data.map((r) => String(r[series]))).length : Array.isArray(spec.y) ? spec.y.length : 1;
