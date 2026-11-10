@@ -8,7 +8,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
-import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } from '../axes.js';
+import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } from '../stats.js';
@@ -99,10 +99,15 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const xTitle = vertical ? spec.xLabel : spec.xLabel ?? humanize(m.val);
   const body = { pre: [], marks: [], post: [] };
   let valS, nd, ticks, tickFmt, inner, catS;
+  // Grupos del eje de categorías (xGroup / yGroup, cualquiera de los dos).
+  const groupF = m.cat ? spec.xGroup ?? spec.yGroup : null;
+  if (groupF) requireField(m.data, groupF, spec.xGroup ? 'xGroup' : 'yGroup');
+  const runs = groupF ? groupRuns(m.cats, m.data, m.cat, groupF) : null;
+  const tickEvery = Math.max(1, Math.floor((spec.xTicks ?? spec.yTicks)?.every ?? 1));
 
   if (vertical) {
     const top = yAxisTop(theme) + (yTitle ? 18 : 0);
-    const bottom = (m.cat ? 24 : 6) + (xTitle ? 18 : 0);
+    const bottom = (m.cat ? 24 : 6) + (xTitle ? 18 : 0) + (runs ? GROUP_BAND : 0);
     const h0 = area.h - top - bottom;
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(h0 / 56)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
@@ -115,7 +120,8 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     if (yTitle) body.post.push(text(area.x, area.y + 10, yTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500 }));
     if (m.cat) {
       const items = m.cats.map((c) => ({ pos: catS.center(c), label: truncate(c, Math.max(40, catS.step - 6), axisSize + 0.5) }));
-      body.post.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: axisSize + 0.5, color: theme.lede }));
+      body.post.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18, size: axisSize + 0.5, color: theme.lede, every: tickEvery }));
+      if (runs) body.post.push(groupBandX(runs, (i) => [catS.center(m.cats[i]) - catS.step / 2 + 1, catS.center(m.cats[i]) + catS.step / 2 - 1], inner.y + inner.h + 24 + (xTitle ? 18 : 0), theme, inner.y));
     }
     body.pre.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis, strokeWidth: 1 }));
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
@@ -126,13 +132,16 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
       area = { ...area, h: frame.bottom - area.y };
     }
-    inner = { x: area.x + labelW, y: area.y + 4, w: area.w - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
+    const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
+    inner = { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(inner.w / 100)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.x, inner.x + inner.w);
     catS = band(m.cats, inner.y, inner.y + inner.h, { inner: 0.28, outer: 0.08 });
     body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN }));
-    if (m.cat) for (const c of m.cats) {
+    if (runs) body.pre.push(groupBandY(runs, (i) => [catS.center(m.cats[i]) - catS.step / 2 + 1, catS.center(m.cats[i]) + catS.step / 2 - 1], area.x, gW, theme, inner.x + inner.w));
+    if (m.cat) for (const [ci, c] of m.cats.entries()) {
+      if (ci % tickEvery) continue;
       const strong = !hl || hl.has(c);
       body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
     }

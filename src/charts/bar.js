@@ -7,7 +7,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
-import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX } from '../axes.js';
+import { gridY, gridX, xLabels, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
@@ -164,6 +164,12 @@ export function bar(spec, theme) {
 
   let area = frame.layout(legend);
   const RAD = theme.marks?.barRadius ?? 4;
+  // Grupos del eje de categorías (xGroup / yGroup: en barras, cualquiera de los dos
+  // agrupa las categorías, sea cual sea la orientación). Sin reordenar.
+  const groupF = spec.xGroup ?? spec.yGroup;
+  if (groupF) requireField(m.data, groupF, spec.xGroup ? 'xGroup' : 'yGroup');
+  const runs = groupF ? groupRuns(cats, m.data, m.x, groupF) : null;
+  const tickEvery = Math.max(1, Math.floor((spec.xTicks ?? spec.yTicks)?.every ?? 1));
   const body = [];
   const refs = (spec.refLines || []).map((r) => ({ ...r, y: r.value ?? r.y }));
 
@@ -178,7 +184,8 @@ export function bar(spec, theme) {
     const top = showLabels ? 16 : 6;
     // Etiquetas bajo barras negativas: reserva espacio para que no pisen las categorías.
     const negPad = showLabels && vmin < 0 ? 16 : 0;
-    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale - negPad };
+    const gH = runs ? GROUP_BAND : 0;
+    const inner = { x: area.x + leftM, y: area.y + top * ctx.textScale, w: area.w - leftM, h: area.h - top * ctx.textScale - 26 * ctx.textScale - negPad - gH };
     const yS = linear(dom.min, dom.max, inner.y + inner.h, inner.y);
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step, yS.ticks(nd.step))));
@@ -245,7 +252,8 @@ export function bar(spec, theme) {
     // Categorías
     const dUnit = m.kind === 'date' ? dateUnit(cats.map((c) => parseDate(c))) : null;
     const items = cats.map((c) => ({ pos: xb.center(c), label: m.nominal ? truncate(c, Math.max(xb.step - 6, 40), 12) : dUnit ? formatDate(parseDate(c), dUnit, locale) : c }));
-    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18 + negPad, size: 12, color: theme.lede }));
+    body.push(xLabels(items, inner, theme, { y: inner.y + inner.h + 18 + negPad, size: 12, color: theme.lede, every: tickEvery }));
+    if (runs) body.push(groupBandX(runs, (i) => [xb.center(cats[i]) - xb.step / 2 + 1, xb.center(cats[i]) + xb.step / 2 - 1], inner.y + inner.h + 26 * ctx.textScale + negPad, theme, inner.y));
     body.push(refLinesY(refs, yS, inner, theme, fmt));
   } else {
     // ── Barras horizontales
@@ -256,11 +264,17 @@ export function bar(spec, theme) {
       area = { ...area, h: frame.bottom - area.y };
     }
     const catW = Math.min(maxCatW, area.w * 0.38) + 12;
+    const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
+    if (gW) area = { ...area, x: area.x + gW, w: area.w - gW };
     const rightM = showLabels ? valueLabelW + 10 : 8;
     const hasNeg = vmin < 0;
     const inner = { x: area.x + catW, y: area.y + 4, w: area.w - catW - rightM - (hasNeg && showLabels ? valueLabelW + 10 : 0), h: area.h - (hideAxis ? 8 : 28) };
     if (hasNeg && showLabels) inner.x += valueLabelW + 10;
-    const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], Math.max(3, Math.round(inner.w / 110))) } : niceDomain(vmin, vmax, Math.max(3, Math.round(inner.w / 110)), { integer: allInt });
+    // Cuántas marcas caben según el ancho real de sus rótulos (en un teléfono,
+    // «7.500.000» no entra cada 50 px): así no hay que ralearlas después.
+    const tickW = measure(fmt(Math.max(Math.abs(vmin), Math.abs(vmax))), SIZES.axis) + 18;
+    const nTicks = Math.max(2, Math.min(Math.round(inner.w / 110), Math.floor(inner.w / tickW)));
+    const nd = spec.yDomain ? { min: spec.yDomain[0], max: spec.yDomain[1], step: niceStep(spec.yDomain[1] - spec.yDomain[0], Math.max(2, nTicks)) } : niceDomain(vmin, vmax, nTicks, { integer: allInt });
     const dom = hideAxis && !spec.yDomain ? { min: vmin, max: vmax || 1 } : nd;
     if (spec._domains) spec._domains.y = [dom.min, dom.max];
     const xS = linear(dom.min, dom.max, inner.x, inner.x + inner.w);
@@ -274,7 +288,7 @@ export function bar(spec, theme) {
       const parts = [];
       const strong = !hl || hl.has(c);
       parts.push(el('rect', { x: area.x, y: by - yb.step * 0.16, width: area.w, height: yb.step, fill: 'transparent' }));
-      parts.push(text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, Math.min(maxCatW, area.w * 0.38) + 0.5, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' }));
+      if (cats.indexOf(c) % tickEvery === 0) parts.push(text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, Math.min(maxCatW, area.w * 0.38) + 0.5, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' }));
       if (stack) {
         const h = Math.min(maxBar, bh);
         const y0b = by + (bh - h) / 2;
@@ -317,6 +331,7 @@ export function bar(spec, theme) {
       }
     });
     body.push(el('line', { x1: Math.round(x0) + 0.5, x2: Math.round(x0) + 0.5, y1: inner.y, y2: inner.y + inner.h, stroke: theme.axis, strokeWidth: 1 }));
+    if (runs) body.push(groupBandY(runs, (i) => [yb.center(cats[i]) - yb.step / 2 + 1, yb.center(cats[i]) + yb.step / 2 - 1], area.x - gW, gW, theme, inner.x + inner.w));
     body.push(refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), xS, inner, theme, fmt));
   }
 

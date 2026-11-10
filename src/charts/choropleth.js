@@ -5,6 +5,7 @@
 // usan todo el ancho con etiquetas solo donde importan. Los estados de EE. UU.
 // llevan su sigla (y el valor, si cabe); los chicos del noreste, afuera con
 // línea guía. En el navegador: zoom con clic, rueda (+ Ctrl/⌘) o pellizco.
+import { binnedScale } from '../colorscales.js';
 import { el, g, text } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -95,6 +96,9 @@ function quantile(sorted, p) {
 export function colorScale(values, spec, theme) {
   const v = values.filter(Number.isFinite).sort((a, b) => a - b);
   const min = v[0], max = v[v.length - 1], range = max - min;
+  // `colorScale: { colors, breaks }`: las clases las fija quien llama.
+  const bins = binnedScale(spec);
+  if (bins) return classed(bins.breaks, bins.colors, min, max);
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const mode = Array.isArray(spec.scale) || Array.isArray(spec.thresholds) ? 'thresholds' : spec.scale || 'quantile';
   if (mid !== undefined) {

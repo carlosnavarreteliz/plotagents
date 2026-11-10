@@ -9,6 +9,8 @@
 //
 // Los mapas se muestrearon de matplotlib 3.9 en puntos equiespaciados y se
 // interpolan en OKLab (error p99 ≤ 2 ΔE×100 frente al original).
+import { PlotError } from './data.js';
+
 export const COLORMAPS = {
   // Perceptually uniform sequential
   viridis: '440154472D7B3B528B2C728E21918C28AE805EC962ADDC30FDE725',
@@ -190,4 +192,30 @@ export function resolveColorScale(v) {
   const stops = unpack(qual ? QUALITATIVE[key] : COLORMAPS[key]);
   if (rev) stops.reverse();
   return { name: key + (rev ? '_r' : ''), stops, kind: qual ? 'qualitative' : DIVERGING.has(key) ? 'diverging' : CYCLIC.has(key) ? 'cyclic' : 'sequential' };
+}
+
+/**
+ * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
+ * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
+ * i si breaks[i − 1] ≤ v < breaks[i]. Devuelve { breaks, colors, cls, color } o
+ * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
+ */
+export function binnedScale(spec) {
+  const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+  if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
+  const breaks = cs.breaks.map(Number);
+  if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
+  for (let i = 1; i < breaks.length; i++) if (!(breaks[i] > breaks[i - 1])) throw new PlotError('`colorScale.breaks` debe ir en orden creciente y sin repetir.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  let colors;
+  if (Array.isArray(cs.colors)) {
+    colors = cs.colors.map(String);
+    if (colors.length !== breaks.length + 1) throw new PlotError(`Con ${breaks.length} cortes van ${breaks.length + 1} colores (hay ${colors.length}).`, 'colors.length = breaks.length + 1');
+  } else {
+    const base = resolveColorScale(cs.name ?? 'Blues');
+    if (!base) throw new PlotError(`Escala "${cs.name}" desconocida.`, 'colorScale: { name: "Blues", breaks: [...] }');
+    colors = sample(base.stops, breaks.length + 1);
+  }
+  if (cs.reverse) colors = [...colors].reverse();
+  const cls = (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
+  return { breaks, colors, cls, color: (v) => colors[cls(v)] };
 }

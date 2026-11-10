@@ -52,6 +52,10 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `aggregate` | `"sum"` (por defecto), `"mean"`, `"max"`, `"min"`, `"count"`, `"first"`, `"last"`. `countplot` cuenta filas. |
 | `labels` | `true`, `false` o `"auto"`. |
 | `barWidth` | Grosor máximo de la barra en px. |
+| `xGroup` / `yGroup` | Campo que agrupa categorías consecutivas (sirve cualquiera de los dos, en ambas orientaciones): una banda teñida con el nombre del grupo corre junto al eje de categorías, con una línea fina entre grupos. No se reordena nada: usa `sort: "none"` para conservar tu orden. |
+| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N categorías (y ralea más sólo si los rótulos aún chocan). |
+
+El eje de valores siempre termina en el primer valor redondo igual o mayor que la barra más larga, y esa última marca siempre va rotulada, también en un teléfono: cuántas marcas caben depende del ancho de sus rótulos.
 
 ## Tiempo
 
@@ -201,6 +205,7 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `jitter`, `dodge`, `radius` | Disposición de strip y swarm. |
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
+| `xGroup` / `yGroup`, `xTicks` / `yTicks` | Eje de categorías con grupos y rótulos raleados, como en `bar`. |
 
 ## Partes de un todo
 
@@ -355,6 +360,16 @@ Filas `from`, `to`, `value`, o `matrix` + `names`. `directed` (por defecto false
 
 Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `diverging: true`) para una rampa divergente. Los valores se escriben en las celdas cuando caben.
 
+| Opción | Qué hace |
+|---|---|
+| `colorScale: { colors, breaks }` | Clases discretas en vez de un degradado ([escalas de color](colorscales.md#clases)); la leyenda pasa a ser una clave escalonada con los cortes escritos debajo, con `format`. |
+| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. |
+| `missing` | Celdas sin valor: `"tint"` (por defecto), `"plain"` (sólo el borde), `"hatch"` (rayado de «sin dato») o `"gap"` (nada). |
+| `floor` / `ceiling` | Los valores bajo / sobre se dibujan como celdas vacías: el valor existe (el tooltip lo muestra), pero no se colorea ni estira la escala. |
+| `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
+| `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
+| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
+
 ### `sankey`
 
 `from`, `to`, `value` (también detecta `source`/`target`). El color parte en la primera etapa con más de un nodo y fluye aguas abajo.
@@ -416,6 +431,7 @@ plot({
 | `date` | Fecha legible en el idioma del gráfico | Fechas ISO |
 | `link` | Enlace subrayado; solo `http(s)` y `mailto` reciben un `href` | URLs |
 | `rank` | Posición según el orden actual | `rank: true` |
+| `range` | Un riel: el valor de la fila como punto sobre `min`–`max`, una `band: [lo, hi]` sombreada, una muesca en la `median` y una marca de referencia `ref` (cada una, un campo o un número fijo). El tooltip lista cada parte; `refLabel` y `bandLabel` las nombran. `scale: "row"` da a cada fila su propia escala (indicadores en unidades distintas); por defecto, una escala para la columna | — |
 | `text`, `number` | Texto (se divide en 2–3 líneas) y números simples | Todo lo demás |
 
 | Opción | Significado |

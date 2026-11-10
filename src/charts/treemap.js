@@ -9,6 +9,7 @@ import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
+import { binnedScale } from '../colorscales.js';
 import { ctx } from '../context.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
@@ -87,14 +88,19 @@ export function treemap(spec, theme) {
   // Crecimiento en el tono frío, caída en el cálido; gris neutro sin cambio.
   // Con una colormap propia (cmap) se respeta su orientación: bajo → alto.
   const divRamp = theme.cmap ? [...theme.diverging] : [...theme.diverging].reverse();
-  const changeColor = (c) => (c === null ? theme.tint : ramp(divRamp, 0.5 + Math.max(-1, Math.min(1, c / cMax)) / 2));
+  // Con `colorScale: { colors, breaks }` la variación va por clases (cortes en fracción: 0,1 = 10 %).
+  const bins = byChange ? binnedScale(spec) : null;
+  const changeColor = (c) => (c === null ? theme.tint : bins ? bins.color(c) : ramp(divRamp, 0.5 + Math.max(-1, Math.min(1, c / cMax)) / 2));
 
   // Leyenda del primer nivel visible, con su participación: la leyenda también informa.
   const top = focus.children;
   let legend = [];
   if (byChange && spec.legend !== false) {
     const lab = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatNumber(Math.abs(v) * 100, 0, locale)}%`;
-    legend = [{ type: 'ramp', stops: divRamp, min: lab(-cMax), max: lab(cMax), title: (en ? 'Change' : 'Variación') + (prevLabel ? (en ? ' vs ' : ' vs ') + prevLabel : '') }];
+    const ttl = (en ? 'Change' : 'Variación') + (prevLabel ? ' vs ' + prevLabel : '');
+    legend = bins
+      ? [{ type: 'steps', colors: bins.colors, labels: bins.breaks.map(lab), title: ttl }]
+      : [{ type: 'ramp', stops: divRamp, min: lab(-cMax), max: lab(cMax), title: ttl }];
   } else if (height(root) > 1 && root.children.length > 1 && spec.legend !== false) {
     // Leyenda del primer nivel, también al entrar a un grupo: clic = ver solo
     // esa categoría en todo el plano; shift + clic = quitarla (en el navegador).

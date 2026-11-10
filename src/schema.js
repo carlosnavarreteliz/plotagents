@@ -22,7 +22,7 @@ const colorScaleSpec = (d) => ({
   anyOf: [
     { type: 'string' },
     { type: 'array', items: { type: 'string' }, minItems: 2 },
-    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' } } },
+    { type: 'object', properties: { name: { type: 'string' }, colors: { type: 'array', items: { type: 'string' } }, reverse: { type: 'boolean' }, mid: { type: 'number', description: 'Center of a diverging scale.' }, breaks: { type: 'array', items: { type: 'number' }, description: 'Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key.' } } },
   ],
 });
 
@@ -122,7 +122,7 @@ export const schema = {
     borderColor: { type: 'string', description: 'Map: color of the borders between regions.' },
     borderWidth: { type: 'number', description: 'Map: width of the borders between regions.' },
     pointRadius: { type: 'number', description: 'Map: radius of Point features in your own GeoJSON (default 5).' },
-    missing: { type: 'string', enum: ['hatch', 'plain'], description: 'choropleth: how regions without data look: hatched (default) or "plain" (flat tint).' },
+    missing: { type: 'string', enum: ['hatch', 'plain', 'tint', 'gap'], description: 'Cells/regions without data. choropleth: "hatch" (default) or "plain" (flat tint). heatmap: "tint" (default), "plain" (outline only), "hatch" or "gap" (nothing drawn).' },
     thresholds: { type: 'array', items: { type: 'number' }, description: 'choropleth: class breaks (same as a list in `scale`).' },
     lat: field('pointmap: latitude field (auto-detected: lat, latitude, latitud).'),
     lon: field('pointmap: longitude field (auto-detected: lon, lng, longitude, longitud).'),
@@ -159,14 +159,18 @@ export const schema = {
     col: field('Alias of facet (seaborn naming).'),
     facetOrder: { type: 'array', items: { type: 'string' }, description: 'facet: panel order (values of the facet field; the rest follow).' },
     columns: {
-      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank. Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.',
+      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and a reference tick; `scale: "row"` gives each row its own scale). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.',
       anyOf: [
         { type: 'integer' },
         { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
           field: { type: 'string' }, label: { type: 'string' },
-          type: { type: 'string', enum: ['text', 'number', 'bar', 'heat', 'delta', 'sparkline', 'progress', 'badge', 'check', 'date', 'link', 'rank'] },
+          type: { type: 'string', enum: ['text', 'number', 'bar', 'heat', 'delta', 'sparkline', 'progress', 'badge', 'check', 'date', 'link', 'rank', 'range'] },
           format: { anyOf: [{ type: 'string' }, { type: 'object' }] }, align: { type: 'string', enum: ['left', 'right', 'center'] }, width: { type: 'number' },
           good: { type: 'string', enum: ['up', 'down'] }, target: { anyOf: [{ type: 'string' }, { type: 'number' }] }, colorScale: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }, { type: 'object' }] },
+          min: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: field (or fixed number) with the low end of the rail.' }, max: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: high end of the rail.' },
+          band: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2, description: 'range: [lo, hi] fields of the shaded band (e.g. quartiles).' }, bandLabel: { type: 'string' },
+          median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: notch.' }, ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: reference tick (e.g. the national figure).' }, refLabel: { type: 'string' },
+          scale: { type: 'string', enum: ['shared', 'row'], description: 'range: one scale for the column (default) or one per row (indicators in different units).' },
           total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
         } }] } },
       ],
@@ -278,6 +282,14 @@ export const schema = {
     centerValue: { type: 'string', description: 'donut/sunburst: text in the center (default: the total).' },
     centerLabel: { type: 'string', description: 'donut/sunburst: caption under the center value.' },
     cellHeight: number('heatmap: maximum cell height in px.'),
+    floor: number('heatmap: values below are drawn as plain empty cells (not "no data"; the tooltip keeps the value) and do not count for the color scale.'),
+    ceiling: number('heatmap: values above are drawn as plain empty cells and do not count for the color scale.'),
+    midClass: { type: 'string', enum: ['neutral'], description: 'heatmap with binned `colorScale.breaks` around 0: the class that contains 0 is drawn in the neutral tint, so near-zero cells are not painted.' },
+    emptyRow: { type: 'string', description: 'heatmap: a row with no values at all is written across with this text (e.g. "no data") instead of empty cells.' },
+    xGroup: field('bar/heatmap/strip/box…: group consecutive categories of the horizontal axis (bar: of the category axis, either orientation). A tinted band with the group name runs along the axis; nothing is reordered.'),
+    yGroup: field('heatmap: group consecutive rows; bar/strip: same as xGroup on a horizontal chart.'),
+    xTicks: { type: 'object', properties: { every: { type: 'integer', minimum: 1 } }, description: 'heatmap/bar/strip: label every Nth category of the horizontal axis ({ every: 5 }); labels are still thinned further if they collide.' },
+    yTicks: { type: 'object', properties: { every: { type: 'integer', minimum: 1 } }, description: 'heatmap: label every Nth row; bar/strip horizontal: every Nth category.' },
     vars: { type: 'array', items: { type: 'string' }, description: 'corr/pairplot: the numeric fields to relate, in order (seaborn `vars`). Default: every numeric field (pairplot: the first 6). `y: [...]` works too.' },
     method: { type: 'string', enum: ['pearson', 'spearman'], description: 'corr: correlation coefficient. "pearson" (default, linear) or "spearman" (ranks: monotonic relations, robust to outliers).' },
     triangle: { anyOf: [{ type: 'string', enum: ['lower', 'full'] }, { type: 'boolean' }], description: 'corr: "lower" (default) shows each pair once, below the diagonal; "full" shows the whole symmetric matrix (default with `cluster`).' },

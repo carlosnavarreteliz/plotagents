@@ -8,6 +8,7 @@ import { themeFor, themes, palettes, ramps } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
+import { binnedScale } from './colorscales.js';
 import { autoLocale } from './i18n.js';
 import { COLUMN_TYPES, columnType } from './charts/table.js';
 
@@ -377,6 +378,10 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
 
   // 2. Valores fuera de catálogo.
+  // Escala por clases: cortes en orden y un color más que cortes.
+  try { binnedScale(spec); } catch (e) {
+    err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
+  }
   const f = spec.format;
   if (typeof f === 'string') enumCheck('format', f, FORMAT_TYPES, '"number", "compact", "percent", "currency", "integer" o { prefix, suffix, decimals }');
   else if (f && typeof f === 'object') {
