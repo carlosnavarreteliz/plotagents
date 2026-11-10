@@ -16,23 +16,30 @@ const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 /** Disposiciones disponibles (`layout`). `circle` es alias de `circular`. */
 export const NETWORK_LAYOUTS = ['force', 'circular', 'radial', 'concentric', 'clusters', 'tree', 'grid'];
-const ALIAS = { circle: 'circular', ring: 'circular', cluster: 'clusters', groups: 'clusters', hierarchy: 'tree', concentrico: 'concentric', arbol: 'tree', 'árbol': 'tree', grilla: 'grid', fuerzas: 'force' };
+const ALIAS = { circle: 'circular', ring: 'circular', cluster: 'clusters', groups: 'clusters', hierarchy: 'tree', concentrico: 'concentric', arbol: 'tree', 'árbol': 'tree', grilla: 'grid', fuerzas: 'force', fixed: 'preset', fija: 'preset', posiciones: 'preset' };
 export function layoutName(v) {
   const s = String(v ?? 'force').toLowerCase();
   const k = ALIAS[s] ?? s;
-  return NETWORK_LAYOUTS.includes(k) ? k : 'force';
+  // `preset` no calcula nada: usa las posiciones de `nodes` (por eso no está en la lista de disposiciones).
+  return NETWORK_LAYOUTS.includes(k) || k === 'preset' ? k : 'force';
 }
 
 /** Prepara nodos y aristas a partir del spec. */
 export function prepareNetwork(spec) {
-  const data = ensureData(spec);
+  // Con posiciones dadas (`layout: "preset"`) las aristas son opcionales: una
+  // tabla `nodes` con x, y basta (un mapa de puntos ya calculado: MDS, UMAP, Gephi).
+  const preset = layoutName(spec.layout) === 'preset';
+  const noEdges = preset && Array.isArray(spec.nodes) && spec.nodes.length && (spec.data === undefined || spec.data === null || (Array.isArray(spec.data) && !spec.data.length));
+  const data = noEdges ? [] : ensureData(spec);
   const fields = fieldsOf(data);
   const from = spec.from ?? pick(fields, ['from', 'source', 'origen', 'desde']) ?? fields[0];
   const to = spec.to ?? pick(fields, ['to', 'target', 'destino', 'hasta']) ?? fields[1];
-  requireField(data, from, 'from');
-  requireField(data, to, 'to');
+  if (!noEdges) {
+    requireField(data, from, 'from');
+    requireField(data, to, 'to');
+  }
   const vf = spec.value ?? pick(fields, ['value', 'weight', 'peso', 'valor']) ?? fields.find((f) => f !== from && f !== to && fieldKind(data, f) === 'number');
-  if (spec.value) requireField(data, vf, 'value');
+  if (spec.value && !noEdges) requireField(data, vf, 'value');
 
   // Aristas: pares no dirigidos agregados (A–B y B–A se suman). `src`/`dst`
   // guardan el sentido de la primera fila (el color sale del origen).
@@ -59,6 +66,8 @@ export function prepareNetwork(spec) {
     const labF = spec.nodeLabel ?? pick(nf, ['label', 'etiqueta']) ?? idF;
     const grF = spec.group ?? pick(nf, ['group', 'grupo', 'type', 'tipo', 'category', 'categoria']);
     const szF = spec.size ?? pick(nf, ['size', 'value', 'valor', 'tamaño', 'weight']);
+    const xF = spec.nodeX ?? pick(nf, ['x']);
+    const yF = spec.nodeY ?? pick(nf, ['y']);
     if (!nf.includes(idF)) throw new PlotError(`El campo "${idF}" (nodeId) no existe en nodes.`, `Campos disponibles: ${nf.join(', ')}`);
     for (const r of spec.nodes) {
       if (r[idF] === null || r[idF] === undefined) continue;
@@ -66,6 +75,7 @@ export function prepareNetwork(spec) {
       if (labF && r[labF] !== undefined) n.label = String(r[labF]);
       if (grF && r[grF] !== undefined && r[grF] !== null) n.group = String(r[grF]);
       if (szF && Number.isFinite(num(r[szF]))) n.size = num(r[szF]);
+      if (xF && yF && Number.isFinite(num(r[xF])) && Number.isFinite(num(r[yF]))) { n.fx = num(r[xF]); n.fy = num(r[yF]); }
     }
   }
   for (const e of edges) {
@@ -73,7 +83,17 @@ export function prepareNetwork(spec) {
     a.deg++; b.deg++; a.wdeg += e.v; b.wdeg += e.v;
   }
   const list = [...nodes.values()];
-  for (const n of list) n.w = n.size ?? n.wdeg;
+  // Sin aristas ni tamaño, todos pesan lo mismo.
+  for (const n of list) n.w = n.size ?? (edges.length ? n.wdeg : 1);
+  if (preset) {
+    const missing = list.filter((n) => n.fx === undefined).map((n) => n.id);
+    if (missing.length) {
+      throw new PlotError(
+        `layout: "preset" necesita x e y para cada nodo; faltan en ${missing.length}: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}.`,
+        'nodes: [{ id: "A", x: 0.2, y: 1.4 }, …] (o nodeX / nodeY con los nombres de tus campos)',
+      );
+    }
+  }
   return { edges, nodes: list, byId: nodes, valueField: vf };
 }
 
@@ -566,6 +586,11 @@ export function network(spec, theme) {
       const lw = Math.min(area.w * 0.18, Math.max(0, ...last.map((n) => measure(n.label, labelSize, 500))));
       pad = { ...pad, r: pad0 + (lw ? lw + 6 : 0) };
     } else pad = { ...pad, b: pad0 + labelPx + 4 };
+  } else if (layout === 'preset') {
+    // Posiciones dadas, en sus unidades: la misma escala en x e y (no se deforma
+    // la nube) y y hacia abajo como en SVG, salvo `flipY: true` (y hacia arriba).
+    for (const n of nodes) { n.x = n.fx; n.y = spec.flipY ? -n.fy : n.fy; }
+    lim = 1; center = false; withR = true; geometric = false;
   } else if (layout === 'grid') {
     gridLayout(nodes, { pin: focusNode, aw: area.w, ah: area.h });
     lim = Infinity; center = false;
@@ -575,7 +600,8 @@ export function network(spec, theme) {
   }
   fitToArea(nodes, area, { pad, lim, center, withR });
   if (geometric) shrinkToFit(nodes);
-  separate(nodes, area, layout === 'circular' || layout === 'grid' || layout === 'tree' ? 2 : 6);
+  // Con posiciones dadas sólo se despegan los nodos encimados: el lugar es el dato.
+  separate(nodes, area, layout === 'preset' ? 1 : layout === 'circular' || layout === 'grid' || layout === 'tree' ? 2 : 6);
   const cx = area.x + pad.l + (area.w - pad.l - pad.r) / 2, cy = area.y + pad.t + (area.h - pad.t - pad.b) / 2;
   const body = [];
 
@@ -583,7 +609,7 @@ export function network(spec, theme) {
   const maxE = Math.max(...edges.map((e) => e.v), 1e-9);
   const baseOp = edges.length > 150 ? 0.3 : 0.5;
   // Curvatura al estilo ECharts (0,3); en la grilla, más suave para no salirse de las filas.
-  const curv = spec.curveness !== undefined && spec.curveness !== null && spec.curveness !== '' && Number.isFinite(+spec.curveness) ? +spec.curveness : layout === 'grid' ? 0.18 : 0.3;
+  const curv = spec.curveness !== undefined && spec.curveness !== null && spec.curveness !== '' && Number.isFinite(+spec.curveness) ? +spec.curveness : layout === 'grid' ? 0.18 : layout === 'preset' ? 0.15 : 0.3;
   const P = (x, y) => `${f1(x)},${f1(y)}`;
   const linkG = [];
   for (const e of [...edges].sort((a, b) => a.v - b.v)) {

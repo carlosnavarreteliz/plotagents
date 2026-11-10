@@ -250,6 +250,8 @@ Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world co
 | `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, or (browser) a URL. |
 | `featureKey`, `nameKey` | Feature property to match, and the one with the display name (both detected when omitted). |
 | `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box or `"markers"`. |
+| `links` | Lines between places, above the regions: `[{ from, to, value }]` or `{ data, from, to, value, color, curveness, width: [min, max], opacity, label }`. Ends are region keys or `[lon, lat]`. |
+| `orientation`, `rotate` | `"landscape"` lays a tall territory on its side, north on the left; `"portrait"` stands a wide one up; `rotate: 90 \| -90 \| 180` turns the projected map clockwise. Labels stay upright. |
 | `markers`, `layers` | Points by lon/lat on top; extra GeoJSON lines, polygons or points over or under the map. |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
@@ -279,9 +281,12 @@ plot({
 ```
 
 - **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
-- **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (pixel coordinates, y down, for hand-drawn or tile maps) or `"planar"` (y up).
+- **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordinates used as they are, y down, for pre-projected or hand-drawn maps; `flipY: true` for y up) or `"planar"` (y up).
 - **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `tall: false` turns off the side column for elongated shapes.
 - **Markers.** `markers: [{ lon, lat, label, value }]` or `{ data, lon, lat, label, size, color, legend, maxRadius }`: dots on top, area-proportional when there is a `size`, labels placed where they don't collide.
+- **Lines between places.** `links: { data: trade, from: 'origin', to: 'partner', value: 'usd' }` draws one curved line per row from region to region (or `[lon, lat]`), width proportional to the value, one color, no arrowheads: a line is a relation, not a route. Each line is a mark with its own tooltip and `data-key="from→to"`; ends that match no region are listed in the description instead of being drawn. With `labels: false` the map carries no text at all.
+- **Lying down.** `orientation: "landscape"` turns a long, thin territory (Chile, Norway, Vietnam, a river basin) a quarter turn after projecting, north on the left so north-to-south reads left to right; framing, hit areas, markers and links follow, and labels stay upright. `rotate: 90 | -90 | 180` sets the turn by hand.
+- **Keys for your page.** Every region, link and marker carries `data-key`: the key your data used for it (a CUT code, an ISO code, a name), or its code or name when it has no data. A page can wire its own lists and highlights to them.
 - **Layers.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` overlays rivers, roads, routes, faults or district lines (or draws them under the regions with `below: true`). A `label` adds a legend key.
 - **Style.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (a named or custom sequential ramp), `palette` and `colors` (categories).
 - **Register once, use by name.** `registerGeo('biobio', comunas, ['comunas-biobio'])` and then `geo: 'biobio'` in every spec, which keeps tool calls short for an agent.
@@ -338,6 +343,7 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 | `clusters` | One sunflower cluster per group, space ∝ √size. |
 | `tree` | The radial tree laid flat (left → right on wide areas), S-shaped connectors. |
 | `grid` | A grid ordered by group and weight, every node named. |
+| `preset` | Positions you already have (MDS, UMAP, t-SNE, Gephi): `nodes` bring `x` and `y` (`nodeX` / `nodeY` for other field names), fitted with one scale for both axes so the cloud is not stretched; y grows downward unless `flipY: true`. Edges are optional: `nodes` alone draws a positioned scatter with sizes, groups and non-overlapping names. |
 
 `labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 

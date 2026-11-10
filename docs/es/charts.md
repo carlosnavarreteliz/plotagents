@@ -250,6 +250,8 @@ Las regiones de Chile (`geo: "chile"`, por defecto), los estados de EE. UU. (`ge
 | `geo` | `"chile"`, `"usa"`, `"world"`, un nombre registrado con `registerGeo()`, un objeto GeoJSON o TopoJSON, o (en el navegador) una URL. |
 | `featureKey`, `nameKey` | Propiedad de la geometría que se empareja, y la que tiene el nombre para mostrar (ambas se detectan si las omites). |
 | `fitTo` | Amplía a regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`. |
+| `links` | Líneas entre lugares, sobre las regiones: `[{ from, to, value }]` o `{ data, from, to, value, color, curveness, width: [mín, máx], opacity, label }`. Los extremos son claves de región o `[lon, lat]`. |
+| `orientation`, `rotate` | `"landscape"` acuesta un territorio más alto que ancho, con el norte a la izquierda; `"portrait"` para uno ancho; `rotate: 90 \| -90 \| 180` gira el mapa proyectado en sentido horario. Las etiquetas quedan derechas. |
 | `markers`, `layers` | Puntos por lon/lat encima; líneas, polígonos o puntos GeoJSON adicionales sobre o bajo el mapa. |
 | `scale`, `classes` | `"quantile"` (por defecto), `"equal"`, `"continuous"` o una lista de cortes; 5 clases por defecto. |
 | `midpoint` / `diverging` | Clases divergentes en torno a un valor (p. ej. 0 para cambios). |
@@ -279,9 +281,12 @@ plot({
 ```
 
 - **Emparejamiento sin configuración.** Las filas se emparejan con las claves habituales (código, id, ISO-3, nombre, alias); si algunas filas no calzan, plotagents encuentra la propiedad de la geometría cuyos valores sí calzan (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` fuerza una. Los nombres para mostrar salen de `nameKey`, o de la primera de `name`, `NOMBRE`, `NAME_1`, `ADMIN` y similares.
-- **Proyecciones.** Se eligen según la geometría: Mercator para un país o una región, Equal Earth para el mundo y un plano cartesiano simple cuando las coordenadas no son longitudes y latitudes (metros UTM, por ejemplo). Fija `projection` en `"equirectangular"`, `"conic"` (o `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordenadas en píxeles, y hacia abajo, para mapas dibujados a mano o de teselas) o `"planar"` (y hacia arriba).
+- **Proyecciones.** Se eligen según la geometría: Mercator para un país o una región, Equal Earth para el mundo y un plano cartesiano simple cuando las coordenadas no son longitudes y latitudes (metros UTM, por ejemplo). Fija `projection` en `"equirectangular"`, `"conic"` (o `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordenadas tal como vienen, y hacia abajo, para mapas ya proyectados o dibujados a mano; `flipY: true` si y crece hacia arriba) o `"planar"` (y hacia arriba).
 - **Encuadre.** `fitTo` amplía a algunas regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`; el resto del mapa queda recortado como contexto. `tall: false` desactiva la columna lateral para formas alargadas.
 - **Marcadores.** `markers: [{ lon, lat, label, value }]` o `{ data, lon, lat, label, size, color, legend, maxRadius }`: puntos encima, proporcionales al área cuando hay un `size`, con etiquetas ubicadas donde no chocan.
+- **Líneas entre lugares.** `links: { data: comercio, from: 'origen', to: 'socio', value: 'usd' }` dibuja una línea curva por fila, de región a región (o `[lon, lat]`), con ancho proporcional al valor, un solo color y sin puntas de flecha: una línea es una relación, no una ruta. Cada línea es una marca con su tooltip y `data-key="origen→destino"`; los extremos que no calzan con ninguna región se nombran en la descripción en vez de dibujarse. Con `labels: false` el mapa no lleva texto.
+- **Acostado.** `orientation: "landscape"` gira un cuarto de vuelta un territorio largo y angosto (Chile, Noruega, Vietnam, una cuenca) después de proyectarlo, con el norte a la izquierda para que norte→sur se lea de izquierda a derecha; encuadre, zonas de clic, marcadores y líneas lo siguen, y las etiquetas quedan derechas. `rotate: 90 | -90 | 180` fija el giro a mano.
+- **Claves para tu página.** Cada región, línea y marcador lleva `data-key`: la clave con que tus datos lo nombran (un CUT, un ISO, un nombre), o su código o nombre si no tiene datos. La página puede conectar sus propias listas y resaltados a ellas.
 - **Capas.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` superpone ríos, caminos, rutas, fallas o límites de distritos (o los dibuja bajo las regiones con `below: true`). Un `label` agrega una clave a la leyenda.
 - **Estilo.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (una rampa secuencial con nombre o propia), `palette` y `colors` (categorías).
 - **Regístrala una vez y úsala por nombre.** `registerGeo('biobio', comunas, ['comunas-biobio'])` y luego `geo: 'biobio'` en cada especificación, lo que mantiene cortas las llamadas a herramientas de un agente.
@@ -338,6 +343,7 @@ Aristas en `data` (`from`, `to`, `value` opcional), `nodes` opcionales con `id`,
 | `clusters` | Un grupo en forma de girasol por grupo, con espacio ∝ √tamaño. |
 | `tree` | El árbol radial extendido en plano (de izquierda → derecha en áreas anchas), con conectores en forma de S. |
 | `grid` | Una cuadrícula ordenada por grupo y peso, con todos los nodos nombrados. |
+| `preset` | Posiciones que ya tienes (MDS, UMAP, t-SNE, Gephi): `nodes` trae `x` e `y` (`nodeX` / `nodeY` para otros nombres), ajustados con una sola escala para ambos ejes, así la nube no se deforma; y crece hacia abajo salvo `flipY: true`. Las aristas son opcionales: con `nodes` solo se dibuja una dispersión con tamaños, grupos y nombres que no se pisan. |
 
 `labels` (número, lista o `true`), `highlight` (un nodo y sus vecinos), `focus` (el id de un nodo: va al centro, o a la raíz en `radial`/`tree`, y se destaca con sus vecinos, todos rotulados; en el navegador lo hace un clic con una transición suave, y un segundo clic o Esc vuelve), `iterations`, `maxRadius`, `curveness`.
 
