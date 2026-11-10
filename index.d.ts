@@ -211,6 +211,8 @@ export interface Spec {
   filled?: string;
   /** sankey: a heading over each column. */
   stages?: string[];
+  /** sankey: separate crowded node labels (true = 31 px between centers, or a number of px), with leader lines to moved ones; grows the height when it is not set. */
+  relax?: boolean | number;
   /** sankey: flows take the source's or the target's color, or one per stage. */
   linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
   /** facet: a field written under each panel name. */

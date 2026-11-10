@@ -449,6 +449,8 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
 
+Many small nodes stack within a few pixels of each other and their names overprint. `relax: true` separates the labels of each column: every node gets its name and second line, each label moves as little as possible to keep 31 px from its neighbors (a number sets another distance; below 28 px labels are one line), and a label that ended up away from its node gets a thin leader line back to it. Without `height`, the chart grows until the labels fit; with `height`, labels that do not fit drop to one line, then squeeze.
+
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
 Words sized by frequency, done carefully: every word horizontal; each word's **area** proportional to its count (font size grows with the square root); a deterministic spiral layout from the most frequent word outwards, with no collisions; one hue that darkens with frequency, or one color per `series` with a legend. If the important words don't fit, the whole cloud shrinks; the words that still don't fit are named in the alt text, never cut off.

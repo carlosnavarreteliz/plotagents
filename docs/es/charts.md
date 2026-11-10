@@ -449,6 +449,8 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 
 `nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno.
 
+Muchos nodos chicos quedan a pocos píxeles unos de otros y sus nombres se enciman. `relax: true` separa los rótulos de cada columna: todo nodo lleva su nombre y su segunda línea, cada rótulo se corre lo mínimo para quedar a 31 px de sus vecinos (un número fija otra distancia; bajo 28 px el rótulo es de una línea) y el que quedó lejos de su nodo lleva una guía fina hasta él. Sin `height`, el gráfico crece hasta que caben; con `height`, los que no caben pasan a una línea y luego se aprietan.
+
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
 Palabras con tamaño según su frecuencia, hechas con cuidado: todas horizontales; el **área** de cada palabra es proporcional a su conteo (el tamaño de la letra crece con la raíz cuadrada); una disposición en espiral determinista desde la palabra más frecuente hacia afuera, sin choques; un solo tono que se oscurece con la frecuencia, o un color por `series` con leyenda. Si las palabras importantes no caben, toda la nube se achica; las palabras que aun así no caben se nombran en el texto alternativo, nunca se cortan.

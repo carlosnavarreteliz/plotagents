@@ -405,6 +405,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     const pos = typeof spec.legend === 'string' ? spec.legend : spec.legend && typeof spec.legend === 'object' ? spec.legend.position : undefined;
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
+  if (type === 'sankey' && spec.relax !== undefined && spec.relax !== null && typeof spec.relax !== 'boolean' && !(typeof spec.relax === 'number' && spec.relax > 0)) err('enum-relax', L('`relax` es true o la distancia en px entre rótulos.', '`relax` is true or the distance in px between labels.'), 'relax: true | 31');
   if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid", "preset"');
   if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
   if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);
