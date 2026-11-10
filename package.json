@@ -11,6 +11,22 @@
       "types": "./index.d.ts",
       "default": "./src/index.js"
     },
+    "./core": {
+      "types": "./index.d.ts",
+      "default": "./src/core.js"
+    },
+    "./maps": {
+      "types": "./index.d.ts",
+      "default": "./src/maps.js"
+    },
+    "./table": {
+      "types": "./index.d.ts",
+      "default": "./src/table-entry.js"
+    },
+    "./types/*": {
+      "types": "./index.d.ts",
+      "default": "./src/types/*.js"
+    },
     "./schema.json": "./schema.json",
     "./browser": "./dist/plotagents.js",
     "./browser/geo": "./dist/plotagents-geo.js",

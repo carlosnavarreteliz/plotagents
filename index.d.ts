@@ -106,7 +106,7 @@ export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | 
 export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number };
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
-export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle';
+export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle' | 'preset';
 
 /** A color set for `skins`: patches only colors. */
 export interface Skin {
@@ -307,6 +307,12 @@ export interface Spec {
   projection?: 'mercator' | 'equalEarth' | 'albersUsa' | 'equirectangular' | 'conic' | 'identity' | 'planar' | { type: string; parallels?: [number, number]; rotate?: number; center?: [number, number] };
   /** Zoom to regions, a [lonMin, latMin, lonMax, latMax] box, or "markers". */
   fitTo?: string | string[] | [number, number, number, number];
+  /** Maps: lines between places (region keys or [lon, lat]); width ∝ value, one color, no arrowheads. */
+  links?: Array<{ from: string | [number, number]; to: string | [number, number]; value?: number }> | { data: Row[]; from?: string; to?: string; value?: string; color?: string; curveness?: number; width?: [number, number]; opacity?: number; label?: string };
+  /** Maps: turn the projected map clockwise (labels stay upright). -90 puts north on the left. */
+  rotate?: 90 | -90 | 180 | 270;
+  /** Maps: "landscape" lays a tall territory on its side (north left); "portrait" stands a wide one up. bar: "horizontal" | "vertical". */
+  orientation?: 'landscape' | 'portrait' | 'horizontal' | 'vertical';
   markers?: Array<{ lon: number; lat: number; label?: string; value?: number; color?: string }> | { data: Row[]; lon?: string; lat?: string; label?: string; size?: string; color?: string; legend?: string; maxRadius?: number; radius?: number; labels?: boolean };
   layers?: Array<{ geo: object | string; label?: string; stroke?: string; width?: number; fill?: string; dash?: boolean | string; opacity?: number; below?: boolean; object?: string }>;
   borderColor?: string;
@@ -321,6 +327,11 @@ export interface Spec {
   curveness?: number;
   nodeId?: string;
   nodeLabel?: string;
+  /** network layout "preset": fields of `nodes` with each node's position (default "x", "y"). */
+  nodeX?: string;
+  nodeY?: string;
+  /** network "preset" and maps with projection "identity": y grows upward instead of downward. */
+  flipY?: boolean;
   /** Largest node / circle radius in px. */
   maxRadius?: number;
   /** network: force-layout iterations. */
@@ -453,6 +464,8 @@ export declare function resolve(spec: Spec): Spec;
 export declare const schema: Record<string, unknown>;
 /** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
 export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
+/** Add a chart type (the light entries 'plotagents/maps', 'plotagents/table' and 'plotagents/types/*' use it). */
+export declare function registerRenderer(type: string, render: (spec: Spec, theme: Theme) => string): void;
 export interface DashboardSpec {
   title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
   locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];

@@ -40,7 +40,9 @@ function lintSpec(spec = {}) {
 
   let data = [];
   const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
-  try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  // Una red con posiciones dadas puede venir sin aristas: basta la tabla `nodes`.
+  const presetNodes = spec.data === undefined && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''));
+  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
@@ -51,7 +53,7 @@ function lintSpec(spec = {}) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
     check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to');
-  } else if (type !== 'kpi' && !rawWords && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+  } else if (type !== 'kpi' && !rawWords && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -352,7 +354,7 @@ const FORMAT_TYPES = ['number', 'compact', 'percent', 'currency', 'integer', 'ye
 const SCALES = ['linear', 'log'];
 const CURVES = ['linear', 'smooth', 'step'];
 const LEGEND_POS = ['top', 'bottom', 'left', 'right', 'arriba', 'abajo', 'izquierda', 'derecha'];
-const NETWORK_LAYOUTS = ['force', 'circular', 'circle', 'radial', 'concentric', 'clusters', 'tree', 'grid', 'ring', 'cluster', 'groups', 'hierarchy', 'concentrico', 'arbol', 'árbol', 'grilla', 'fuerzas'];
+const NETWORK_LAYOUTS = ['force', 'circular', 'circle', 'radial', 'concentric', 'clusters', 'tree', 'grid', 'ring', 'cluster', 'groups', 'hierarchy', 'concentrico', 'arbol', 'árbol', 'grilla', 'fuerzas', 'preset', 'fixed', 'fija', 'posiciones'];
 const TILES = ['osm', 'esri-gray', 'esri-dark', 'carto-light', 'carto-dark', 'mapbox-light', 'mapbox-dark', 'esri', 'carto', 'mapbox', 'none', 'openstreetmap', 'esri-light', 'esri-grey', 'positron', 'dark-matter', 'darkmatter'];
 const THEME_KEYS = 'extends mode name surface background ink text lede muted grid axis tint tint2 dim other link accent categorical sequential diverging status font type marks axes layout tooltip radius barRadius'.split(' ');
 const PALETTE_NAMES = () => [...Object.keys(palettes), ...Object.values(colorScaleNames()).flat()];
@@ -397,7 +399,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     const pos = typeof spec.legend === 'string' ? spec.legend : spec.legend && typeof spec.legend === 'object' ? spec.legend.position : undefined;
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
-  if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid"');
+  if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid", "preset"');
   if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
   if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);
   if (type === 'corr' && spec.alpha !== undefined && !(+spec.alpha > 0 && +spec.alpha < 1)) err('corr-alpha', L('`alpha` es un nivel de significancia entre 0 y 1.', '`alpha` is a significance level between 0 and 1.'), 'alpha: 0.05');
