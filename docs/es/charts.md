@@ -262,6 +262,7 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `highlight` | Un nombre (o lista): ese punto lleva un anillo y su nombre; el resto se aclara. |
 | `ticks` | Marcas propias en el eje: `[[500000, "$500 mil"], [1000000, "$1 M"]]`. |
 | `dotSize` | Diámetro máximo de un punto en px (14 por defecto). |
+| `refLines` | Valores de referencia que no son un punto más (la cifra de Chile): `[{ x: 18.4, label: "Chile" }]`, una línea vertical detrás de los puntos con su rótulo arriba (`rótulo · valor`; `showValue: false` escribe sólo el rótulo) y su propio tooltip. `x` puede ser un campo cuyas filas digan todas lo mismo (con `facet`, el de cada panel). El eje se abre para incluirla. |
 
 ## Partes de un todo
 

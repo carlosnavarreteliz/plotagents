@@ -100,3 +100,40 @@ test('heatmap lint: link and class fields must exist; unnamed classes and diagon
   assert.ok(!lint({ ...fm, data, cellColor: 'kind', colors: { Stayed: '#123456' } }).suggestions.some((t) => t.code === 'cellcolor-no-color'));
   assert.ok(lint({ ...fm, diagonal: true }).suggestions.some((t) => t.code === 'diagonal-label'));
 });
+
+// ── dotplot refLines ───────────────────────────────────────────────────────
+const inst = Array.from({ length: 24 }, (_, i) => ({ name: 'Inst ' + i, dropout: 5 + ((i * 7) % 30), chile: 18.4 }));
+const dp = { type: 'dotplot', data: inst, x: 'dropout', bin: 2, label: 'name', width: 600, locale: 'en', format: (v) => `${v}%` };
+
+test('dotplot refLines: a labeled vertical line, behind the dots, label on top, its own tooltip', () => {
+  const svg = plot({ ...dp, refLines: [{ x: 18.4, label: 'Chile' }] });
+  assert.ok(texts(svg).includes('Chile · 18.4%'), texts(svg).join('|'));
+  assert.ok(tips(svg).includes('Chile\n18.4%'));
+  assert.ok(svg.indexOf('class="pa-refs"') < svg.indexOf('<circle'), 'line behind the dots');
+  // The label strip makes the chart taller, never squeezes the dots.
+  const h = (s) => +/viewBox="0 0 [\d.]+ ([\d.]+)"/.exec(s)[1];
+  assert.ok(h(svg) > h(plot(dp)));
+  // A field: every row must agree (per facet panel, each panel's own).
+  assert.ok(texts(plot({ ...dp, refLines: [{ x: 'chile', label: 'Chile', showValue: false }] })).includes('Chile'));
+  const split = inst.map((r, i) => ({ ...r, chile: i % 2 ? 1 : 2 }));
+  assert.doesNotMatch(plot({ ...dp, data: split, refLines: [{ x: 'chile', label: 'Chile' }] }), /pa-refs/);
+});
+
+test('dotplot refLines: a reference outside the data widens the axis to include it', () => {
+  const svg = plot({ ...dp, refLines: [{ x: 80, label: 'Far' }] });
+  const ref = +/class="pa-ref"[^>]*><line x1="([\d.]+)"/.exec(svg)[1];
+  const maxDot = Math.max(...[...svg.matchAll(/<circle cx="([\d.]+)"/g)].map((m) => +m[1]));
+  assert.ok(ref > maxDot, `${ref} > ${maxDot}`);
+  assert.match(svg, /text-anchor="end"[^>]*>Far · 80%/);
+});
+
+test('dotplot refLines under skins', () => {
+  const svg = plot({ ...dp, refLines: [{ x: 18.4, label: 'Chile' }], skins: [{ palette: ['#6e86c8'] }, { when: 'html.classic', palette: ['#0b3f8c'] }] });
+  assert.match(svg, /Chile · 18.4%/);
+});
+
+test('dotplot lint: a reference field that does not hold one value is flagged', () => {
+  const split = inst.map((r, i) => ({ ...r, chile: i % 2 ? 1 : 2 }));
+  assert.ok(lint({ ...dp, data: split, refLines: [{ x: 'chile', label: 'Chile' }] }).warnings.some((w) => w.code === 'refline-field'));
+  assert.ok(!lint({ ...dp, refLines: [{ x: 'chile', label: 'Chile' }] }).warnings.some((w) => w.code === 'refline-field'));
+});

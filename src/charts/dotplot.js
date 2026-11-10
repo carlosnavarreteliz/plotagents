@@ -63,6 +63,20 @@ export function dotplot(spec, theme) {
   for (const st of stacks) st.sort((a, b) => (series ? keys.indexOf(String(a[series])) - keys.indexOf(String(b[series])) : 0) || (categorical ? 0 : num(a[x]) - num(b[x])) || String(a[labelF] ?? '').localeCompare(String(b[labelF] ?? '')));
   const maxStack = Math.max(...stacks.map((s) => s.length));
 
+  // Líneas de referencia (sólo con x numérico): un valor fijo o un campo de los
+  // datos —todas las filas deben decir lo mismo; en facetas, el de cada panel—.
+  // Una referencia que no es un punto más: no se apila ni entra a los tramos.
+  const refs = categorical ? [] : [].concat(spec.refLines ?? []).filter((r) => r && typeof r === 'object').map((r) => {
+    const raw = r.x ?? r.value;
+    let v = NaN;
+    if (typeof raw === 'string' && data.length && raw in data[0]) {
+      const vs = uniq(data.map((d) => num(d[raw])).filter(Number.isFinite));
+      if (vs.length === 1) v = vs[0];
+    } else v = num(raw);
+    return { ...r, v };
+  }).filter((r) => Number.isFinite(r.v));
+  const refTop = refs.some((r) => r.label) ? 18 : 0;
+
   // Marco.
   const legend = keys.length > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: cmap.get(k), shape: 'circle' })) : [];
   const frame = createFrame(spec, theme, { height: 260 });
@@ -79,6 +93,7 @@ export function dotplot(spec, theme) {
   } else {
     let d0 = lo, d1 = lo + bins.length * w;
     if (custom) for (const [v] of custom) { d0 = Math.min(d0, v); d1 = Math.max(d1, v); }
+    for (const r of refs) { d0 = Math.min(d0, r.v); d1 = Math.max(d1, r.v); }
     const sc = linear(d0, d1, inner.x, inner.x + inner.w);
     xs = (i) => sc(center(i));
     xs.value = sc;
@@ -86,8 +101,8 @@ export function dotplot(spec, theme) {
   }
   const maxD = spec.dotSize ?? 14;
   let d = Math.max(2, Math.min(binPx, maxD));
-  if (spec.height !== undefined) d = Math.max(2, Math.min(d, inner.h / maxStack));
-  else { inner.h = maxStack * d + 4 + (hl && labelF ? 20 : 0); frame.setHeight(inner.y + inner.h + axisH + frame.chrome); }
+  if (spec.height !== undefined) d = Math.max(2, Math.min(d, (inner.h - refTop) / maxStack));
+  else { inner.h = maxStack * d + 4 + (hl && labelF ? 20 : 0) + refTop; frame.setHeight(inner.y + inner.h + axisH + frame.chrome); }
   const base = inner.y + inner.h;
   const r = Math.max(1, d / 2 - (d > 6 ? 0.75 : 0.25));
 
@@ -128,7 +143,28 @@ export function dotplot(spec, theme) {
       top.push(text(tx, base - st.length * d - 6, t, { fill: readable(c, theme), fontSize: 12, fontWeight: 600 }));
     }
   }));
-  body.push(...marks, ...top);
+  if (refs.length) {
+    // Detrás de los puntos: la línea; encima de todo, el rótulo (sin salirse del área).
+    const lines = [], labels = [];
+    for (const r of refs) {
+      const px = Math.round(xs.value(r.v)) + 0.5;
+      const lab = r.label ? (r.showValue === false ? String(r.label) : `${r.label} · ${fmt(r.v)}`) : '';
+      const tipTxt = tip(r.label ? String(r.label) : '', fmt(r.v));
+      lines.push(g({ class: 'pa-ref', 'data-tip': tipTxt }, [
+        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7 }),
+        el('line', { x1: px, x2: px, y1: inner.y + (lab ? 16 : 0), y2: base, stroke: 'transparent', strokeWidth: 8 }),
+      ]));
+      if (lab) {
+        const w = measure(lab, 11.5, 500);
+        const anchor = px - w / 2 < inner.x ? 'start' : px + w / 2 > inner.x + inner.w ? 'end' : 'middle';
+        const tx = anchor === 'start' ? Math.max(inner.x, px - 4) : anchor === 'end' ? Math.min(inner.x + inner.w, px + 4) : px;
+        labels.push(text(tx, inner.y + 11, lab, { fill: theme.ink, fontSize: 11.5, fontWeight: 500, textAnchor: anchor, 'data-tip': tipTxt }));
+      }
+    }
+    body.push(g({ class: 'pa-refs' }, lines));
+    body.push(...marks, ...top);
+    body.push(g({ class: 'pa-refs' }, labels));
+  } else body.push(...marks, ...top);
 
   const big = stacks.reduce((b, s, i) => (s.length > stacks[b].length ? i : b), 0);
   const where = categorical ? bins[big] : `${fmt(lo + big * w)}–${fmt(lo + (big + 1) * w)}`;

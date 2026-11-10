@@ -262,6 +262,7 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
 | `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
 | `dotSize` | Largest dot diameter in px (default 14). |
+| `refLines` | Reference values that are not one more dot (the national figure): `[{ x: 18.4, label: "Chile" }]`, drawn as a vertical line behind the dots with its label on top (`label · value`; `showValue: false` writes the label alone) and its own tooltip. `x` may be a field whose rows all hold the same value (with `facet`, each panel's own). The axis widens to include it. |
 
 ## Part-to-whole
 

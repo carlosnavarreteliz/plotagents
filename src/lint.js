@@ -164,6 +164,14 @@ function lintSpec(spec = {}) {
     }
     if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
   }
+  if (type === 'dotplot' && data.length && !spec.facet && !spec.col) {
+    for (const r of [].concat(spec.refLines ?? [])) {
+      const f = r && typeof r === 'object' ? r.x ?? r.value : undefined;
+      if (typeof f !== 'string' || !fields.includes(f)) continue;
+      const vs = uniq(data.map((d) => num(d[f])).filter(Number.isFinite));
+      if (vs.length !== 1) warn('refline-field', L(`La referencia lee \`${f}\`, pero sus filas no dicen un solo valor (${vs.length}): no se dibuja.`, `The reference reads \`${f}\`, but its rows do not hold one value (${vs.length}): it is not drawn.`), L('Pasa el número: refLines: [{ x: 18.4, label: "Chile" }].', 'Pass the number: refLines: [{ x: 18.4, label: "Chile" }].'));
+    }
+  }
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
 

@@ -77,7 +77,16 @@ export interface KpiItem {
   note?: string;
 }
 
-export interface RefLine { y?: number; x?: number; value?: number; label?: string; color?: string }
+export interface RefLine {
+  y?: number;
+  /** dotplot: also a field whose rows all hold the same value. */
+  x?: number | string;
+  value?: number;
+  label?: string;
+  color?: string;
+  /** dotplot: false writes the label without the value. */
+  showValue?: boolean;
+}
 export interface Annotation { x: string | number | Date; label?: string }
 
 export interface Theme {
