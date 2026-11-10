@@ -47,6 +47,11 @@
         "table",
         "corr",
         "pairplot",
+        "spark",
+        "bump",
+        "waffle",
+        "dendrogram",
+        "dotplot",
         "barplot",
         "countplot",
         "columns",
@@ -145,6 +150,29 @@
         "scatterplot-matrix",
         "matriz-de-dispersion",
         "matriz-de-dispersión",
+        "sparkline",
+        "sparklines",
+        "microchart",
+        "bumpchart",
+        "bump-chart",
+        "rank",
+        "ranking",
+        "slope",
+        "slopegraph",
+        "slope-chart",
+        "waffle-chart",
+        "squares",
+        "unitchart",
+        "unit-chart",
+        "cuadros",
+        "dendrograma",
+        "linkage",
+        "hclust",
+        "cluster-tree",
+        "dot-plot",
+        "wilkinson",
+        "dot-histogram",
+        "puntos-apilados",
         "tree",
         "stat",
         "stats",
@@ -555,6 +583,38 @@
         }
       ]
     },
+    "links": {
+      "description": "choropleth/symbolmap: lines between places, drawn above the regions. [{ from, to, value }] or { data, from, to, value, color, curveness (0.2), width: [min, max] px (0.75–6), opacity, label }. Ends are region keys (same matching as `key`) or [lon, lat]. A line is a relation, not a route: curved, one color, no arrowheads, width proportional to value; each line is a hoverable mark with data-key \"from→to\".",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "rotate": {
+      "type": "number",
+      "enum": [
+        90,
+        -90,
+        180,
+        270
+      ],
+      "description": "Maps: turn the projected map a quarter (or half) turn clockwise, after projection and fitting; labels stay upright and hit areas follow. -90 puts north on the left."
+    },
+    "orientation": {
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "vertical"
+      ],
+      "description": "dendrogram: \"horizontal\" (root left, leaves right, default) or \"vertical\" (root on top)."
+    },
     "markers": {
       "description": "Map: points on top, from [{ lon, lat, label, value?, color? }] or { data, lon, lat, label, size, color, legend, maxRadius, labels }. With a size field, circles are area-proportional.",
       "anyOf": [
@@ -592,9 +652,11 @@
       "type": "string",
       "enum": [
         "hatch",
-        "plain"
+        "plain",
+        "tint",
+        "gap"
       ],
-      "description": "choropleth: how regions without data look: hatched (default) or \"plain\" (flat tint)."
+      "description": "Cells/regions without data. choropleth: \"hatch\" (default) or \"plain\" (flat tint). heatmap: \"tint\" (default), \"plain\" (outline only), \"hatch\" or \"gap\" (nothing drawn)."
     },
     "thresholds": {
       "type": "array",
@@ -725,7 +787,7 @@
       "items": {
         "type": "object"
       },
-      "description": "network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane)."
+      "description": "network: node rows (id, group, size). flowchart: steps (id, label, type: start|end|process|decision|data|note, lane). sankey: { id, label, sub, color, column, tip }: an id apart from its label (the same place in two stages stays two nodes), a second line, a fixed column."
     },
     "edges": {
       "type": "array",
@@ -744,9 +806,22 @@
         "clusters",
         "tree",
         "grid",
-        "circle"
+        "circle",
+        "preset"
       ],
-      "description": "network layout: \"force\" (default) deterministic force-directed; \"circular\" around a circle by group with names rotated outward (\"circle\" = circular); \"radial\" tree rings from `focus` or the most connected node; \"concentric\" rings by weight; \"clusters\" one cluster per group; \"tree\" the radial tree laid flat; \"grid\" ordered by group."
+      "description": "network layout: \"force\" (default) deterministic force-directed; \"circular\" around a circle by group with names rotated outward (\"circle\" = circular); \"radial\" tree rings from `focus` or the most connected node; \"concentric\" rings by weight; \"clusters\" one cluster per group; \"tree\" the radial tree laid flat; \"grid\" ordered by group; \"preset\" nodes bring their own x, y (MDS, UMAP, Gephi…), fitted with one scale for both axes; edges are then optional."
+    },
+    "nodeX": {
+      "type": "string",
+      "description": "network layout \"preset\": field of `nodes` with the x position (default \"x\")."
+    },
+    "nodeY": {
+      "type": "string",
+      "description": "network layout \"preset\": field of `nodes` with the y position (default \"y\"); y grows downward unless `flipY`."
+    },
+    "flipY": {
+      "type": "boolean",
+      "description": "network layout \"preset\" and maps with projection \"identity\": y grows upward (math orientation) instead of downward."
     },
     "curveness": {
       "type": "number",
@@ -843,7 +918,7 @@
       "description": "facet: panel order (values of the facet field; the rest follow)."
     },
     "columns": {
-      "description": "table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank. Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row.",
+      "description": "table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and a reference tick; `scale: \"row\"` gives each row its own scale). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row. waffle: squares per row.",
       "anyOf": [
         {
           "type": "integer"
@@ -878,7 +953,8 @@
                       "check",
                       "date",
                       "link",
-                      "rank"
+                      "rank",
+                      "range"
                     ]
                   },
                   "format": {
@@ -934,6 +1010,80 @@
                         "type": "object"
                       }
                     ]
+                  },
+                  "min": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "range: field (or fixed number) with the low end of the rail."
+                  },
+                  "max": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "range: high end of the rail."
+                  },
+                  "band": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "range: [lo, hi] fields of the shaded band (e.g. quartiles)."
+                  },
+                  "bandLabel": {
+                    "type": "string"
+                  },
+                  "median": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "range: notch."
+                  },
+                  "ref": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "range: reference tick (e.g. the national figure)."
+                  },
+                  "refLabel": {
+                    "type": "string"
+                  },
+                  "scale": {
+                    "type": "string",
+                    "enum": [
+                      "shared",
+                      "row"
+                    ],
+                    "description": "range: one scale for the column (default) or one per row (indicators in different units)."
                   },
                   "total": {
                     "anyOf": [
@@ -1036,8 +1186,86 @@
       "description": "table: label of the totals row (default \"Total\"/\"Gesamt\")."
     },
     "rank": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "table: true adds a \"#\" column with the position under the current sort. bump: a field that already holds the rank (1 = first), instead of ranking `y`."
+    },
+    "ends": {
+      "type": "string",
+      "enum": [
+        "all",
+        "first-last"
+      ],
+      "description": "bump: \"first-last\" draws only the first and last period (a slope chart; the `slope` alias sets it)."
+    },
+    "linkage": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "description": "dendrogram: a scipy-style linkage matrix (n − 1 rows [a, b, height, count]); indices < n are leaves. Pair it with `labels` (one per observation)."
+    },
+    "clusters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "dendrogram: names for the groups that `cut` makes, in leaf order."
+    },
+    "parent": {
+      "type": "string",
+      "description": "dendrogram: field with the parent id of each row (empty for the root)."
+    },
+    "heightField": {
+      "type": "string",
+      "description": "dendrogram: field with the height at which a node joins its children (default \"height\")."
+    },
+    "bin": {
+      "type": "number",
+      "description": "dotplot: bin width in units of `x` (or `bins` for a count)."
+    },
+    "ticks": {
+      "type": "array",
+      "description": "dotplot: your own axis ticks, [[value, label], …] (e.g. income brackets), instead of the automatic ones.",
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "array"
+          }
+        ]
+      }
+    },
+    "dotSize": {
+      "type": "number",
+      "description": "dotplot: largest dot diameter in px (default 14)."
+    },
+    "dot": {
       "type": "boolean",
-      "description": "table: add a \"#\" column with the position under the current sort."
+      "description": "spark: false hides the end dot."
+    },
+    "dotRadius": {
+      "type": "number",
+      "description": "spark: end dot radius in px."
+    },
+    "unit": {
+      "type": "number",
+      "description": "waffle: what one square is worth (default 1, or a round number when the total passes `maxSquares`)."
+    },
+    "maxSquares": {
+      "type": "integer",
+      "description": "waffle: most squares before each square is worth a round `unit` (default 400)."
     },
     "cards": {
       "description": "table: one card per row. \"auto\" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).",
@@ -1083,8 +1311,22 @@
       "description": "facet: height of each panel in px."
     },
     "sharey": {
-      "type": "boolean",
-      "description": "facet: same y scale in every panel (default true)."
+      "description": "facet: same y scale in every panel (default true). \"span\": the same span in every panel, each with its own floor, so a slope means the same change everywhere.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "span"
+          ]
+        }
+      ]
+    },
+    "panelNote": {
+      "type": "string",
+      "description": "facet: a field whose value is written under each panel name (e.g. the latest value and its change)."
     },
     "time": {
       "type": "string",
@@ -1485,7 +1727,7 @@
       ]
     },
     "labels": {
-      "description": "Value labels: true, false or \"auto\". In scatter/regplot: a number of points or a list of names to label. network: true labels every node.",
+      "description": "Value labels: true, false or \"auto\". In scatter/regplot: a number of points or a list of names to label. network: true labels every node. dendrogram: leaf labels true/false/\"auto\" (every k-th when they do not fit), or with `linkage`, the list of leaf names.",
       "anyOf": [
         {
           "type": "boolean"
@@ -1558,7 +1800,7 @@
     },
     "top": {
       "type": "integer",
-      "description": "bar: keep the N largest and fold the rest into \"Other\". table: keep the first N rows after sorting."
+      "description": "bar: keep the N largest and fold the rest into \"Other\". table: keep the first N rows after sorting. bump: keep series in the top N at some period (default 12); a rank below N is drawn on a \"below N\" row."
     },
     "endLabels": {
       "type": "boolean",
@@ -1665,7 +1907,7 @@
       "description": "kde: fill the area. line: false removes the gradient under a single line."
     },
     "order": {
-      "description": "regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list). corr: variable order (list).",
+      "description": "regplot: polynomial degree (number). box/violin/strip/swarm/point: category order (list). corr: variable order (list). sankey: \"given\" keeps the order of `nodes` in every column. waffle: series order (default: largest first).",
       "anyOf": [
         {
           "type": "integer"
@@ -1675,8 +1917,154 @@
           "items": {
             "type": "string"
           }
+        },
+        {
+          "type": "string",
+          "enum": [
+            "given"
+          ]
         }
       ]
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "sankey: a heading over each column (\"Region\", \"Customs office\", \"Country\")."
+    },
+    "linkColor": {
+      "description": "sankey: flows take the color of their \"source\" or their \"target\"; a list sets it per stage ([\"source\", \"target\"]). `colors[\"from→to\"]` pins one flow.",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "source",
+            "target"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "source",
+              "target"
+            ]
+          }
+        }
+      ]
+    },
+    "tooltip": {
+      "description": "What each mark says on hover, beyond its value. A list of fields (\"Field: value\" lines from the mark's rows), or { title: field, fields: [field | { field, label, format }], text: field (pre-written text, may hold line breaks), replace: true (drop the default lines) }, or false. From JavaScript, also a function (d) => text | { title, lines }. A mark made of several rows shows a field only when they agree.",
+      "anyOf": [
+        {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "fields": {
+              "type": "array"
+            },
+            "text": {
+              "type": "string"
+            },
+            "replace": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "crosshair": {
+      "type": "boolean",
+      "description": "line/area: false writes one tooltip column per x (with `data-tip`) instead of the browser crosshair: for pages that bring their own tooltip layer. Implied by `tooltip`."
+    },
+    "band": {
+      "type": "object",
+      "properties": {
+        "lower": {
+          "type": "string"
+        },
+        "upper": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "description": "line/area: an interval that comes already computed (a model's 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`."
+    },
+    "missingLabel": {
+      "type": "string",
+      "description": "bar: what the tooltip says for a value that is missing (default \"sin dato\" / \"no data\"). A missing value is never drawn as 0."
+    },
+    "missingMark": {
+      "type": "string",
+      "description": "bar: text written at the base where a bar is missing (\"n/a\")."
+    },
+    "xBands": {
+      "description": "bar (columns) and line/area: shaded ranges of the x axis behind the marks: [{ from, to, label, color }].",
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {},
+              "to": {},
+              "label": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "href": {
+      "type": "string",
+      "description": "treemap tiles, horizontal bar names and scatter dots link to the URL in this field (paths and http(s) only)."
+    },
+    "hollow": {
+      "type": "string",
+      "description": "scatter/bubble: rows where this field is truthy are drawn as hollow dots (same color as the outline)."
+    },
+    "filled": {
+      "type": "string",
+      "description": "scatter/bubble: the opposite of `hollow`: rows where this field is falsy are hollow."
     },
     "lowess": {
       "type": "boolean",
@@ -1731,7 +2119,7 @@
     },
     "cut": {
       "type": "number",
-      "description": "kde/violin: how far the density extends past the data, in bandwidths."
+      "description": "kde/violin: how far the density extends past the data, in bandwidths. dendrogram: the height to cut at; each subtree below it is a colored, named group."
     },
     "jitter": {
       "description": "strip: spread of the points across the category (fraction of the band, default 0.6; 0 or false = none).",
@@ -1813,6 +2201,53 @@
     "cellHeight": {
       "type": "number",
       "description": "heatmap: maximum cell height in px."
+    },
+    "floor": {
+      "type": "number",
+      "description": "heatmap: values below are drawn as plain empty cells (not \"no data\"; the tooltip keeps the value) and do not count for the color scale."
+    },
+    "ceiling": {
+      "type": "number",
+      "description": "heatmap: values above are drawn as plain empty cells and do not count for the color scale."
+    },
+    "midClass": {
+      "type": "string",
+      "enum": [
+        "neutral"
+      ],
+      "description": "heatmap with binned `colorScale.breaks` around 0: the class that contains 0 is drawn in the neutral tint, so near-zero cells are not painted."
+    },
+    "emptyRow": {
+      "type": "string",
+      "description": "heatmap: a row with no values at all is written across with this text (e.g. \"no data\") instead of empty cells."
+    },
+    "xGroup": {
+      "type": "string",
+      "description": "bar/heatmap/strip/box…: group consecutive categories of the horizontal axis (bar: of the category axis, either orientation). A tinted band with the group name runs along the axis; nothing is reordered."
+    },
+    "yGroup": {
+      "type": "string",
+      "description": "heatmap: group consecutive rows; bar/strip: same as xGroup on a horizontal chart."
+    },
+    "xTicks": {
+      "type": "object",
+      "properties": {
+        "every": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "heatmap/bar/strip: label every Nth category of the horizontal axis ({ every: 5 }); labels are still thinned further if they collide."
+    },
+    "yTicks": {
+      "type": "object",
+      "properties": {
+        "every": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "heatmap: label every Nth row; bar/strip horizontal: every Nth category."
     },
     "vars": {
       "type": "array",
@@ -1988,6 +2423,13 @@
             "mid": {
               "type": "number",
               "description": "Center of a diverging scale."
+            },
+            "breaks": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key."
             }
           }
         }
@@ -2024,6 +2466,13 @@
             "mid": {
               "type": "number",
               "description": "Center of a diverging scale."
+            },
+            "breaks": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key."
             }
           }
         }
@@ -2060,6 +2509,13 @@
             "mid": {
               "type": "number",
               "description": "Center of a diverging scale."
+            },
+            "breaks": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Class breaks, ascending: discrete classes instead of a gradient (heatmap, choropleth, treemap change). `colors` needs breaks.length + 1 entries (or give `name` and it is sampled). The legend becomes a stepped key."
             }
           }
         }

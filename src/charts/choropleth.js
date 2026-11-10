@@ -5,6 +5,7 @@
 // usan todo el ancho con etiquetas solo donde importan. Los estados de EE. UU.
 // llevan su sigla (y el valor, si cabe); los chicos del noreste, afuera con
 // línea guía. En el navegador: zoom con clic, rueda (+ Ctrl/⌘) o pellizco.
+import { tipper } from '../tooltip.js';
 import { binnedScale } from '../colorscales.js';
 import { el, g, text } from '../svg.js';
 import { measure, truncate } from '../text.js';
@@ -252,10 +253,13 @@ function prepare(spec, locale) {
   const unmatched = [];
   // La clave con que los datos nombran cada región (CUT, ISO, sigla…): va al SVG como data-key.
   const keyOf = new Map();
+  const rowsOf = new Map(); // región → sus filas (para `tooltip`)
   for (const r of data) {
     const f = idx.get(normKey(r[key]));
     if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
     if (!keyOf.has(f)) keyOf.set(f, String(r[key]));
+    if (!rowsOf.has(f)) rowsOf.set(f, []);
+    rowsOf.get(f).push(r);
     if (!buckets.has(f)) buckets.set(f, []);
     buckets.get(f).push(categorical ? r[valueF] : num(r[valueF]));
   }
@@ -288,7 +292,7 @@ function prepare(spec, locale) {
   // `dashed`: por nombre de región (con los mismos alias) o por un campo de los datos.
   const dm = dashedMatcher(spec, data, key, null, normKey);
   const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories, keyOf, idx };
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories, keyOf, idx, rowsOf };
 }
 
 /**
@@ -792,6 +796,7 @@ function zoomLayer(B, children) {
 export function choropleth(spec, theme) {
   const B = baseChart(spec, theme, 'choropleth');
   const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX, layers, markers } = B;
+  const TT = tipper(spec, m.data, locale);
   const borderC = spec.borderColor ?? theme.surface, borderW = spec.borderWidth ?? 0.75;
   const ptR = spec.pointRadius ?? 5;
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
@@ -808,7 +813,7 @@ export function choropleth(spec, theme) {
     const tipTxt = (has ? `${name}\n${fmt(v)}${m.categorical ? '' : ' · ' + rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
     const d = pathD(f.geometry, proj, { r: ptR });
     const isLine = isLineGeom(f.geometry);
-    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt, 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name), 'data-key': regionKey(m, f, locale) };
+    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name), 'data-key': regionKey(m, f, locale) };
     let fill = has ? base : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
     let stroke = null;
     if (isDashed && has) {
@@ -855,6 +860,7 @@ export function choropleth(spec, theme) {
 export function symbolMap(spec, theme) {
   const B = baseChart(spec, theme, 'symbol');
   const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax, layers, markers } = B;
+  const TT = tipper(spec, m.data, locale);
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
@@ -870,7 +876,7 @@ export function symbolMap(spec, theme) {
       tip: (v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}`) + (isDashed ? `\n${dashedLabel}` : '') };
   });
   const circles = items.filter((it) => !it.missing).sort((a, b) => b.r - a.r)
-    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': it.tip, 'data-color': color, 'data-key': regionKey(m, it.f, locale),
+    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': TT(m.rowsOf.get(it.f) || [], ...it.tip.split('\n')), 'data-color': color, 'data-key': regionKey(m, it.f, locale),
       ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
   const links = linkList(spec, m, theme, locale);
   if (links) layer.push(drawLinks(links, proj, theme, fmt, locale));

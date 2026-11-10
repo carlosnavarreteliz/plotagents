@@ -5,6 +5,7 @@
 // serie, sin cero, sin ejes, sin grilla ni rótulos; cabe en una celda de tabla
 // (108 × 26) y no tiene tamaño mínimo. Un punto marca el último valor. Con
 // `series`, hasta unas pocas líneas comparten la misma escala.
+import { tipper } from '../tooltip.js';
 import { el, g, tip, r2 } from '../svg.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
@@ -16,6 +17,7 @@ export function spark(spec, theme) {
   const locale = spec.locale || 'es';
   const en = langOf(locale) === 'en';
   const data = ensureData(spec);
+  const TT = tipper(spec, data, locale);
   const inf = inferXY(spec, data);
   const x = spec.x ?? inf.x;
   const y = (Array.isArray(spec.y) ? spec.y[0] : spec.y) ?? spec.value ?? inf.y;
@@ -88,7 +90,7 @@ export function spark(spec, theme) {
     const lineTxt = vals.map(([k, v]) => (series ? `${k}: ` : '') + (Number.isFinite(v) ? fmt(v) : '—'));
     const cx = px(xn);
     const x0r = Math.max(0, cx - step / 2), x1r = Math.min(frame.width, cx + step / 2);
-    body.push(g({ class: 'pa-m', 'data-tip': tip(xs.get(xn), ...lineTxt) }, [
+    body.push(g({ class: 'pa-m', 'data-tip': TT({ [x]: xs.get(xn) }, xs.get(xn), ...lineTxt) }, [
       el('rect', { x: x0r, y: 0, width: Math.max(0.5, x1r - x0r), height: frame.height, fill: 'transparent' }),
     ]));
   }

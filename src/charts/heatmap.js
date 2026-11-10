@@ -1,5 +1,6 @@
 // Mapa de calor: magnitud en una grilla de dos categorías (o tiempo).
 // Rampa secuencial de un solo tono; divergente si hay un punto medio.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -28,6 +29,7 @@ export function heatmap(spec, theme) {
     if (!cells.has(k)) cells.set(k, []);
     cells.get(k).push(num(r[valueF]));
   }
+  const TT = tipper(spec, data, locale);
   const val = (a, b) => { const v = cells.get(a + '\u0000' + b); return v ? aggregate(v, spec.aggregate || 'sum') : NaN; };
   // `floor` / `ceiling`: lo que cae fuera se dibuja como celda vacía (no es
   // «sin dato»: el valor existe y el tooltip lo dice) y no cuenta para la escala.
@@ -101,7 +103,7 @@ export function heatmap(spec, theme) {
       const v = val(a, b);
       const cx = inner.x + i * cw + 1, cy = inner.y + j * ch + 1;
       const box = { x: cx, y: cy, width: Math.max(0, cw - 2), height: Math.max(0, ch - 2), rx: 3 };
-      const tipTxt = tip(`${b} · ${a}`, Number.isFinite(v) ? fmt(v) : '—');
+      const tipTxt = TT({ [x]: a, [y]: b }, `${b} · ${a}`, Number.isFinite(v) ? fmt(v) : '—');
       if (!Number.isFinite(v) && missing === 'gap') return;
       // Celda vacía: sin dato con missing: 'plain', o un valor fuera de floor/ceiling.
       if (outside(v) || (!Number.isFinite(v) && missing === 'plain')) {

@@ -2,6 +2,7 @@
 // El tamaño del nodo es su peso (o su grado ponderado); el color, su grupo.
 // Cada disposición llena coordenadas propias; luego un mismo ajuste al área y
 // una misma pasada contra encimados sirven a todas.
+import { tipper } from '../tooltip.js';
 import { el, g, tip, esc } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -72,6 +73,7 @@ export function prepareNetwork(spec) {
     for (const r of spec.nodes) {
       if (r[idF] === null || r[idF] === undefined) continue;
       const n = add(String(r[idF]));
+      n.row = r;
       if (labF && r[labF] !== undefined) n.label = String(r[labF]);
       if (grF && r[grF] !== undefined && r[grF] !== null) n.group = String(r[grF]);
       if (szF && Number.isFinite(num(r[szF]))) n.size = num(r[szF]);
@@ -647,6 +649,8 @@ export function network(spec, theme) {
   // ── Nodos: grandes debajo, chicos encima ──────────────────────────────────
   const ring = nodes.length > 60 ? 0 : 0.75;
   const nodeG = [];
+  const TN = tipper(spec, null, locale);
+  const nodeRows = new Map(nodes.filter((n) => n.row).map((n) => [String(n.id), [n.row]]));
   for (const n of [...nodes].sort((a, b) => (on(a) - on(b)) || b.r - a.r || (a.id < b.id ? -1 : 1))) {
     const lines = [n.label];
     if (hasGroups && n.group) lines.push(n.group);
@@ -656,7 +660,7 @@ export function network(spec, theme) {
     nodeG.push(el('circle', {
       class: 'pa-m', cx: n.px, cy: n.py, r: n.r, fill: on(n) ? colorOf(n) : theme.dim,
       stroke: isF ? theme.ink : ring ? theme.surface : undefined, strokeWidth: isF ? 2.5 : ring || undefined,
-      'data-tip': tip(...lines), 'data-node': n.id, style: 'cursor:pointer',
+      'data-tip': TN(nodeRows.get(String(n.id)) || [], ...lines), 'data-node': n.id, style: 'cursor:pointer',
     }));
   }
   const nodesSvg = g({ class: 'pa-nodes' }, nodeG);

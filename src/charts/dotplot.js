@@ -6,6 +6,7 @@
 // `bins` tramos); `x` categórico apila por categoría. `ticks: [[valor, rótulo],
 // …]` pone marcas propias en el eje (p. ej. los tramos de ingreso que publica
 // la fuente) en vez de las automáticas.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -107,6 +108,7 @@ export function dotplot(spec, theme) {
   }
 
   // Puntos: los destacados al final, encima.
+  const TT = tipper(spec, null, spec.locale || 'es');
   const marks = [], top = [];
   stacks.forEach((st, i) => st.forEach((row, k) => {
     const c = colorOf(row);
@@ -118,7 +120,7 @@ export function dotplot(spec, theme) {
       series ? `${series}: ${row[series]}` : '',
     ];
     const dot = el('circle', { cx, cy, r: on ? r + 1 : r, fill: c, fillOpacity: hl && !on ? 0.3 : theme.marks?.dotOpacity ?? 0.9, stroke: on ? theme.ink : null, strokeWidth: on ? 1.75 : null });
-    (on ? top : marks).push(g({ class: 'pa-m', 'data-tip': tip(...lines), 'data-color': c }, [dot]));
+    (on ? top : marks).push(g({ class: 'pa-m', 'data-tip': TT([row], ...lines), 'data-color': c }, [dot]));
     if (on && labelF) {
       const t = String(row[labelF]);
       const tx = Math.min(inner.x + inner.w - measure(t, 12, 600), Math.max(inner.x, cx - measure(t, 12, 600) / 2));

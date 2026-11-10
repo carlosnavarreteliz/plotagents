@@ -8,6 +8,7 @@
 // `top: N` deja las series que estuvieron entre las N primeras en algún periodo
 // mostrado; un puesto fuera de las N se dibuja en una fila «más abajo», hueco,
 // y el tooltip dice el puesto real. El color sigue a la entidad.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, parseDate } from '../format.js';
@@ -21,6 +22,7 @@ export function bump(spec, theme) {
   const locale = spec.locale || 'es';
   const en = langOf(locale) === 'en';
   const data = ensureData(spec);
+  const TT = tipper(spec, data, locale);
   const inf = inferXY(spec, data);
   const x = spec.x ?? inf.x;
   const series = spec.series ?? spec.hue;
@@ -104,7 +106,7 @@ export function bump(spec, theme) {
     for (const [i, r] of pts) {
       const out = r > N;
       const v = y ? val.get(s + '\u0000' + periods[i]) : null;
-      parts.push(g({ class: 'pa-m', 'data-tip': tip(s, `${periods[i]}: #${r}` + (v !== null && v !== undefined ? ` (${fmt(v)})` : '')) }, [
+      parts.push(g({ class: 'pa-m', 'data-tip': TT({ [series]: s, [x]: periods[i] }, s, `${periods[i]}: #${r}` + (v !== null && v !== undefined ? ` (${fmt(v)})` : '')) }, [
         el('circle', { cx: px(i), cy: py(r), r: 9, fill: 'transparent' }),
         el('circle', { cx: px(i), cy: py(r), r: out ? 3 : 4, fill: out ? theme.surface : c, stroke: c, strokeWidth: out ? 1.5 : 0 }),
       ]));

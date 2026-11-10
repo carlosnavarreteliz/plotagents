@@ -6,6 +6,7 @@
 // Si el total no cabe (más de `maxSquares` cuadros), cada cuadro pasa a valer
 // una cantidad redonda (`unit`) y la leyenda lo dice; los cuadros por serie se
 // reparten por restos mayores, así que siempre suman el total redondeado.
+import { tipper } from '../tooltip.js';
 import { el, g, tip } from '../svg.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap } from '../theme.js';
@@ -19,6 +20,7 @@ export function waffle(spec, theme) {
   const locale = spec.locale || 'es';
   const en = langOf(locale) === 'en';
   const data = ensureData(spec);
+  const TT = tipper(spec, data, locale);
   const fields = fieldsOf(data);
   const series = spec.series ?? spec.hue ?? spec.label ?? spec.x ?? fields.find((f) => fieldKind(data, f) === 'category');
   requireField(data, series, 'series');
@@ -81,7 +83,7 @@ export function waffle(spec, theme) {
         : `M${cx.toFixed(2)},${cy.toFixed(2)}h${s.toFixed(2)}v${s.toFixed(2)}h${(-s).toFixed(2)}Z`);
     }
     if (!d.length) return;
-    body.push(g({ class: 'pa-m', 'data-tip': tip(k, `${fmt(tot.get(k))} (${share(tot.get(k))})`, unitTxt ? `${squares[i]} × ${fmt(unit)}` : '') }, [el('path', { d: d.join(''), fill: colorOf(k) })]));
+    body.push(g({ class: 'pa-m', 'data-tip': TT({ [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`, unitTxt ? `${squares[i]} × ${fmt(unit)}` : '') }, [el('path', { d: d.join(''), fill: colorOf(k) })]));
   });
 
   const big = keys[0];
