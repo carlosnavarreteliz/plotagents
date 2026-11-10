@@ -402,7 +402,7 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
     return [
       '{',
       `  ok: ${r.ok}, type: ${JSON.stringify(r.type)},`,
-      `  svg: "<svg …>…</svg>",  // ${kb} kB, ${t('with', 'con')} <title> ${t('and', 'y')} <desc>`,
+      `  svg: "<svg …>…</svg>",  // ${kb} kB, ${t('with', 'con')} aria-label ${t('and', 'y')} <desc>`,
       `  description: ${JSON.stringify(d)},`,
       `  errors: [], warnings: [${r.warnings.length ? '…' : ''}], suggestions: [${r.suggestions.length ? '…' : ''}]`,
       '}',
@@ -443,14 +443,14 @@ ${examples.filter((e) => e.section === sec).map(card).join('\n')}
     ['Etiquetas donde mira el ojo', 'Las líneas se rotulan en su extremo, los valores van sobre las barras y las etiquetas que chocan se separan con guías. Leyenda solo cuando hace falta.'],
     ['El color sigue a la entidad', 'Ocho colores aptos para daltonismo en un orden fijo. “Cobre” conserva su color al filtrar, al entrar en un grupo o al mover el slider.'],
     ['Honesto con la incertidumbre', 'Las estimaciones y proyecciones se rayan con `dashed`, nunca con un color nuevo, y la leyenda dice qué significa el rayado.'],
-    ['SVG rápido y accesible', 'Cero dependencias, render en el servidor, un `<title>` y un `<desc>` en cada gráfico y los datos densos agrupados en trazos.'],
+    ['SVG rápido y accesible', 'Cero dependencias, render en el servidor, un `aria-label` y un `<desc>` en cada gráfico y los datos densos agrupados en trazos.'],
   ] : [
     ['The title states the finding', 'A full sentence with the key number. `lint` flags titles that only name the chart; `describe` writes the alt text.'],
     ['One axis, always', 'No dual axes: they invent correlations. `index: true` rebases to 100, `facet` draws panels on a shared scale.'],
     ['Labels where the eye is', 'Lines are labeled at their ends, values sit on the bars, colliding labels get leader lines. A legend only when it is needed.'],
     ['Color follows the entity', 'Eight colorblind-safe colors in a fixed order. “Copper” keeps its color when you filter, drill down or move the slider.'],
     ['Honest about uncertainty', 'Estimates and projections are hatched with `dashed`, never a new color, and the legend says what the hatching means.'],
-    ['Fast, accessible SVG', 'Zero dependencies, server-side rendering, a `<title>` and `<desc>` in every chart, and dense data batched into paths.'],
+    ['Fast, accessible SVG', 'Zero dependencies, server-side rendering, an `aria-label` and a `<desc>` in every chart, and dense data batched into paths.'],
   ];
   const VOCAB = ES ? [
     ['title', '<b>El hallazgo</b>, como una oración con la cifra.'],

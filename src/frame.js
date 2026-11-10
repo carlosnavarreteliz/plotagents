@@ -17,7 +17,7 @@ export const SIZES = {
 
 export function createFrame(spec, theme, defaults = {}) {
   // `chrome: false` (sparklines): sin título, bajada ni fuente dibujados (el
-  // título sigue en <title> para lectores de pantalla) y sin tamaño mínimo.
+  // título sigue en aria-label para lectores de pantalla) y sin tamaño mínimo.
   const chrome = defaults.chrome !== false;
   const width = Math.max(defaults.minWidth ?? 240, +spec.width || defaults.width || 720);
   // Con textos más grandes (textScale), el alto por defecto crece para no aplastar los datos.
@@ -125,8 +125,9 @@ export function createFrame(spec, theme, defaults = {}) {
           width,
           height: r2(height),
           role,
-          'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
-          'aria-describedby': role === 'img' ? null : `${id}-d`,
+          // Sin <title>: el navegador lo muestra como tooltip nativo encima del propio.
+          'aria-label': spec.title || type,
+          'aria-describedby': `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
           class: 'pa-chart' + (root?.class ? ' ' + root.class : ''),
           'data-pa-type': type,
@@ -138,7 +139,6 @@ export function createFrame(spec, theme, defaults = {}) {
           ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
-          el('title', { id: `${id}-t` }, esc(spec.title || type)),
           el('desc', { id: `${id}-d` }, esc(desc)),
           el('style', {}, style),
           defs ? el('defs', {}, defs) : '',

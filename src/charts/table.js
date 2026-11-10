@@ -677,7 +677,7 @@ export function table(spec, theme) {
       case 'check': {
         const yes = v === true || YES.test(String(v).trim());
         const cx = c.align === 'right' ? x + w - P - 5 : c.align === 'center' ? x + w / 2 : ix + 5;
-        out.push(g({ role: 'img', 'aria-label': s }, [check(cx, my, yes), el('title', {}, esc(s))]));
+        out.push(g({ role: 'img', 'aria-label': s }, [check(cx, my, yes)]));
         break;
       }
       case 'link': {

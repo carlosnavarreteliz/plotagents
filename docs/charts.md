@@ -87,7 +87,7 @@ The value axis always ends on the first round value at or above the largest bar,
 
 ### `spark` (`sparkline`)
 
-The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `<title>` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip.
+The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `aria-label` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip.
 
 | Option | Meaning |
 |---|---|
@@ -117,7 +117,7 @@ plot({ type: 'rail', data: [row], value: 'chile', min: 'lo', max: 'hi', band: ['
 | `fallback` | A row with no `min`/`max` and no `domain` has no rail: it prints its figure (`"value"`, default) or nothing (`"none"`), never a lone dot. |
 | `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Names in the tooltip (text or a field of the row). With `minLabel`/`maxLabel` the tooltip lists both ends ("Lowest · Colchane: 7.1") instead of "Range: a–b". |
 | `color`, `colors` | The dot's colour; `colors: { rail, band, median, ref, value }` per part. Any colour may be `var(--x, #fallback)`, and `skins` work as in any chart. |
-| `format`, `dotRadius`, `tooltip`, `title` | A format (a function from JS), the dot size, extra tooltip fields, and the tooltip heading (also the `<title>`). |
+| `format`, `dotRadius`, `tooltip`, `title` | A format (a function from JS), the dot size, extra tooltip fields, and the tooltip heading (also the `aria-label`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 

@@ -87,7 +87,7 @@ El eje de valores siempre termina en el primer valor redondo igual o mayor que l
 
 ### `spark` (`sparkline`)
 
-La forma de una serie, en su propia escala de mínimo a máximo (sin cero): responde «cómo se movió», y la cifra de al lado dice «cuánto». Sin ejes, grilla, rótulos, leyenda ni título dibujados (el título queda en `<title>` para lectores de pantalla) y sin tamaño mínimo, así que cabe en una celda: `width: 108, height: 26`. Un punto marca el último valor; un valor faltante es un hueco. Una franja invisible por x lleva el tooltip.
+La forma de una serie, en su propia escala de mínimo a máximo (sin cero): responde «cómo se movió», y la cifra de al lado dice «cuánto». Sin ejes, grilla, rótulos, leyenda ni título dibujados (el título queda en `aria-label` para lectores de pantalla) y sin tamaño mínimo, así que cabe en una celda: `width: 108, height: 26`. Un punto marca el último valor; un valor faltante es un hueco. Una franja invisible por x lleva el tooltip.
 
 | Opción | Significado |
 |---|---|
@@ -117,7 +117,7 @@ plot({ type: 'rail', data: [fila], value: 'chile', min: 'lo', max: 'hi', band: [
 | `fallback` | Una fila sin `min`/`max` ni `domain` no tiene riel: escribe su cifra (`"value"`, por defecto) o nada (`"none"`), nunca un punto suelto. |
 | `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Nombres en el tooltip (texto o un campo de la fila). Con `minLabel`/`maxLabel` el tooltip lista los dos extremos («Más bajo · Colchane: 7,1») en vez de «Rango: a–b». |
 | `color`, `colors` | El color del punto; `colors: { rail, band, median, ref, value }` por parte. Cualquier color puede ser `var(--x, #respaldo)`, y `skins` funciona como en cualquier gráfico. |
-| `format`, `dotRadius`, `tooltip`, `title` | Un formato (una función desde JS), el tamaño del punto, campos extra del tooltip y su encabezado (también el `<title>`). |
+| `format`, `dotRadius`, `tooltip`, `title` | Un formato (una función desde JS), el tamaño del punto, campos extra del tooltip y su encabezado (también el `aria-label`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 

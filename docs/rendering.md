@@ -23,7 +23,7 @@ Reproduce it with `node scripts/bench.js` (needs Playwright with Chromium instal
 |---|---|---|
 | Render on a server, in Node, with zero dependencies | Yes: SVG is a string | Needs a native module (`node-canvas`) or a headless browser |
 | An agent can read and check its own output | Yes: titles, labels and values are text | No: a bitmap |
-| Accessibility (`<title>`, `<desc>`, screen readers, text selection) | Built in | Must be rebuilt by hand next to the canvas |
+| Accessibility (`aria-label`, `<desc>`, screen readers, text selection) | Built in | Must be rebuilt by hand next to the canvas |
 | Crisp at any zoom, print and PDF | Vector | Fixed resolution; must re-render for each pixel ratio |
 | Paste into slides, Word, Figma, Markdown, email | Works as a file | Only as an image |
 | Theming with CSS, dark mode, hover states | CSS classes | Manual redraw |

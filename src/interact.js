@@ -379,7 +379,7 @@ function mapZoom(root, svg, z, { dark, hide }) {
   box.style.cssText = `position:absolute;display:flex;gap:4px;z-index:5;opacity:.0;transition:opacity .15s`;
   const mk = (label, svgIcon) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
+    b.type = 'button'; b.setAttribute('aria-label', label);
     // Tamaño fijo en línea: hojas como `figure svg{width:100%}` no deben estirar el ícono.
     b.innerHTML = svgIcon.replace('<svg ', '<svg style="width:12px;height:12px;display:block;flex:none" ');
     b.style.cssText = `width:28px;height:28px;display:grid;place-items:center;padding:0;border-radius:7px;border:1px solid ${bd};background:${bg};color:${fg};cursor:pointer;box-shadow:0 1px 3px rgba(11,15,43,.12)`;

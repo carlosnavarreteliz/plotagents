@@ -1745,8 +1745,8 @@ function createFrame(spec, theme, defaults = {}) {
           width,
           height: r2(height),
           role,
-          'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
-          'aria-describedby': role === 'img' ? null : `${id}-d`,
+          'aria-label': spec.title || type,
+          'aria-describedby': `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
           class: 'pa-chart' + (root?.class ? ' ' + root.class : ''),
           'data-pa-type': type,
@@ -1758,7 +1758,6 @@ function createFrame(spec, theme, defaults = {}) {
           ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
-          el('title', { id: `${id}-t` }, esc(spec.title || type)),
           el('desc', { id: `${id}-d` }, esc(desc)),
           el('style', {}, style),
           defs ? el('defs', {}, defs) : '',
@@ -14210,7 +14209,7 @@ function table(spec, theme) {
       case 'check': {
         const yes = v === true || YES.test(String(v).trim());
         const cx = c.align === 'right' ? x + w - P - 5 : c.align === 'center' ? x + w / 2 : ix + 5;
-        out.push(g({ role: 'img', 'aria-label': s }, [check(cx, my, yes), el('title', {}, esc(s))]));
+        out.push(g({ role: 'img', 'aria-label': s }, [check(cx, my, yes)]));
         break;
       }
       case 'link': {
@@ -15901,7 +15900,7 @@ function mapZoom(root, svg, z, { dark, hide }) {
   box.style.cssText = `position:absolute;display:flex;gap:4px;z-index:5;opacity:.0;transition:opacity .15s`;
   const mk = (label, svgIcon) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
+    b.type = 'button'; b.setAttribute('aria-label', label);
     b.innerHTML = svgIcon.replace('<svg ', '<svg style="width:12px;height:12px;display:block;flex:none" ');
     b.style.cssText = `width:28px;height:28px;display:grid;place-items:center;padding:0;border-radius:7px;border:1px solid ${bd};background:${bg};color:${fg};cursor:pointer;box-shadow:0 1px 3px rgba(11,15,43,.12)`;
     box.appendChild(b);

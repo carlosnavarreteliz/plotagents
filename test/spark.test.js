@@ -9,7 +9,8 @@ test('spark: any size, no chrome, own min–max scale', () => {
   const svg = plot({ type: 'spark', data, x: 'y', y: 'v', width: 108, height: 26, title: 'Sube', source: 'X' });
   assert.match(svg, /viewBox="0 0 108 26"/);
   assert.doesNotMatch(svg, /<text/); // no title, axes, labels or source drawn
-  assert.match(svg, /<title[^>]*>Sube<\/title>/); // the title stays for screen readers
+  assert.match(svg, /aria-label="Sube"/); // the title stays for screen readers
+  assert.ok(!/<title/.test(svg), 'no <title>: it would show a native tooltip over ours');
   // Min–max: the lowest point sits at the bottom edge of the plot area, the highest at the top.
   const ys = [...svg.matchAll(/[ML]([\d.]+),([\d.]+)/g)].map((m) => +m[2]);
   assert.ok(Math.max(...ys) > 20 && Math.min(...ys) < 6);
