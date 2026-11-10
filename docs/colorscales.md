@@ -12,7 +12,7 @@ plot({ ...spec, colorScale: { name: 'coolwarm', mid: 100 } });    // diverging a
 
 - **Names are case-insensitive** (`'rdbu'` works) and `_r` reverses any map.
 - **Diverging maps center themselves**: on 0 when the data crosses zero, otherwise on the middle of the data. Set `mid` (or `midpoint`) to choose the center.
-- **Your own scale** is a list of two or more colors, evenly spaced from low to high, or `{ colors, reverse, mid }`.
+- **Your own scale** is a list of two or more colors, evenly spaced from low to high, or `{ colors, reverse, mid }`. Colors are hex, `rgb()` / `rgba()` (the alpha is dropped) or CSS names; one that is none of these is dropped, and `lint` names it (`colorscale-color`).
 - Interpolation happens in OKLab, so steps look even. The stops were sampled from matplotlib 3.9 and stay within 2 ΔE (×100) of the original.
 - `cmap` and `colormap` are aliases of `colorScale`. The older `ramp` option still works.
 

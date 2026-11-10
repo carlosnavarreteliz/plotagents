@@ -159,6 +159,7 @@ function lintSpec(spec = {}) {
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
   if (spec.fixedRadius && ['strip', 'box', 'violin', 'point'].includes(type)) sug('fixedradius-swarm', L('`fixedRadius` es del enjambre (swarm): en strip el radio ya es fijo.', '`fixedRadius` belongs to swarm: in strip the radius is already fixed.'), L('Quita `fixedRadius`, o usa `type: "swarm"`.', 'Drop `fixedRadius`, or use `type: "swarm"`.'));
+  if (spec.leanDots && type !== 'strip' && type !== 'swarm') sug('lean-dots-type', L('`leanDots` sólo cambia los puntos de strip y swarm.', '`leanDots` only changes the dots of strip and swarm.'), L('Quítalo, o usa `type: "swarm"`.', 'Drop it, or use `type: "swarm"`.'));
   if (type === 'heatmap' && data.length) {
     for (const k of ['rowHref', 'colHref', 'rowTip', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
     if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
@@ -466,6 +467,18 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   for (const k of ['xScale', 'yScale']) if (spec[k] !== undefined) enumCheck(k, spec[k], SCALES, '"linear", "log"');
   if (spec.curve !== undefined) enumCheck('curve', spec.curve, CURVES);
   if (spec.groupStripe !== undefined) enumCheck('groupStripe', spec.groupStripe, ['grid', 'labels'], '"grid", "labels"');
+  if (spec.subWidth !== undefined) enumCheck('subWidth', spec.subWidth, ['label', 'full'], '"label", "full"');
+  if (spec.xLabelPosition !== undefined) enumCheck('xLabelPosition', spec.xLabelPosition, ['top', 'bottom'], '"top", "bottom"');
+  for (const k of ['stackGap', 'rowLabelWidth']) {
+    if (spec[k] !== undefined && spec[k] !== null && !(Number.isFinite(+spec[k]) && +spec[k] >= (k === 'stackGap' ? 0 : 1e-9) && typeof spec[k] !== 'boolean')) {
+      err('enum-' + k, L(`\`${k}: ${q(spec[k])}\` debe ser un número ${k === 'stackGap' ? '≥ 0 (px)' : '> 0 (px, o fracción del ancho ≤ 1)'}.`, `\`${k}: ${q(spec[k])}\` must be a number ${k === 'stackGap' ? '≥ 0 (px)' : '> 0 (px, or a fraction of the width ≤ 1)'}.`), k === 'stackGap' ? 'stackGap: 0' : 'rowLabelWidth: 0.4');
+    }
+  }
+  if (type === 'sankey' && spec.labelWidth !== undefined && spec.labelWidth !== null) {
+    const lw = spec.labelWidth;
+    const parts = Array.isArray(lw) ? lw : typeof lw === 'object' ? [lw.left, lw.right].filter((v) => v !== undefined) : [lw];
+    if ((Array.isArray(lw) && lw.length !== 2) || !parts.every((v) => Number.isFinite(+v) && +v > 0)) err('sankey-label-width', L('`labelWidth` en un sankey es un número > 0 (px, o fracción del ancho ≤ 1), [izquierda, derecha] o { left, right }.', '`labelWidth` in a sankey is a number > 0 (px, or a fraction of the width ≤ 1), [left, right] or { left, right }.'), 'labelWidth: [0.3, 0.22]');
+  }
   if (typeof spec.rowLine === 'string') enumCheck('rowLine', spec.rowLine, ['dashed'], 'true, false, "dashed"');
   if (typeof spec.clamp === 'string') enumCheck('clamp', spec.clamp, ['always'], 'true, false, "always"');
   if (spec.tileLabels !== undefined) enumCheck('tileLabels', spec.tileLabels, ['auto', 'wrap'], '"auto", "wrap"');
@@ -550,7 +563,13 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
         const near = didYouMean(base, all);
         err('colorscale-unknown', L(`La escala de color "${nameOf}" no existe.`, `The color scale "${nameOf}" does not exist.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Usa un nombre de matplotlib ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` invierte) o una lista de colores hex.', 'Use a matplotlib name ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` reverses) or a list of hex colors.'));
       } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores (["#FFF", "steelblue"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two colors (["#FFF", "steelblue"]) or { name, reverse, mid }.'));
-    } else if (cs.kind === 'qualitative') {
+    } else if (Array.isArray(v) || (v && typeof v === 'object' && Array.isArray(v.colors) && !Array.isArray(v.breaks))) {
+      // Un color que la escala no entiende se descartaba en silencio.
+      const list = Array.isArray(v) ? v : v.colors;
+      const bad = list.filter((c) => !/^\s*var\(/.test(String(c)) && !resolveColorScale([c, c]));
+      if (bad.length) warn('colorscale-color', L(`\`${key}\` trae colores que no se entienden y se omiten: ${bad.map(q).join(', ')}.`, `\`${key}\` has colors that are not understood and are dropped: ${bad.map(q).join(', ')}.`), L('Usa hex ("#3A47B8"), rgb() o un nombre CSS.', 'Use hex ("#3A47B8"), rgb() or a CSS name.'));
+    }
+    if (!cs) { /* ya dicho */ } else if (cs.kind === 'qualitative') {
       err('colorscale-qualitative', L(`"${cs.name}" es una paleta cualitativa: no sirve para una escala continua.`, `"${cs.name}" is a qualitative palette: it cannot be a continuous scale.`), L(`Usa \`palette: "${cs.name}"\` para categorías, o una escala como "viridis" o "Blues".`, `Use \`palette: "${cs.name}"\` for categories, or a scale such as "viridis" or "Blues".`));
     } else if (RAINBOW.has(cs.name.replace(/_r$/, ''))) {
       warn('colorscale-rainbow', L(`"${cs.name}" es un arcoíris: inventa bordes, no se lee en escala de grises ni con daltonismo.`, `"${cs.name}" is a rainbow map: it invents edges and fails in grayscale and for color-blind readers.`), L('Usa "viridis" (o "turbo" si necesitas muchos tonos).', 'Use "viridis" (or "turbo" if you need many hues).'));

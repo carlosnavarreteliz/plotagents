@@ -132,7 +132,12 @@ export function dendrogram(spec, theme) {
   const posNum = (v) => (Number.isFinite(+v) && v !== null && +v > 0 ? +v : null);
   const treeW = horizontal ? posNum(spec.treeWidth) : null;
   const labCap = treeW !== null ? Math.max(40, area.w - treeW - groupW - weightW - 8 - swW - 14) : posNum(spec.labelWidth) ?? (horizontal ? area.w * 0.3 : 120);
-  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? Math.max(...subLines(l).map((t) => measure(t, fsSub))) : 0)))) + 14) + swW;
+  // `subWidth: "full"`: las líneas de `sub` corren también bajo la columna
+  // de pesos (la barra y la cifra suben a la línea del nombre); la columna de
+  // nombres sólo tiene que caber el nombre.
+  const subFull = spec.subWidth === 'full' && twoLines && weightW > 0;
+  const subW = (l) => (twoLines && subOf(l) !== null ? Math.max(...subLines(l).map((t) => measure(t, fsSub))) - (subFull ? weightW : 0) : 0);
+  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), subW(l))))) + 14) + swW;
   const hTitle = horizontal ? spec.xLabel ?? spec.yLabel : spec.yLabel ?? spec.xLabel;
   const axisH = 26 + (hTitle && horizontal ? 16 : 0);
   const inner = horizontal
@@ -246,12 +251,13 @@ export function dendrogram(spec, theme) {
       parts.push(horizontal
         ? text(inner.x + inner.w + 6 + swW, nameY, s, { fill: sub !== null ? theme.ink : theme.lede, fontSize: fs })
         : text(pos + 4, inner.y + inner.h + 6 + swW, s, { fill: theme.lede, fontSize: fs, transform: `rotate(90 ${(pos + 4).toFixed(2)} ${(inner.y + inner.h + 6 + swW).toFixed(2)})` }));
-      sl.forEach((line, j) => parts.push(text(inner.x + inner.w + 6 + swW, nameY + 14 + j * SUB_LH, truncate(line, labW - 6 - swW, fsSub), { fill: theme.lede, fontSize: fsSub })));
+      sl.forEach((line, j) => parts.push(text(inner.x + inner.w + 6 + swW, nameY + 14 + j * SUB_LH, truncate(line, labW - 6 - swW + (subFull ? weightW : 0), fsSub), { fill: theme.lede, fontSize: fsSub })));
     }
     if (barMax && w !== null) {
       const x0 = inner.x + inner.w + labW + 4, bw = Math.max(w > 0 ? 1 : 0, (barMax * w) / maxWt), bh = Math.min(8, gap * 0.45);
-      parts.push(el('rect', { x: x0, y: pos - bh / 2, width: bw, height: bh, rx: 1, fill: lc ?? theme.muted }));
-      parts.push(text(x0 + bw + 4, pos + 4, fmtW(w), { fill: theme.lede, fontSize: 11 }));
+      const by = subFull && sub !== null ? nameY - 4 : pos;
+      parts.push(el('rect', { x: x0, y: by - bh / 2, width: bw, height: bh, rx: 1, fill: lc ?? theme.muted }));
+      parts.push(text(x0 + bw + 4, by + 4, fmtW(w), { fill: theme.lede, fontSize: 11 }));
     }
     body.push(g({ class: 'pa-m', 'data-tip': T(rowsOfLeaf(l), ...lines), 'data-color': c }, parts));
   });

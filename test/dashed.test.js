@@ -54,7 +54,7 @@ test('líneas: tramo proyectado discontinuo, banda y puntos huecos', () => {
 test('dona: segmento punteado con rayado y muestra rayada en la tabla', () => {
   const svg = plot({ type: 'donut', data: [{ k: 'A', v: 5 }, { k: 'B', v: 3 }], label: 'k', value: 'v', dashed: 'B' });
   assert.equal(count(svg, /data-dashed="1"/g), 1);
-  assert.ok(count(svg, /fill="url\(#pa-d[^"]+-h0\)"/g) >= 2);
+  assert.ok(count(svg, /fill="url\(#pa-hatch-[^"]+-h0\)"/g) >= 2);
 });
 
 test('lint sugiere dashedLabel cuando falta', () => {

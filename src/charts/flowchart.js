@@ -5,7 +5,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { colorMap, readable, textOn, hexToRgb, rgbToHex } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 
 const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
 const FS = 12.5, LH = 16, EDGE_FS = 11;
@@ -284,7 +284,7 @@ export function flowchart(spec, theme) {
 
   // ── Dibujo ───────────────────────────────────────────────────────────────
   const body = [];
-  const mid = 'pa-arrow-' + Math.abs(hash(String(spec.title) + N.length + area.w)).toString(36);
+  const mid = chartId(spec, 'arrow');
   const edgeColor = theme.muted;
   // Marcador escrito a mano: refX/markerWidth deben conservar mayúsculas.
   const defs = `<marker id="${mid}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5L9,5L1,8.5Z" fill="${edgeColor}"/></marker>`;

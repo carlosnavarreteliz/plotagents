@@ -100,9 +100,18 @@ export function sankey(spec, theme) {
   const leadW = relaxGap ? 6 : 0;
   const label = (n) => n.name;
   const second = (n) => (n.sub !== undefined && n.sub !== null ? String(n.sub) : fmt(n.value));
-  const leftW = Math.min(area.w * 0.22, Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
+  // `labelWidth`: el tope de cada columna de rótulos de los extremos, en px
+  // (> 1) o como fracción del ancho (≤ 1); un número para los dos lados, o
+  // [izquierda, derecha] / { left, right }. 22 % por defecto.
+  const lwOf = (side) => {
+    const v = spec.labelWidth;
+    const raw = Array.isArray(v) ? v[side === 'left' ? 0 : 1] : v && typeof v === 'object' ? v[side] : v;
+    const n = +raw;
+    return raw !== undefined && raw !== null && raw !== '' && Number.isFinite(n) && n > 0 ? (n <= 1 ? area.w * n : n) : area.w * 0.22;
+  };
+  const leftW = Math.min(lwOf('left'), Math.max(...cols[0].map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
   const last = cols[cols.length - 1];
-  const rightW = Math.min(area.w * 0.22, Math.max(...last.map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
+  const rightW = Math.min(lwOf('right'), Math.max(...last.map((n) => Math.max(measure(label(n), 12.5, 500), measure(second(n), 12))))) + 10 + leadW;
   const NW = 10;
   const inner = { x: area.x + leftW, y: area.y + 4, w: area.w - leftW - rightW, h: area.h - 8 };
   const pad = Math.max(6, Math.min(18, inner.h / Math.max(...cols.map((c) => c.length)) / 4));

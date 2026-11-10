@@ -8,7 +8,7 @@ import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.
 import { colorMap } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
-import { createFrame } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
 
@@ -200,7 +200,7 @@ export function hist(spec, theme) {
   const valueOverride = horizontal ? spec.xDomain : spec.yDomain;
   const vAx = axisDomain([0, vMax], { domain: multiple === 'fill' ? [0, 1] : valueOverride, count: Math.max(3, Math.round((horizontal ? area.w / 110 : area.h / 64))), zero: true, integer: stat === 'count' && multiple !== 'fill' });
   const binDom = dom ? [dom[0], dom[1]] : [bins[0].x0, bins[bins.length - 1].x1];
-  const clipId = 'pa-clip-h' + Math.abs(hashStr((spec.title || '') + field + area.w)).toString(36);
+  const clipId = chartId(spec, 'clip-h');
   const writeDomains = (bin, val) => { if (spec._domains && typeof spec._domains === 'object') { spec._domains[horizontal ? 'y' : 'x'] = bin; spec._domains[horizontal ? 'x' : 'y'] = val; } };
 
   if (!horizontal) {
@@ -524,8 +524,3 @@ function emptyChart(spec, theme, en) {
   return frame.finish([text(area.x, area.y + 20, en ? 'No numeric values to plot.' : 'No hay valores numéricos para graficar.', { fill: theme.lede, fontSize: 13 })], { desc: en ? 'Empty chart.' : 'Gráfico vacío.', type: 'empty' });
 }
 
-function hashStr(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  return h;
-}

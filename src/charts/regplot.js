@@ -6,7 +6,7 @@ import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
-import { createFrame } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
 
@@ -105,7 +105,7 @@ export function regplot(spec, theme) {
   const xS = xAx0.scale(inner.x + pad, inner.x + inner.w - pad);
   const yS = yAx.scale(inner.y + inner.h - pad, inner.y + pad);
   if (spec._domains && typeof spec._domains === 'object') { spec._domains.x = [xAx0.min, xAx0.max]; spec._domains.y = [yAx.min, yAx.max]; }
-  const clipId = 'pa-clip-reg-' + Math.abs(hashStr((spec.title || '') + inner.w + K)).toString(36);
+  const clipId = chartId(spec, 'clip-reg');
 
   const body = [];
   body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
@@ -369,8 +369,3 @@ function visible(p, xS, yS, inner) {
   return cx >= inner.x - 1 && cx <= inner.x + inner.w + 1 && cy >= inner.y - 1 && cy <= inner.y + inner.h + 1;
 }
 
-function hashStr(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return h;
-}

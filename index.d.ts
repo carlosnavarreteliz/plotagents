@@ -250,7 +250,11 @@ export interface Spec {
   title?: string;
   /** Accessible name (the SVG <title>) without drawing a title; default `title`, else the chart type. */
   ariaLabel?: string;
-  /** Base of the SVG's internal ids (aria ids; maps: clip path, no-data pattern). Set it when one chart appears twice on a page. */
+  /**
+   * Base of the SVG's internal ids (aria title/desc, clip paths, gradients, hatch patterns, markers; maps: clip, no-data pattern):
+   * each becomes "<idPrefix>-<kind>". Without it, ids carry a hash of what the chart draws (colors left out, so skins keep them),
+   * so two charts that draw differently never share one. Set it when one chart appears twice on a page.
+   */
   idPrefix?: string;
   subtitle?: string;
   source?: string;
@@ -267,6 +271,8 @@ export interface Spec {
   size?: string;
   /** dendrogram (rows input): a second line under each leaf name; "\n" in the value splits it into several lines (rows grow to fit). */
   sub?: string;
+  /** dendrogram with `sub` and `size`: "label" (default) fits `sub` into the names column; "full" runs it under the size column too (bar and count move to the name line). */
+  subWidth?: 'label' | 'full';
   from?: string;
   to?: string;
   items?: KpiItem[];
@@ -278,6 +284,8 @@ export interface Spec {
   /** Axis ticks of the value axis (line, area, bar), apart from `format` (labels, tooltips). Default: `format`. */
   yFormat?: Format;
   stack?: boolean | 'percent';
+  /** Stacked bar/column: px between stacked segments (default 2; 0 joins them). */
+  stackGap?: number;
   horizontal?: boolean;
   sort?: 'desc' | 'asc' | 'none' | 'alpha' | 'start';
   top?: number;
@@ -502,8 +510,11 @@ export interface Spec {
   maxRadius?: number;
   /** network: smallest node radius in px (default 2.5). */
   minRadius?: number;
-  /** network: widest node label in px before truncating (default 150). dendrogram: widest names column in px (default 30% of the width; 120 px vertical). */
-  labelWidth?: number;
+  /**
+   * network: widest node label in px before truncating (default 150). dendrogram: widest names column in px (default 30% of the width; 120 px vertical).
+   * sankey: cap of each end label column, px (> 1) or fraction of the width (≤ 1); one for both sides, [left, right] or { left, right } (default 0.22).
+   */
+  labelWidth?: number | [number, number] | { left?: number; right?: number };
   /** dendrogram (horizontal): width of the tree in px; the names take the rest. The height axis shows as many ticks (up to 4) as fit. */
   treeWidth?: number;
   /** network: false writes no tooltip on edges (also off with `tooltip: false`). */
@@ -590,6 +601,10 @@ export interface Spec {
   groupColors?: Record<string, string>;
   /** heatmap with `groupColors`: stripe on the group band ("grid", default) or on the grid edge next to the column / row labels ("labels"; over the grid with `xLabelPosition: "top"`). */
   groupStripe?: 'grid' | 'labels';
+  /** heatmap with xGroup / yGroup: false drops the band of group names; `groupColors` stripes stay next to the labels, with the name in their tooltip. */
+  groupLabels?: boolean;
+  /** heatmap: cap of the row-label column, px (> 1) or fraction of the width (≤ 1). Default 0.3. */
+  rowLabelWidth?: number;
   /** heatmap: text written across a row that has no values. */
   emptyRow?: string;
   /** heatmap: row / column labels link to the URL in this field (paths and http(s) only), or a function of the label. */
@@ -599,10 +614,12 @@ export interface Spec {
   colHref?: string | ((label: string) => string | undefined);
   /** heatmap: rotate the column labels (-90 upright, -45 slanted); the label strip grows to fit. */
   xLabelAngle?: number;
-  /** heatmap: column labels under the grid (default) or over it. */
+  /** heatmap: column labels under the grid (default) or over it. Horizontal box/violin/strip/swarm/point: the value axis under the rows (default) or "top". */
   xLabelPosition?: 'top' | 'bottom';
-  /** Horizontal box/violin/strip/swarm/point: row names left of the axis (default) or above each row (a phone); in strip/swarm the name sits right above its highest dot. */
+  /** Horizontal box/violin/strip/swarm/point: row names left of the axis (default) or above each row (a phone); in strip/swarm the name sits right above its highest dot. heatmap: "above" writes each row name over its row. */
   yLabelPosition?: 'left' | 'above';
+  /** strip/swarm: dot style once on a <g class="pa-dots"> (skin variable included), dots with cx/cy (1 decimal), r and tooltip only; hover ring styled by the page (`.pa-dots .pa-m:hover`). */
+  leanDots?: boolean;
   /** strip/swarm/box/violin/point with a value domain: values outside sit on its edge; the edge tick says ≤ / ≥ when some value lies beyond ("always": on both edges regardless). */
   clamp?: boolean | 'always';
   /** heatmap: px between cells (default 2); 0 joins them; [x, y] per axis. */

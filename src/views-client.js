@@ -1,9 +1,10 @@
 // plotagents/views · cambiar la vista de un mapa dibujado con `views`, en el
-// navegador y sin la biblioteca (menos de 1 kB, sin dependencias).
+// navegador y sin la biblioteca (menos de 2 kB minificado, sin dependencias).
 //
 //   import { setView, bindViews } from 'plotagents/views';
 //   setView(document.querySelector('#mapa'), 'inmigrantes');
 //   bindViews(document);   // <button data-set-view="inmigrantes"> cambia los mapas de la página
+//   activeTip(e.target);   // el tooltip de la vista que se ve (también con `viewSelector`)
 //
 // El SVG ya trae todo: cada vista pinta sus regiones con el <style> que lleva
 // dentro, según el atributo `data-view` de la raíz. Lo único que hace este
@@ -42,10 +43,43 @@ export function setView(target, id) {
   return n;
 }
 
-/** La vista que muestra un mapa (o el primero con vistas dentro de `target`). */
+/**
+ * La vista que muestra un mapa (o el primero con vistas dentro de `target`).
+ * Con `viewSelector` la elige el CSS (un radio :checked, una clase en un
+ * ancestro), no `data-view`: se lee del <style> del mapa qué selector lleva
+ * cada vista y se prueba con `matches()`.
+ */
 export function currentView(target) {
   const svg = charts(target)[0];
-  return svg ? svg.getAttribute('data-view') : null;
+  if (!svg) return null;
+  const ids = (svg.getAttribute('data-views') || '').split(' ');
+  const css = [...svg.querySelectorAll('style')].map((n) => n.textContent).join('');
+  // Una regla «<selector> .pv0{display:none}» por vista desde la segunda, en orden.
+  const sels = [...css.matchAll(/(?:^|\})([^{}]+?) \.pv0\{display:none\}/g)].map((m) => m[1]);
+  if (sels.length && !/:not\(\[data-view=/.test(sels[0])) {
+    for (let j = 0; j < sels.length; j++) {
+      try { if (svg.matches(sels[j])) return ids[j + 1]; } catch (e) { /* un selector que este navegador no entiende */ }
+    }
+    return ids[0];
+  }
+  return svg.getAttribute('data-view');
+}
+
+/**
+ * El tooltip que corresponde a la vista que se ve, para la capa de hover
+ * propia de una página: `activeTip(evento.target)` sube hasta la marca (el
+ * elemento con `data-tip` o `data-vtip-*`) y devuelve el texto de la vista
+ * activa (con `viewSelector` o con `data-view`), o null si no hay. Fuera de un
+ * mapa con vistas, es el `data-tip` de la marca. No cambia el documento.
+ */
+export function activeTip(el) {
+  let n = el;
+  while (n && n.getAttribute && !n.hasAttribute('data-tip') && !n.getAttributeNames().some((a) => a.startsWith('data-vtip-'))) n = n.parentNode;
+  if (!n || !n.getAttribute) return null;
+  const svg = n.closest('svg[data-views]');
+  const v = svg && currentView(svg);
+  const t = v ? n.getAttribute(`data-vtip-${v}`) : null;
+  return t !== null ? t || null : n.getAttribute('data-tip');
 }
 
 /**

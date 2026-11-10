@@ -12,7 +12,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `subtitle` | Cómo leer el gráfico: medida, unidad, período. |
 | `source` | Fuente de los datos, en letra pequeña abajo a la derecha. |
 | `ariaLabel` | El nombre accesible (el `<title>` del SVG, el que lee un lector de pantalla) sin dibujar un título. Por omisión, `title`, o el tipo de gráfico si no hay. |
-| `idPrefix` | Base de los ids internos del SVG (los de aria; en mapas, el recorte y el patrón sin dato). Úsalo cuando el mismo gráfico aparece dos veces en una página; los paneles de un facet llevan `-0`, `-1`… |
+| `idPrefix` | Base de los ids internos del SVG: título y descripción de aria, recortes, degradados, patrones rayados y puntas de flecha (en mapas también el recorte y el patrón sin dato); cada uno queda `<idPrefix>-<tipo>`. Sin él, cada id lleva una huella de lo que el gráfico dibuja, sin los colores (las pieles y los colores `var(--x)` dan los mismos ids): dos gráficos que se dibujan distinto nunca comparten un id, y el mismo gráfico da los mismos ids en cada build. Úsalo cuando el mismo gráfico aparece dos veces en una página, o cuando los ids no deben cambiar con los datos; los paneles de un facet llevan `-0`, `-1`… |
 | `series` / `hue` | Campo que divide los datos en grupos de color. |
 | `highlight` | Un nombre o una lista: destaca esos y atenúa el resto. |
 | `colors` | `{ "name": "#hex" }` para fijar el color de una entidad. |
@@ -51,6 +51,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | Opción | Significado |
 |---|---|
 | `stack` | `true` apila las series; `"percent"` apila al 100%. |
+| `stackGap` | Barras apiladas: px entre segmentos (por omisión `2`). `0` los junta: con muchas series el blanco entre segmentos lava los más finos. |
 | `horizontal` | Fuerza la orientación. |
 | `sort` | `"desc"` (por defecto para categorías), `"asc"`, `"none"`, `"alpha"`. Los años y las fechas mantienen su orden. |
 | `top` | Conserva las N más grandes y agrupa el resto en "Otros" (automático sobre 40 categorías). |
@@ -89,7 +90,7 @@ El eje de valores siempre termina en el primer valor redondo igual o mayor que l
 
 ### `spark` (`sparkline`)
 
-La forma de una serie, en su propia escala de mínimo a máximo (sin cero): responde «cómo se movió», y la cifra de al lado dice «cuánto». Sin ejes, grilla, rótulos, leyenda ni título dibujados (el título queda en `<title>` para lectores de pantalla) y sin tamaño mínimo, así que cabe en una celda: `width: 108, height: 26`. Un punto marca el último valor; un valor faltante es un hueco. Una franja invisible por x lleva el tooltip.
+La forma de una serie, en su propia escala de mínimo a máximo (sin cero): responde «cómo se movió», y la cifra de al lado dice «cuánto». Sin ejes, grilla, rótulos, leyenda ni título dibujados (el título queda en `<title>` para lectores de pantalla) y sin tamaño mínimo, así que cabe en una celda: `width: 108, height: 26`. Un punto marca el último valor; un valor faltante es un hueco. Una franja invisible por x lleva el tooltip; con `tooltip: false` no hay franjas (un spark `bare` queda en su trazo y su punto).
 
 | Opción | Significado |
 |---|---|
@@ -238,6 +239,7 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
 | `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
 | `labelWidth` / `treeWidth` | La columna de nombres ocupa a lo más el 30 % del ancho (120 px en vertical); `labelWidth` fija ese tope en px. `treeWidth` (horizontal) fija en cambio el ancho del árbol y deja a los nombres todo lo demás: `width: 1236, treeWidth: 250`. |
+| `subWidth` | Con `sub` y `size` (horizontal): `"label"` (por omisión) acomoda las líneas de `sub` en la columna de nombres, que se ensancha y empuja la barra de peso a la derecha; `"full"` las deja correr también bajo la columna de pesos (la barra y su cifra suben a la línea del nombre), así un teléfono conserva ambas: `width: 358, treeWidth: 48, subWidth: "full"`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -284,10 +286,12 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `scale` | Ancho del violín: `"width"`, `"area"`, `"count"`. |
 | `jitter`, `dodge`, `radius` | Disposición de strip y swarm. Cada punto de strip y swarm lleva el `tooltip` de su fila (`{ title, text, replace: true }`). En un enjambre `radius` es un punto de partida: se achica hasta que el grupo más ancho quepa en su banda. |
 | `fixedRadius` | Enjambre: `radius` queda tal cual. En horizontal, sin `rowHeight` ni `height`, las filas crecen hasta que quepa el grupo más ancho; si no, los puntos que no caben se aprietan contra el borde de su banda y se tocan. |
+| `leanDots` | Strip y swarm: marcado liviano de los puntos. El estilo (relleno, su opacidad, el anillo) va una vez en un `<g class="pa-dots">` por tramo de puntos del mismo estilo, y cada punto conserva sólo `cx`/`cy` (un decimal), `r` y su tooltip; con `skins`, la variable del color también va una vez, en el grupo. Cerca de la mitad de los bytes (160 puntos con dos pieles: 30,6 KB → 15,7 KB). Los puntos no llevan trazo propio, así que la página da estilo al anillo al pasar el mouse: `.pa-dots .pa-m:hover { stroke: var(--ink); stroke-width: 2px }` (el gráfico trae uno en `currentColor`). Un tooltip propio que lea el color del atributo `fill` del punto debe leer el relleno calculado (o el del grupo). Sobre 1.500 puntos manda la capa densa de siempre. |
 | `rowHeight` | Gráficos horizontales: px por fila de categoría, el paso exacto entre filas (46 por omisión; con `hue` y `dodge`, 22 por grupo + 12). Fija el alto si no hay `height`. |
 | `rowLine` | Una guía a lo largo de cada categoría, de punta a punta del eje de valores y detrás de las marcas: `true` continua, `"dashed"` punteada (2 3), en el color de la grilla del tema. |
 | `clamp` | Con un dominio de valores (`xDomain` en horizontal, `yDomain` en vertical): lo que cae fuera se dibuja en el borde, y la marca del borde lo dice («≤ 0,0001 %», «≥ 100 %») cuando algún valor quedó más allá. `"always"` marca los dos bordes aunque nada quede más allá. En un eje log, un 0 va al borde de abajo. |
 | `yLabelPosition` | Gráficos horizontales: `"above"` escribe el nombre de cada fila sobre ella, alineado a la izquierda, y el eje de valores se queda con todo el ancho (un teléfono). En strip y swarm cada fila es una franja de `rowHeight` con el nombre arriba y los puntos debajo, el nombre justo sobre su punto más alto. |
+| `xLabelPosition` | Gráficos horizontales: `"top"` pone el eje de valores (marcas y su título) sobre las filas en vez de bajo ellas; el gráfico conserva su alto. Con `yLabelPosition: "above"`, un teléfono lee primero la escala. |
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Eje de categorías con grupos y rótulos raleados, como en `bar`. |
@@ -441,7 +445,7 @@ plot({
 });
 ```
 
-Cambiar de vista es cambiar un atributo. `plotagents/views` (1,2 KB minificado, 0,6 KB con gzip, sin dependencias) lo hace y pasa el tooltip de la vista a `data-tip`, que es lo que lee cualquier capa de hover:
+Cambiar de vista es cambiar un atributo. `plotagents/views` (1,9 KB minificado, 0,85 KB con gzip, sin dependencias) lo hace y pasa el tooltip de la vista a `data-tip`, que es lo que lee cualquier capa de hover:
 
 ```js
 import { setView, bindViews } from 'plotagents/views';
@@ -456,7 +460,14 @@ plot({ ...spec, views, viewSelector: '#distritos:has(input[data-set-view="{id}"]
 // o una clase que pone la página: viewSelector: '.ver-{id}'
 ```
 
-Si ningún selector calza, se ve la primera vista. Los colores, leyendas, rótulos y líneas siguen al selector; **los tooltips no**: son atributos y el CSS no los cambia, así que la capa de hover lee `data-vtip-<id>` por su cuenta o la página deja `bindViews` (sobre los mismos radios) para pasar el tooltip de cada vista a `data-tip`. Con `viewSelector`, `setView` sigue cambiando los tooltips pero ya no repinta el mapa.
+Si ningún selector calza, se ve la primera vista. Los colores, leyendas, rótulos y líneas siguen al selector; **los tooltips no**: son atributos y el CSS no los cambia, así que la capa de hover propia de la página le pide el texto a `activeTip(elemento)`: sube hasta la marca, lee qué vista está mostrando el CSS (los selectores están en el `<style>` del mapa y se prueban con `matches()`) y devuelve el tooltip de esa vista, o `null`. Sin enlazar nada ni cambiar atributos:
+
+```js
+import { activeTip } from 'plotagents/views';
+document.addEventListener('pointerover', (e) => { const t = activeTip(e.target); if (t) showCard(t, e); });
+```
+
+`currentView(svg)` responde lo mismo también con `viewSelector`. Dejar `bindViews` sobre los mismos radios (para pasar el tooltip de cada vista a `data-tip`) sigue funcionando. Con `viewSelector`, `setView` sigue cambiando los tooltips pero ya no repinta el mapa.
 
 **El mundo.** Los países calzan por ISO-2 (`"CL"`), ISO-3 o nombre. `microstates: true` dibuja como punto los estados demasiado chicos para tener contorno a esta escala (Singapur, Malta, Baréin, Hong Kong…; `"all"` los dibuja todos); las líneas llegan a ellos como a cualquier país. Las **líneas** siguen siendo lo que eran: una relación, no una ruta.
 
@@ -554,12 +565,15 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. Un nombre que no cabe se corta, y va entero en su tooltip. |
 | `groupColors` | `{ [grupo]: color }`: cada grupo con color lleva una franja de 3 px de su color en el borde de su banda que mira a la grilla (el matiz de una familia bajo sus sectores), en vez del tinte alterno. |
 | `groupStripe` | Dónde va la franja de `groupColors`: `"grid"` (por omisión) en la banda de grupos, o `"labels"` en el borde de la grilla del lado de los rótulos, entre los rótulos y las celdas (sobre la grilla con `xLabelPosition: "top"`, a su izquierda en las filas). La banda de grupos queda entonces sólo con los nombres. |
+| `groupLabels` | `false` quita la banda de nombres de grupo (en un teléfono se leen «Indus…», «Co…»). Con `groupColors` las franjas quedan, en el borde de la grilla junto a los rótulos (como `groupStripe: "labels"`), y cada una lleva el nombre de su grupo en un tooltip. |
 | `cornerLabel` | Un título en la esquina vacía donde se encuentran los rótulos de fila y de columna: `"nació en ↓ / vive en →"`; `"\n"` lo parte en líneas. La columna de rótulos de fila se ensancha para que quepa (con el mismo tope); lo que no cabe se corta y va entero en el tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
 | `rowTip` | Tooltip del rótulo de cada fila, desde este campo: lo que es de toda la fila y no tiene que repetirse en cada celda. Desde JS, también una función del rótulo. |
 | `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
 | `xLabelAngle`, `xLabelPosition` | Rótulos de columna girados (`-90` de pie, `-45` inclinados) cuando no caben de lado, bajo la grilla (por defecto) o sobre ella (`"top"`). La franja crece lo necesario; un rótulo cortado lleva su nombre entero en el tooltip. |
 | `cellGap` | Aire entre celdas en px (`2` por defecto); `0` las junta con esquinas rectas; `[x, y]` por eje. |
+| `rowLabelWidth` | Tope de la columna de rótulos de fila: px (`200`) o fracción del ancho (`0.45`); por omisión `0.3`. Los nombres más largos se cortan, enteros en el tooltip. |
+| `yLabelPosition` | `"above"` escribe el nombre de cada fila sobre ella, a todo el ancho, y quita la columna de rótulos: en un teléfono las celdas tienen todo el ancho. |
 | `diagonal` | Las celdas con `x` igual a `y` (se quedó en la misma región) van aparte: su propio color, fuera de la escala (una diagonal enorme no aplana el resto), una entrada en la leyenda y una línea en el tooltip. `true`, un rótulo o `{ label, color, opacity }`. Un valor que falta sigue siendo «sin dato». |
 | `cellColor` | Un campo que nombra la clase de cada celda («Revisada»); esas celdas toman `colors[clase]`, fuera de la escala, con su entrada en la leyenda y su línea en el tooltip. Un valor escrito como color se usa tal cual. |
 | `labelFormat` | Formato sólo del numeral dentro de las celdas (tooltip y leyenda siguen con `format`). Una función que devuelve `""` deja la celda sin cifra. |
@@ -577,6 +591,8 @@ plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
 `nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno. Los trazos de los flujos van con dos decimales; `pathPrecision: 1` (o 0) escribe menos.
 
 Muchos nodos chicos quedan a pocos píxeles unos de otros y sus nombres se enciman. `relax: true` separa los rótulos de cada columna: todo nodo lleva su nombre y su segunda línea, cada rótulo se corre lo mínimo para quedar a 31 px de sus vecinos (un número fija otra distancia; bajo 28 px el rótulo es de una línea) y el que quedó lejos de su nodo lleva una guía fina hasta él. Sin `height`, el gráfico crece hasta que caben; con `height`, los que no caben pasan a una línea y luego se aprietan.
+
+Las columnas de rótulos de los extremos ocupan a lo más el 22 % del ancho cada una. `labelWidth` fija ese tope: px (`240`) o fracción del ancho (`0.3`), un número para ambos lados, `[izquierda, derecha]` o `{ left, right }`.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 

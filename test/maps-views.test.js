@@ -177,7 +177,7 @@ function fakeDom(svg) {
   const root = node(parse(svg.match(/^<svg[^>]*>/)[0]));
   const marks = regions(svg).map((t) => node(parse(t)));
   root.matches = (sel) => sel === 'svg[data-views]';
-  root.querySelectorAll = (sel) => { const k = sel.match(/\[([\w-]+)\]/)[1]; return marks.filter((m) => m.hasAttribute(k)); };
+  root.querySelectorAll = (sel) => { if (sel === 'style') return []; const k = sel.match(/\[([\w-]+)\]/)[1]; return marks.filter((m) => m.hasAttribute(k)); };
   return { root, marks };
 }
 

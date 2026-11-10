@@ -152,7 +152,11 @@ const NAMED = {
   cyan: '#00ffff', aqua: '#00ffff', turquoise: '#40e0d0', lightblue: '#add8e6', skyblue: '#87ceeb', steelblue: '#4682b4', blue: '#0000ff', darkblue: '#00008b', navy: '#000080', royalblue: '#4169e1', cornflowerblue: '#6495ed', dodgerblue: '#1e90ff',
   purple: '#800080', indigo: '#4b0082', violet: '#ee82ee', magenta: '#ff00ff', fuchsia: '#ff00ff', orchid: '#da70d6', lavender: '#e6e6fa', plum: '#dda0dd',
 };
-const toHex = (c) => (isHex(c) ? c.trim() : typeof c === 'string' ? NAMED[c.trim().toLowerCase()] : undefined);
+// `rgb()` / `rgba()` también (sin el alfa): antes se descartaban en silencio y
+// la escala caía a la del tema.
+const RGB_FN = /^rgba?\(\s*[\d.]+[,\s]+[\d.]+[,\s]+[\d.]+/i;
+const rgbHex = (c) => '#' + parseRgb(c).map((v) => v.toString(16).padStart(2, '0')).join('');
+const toHex = (c) => (isHex(c) ? c.trim() : typeof c === 'string' ? (RGB_FN.test(c.trim()) ? rgbHex(c) : NAMED[c.trim().toLowerCase()]) : undefined);
 
 /** Nombres disponibles, por tipo. */
 export function colorScaleNames() {

@@ -7,7 +7,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, textOn } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
 
@@ -62,7 +62,7 @@ export function donut(spec, theme) {
   const dm = dashedMatcher(spec, data, labelF, null);
   const isDashed = (s) => !!(dm && !s.other && dm(s.k));
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
-  const H = hatcher(theme, 'pa-d' + Math.abs(hash(String(spec.title) + theme.mode + labelF)).toString(36));
+  const H = hatcher(theme, chartId(spec, 'hatch'));
   const paint = (s) => (isDashed(s) ? { fill: H.fill(colorOf(s)), 'data-dashed': '1', 'data-color': colorOf(s) } : { fill: colorOf(s) });
   const TT = tipper(spec, data, locale);
   const tipOf = (s) => TT({ [labelF]: s.k }, s.k, `${fmt(s.v)} · ${pct(s.v)}`, isDashed(s) ? dashedLabel : '');

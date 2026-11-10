@@ -153,7 +153,13 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       area = { ...area, h: frame.bottom - area.y };
     }
     const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
-    inner = { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
+    // `xLabelPosition: "top"`: el eje de valores (marcas y título) sobre las
+    // filas; el alto total no cambia, la banda de 30 px pasa de abajo a arriba.
+    const xTop = spec.xLabelPosition === 'top';
+    const xtH = xTitle ? 20 : 0;
+    inner = xTop
+      ? { x: area.x + gW + labelW, y: area.y + 26 + xtH, w: area.w - gW - labelW - 10, h: area.h - 30 - xtH }
+      : { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - xtH };
     if (above && !tightAbove) { inner.y += 14; inner.h -= 14; }
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(inner.w / 100)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
@@ -161,7 +167,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all, spec.clamp === 'always'); }
     const lineH = (axisSize + 0.5) * ctx.textScale + 4;
     catS = tightAbove ? rowBands(m.cats, inner.y, inner.h, lineH) : band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
-    body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN }));
+    body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN, ...(xTop ? { labelY: inner.y - 8 - (ctx.textScale - 1) * 20 } : {}) }));
     const rowSpan = (c) => (tightAbove ? [catS.top(c) + 1, catS.top(c) + catS.step - 1] : [catS.center(c) - catS.step / 2 + 1, catS.center(c) + catS.step / 2 - 1]);
     if (runs) body.pre.push(groupBandY(runs, (i) => rowSpan(m.cats[i]), area.x, gW, theme, inner.x + inner.w));
     const label = (c, y, attrs) => text(attrs ? inner.x - 10 : inner.x, y, truncate(c, attrs ? labelW - 12 : inner.w, axisSize + 0.5), { fill: !hl || hl.has(c) ? theme.ink : theme.muted, fontSize: axisSize + 0.5, ...attrs });
@@ -183,7 +189,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
       if (above) body.post.push(label(c, catS(c) - 4));
       else body.post.push(label(c, catS.center(c) + 4.5, { textAnchor: 'end' }));
     }
-    if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
+    if (xTitle) body.post.push(text(inner.x + inner.w, xTop ? area.y + axisSize : inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
 
   if (spec._domains && typeof spec._domains === 'object') spec._domains.y = [nd.min, nd.max];
@@ -265,7 +271,7 @@ function autoHorizontal(spec, m) {
   return m.cats.length > 10 || longest > slot - 10;
 }
 
-const finish = (s, desc, type) => s.frame.finish([...s.body.pre, ...s.body.marks, ...s.body.post], { desc, type });
+const finish = (s, desc, type, css = '') => s.frame.finish([...s.body.pre, ...s.body.marks, ...s.body.post], { desc, type, css });
 const extentOf = (vs) => [Math.min(...vs), Math.max(...vs)];
 
 /** Segmento (línea) en coordenadas de categoría/valor. */
@@ -291,6 +297,41 @@ function strips(s, theme, vals, cpos, width, color, seed, r) {
 }
 
 const fmtTipLabel = (c, h) => [c, h].filter(Boolean).join(' · ');
+
+const r1 = (n) => Math.round(n * 10) / 10;
+
+/**
+ * `leanDots: true` (strip, swarm): el estilo de los puntos va una vez en su
+ * grupo —`<g class="pa-dots" fill fill-opacity stroke stroke-width>`— y cada
+ * punto lleva sólo `cx`, `cy` (a un decimal), `r` y su tooltip. Con pieles,
+ * la variable del color también va una vez, en el grupo. Sin `stroke` en el
+ * punto, una regla de la página lo pinta al pasar el mouse
+ * (`.pa-dots .pa-m:hover { stroke: … }`). Puntos seguidos del mismo estilo
+ * comparten grupo (el orden de dibujo no cambia). Con más de 1.500 puntos
+ * manda la capa densa de siempre.
+ */
+function dotMarks(dots, lean) {
+  if (!lean || dots.length > 1500) return dotLayer(dots);
+  const out = [];
+  let run = null, key = null;
+  const flush = () => {
+    if (!run) return;
+    const a = run[0];
+    out.push(g({ class: 'pa-dots', fill: a.fill, fillOpacity: a.fillOpacity, stroke: a.stroke, strokeWidth: a.strokeWidth },
+      run.map((d) => el('circle', { class: d.class, cx: r1(d.cx), cy: r1(d.cy), r: d.r, 'data-tip': d['data-tip'] }))));
+    run = null;
+  };
+  for (const d of dots) {
+    const k = [d.fill, d.fillOpacity, d.stroke, d.strokeWidth].join('|');
+    if (k !== key) { flush(); run = []; key = k; }
+    run.push(d);
+  }
+  flush();
+  return out.join('');
+}
+
+/** El trazo al pasar el mouse sobre un punto `leanDots`: el color del texto de la página. */
+const LEAN_CSS = '.pa-dots .pa-m:hover{stroke:currentColor;stroke-width:1.5px}';
 
 // ── Caja ───────────────────────────────────────────────────────────────────
 
@@ -428,7 +469,7 @@ export function strip(spec, theme) {
       if (s.placeLabels) tops.set(c, Math.min(tops.get(c) ?? Infinity, y - r));
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': TT([rows[i]], fmtTipLabel(c, h), s.fmt(v)) };
     });
-    parts.splice(0, parts.length, dotLayer(parts));
+    parts.splice(0, parts.length, dotMarks(parts, !!spec.leanDots));
     if (spec.mean || spec.showMeans) {
       const mu = mean(vs);
       parts.push(seg(s, cpos - Math.min(s.slot * 0.42, 34), mu, cpos + Math.min(s.slot * 0.42, 34), mu, { stroke: theme.ink, strokeWidth: 2.5, strokeLinecap: 'round' }));
@@ -436,7 +477,7 @@ export function strip(spec, theme) {
     s.body.marks.push(g({}, parts));
   }));
   if (s.placeLabels) s.placeLabels(tops);
-  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip');
+  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip', spec.leanDots ? LEAN_CSS : '');
 }
 
 // ── Enjambre (swarm / beeswarm) ────────────────────────────────────────────
@@ -514,11 +555,11 @@ export function swarm(spec, theme) {
       const color = s.colorOf(grp.c, it.h);
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': TT([it.row], fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
-    parts.splice(0, parts.length, dotLayer(parts));
+    parts.splice(0, parts.length, dotMarks(parts, !!spec.leanDots));
     s.body.marks.push(g({}, parts));
   }
   if (s.placeLabels) s.placeLabels(tops);
-  return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
+  return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm', spec.leanDots ? LEAN_CSS : '');
 }
 
 // ── Estimación con intervalo (point) ───────────────────────────────────────

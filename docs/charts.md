@@ -12,7 +12,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `subtitle` | How to read the chart: measure, unit, period. |
 | `source` | Data source, shown small at the bottom right. |
 | `ariaLabel` | The accessible name (the SVG `<title>` a screen reader reads) without drawing a title. Default: `title`, or the chart type when there is none. |
-| `idPrefix` | Base of the SVG's internal ids (aria ids; on maps the clip path and the no-data pattern). Set it when the same chart appears twice on a page; facet panels get `-0`, `-1`… |
+| `idPrefix` | Base of the SVG's internal ids: aria title and description, clip paths, gradients, hatch patterns, arrow markers (on maps also the clip path and the no-data pattern); each becomes `<idPrefix>-<kind>`. Without it, every id carries a hash of what the chart draws, colors left out (skins and `var(--x)` colors keep the same ids): two charts that draw differently never share an id, and the same chart gives the same ids in every build. Set it when the same chart appears twice on a page, or when ids must not change with the data; facet panels get `-0`, `-1`… |
 | `series` / `hue` | Field that splits the data into colored groups. |
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
@@ -51,6 +51,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | Option | Meaning |
 |---|---|
 | `stack` | `true` stacks series; `"percent"` stacks to 100%. |
+| `stackGap` | Stacked bars: px between segments (default `2`). `0` joins them: with many series the white gaps wash out the thin segments. |
 | `horizontal` | Force orientation. |
 | `sort` | `"desc"` (default for categories), `"asc"`, `"none"`, `"alpha"`. Years and dates keep their order. |
 | `top` | Keep the N largest, fold the rest into "Other" (automatic past 40 categories). |
@@ -89,7 +90,7 @@ The value axis always ends on the first round value at or above the largest bar,
 
 ### `spark` (`sparkline`)
 
-The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `<title>` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip.
+The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `<title>` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip; with `tooltip: false` there are no strips (a `bare` spark is then just its path and dot).
 
 | Option | Meaning |
 |---|---|
@@ -238,6 +239,7 @@ How things group, and at what height they join. The tree comes in already comput
 | `tickFormat` | Format of the height-axis ticks, apart from `format` (tooltips): `format: { decimals: 2 }, tickFormat: "integer"`. `xFormat` (horizontal) or `yFormat` (vertical) also work. The axis takes up to 4 ticks, fewer when their labels would touch (a narrow `treeWidth`). |
 | `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
 | `labelWidth` / `treeWidth` | The names column takes at most 30% of the width (120 px vertical); `labelWidth` sets that cap in px. `treeWidth` (horizontal) fixes the tree's width instead and gives the names the rest: `width: 1236, treeWidth: 250`. |
+| `subWidth` | With `sub` and `size` (horizontal): `"label"` (default) fits the `sub` lines into the names column, which widens to hold them and pushes the count bar right; `"full"` lets them run under the count column too (the bar and its figure move up to the name line), so a phone layout keeps both: `width: 358, treeWidth: 48, subWidth: "full"`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -284,10 +286,12 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `scale` | Violin width: `"width"`, `"area"`, `"count"`. |
 | `jitter`, `dodge`, `radius` | Strip and swarm layout. Strip and swarm dots carry their own row's `tooltip` (`{ title, text, replace: true }`). In a swarm `radius` is a starting value: it shrinks until the widest cluster fits its band. |
 | `fixedRadius` | Swarm: keep `radius` as given. Horizontal, without `rowHeight` or `height`, the rows grow until the widest cluster fits; otherwise the dots that do not fit are pressed against the edge of their band and overlap. |
+| `leanDots` | Strip and swarm: lean dot markup. The style (fill, its opacity, the ring) goes once on a `<g class="pa-dots">` per run of same-styled dots, and each dot keeps only `cx`/`cy` (one decimal), `r` and its tooltip; with `skins`, the color variable also goes once on the group. About half the bytes (160 dots under two skins: 30.6 KB → 15.7 KB). Dots have no stroke of their own, so the page styles the hover ring: `.pa-dots .pa-m:hover { stroke: var(--ink); stroke-width: 2px }` (the chart ships one in `currentColor`). A host tooltip that reads the color from the dot's `fill` attribute should read the computed fill (or the group's). Above 1,500 dots the dense layer applies as always. |
 | `rowHeight` | Horizontal charts: px per category row, the exact pitch between rows (default 46; with `hue` and `dodge`, 22 per group + 12). Sets the height when `height` is not given. |
 | `rowLine` | A guide line along each category, across the value axis and behind the marks: `true` solid, `"dashed"` dashed (2 3), in the theme's grid color. |
 | `clamp` | With a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0.0001%", "≥ 100%") when some value lies beyond. `"always"` marks both edge ticks even when nothing lies beyond. On a log axis a 0 sits on the low edge. |
 | `yLabelPosition` | Horizontal charts: `"above"` writes each row's name above it, left-aligned, so the value axis keeps the full width (a phone). In strip and swarm each row is a strip of `rowHeight` with the name on top and the dots under it, the name right above its highest dot. |
+| `xLabelPosition` | Horizontal charts: `"top"` puts the value axis (tick labels and its title) over the rows instead of under them; the chart keeps its height. With `yLabelPosition: "above"` a phone reads the scale first. |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
@@ -441,7 +445,7 @@ plot({
 });
 ```
 
-Switching is one attribute. `plotagents/views` (1.2 KB minified, 0.6 KB gzipped, no dependencies) does it and moves each view's tooltip to `data-tip`, which is what any hover layer reads:
+Switching is one attribute. `plotagents/views` (1.9 KB minified, 0.85 KB gzipped, no dependencies) does it and moves each view's tooltip to `data-tip`, which is what any hover layer reads:
 
 ```js
 import { setView, bindViews } from 'plotagents/views';
@@ -456,7 +460,14 @@ plot({ ...spec, views, viewSelector: '#districts:has(input[data-set-view="{id}"]
 // or a class the page sets: viewSelector: '.show-{id}'
 ```
 
-The first view shows when no selector matches. The colors, legends, labels and lines follow the selector; **tooltips do not**: they are attributes, which CSS cannot change, so a hover layer either reads `data-vtip-<id>` itself or the page keeps `bindViews` (on the same radios) to move each view's tooltip into `data-tip`. With `viewSelector`, `setView` still swaps tooltips but no longer repaints the map.
+The first view shows when no selector matches. The colors, legends, labels and lines follow the selector; **tooltips do not**: they are attributes, which CSS cannot change, so a page's own hover layer asks `activeTip(element)` for the text: it climbs to the mark, reads which view the CSS is showing (the selectors are in the map's own `<style>`, tested with `matches()`) and returns that view's tooltip, or `null`. No binding, no attribute changes:
+
+```js
+import { activeTip } from 'plotagents/views';
+document.addEventListener('pointerover', (e) => { const t = activeTip(e.target); if (t) showCard(t, e); });
+```
+
+`currentView(svg)` answers the same with `viewSelector` too. Keeping `bindViews` on the same radios (to move each view's tooltip into `data-tip`) still works. With `viewSelector`, `setView` still swaps tooltips but no longer repaints the map.
 
 **The world.** Countries match by ISO-2 (`"CL"`), ISO-3 or name. `microstates: true` draws as a dot the states too small for an outline at this scale (Singapore, Malta, Bahrain, Hong Kong…; `"all"` draws every one); lines reach them like any country. **Links** stay what they were: a line is a relation, not a route.
 
@@ -554,12 +565,15 @@ A map you already computed (the product space, a knowledge network) usually want
 | `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. A name that does not fit is cut, with the whole name in its tooltip. |
 | `groupColors` | `{ [group]: color }`: each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid (a family's hue under its sectors), instead of the alternate tint. |
 | `groupStripe` | Where the `groupColors` stripe goes: `"grid"` (default) on the group band, or `"labels"` on the grid edge on the labels side, between the labels and the cells (over the grid with `xLabelPosition: "top"`, left of it for rows). The group band then keeps only the names. |
+| `groupLabels` | `false` drops the band of group names (on a phone they read «Indus…», «Co…»). With `groupColors` the stripes stay, on the grid edge next to the labels (as `groupStripe: "labels"`), and each carries its group name in a tooltip. |
 | `cornerLabel` | A title in the empty corner where row labels meet column labels: `"born in ↓ / lives in →"`; `"\n"` breaks it into lines. The row-label column widens to fit it (same cap); what does not fit is cut, whole in the tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
 | `rowTip` | Tooltip of each row label, from this field: what belongs to the whole row and need not repeat in every cell. From JS, also a function of the label. |
 | `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
 | `xLabelAngle`, `xLabelPosition` | Column labels turned (`-90` upright, `-45` slanted) when they do not fit side by side, under the grid (default) or over it (`"top"`). The strip grows to fit; a label cut short keeps its full name in the tooltip. |
 | `cellGap` | Space between cells in px (default `2`); `0` joins them with square corners; `[x, y]` per axis. |
+| `rowLabelWidth` | Cap of the row-label column: px (`200`) or a fraction of the width (`0.45`); default `0.3`. Longer names are cut, whole in the tooltip. |
+| `yLabelPosition` | `"above"` writes each row name over its row, across the full width, and drops the row-label column: the cells get the whole width on a phone. |
 | `diagonal` | Cells where `x` equals `y` (stayed in the same region) drawn apart: their own color, outside the color scale (so a huge diagonal does not flatten the rest), a legend entry and a tooltip line. `true`, a label, or `{ label, color, opacity }`. A missing value stays "no data". |
 | `cellColor` | A field naming each cell's class ("Revised"); those cells take `colors[class]`, outside the scale, with a legend entry and a tooltip line. A value written as a color is used as is. |
 | `labelFormat` | Format of the numeral inside the cells only (tooltip and legend keep `format`). A function returning `""` leaves a cell without a numeral. |
@@ -577,6 +591,8 @@ plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
 `nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one. Link paths are written with two decimals; `pathPrecision: 1` (or 0) writes fewer.
 
 Many small nodes stack within a few pixels of each other and their names overprint. `relax: true` separates the labels of each column: every node gets its name and second line, each label moves as little as possible to keep 31 px from its neighbors (a number sets another distance; below 28 px labels are one line), and a label that ended up away from its node gets a thin leader line back to it. Without `height`, the chart grows until the labels fit; with `height`, labels that do not fit drop to one line, then squeeze.
+
+The first and last columns of labels take at most 22% of the width each. `labelWidth` sets that cap: px (`240`) or a fraction of the width (`0.3`), one number for both sides, `[left, right]` or `{ left, right }`.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 

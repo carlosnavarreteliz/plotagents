@@ -158,6 +158,9 @@ export function attach(root) {
       const st = n.getAttribute && n.getAttribute('stroke');
       if (isLit(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return skinned(n, 'stroke') || st;
     }
+    // `leanDots`: el color va en el grupo de los puntos.
+    const grp = node.closest && node.closest('.pa-dots');
+    if (grp && isLit(grp.getAttribute('fill'))) return skinned(grp, 'fill') || grp.getAttribute('fill');
     return null;
   };
   const linesHtml = (txt, color) => {
@@ -281,6 +284,8 @@ export function attach(root) {
     for (const n of body.querySelectorAll('[fill],[stroke],[data-color]')) {
       if (n.closest('.pa-legend')) continue;
       if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c || norm(n.getAttribute('data-color')) === c) {
+        // `leanDots`: el grupo lleva el color; se iluminan sus puntos.
+        if (n.classList.contains('pa-dots')) { for (const d of n.querySelectorAll('.pa-m')) out.add(d); continue; }
         const m = n.closest('.pa-m') || n;
         out.add(m);
       }
