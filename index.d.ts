@@ -19,8 +19,20 @@ export interface TableColumn {
   field?: string;
   label?: string;
   /** Indicator. Inferred when omitted: bar on the main measure, delta on change fields, sparkline on lists of numbers, progress on 0–1 goals, badge on status words, check on booleans. */
-  type?: 'text' | 'number' | 'bar' | 'heat' | 'delta' | 'sparkline' | 'progress' | 'badge' | 'check' | 'date' | 'link' | 'rank';
+  type?: 'text' | 'number' | 'bar' | 'heat' | 'delta' | 'sparkline' | 'progress' | 'badge' | 'check' | 'date' | 'link' | 'rank' | 'range';
   format?: Format;
+  /** range: field or fixed number for each part of the rail. */
+  min?: string | number;
+  max?: string | number;
+  /** range: [lo, hi] of the shaded band (e.g. quartiles). */
+  band?: [string | number, string | number];
+  bandLabel?: string;
+  median?: string | number;
+  /** range: reference tick (e.g. the national figure) and its name in the tooltip. */
+  ref?: string | number;
+  refLabel?: string;
+  /** range: one scale for the column (default) or one per row. */
+  scale?: 'shared' | 'row';
   align?: 'left' | 'right' | 'center';
   width?: number;
   /** delta/progress: whether up is good (default) or down (costs). */
@@ -103,7 +115,8 @@ export interface ThemeTokens {
 export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | (Omit<DeepPartial<Theme>, 'grid' | 'font'> & ThemeTokens & { extends?: 'papel' | 'noche' | (string & {}) })
 
 /** matplotlib colormap name (case-insensitive, `_r` reverses), a list of hex colors, or { name | colors, reverse, mid }. */
-export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number };
+/** `breaks` (ascending) turns the scale into discrete classes: `colors` needs breaks.length + 1 entries, or give `name` and it is sampled. */
+export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number; breaks?: number[] };
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
 export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle' | 'preset';
@@ -359,7 +372,8 @@ export interface Spec {
   /** [lon, lat] */
   center?: [number, number];
   /** choropleth */
-  missing?: 'hatch' | 'plain';
+  /** choropleth: 'hatch' (default) | 'plain'. heatmap: 'tint' (default) | 'plain' | 'hatch' | 'gap'. */
+  missing?: 'hatch' | 'plain' | 'tint' | 'gap';
   thresholds?: number[];
   classes?: number;
   scale?: 'quantile' | 'equal' | 'continuous' | 'categorical' | number[] | string;
@@ -385,6 +399,19 @@ export interface Spec {
   hole?: number;
   thickness?: number;
   cellHeight?: number;
+  /** heatmap: values below `floor` / above `ceiling` are plain empty cells (value kept in the tooltip) and leave the color scale. */
+  floor?: number;
+  ceiling?: number;
+  /** heatmap + binned breaks around 0: the class containing 0 takes the neutral tint. */
+  midClass?: 'neutral';
+  /** heatmap: text written across a row that has no values. */
+  emptyRow?: string;
+  /** Group consecutive categories along the axis (bar: either names the category groups). Nothing is reordered. */
+  xGroup?: string;
+  yGroup?: string;
+  /** Label every Nth category (still thinned further on collision). */
+  xTicks?: { every?: number };
+  yTicks?: { every?: number };
   facetOrder?: string[];
   /** gantt */
   task?: string;

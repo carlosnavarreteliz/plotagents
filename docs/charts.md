@@ -55,6 +55,10 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `aggregate` | `"sum"` (default), `"mean"`, `"max"`, `"min"`, `"count"`, `"first"`, `"last"`. `countplot` counts rows. |
 | `labels` | `true`, `false` or `"auto"`. |
 | `barWidth` | Max bar thickness in px. |
+| `xGroup` / `yGroup` | Field that groups consecutive categories (either name works, in both orientations): a tinted band with the group name runs along the category axis, with a thin line between groups. Nothing is reordered, so set `sort: "none"` to keep your order. |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). |
+
+The value axis always ends on the first round value at or above the largest bar, and that last tick is always labeled, also on a phone: the number of ticks follows the width of their labels.
 
 **Missing values.** A missing value is never a zero: the bar is not drawn, the tooltip says `missingLabel` ("sin dato" / "no data") and `missingMark: "n/a"` writes it at the base. With `stack: "percent"`, a `format` function receives the share as a fraction (0–1).
 
@@ -210,6 +214,7 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `jitter`, `dodge`, `radius` | Strip and swarm layout. |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
+| `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
 
 ## Part-to-whole
 
@@ -370,6 +375,16 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `x`, `y` categories and `value`. Sequential ramp by default; `midpoint` (or `diverging: true`) for a diverging ramp. Values are written in cells when they fit.
 
+| Option | Meaning |
+|---|---|
+| `colorScale: { colors, breaks }` | Discrete classes instead of a gradient ([color scales](colorscales.md#classes)); the legend becomes a stepped key with the breaks written under it, formatted with `format`. |
+| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. |
+| `missing` | Cells without a value: `"tint"` (default), `"plain"` (outline only), `"hatch"` (striped "no data") or `"gap"` (nothing). |
+| `floor` / `ceiling` | Values below / above are drawn as plain empty cells: the value exists (the tooltip shows it) but it is not colored and does not stretch the scale. |
+| `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
+| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+
 ### `sankey`
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
@@ -433,6 +448,7 @@ plot({
 | `date` | Readable date in the chart's language | ISO dates |
 | `link` | Underlined link; only `http(s)` and `mailto` get an `href` | URLs |
 | `rank` | Position under the current sort | `rank: true` |
+| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column | — |
 | `text`, `number` | Text (wraps to 2–3 lines) and plain numbers | Everything else |
 
 | Option | Meaning |

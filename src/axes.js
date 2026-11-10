@@ -1,6 +1,6 @@
 // Ejes recesivos: líneas finas (1px), sólidas, un tono fuera del fondo.
 import { el, g, text } from './svg.js';
-import { measure } from './text.js';
+import { measure, truncate } from './text.js';
 import { SIZES } from './frame.js';
 import { ctx } from './context.js';
 
@@ -23,15 +23,18 @@ export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0,
   for (const it of items) {
     if (lines) out.push(el('line', { x1: it.pos, x2: it.pos, y1: area.y, y2: area.y + area.h, stroke: it.t === baseline ? theme.axis : theme.grid, ...gridAttrs(theme, it.t === baseline) }));
   }
-  if (labels) out.push(xLabels(items, area, theme));
+  // Un eje de valores siempre rotula su última marca: el primer valor redondo
+  // sobre el máximo es lo que dice hasta dónde llega la escala.
+  if (labels) out.push(xLabels(items, area, theme, { keepLast: true }));
   return g({ class: 'pa-axis pa-axis-x' }, out);
 }
 
 /** Etiquetas bajo el eje x, raleadas si chocan (nunca rotadas). */
-export function xLabels(items, area, theme, { y, size = SIZES.axis, color } = {}) {
+export function xLabels(items, area, theme, { y, size = SIZES.axis, color, keepLast = false, every: everyMin = 1 } = {}) {
   const ly = (y ?? area.y + area.h + 18) + (ctx.textScale - 1) * 10;
   const widths = items.map((it) => measure(it.label, size));
-  let every = 1;
+  // `every`: raleo pedido (xTicks: { every }); se ralea más sólo si chocan.
+  let every = Math.max(1, Math.floor(everyMin) || 1);
   const fits = (k) => {
     let last = -Infinity;
     for (let i = 0; i < items.length; i += k) {
@@ -42,6 +45,14 @@ export function xLabels(items, area, theme, { y, size = SIZES.axis, color } = {}
     return true;
   };
   while (every < items.length && !fits(every)) every++;
+  // Eje de valores: un raleo que deje la última marca sin rótulo se cambia por
+  // el más fino que la incluya (cada k que divide n − 1).
+  const n = items.length;
+  if (keepLast && n > 2 && every > 1 && (n - 1) % every !== 0) {
+    let k = every;
+    while (k < n - 1 && ((n - 1) % k !== 0 || !fits(k))) k++;
+    every = k;
+  }
   const out = [];
   items.forEach((it, i) => {
     if (i % every) return;
@@ -149,4 +160,64 @@ export function gridAttrs(theme, base = false) {
   const w = st && Number.isFinite(+st.width) ? +st.width : 1;
   const dash = !base && st && st.dash && /^[\d.\s,]+$/.test(String(st.dash)) ? String(st.dash) : null;
   return { strokeWidth: w, strokeDasharray: dash, shapeRendering: dash ? null : 'crispEdges' };
+}
+
+// ── Eje de categorías con grupos (xGroup / yGroup) ──────────────────────────
+// Categorías consecutivas que comparten grupo llevan una banda junto al eje con
+// el nombre del grupo, en tinte alterno, y una línea fina entre grupos. No se
+// reordena nada: un grupo partido en dos tramos son dos bandas.
+
+/** Tramos [{ group, from, to }] de categorías consecutivas con el mismo grupo. */
+export function groupRuns(cats, data, catField, groupField) {
+  const of = new Map();
+  for (const r of data) {
+    const c = String(r[catField]);
+    if (!of.has(c)) of.set(c, r[groupField] === null || r[groupField] === undefined ? '' : String(r[groupField]));
+  }
+  const runs = [];
+  cats.forEach((c, i) => {
+    const name = of.get(String(c)) ?? '';
+    const last = runs[runs.length - 1];
+    if (last && last.group === name) last.to = i;
+    else runs.push({ group: name, from: i, to: i });
+  });
+  return runs;
+}
+
+/** Alto (o ancho mínimo) de la banda de grupos. */
+export const GROUP_BAND = 22;
+
+/** Ancho de la banda vertical de grupos (yGroup). */
+export function groupBandWidth(runs, maxW, size = 11.5) {
+  return Math.min(maxW, Math.max(GROUP_BAND, ...runs.map((r) => measure(r.group, size, 500) + 16)));
+}
+
+/**
+ * Banda de grupos bajo un eje horizontal. `pos(i)` → [x0, x1] de la categoría i;
+ * `y` es el borde superior de la banda; la línea entre grupos sube hasta `top`.
+ */
+export function groupBandX(runs, pos, y, theme, top, size = 11.5) {
+  const out = [];
+  runs.forEach((r, k) => {
+    const a = pos(r.from)[0], b = pos(r.to)[1];
+    if (k % 2 === 0) out.push(el('rect', { x: a, y, width: Math.max(0, b - a), height: GROUP_BAND - 4, rx: 3, fill: theme.tint }));
+    if (k > 0) out.push(el('line', { x1: a - 1, x2: a - 1, y1: top, y2: y + GROUP_BAND - 4, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+    if (r.group && b - a >= 24) out.push(text((a + b) / 2, y + 13 + (ctx.textScale - 1) * 4, truncate(r.group, b - a - 6, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500, textAnchor: 'middle' }));
+  });
+  return g({ class: 'pa-groups pa-groups-x' }, out);
+}
+
+/**
+ * Banda de grupos a la izquierda de un eje vertical. `pos(i)` → [y0, y1];
+ * `x`, `w` = posición y ancho de la banda; la línea entre grupos llega a `right`.
+ */
+export function groupBandY(runs, pos, x, w, theme, right, size = 11.5) {
+  const out = [];
+  runs.forEach((r, k) => {
+    const a = pos(r.from)[0], b = pos(r.to)[1];
+    if (k % 2 === 0) out.push(el('rect', { x, y: a, width: Math.max(0, w - 6), height: Math.max(0, b - a), rx: 3, fill: theme.tint }));
+    if (k > 0) out.push(el('line', { x1: x, x2: right, y1: a - 1, y2: a - 1, stroke: theme.axis, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+    if (r.group && b - a >= 12) out.push(text(x + 6, (a + b) / 2 + 4, truncate(r.group, w - 14, size, 500), { fill: theme.lede, fontSize: size, fontWeight: 500 }));
+  });
+  return g({ class: 'pa-groups pa-groups-y' }, out);
 }

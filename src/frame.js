@@ -168,7 +168,7 @@ function withExcluded(items, spec, theme) {
 
 function legendWidth(items, size) {
   const X = ctx.textScale;
-  return Math.max(...items.map((it) => (it.type === 'ramp' ? 220 : 18 * X + measure(String(it.label), size) + 12)));
+  return Math.max(...items.map((it) => (it.type === 'ramp' ? 220 : it.type === 'steps' ? 320 : 18 * X + measure(String(it.label), size) + 12)));
 }
 
 function drawLegend(items, x0, y0, maxW, theme, opts) {
@@ -179,6 +179,33 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
   const vertical = !!opts.vertical;
   let x = x0, y = y0, rows = 1;
   for (const it of items) {
+    // Clave escalonada (escala por clases): un cuadro por clase y los cortes
+    // rotulados debajo, entre cuadro y cuadro. Ocupa dos filas.
+    if (it.type === 'steps') {
+      if (x > x0) { x = x0; y += rowH; rows++; }
+      if (it.title) {
+        const tw = Math.min(measure(it.title, size), maxW * 0.45);
+        out.push(text(x, y + 10, truncate(it.title, tw, size), { fill: theme.lede, fontSize: size }));
+        x += tw + 10;
+      }
+      const n = it.colors.length, gap = 2;
+      const w = Math.max(60, Math.min(x0 + maxW - x, Math.max(140, n * 46)));
+      const sw = (w - gap * (n - 1)) / n;
+      it.colors.forEach((c, i) => out.push(g({ class: 'pa-key', 'data-color': c, style: 'cursor:pointer' }, [
+        el('rect', { x: x + i * (sw + gap), y: y + 1, width: sw, height: 10, rx: i === 0 || i === n - 1 ? 3 : 1, fill: c }),
+      ])));
+      let last = -Infinity;
+      (it.labels || []).forEach((lab, i) => {
+        const cx = x + (i + 1) * (sw + gap) - gap / 2;
+        const lw = measure(lab, SIZES.axis);
+        if (cx - lw / 2 < last + 6) return;
+        out.push(text(cx, y + 11 + rowH * 0.8, lab, { fill: theme.muted, fontSize: SIZES.axis, textAnchor: 'middle' }));
+        last = cx + lw / 2;
+      });
+      y += rowH; rows++;
+      x = x0 + maxW; // lo que siga empieza en una fila nueva
+      continue;
+    }
     if (it.type === 'ramp') {
       if (vertical && x > x0) { x = x0; y += rowH; rows++; }
       const w = Math.min(220, maxW);
