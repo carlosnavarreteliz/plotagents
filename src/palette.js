@@ -1,3 +1,4 @@
+import { parseRgb } from './rgb.js';
 // Validador de paletas categóricas: lo mismo que se usó para validar las
 // paletas de fábrica, disponible para que un agente revise la suya.
 // Umbrales: banda de luminosidad OKLCH, croma mínimo, separación ΔE (OKLab×100)
@@ -12,7 +13,7 @@ const MACHADO = {
 };
 
 const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-const rgbLin = (hex) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(lin); };
+const rgbLin = (c) => parseRgb(c).map(lin);
 function oklab([r, g, b]) {
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);

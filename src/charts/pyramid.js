@@ -1,6 +1,7 @@
 // Pirámide de población: barras horizontales espalda con espalda desde un eje
 // central, con los tramos de edad en la columna del medio (sin ejes repetidos).
 // Opcional: comparación con otro periodo como contorno escalonado.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip, barPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
@@ -62,7 +63,9 @@ export function pyramid(spec, theme) {
 
   const allV = ages.flatMap((a) => sides.flatMap((s) => [V(a, s), C(a, s)])).filter(Number.isFinite);
   const vmax = Math.max(...allV, 1e-9);
-  const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, allV);
+  // Una función de formato manda también en porcentajes (recibe la fracción, 0–1).
+  const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, allV);
+  const TT = tipper(spec, rows, locale);
   const share = (v) => formatNumber((v / total) * 100, (v / total) * 100 < 10 ? 1 : 0, locale, true) + '%';
 
   const cmap = colorMap(sides, theme, spec.colors);
@@ -144,7 +147,7 @@ export function pyramid(spec, theme) {
         const lab = fmt(v);
         parts.push(text(k === 0 ? x - 5 : x + w + 5, y + bh / 2 + 4, lab, { fill: theme.lede, fontSize: 11, fontWeight: 500, textAnchor: k === 0 ? 'end' : 'start' }));
       }
-      body.push(g({ class: 'pa-m', 'data-tip': tip(...lines) }, parts));
+      body.push(g({ class: 'pa-m', 'data-tip': TT({ [ageF]: a, [sideF]: s }, ...lines) }, parts));
     });
   });
 

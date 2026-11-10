@@ -1,3 +1,4 @@
+import { parseRgb } from './rgb.js';
 // Escalas de color (colormaps) con nombre: todas las de matplotlib, más las
 // propias de plotagents y escalas a medida.
 //
@@ -9,6 +10,8 @@
 //
 // Los mapas se muestrearon de matplotlib 3.9 en puntos equiespaciados y se
 // interpolan en OKLab (error p99 ≤ 2 ΔE×100 frente al original).
+import { PlotError } from './data.js';
+
 export const COLORMAPS = {
   // Perceptually uniform sequential
   viridis: '440154472D7B3B528B2C728E21918C28AE805EC962ADDC30FDE725',
@@ -111,9 +114,7 @@ const lin = (c) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) **
 const gam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - 0.055);
 const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
 function toLab(hex) {
-  let h = String(hex).replace('#', '');
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-  const n = parseInt(h.slice(0, 6), 16), [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(lin);
+  const [r, g, b] = parseRgb(hex).map(lin);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
   return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
 }
@@ -190,4 +191,30 @@ export function resolveColorScale(v) {
   const stops = unpack(qual ? QUALITATIVE[key] : COLORMAPS[key]);
   if (rev) stops.reverse();
   return { name: key + (rev ? '_r' : ''), stops, kind: qual ? 'qualitative' : DIVERGING.has(key) ? 'diverging' : CYCLIC.has(key) ? 'cyclic' : 'sequential' };
+}
+
+/**
+ * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
+ * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
+ * i si breaks[i − 1] ≤ v < breaks[i]. Devuelve { breaks, colors, cls, color } o
+ * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
+ */
+export function binnedScale(spec) {
+  const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+  if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
+  const breaks = cs.breaks.map(Number);
+  if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
+  for (let i = 1; i < breaks.length; i++) if (!(breaks[i] > breaks[i - 1])) throw new PlotError('`colorScale.breaks` debe ir en orden creciente y sin repetir.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
+  let colors;
+  if (Array.isArray(cs.colors)) {
+    colors = cs.colors.map(String);
+    if (colors.length !== breaks.length + 1) throw new PlotError(`Con ${breaks.length} cortes van ${breaks.length + 1} colores (hay ${colors.length}).`, 'colors.length = breaks.length + 1');
+  } else {
+    const base = resolveColorScale(cs.name ?? 'Blues');
+    if (!base) throw new PlotError(`Escala "${cs.name}" desconocida.`, 'colorScale: { name: "Blues", breaks: [...] }');
+    colors = sample(base.stops, breaks.length + 1);
+  }
+  if (cs.reverse) colors = [...colors].reverse();
+  const cls = (v) => { let i = 0; while (i < breaks.length && v >= breaks[i]) i++; return i; };
+  return { breaks, colors, cls, color: (v) => colors[cls(v)] };
 }

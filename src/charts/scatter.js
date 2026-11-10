@@ -1,5 +1,6 @@
 // Dispersión y burbujas: relación entre dos variables numéricas, con tamaño
 // opcional (área proporcional), escalas log y línea de tendencia.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -140,15 +141,20 @@ export function scatter(spec, theme) {
   const hx = humanize(x), hy = humanize(y), hs = size ? humanize(size) : '';
   // Con xDomain/yDomain, los puntos fuera del rango no se dibujan fuera del área.
   const vis = (p) => { const cx = xS(p.x), cy = yS(p.y); return cx >= inner.x - 1 && cx <= inner.x + inner.w + 1 && cy >= inner.y - 1 && cy <= inner.y + inner.h + 1; };
+  const TT = tipper(spec, null, locale);
   const circles = sorted.filter(vis).map((p, i) => {
     let t = '';
     if (i < MAX_TIPS || sorted.length <= 1500) {
       const lines = [p.name || '', `${hx}: ${fx(p.x)}`, `${hy}: ${fy(p.y)}`];
       if (size) lines.push(`${hs}: ${fs(p.s)}`);
       if (series) lines.splice(1, 0, p.k);
-      t = tip(...lines);
+      t = TT([p.r], ...lines);
     }
-    return { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : pts.length > 400 ? 1 : 2, 'data-tip': t };
+    // `hollow: "campo"` (o `filled`): un punto hueco es el mismo color en el borde,
+    // con el fondo adentro — una segunda codificación sin un segundo color.
+    const hollow = spec.hollow ? !!p.r[spec.hollow] : spec.filled ? !p.r[spec.filled] : false;
+    if (hollow) return { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: Math.max(2, rOf(p) - 0.75), fill: theme.surface, fillOpacity: 1, stroke: colorOf(p), strokeWidth: 1.5, 'data-tip': t, 'data-href': spec.href ? p.r[spec.href] : undefined };
+    return { class: 'pa-m', cx: xS(p.x), cy: yS(p.y), r: rOf(p), fill: colorOf(p), fillOpacity: size ? 0.78 : 0.9, stroke: theme.surface, strokeWidth: size ? 1.5 : pts.length > 400 ? 1 : 2, 'data-tip': t, 'data-href': spec.href ? p.r[spec.href] : undefined };
   });
   body.push(dotLayer(circles, { maxTips: MAX_TIPS }));
 

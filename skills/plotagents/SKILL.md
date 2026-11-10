@@ -71,12 +71,17 @@ Read `suggestions` too. Check a spec without drawing with `npx plotagents spec.j
 |---|---|---|
 | Compare categories | `bar` | `x`, `y`, `series?`, `stack?`, `top?` |
 | Change over time | `line` / `area` | `x` date or year, `y`, `series?` |
+| Rank over time (who passed whom) | `bump` / `slope` | `x`, `y` (or `rank`), `series`, `top?` |
+| A series' shape in a table cell | `spark` | `x`, `y`, any `width`/`height` |
 | Part of a whole (≤ 6 parts) | `donut` / `pie` | `label`, `value` |
+| A count as squares | `waffle` | `series`, `value?` |
 | Hierarchy | `treemap` / `sunburst` | `path: [...]`, `value` |
 | Relationship | `scatter` / `regplot` / `bubble` | `x`, `y`, `hue?`, `size?` |
 | Distribution | `hist` / `kde` / `box` / `violin` | `x` (and `y` measure for box/violin) |
+| Distribution, one named dot each | `dotplot` | `x`, `bin?`, `label?`, `highlight?` |
 | Which measures move together | `corr` / `clustermap` | `vars?`, `method?: "spearman"`, `alpha?: 0.05` |
 | Every pair of measures | `pairplot` | `vars` (3–6), `hue?` |
+| A clustering tree you already have | `dendrogram` | `linkage` + `labels`, or rows `id`/`parent`/`heightField`; `cut?` |
 | Grid of values | `heatmap` | `x`, `y`, `value` |
 | Value per region or country | `choropleth` | `geo: "chile" \| "usa" \| "world"` or GeoJSON, `key`, `value` |
 | Places on a street map | `pointmap` | `lon`, `lat` |

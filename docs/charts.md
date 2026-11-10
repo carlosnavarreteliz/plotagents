@@ -20,7 +20,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name; an annotation with `panel` goes only to that panel. |
 | `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
@@ -30,6 +30,9 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
 | `legend` | Position: `"top"` (default), `"bottom"`, `"left"`, `"right"`, or `false` to hide it. Side legends move to the bottom below 520 px. Setting a position also forces a legend where the chart would otherwise label lines directly. |
 | `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
+| `tooltip` | What each mark says on hover beyond its value: a list of fields (`"Field: value"` lines from the mark's rows), or `{ title, fields: [field \| { field, label, format }], text, replace }` where `text` is a field with pre-written lines, or `false`. From JavaScript, also `(d) => text \| { title, lines }` with `d.rows`, `d.lines`. A mark made of several rows (a treemap group, a year with several series) shows a field only when its rows agree. |
+| `href` | Treemap tiles, horizontal bar names and scatter dots link to the URL in this field (paths and http(s) only). |
+| `xBands` | Shaded ranges of the x axis behind columns, lines and areas: `[{ from, to, label, color }]`. |
 
 ### In the browser
 
@@ -52,6 +55,12 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `aggregate` | `"sum"` (default), `"mean"`, `"max"`, `"min"`, `"count"`, `"first"`, `"last"`. `countplot` counts rows. |
 | `labels` | `true`, `false` or `"auto"`. |
 | `barWidth` | Max bar thickness in px. |
+| `xGroup` / `yGroup` | Field that groups consecutive categories (either name works, in both orientations): a tinted band with the group name runs along the category axis, with a thin line between groups. Nothing is reordered, so set `sort: "none"` to keep your order. |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). |
+
+The value axis always ends on the first round value at or above the largest bar, and that last tick is always labeled, also on a phone: the number of ticks follows the width of their labels.
+
+**Missing values.** A missing value is never a zero: the bar is not drawn, the tooltip says `missingLabel` ("sin dato" / "no data") and `missingMark: "n/a"` writes it at the base. With `stack: "percent"`, a `format` function receives the share as a fraction (0–1).
 
 ## Time
 
@@ -71,6 +80,30 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `stack` | Areas: `true` (default with series), `"percent"`, or `false` to overlap. |
 | `fill` | Single line: `false` removes the soft gradient. |
 | `xRange` | Visible range `[from, to]`; this is what the range slider sets (`slider: true`). |
+
+**Given intervals and tooltips without a runtime.** `band: { lower: 'lo', upper: 'hi', label: '80% interval' }` draws an interval that comes already computed (a model's projection, a published range) as is, with no estimator, and names it in the legend; it combines with `dashedFrom`. `crosshair: false` (implied by `tooltip`) writes one column per x with its own `data-tip` instead of the browser crosshair, for pages that bring their own tooltip layer.
+
+### `spark` (`sparkline`)
+
+The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `<title>` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip.
+
+| Option | Meaning |
+|---|---|
+| `series` | A few lines on one shared scale. |
+| `fill` | Soft wash under the line (`true` or an opacity). |
+| `dot`, `dotRadius`, `lineWidth` | End dot (`dot: false` hides it) and stroke. |
+| `yDomain` | Fix the scale (e.g. to compare sparklines in a column). |
+
+### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
+
+Who passed whom: `x` period, `y` value (ranked per period, largest first) or `rank` with ranks you already have, and `series`. The y axis is the rank, 1 on top. Names go on both ends (rank + name on the left; on phones, the rank alone), and a ▲/▼ at the right end says how many places each series moved. Ties break by name, so the drawing is deterministic.
+
+| Option | Meaning |
+|---|---|
+| `top` | Keep series that were in the top N at some period (default 12). A rank below N is drawn hollow on a "below N" row; the tooltip has the real rank. |
+| `ends` | `"first-last"`: only the first and last period (a slope chart; the `slope` alias sets it). |
+| `rank` | Field with ranks already computed (1 = first) instead of ranking `y`. |
+| `highlight` | One or more series in color; the rest in `dim`. |
 
 ## Projects
 
@@ -119,6 +152,8 @@ plot({
 
 `x`, `y` numeric; `size` for bubbles (area-proportional); `label` field with `labels` (number of points or list of names) for selective labels; `trend: true` adds a least-squares line with R².
 
+`hollow: 'field'` (or `filled`) draws some dots hollow: a second encoding without a second color.
+
 ### `regplot` (`lmplot`) · `residplot` · `jointplot`
 
 | Option | Meaning |
@@ -154,6 +189,18 @@ plot({ type: 'corr', data, vars: ['income', 'schooling', 'poverty', 'density'], 
 | `highlight` | One variable: its row and column stay, the rest fade. |
 | `labelsFor` | Display names, e.g. `{ areas_verdes: "Green space" }`. |
 | `x`, `y`, `value` | Draw a matrix you already computed, in long form (one row per pair). |
+
+### `dendrogram` (`dendrograma`, `hclust`)
+
+How things group, and at what height they join. The tree comes in already computed, either as rows `{ id, parent, height }` (field names in `id`, `parent`, `heightField`; a node with three or more children is drawn as elbows at the same height) or as a scipy `linkage` matrix with its `labels`. The library does not cluster anything itself (`corr` with `cluster: true` does, for correlations).
+
+| Option | Meaning |
+|---|---|
+| `cut` | Height to cut at: each subtree below it is a group in its own categorical color, named along its leaves with its size; above the cut, grey. A dashed line marks the cut. |
+| `clusters` | Group names, in leaf order. |
+| `orientation` | `"horizontal"` (root left, default) or `"vertical"` (root on top). |
+| `labels` | Leaf labels: `"auto"` (every k-th when they do not fit), `true`, `false`; with `linkage`, the list of leaf names. |
+| `label` | Rows input: field with the display name of each leaf. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -201,6 +248,20 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `jitter`, `dodge`, `radius` | Strip and swarm layout. |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
+| `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
+
+### `dotplot` (`dot-plot`, `wilkinson`)
+
+One dot per row, stacked by bin (Wilkinson): a histogram where each thing is still one thing, to point at, name and highlight. `x` numeric is binned; `x` categorical stacks per category.
+
+| Option | Meaning |
+|---|---|
+| `bin`, `bins` | Bin width in units of `x`, or a number of bins (default 30). |
+| `label` | Field with each dot's name (tooltip, and the label of a highlighted dot). |
+| `series` | Dot colors. |
+| `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
+| `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
+| `dotSize` | Largest dot diameter in px (default 14). |
 
 ## Part-to-whole
 
@@ -237,6 +298,17 @@ Age groups (`age` or `y`), two sides (`sex`, `series` or `hue`) and a value. Bac
 | `sort` | `"desc"` or `"none"`. |
 | `centerValue`, `centerLabel` | Donut center. |
 
+### `waffle` (`squares`, `unit-chart`)
+
+A count drawn as squares: one square per row, or per unit of `value`, by `series`, largest first, filled row by row. The part reads as a number of things, not only a share. When the total passes `maxSquares` (400), each square is worth a round `unit` and the legend says so ("1 square = 5"); squares per series are split by largest remainder, so they always add up to the rounded total. The legend carries each count; one tooltip per series with count and share. `facet` gives one wall per value.
+
+| Option | Meaning |
+|---|---|
+| `value` | Field to add up (otherwise one square per row). |
+| `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
+| `columns` | Squares per row (default 10, 20 or 25 by total). |
+| `order` | Series order (default: largest first). |
+
 ## Maps
 
 ### `choropleth` (`map`) · `symbolmap` (`bubblemap`)
@@ -250,6 +322,8 @@ Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world co
 | `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, or (browser) a URL. |
 | `featureKey`, `nameKey` | Feature property to match, and the one with the display name (both detected when omitted). |
 | `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box or `"markers"`. |
+| `links` | Lines between places, above the regions: `[{ from, to, value }]` or `{ data, from, to, value, color, curveness, width: [min, max], opacity, label }`. Ends are region keys or `[lon, lat]`. |
+| `orientation`, `rotate` | `"landscape"` lays a tall territory on its side, north on the left; `"portrait"` stands a wide one up; `rotate: 90 \| -90 \| 180` turns the projected map clockwise. Labels stay upright. |
 | `markers`, `layers` | Points by lon/lat on top; extra GeoJSON lines, polygons or points over or under the map. |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
@@ -279,9 +353,12 @@ plot({
 ```
 
 - **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
-- **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (pixel coordinates, y down, for hand-drawn or tile maps) or `"planar"` (y up).
+- **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordinates used as they are, y down, for pre-projected or hand-drawn maps; `flipY: true` for y up) or `"planar"` (y up).
 - **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `tall: false` turns off the side column for elongated shapes.
 - **Markers.** `markers: [{ lon, lat, label, value }]` or `{ data, lon, lat, label, size, color, legend, maxRadius }`: dots on top, area-proportional when there is a `size`, labels placed where they don't collide.
+- **Lines between places.** `links: { data: trade, from: 'origin', to: 'partner', value: 'usd' }` draws one curved line per row from region to region (or `[lon, lat]`), width proportional to the value, one color, no arrowheads: a line is a relation, not a route. Each line is a mark with its own tooltip and `data-key="from→to"`; ends that match no region are listed in the description instead of being drawn. With `labels: false` the map carries no text at all.
+- **Lying down.** `orientation: "landscape"` turns a long, thin territory (Chile, Norway, Vietnam, a river basin) a quarter turn after projecting, north on the left so north-to-south reads left to right; framing, hit areas, markers and links follow, and labels stay upright. `rotate: 90 | -90 | 180` sets the turn by hand.
+- **Keys for your page.** Every region, link and marker carries `data-key`: the key your data used for it (a CUT code, an ISO code, a name), or its code or name when it has no data. A page can wire its own lists and highlights to them.
 - **Layers.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` overlays rivers, roads, routes, faults or district lines (or draws them under the regions with `below: true`). A `label` adds a legend key.
 - **Style.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (a named or custom sequential ramp), `palette` and `colors` (categories).
 - **Register once, use by name.** `registerGeo('biobio', comunas, ['comunas-biobio'])` and then `geo: 'biobio'` in every spec, which keeps tool calls short for an agent.
@@ -338,6 +415,7 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 | `clusters` | One sunflower cluster per group, space ∝ √size. |
 | `tree` | The radial tree laid flat (left → right on wide areas), S-shaped connectors. |
 | `grid` | A grid ordered by group and weight, every node named. |
+| `preset` | Positions you already have (MDS, UMAP, t-SNE, Gephi): `nodes` bring `x` and `y` (`nodeX` / `nodeY` for other field names), fitted with one scale for both axes so the cloud is not stretched; y grows downward unless `flipY: true`. Edges are optional: `nodes` alone draws a positioned scatter with sizes, groups and non-overlapping names. |
 
 `labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 
@@ -355,9 +433,21 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `x`, `y` categories and `value`. Sequential ramp by default; `midpoint` (or `diverging: true`) for a diverging ramp. Values are written in cells when they fit.
 
+| Option | Meaning |
+|---|---|
+| `colorScale: { colors, breaks }` | Discrete classes instead of a gradient ([color scales](colorscales.md#classes)); the legend becomes a stepped key with the breaks written under it, formatted with `format`. |
+| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. |
+| `missing` | Cells without a value: `"tint"` (default), `"plain"` (outline only), `"hatch"` (striped "no data") or `"gap"` (nothing). |
+| `floor` / `ceiling` | Values below / above are drawn as plain empty cells: the value exists (the tooltip shows it) but it is not colored and does not stretch the scale. |
+| `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
+| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+
 ### `sankey`
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
+
+`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
@@ -416,6 +506,7 @@ plot({
 | `date` | Readable date in the chart's language | ISO dates |
 | `link` | Underlined link; only `http(s)` and `mailto` get an `href` | URLs |
 | `rank` | Position under the current sort | `rank: true` |
+| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column | — |
 | `text`, `number` | Text (wraps to 2–3 lines) and plain numbers | Everything else |
 
 | Option | Meaning |

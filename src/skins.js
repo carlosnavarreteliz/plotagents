@@ -80,7 +80,9 @@ function same(parts, msg, fix) {
   const n = parts[0].length;
   for (let i = 1; i < parts.length; i++) {
     const p = parts[i];
-    if (!(p.length === n && p.every((t, j) => j % 2 === 1 || t === parts[0][j]))) throw new PlotError(msg(i), fix);
+    if (!(p.length === n && p.every((t, j) => j % 2 === 1 || t === parts[0][j]))) {
+      throw new PlotError(msg(i), fix);
+    }
   }
 }
 
@@ -150,15 +152,16 @@ export function cssVars(spec) {
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (!(key === undefined && NOT_STYLE.has(k))) walk(x, k);
   };
   walk(spec);
-  // Sondas: el respaldo con el azul corrido lo mínimo, distinta para cada variable.
-  const taken = new Set([...found.values()].map((v) => hex6(rgbOf(v.fallback))));
+  // Sondas: el mismo color en otra notación (rgba con una opacidad casi 1,
+  // distinta por variable). Todo lo que se calcula a partir del color —el texto
+  // blanco o tinta encima, un tinte— sale idéntico; sólo cambia cómo se escribe.
+  // (Correr el tono un punto bastaba, cerca de un umbral, para voltear el
+  // contraste y cambiar el dibujo.)
   let k = 0;
   for (const v of found.values()) {
     const [r, g, b] = rgbOf(v.fallback);
-    let probe;
-    do { k++; probe = hex6([r, g ^ (k >> 8 & 1), b ^ (k & 255)]); } while (taken.has(probe));
-    taken.add(probe);
-    v.probe = probe;
+    k++;
+    v.probe = `rgba(${r}, ${g}, ${b}, 0.${String(99990 + k).padStart(5, '0')})`;
   }
   return found;
 }
@@ -181,11 +184,12 @@ export function plotWithVars(spec, map, draw) {
   const pa = tokens(a);
   const pb = tokens(b);
   same([pa, pb], () => 'Un color `var()` cambió algo más que colores al dibujarse.', 'Usa un respaldo cercano al color que la página va a dar.');
-  const byProbe = new Map([...map.values()].map((v) => [v.probe, v]));
+  const norm = (c) => c.toLowerCase().replace(/\s+/g, '');
+  const byProbe = new Map([...map.values()].map((v) => [norm(v.probe), v]));
   const at = [];
   for (let j = 1; j < pa.length; j += 2) {
     if (pa[j].toLowerCase() === pb[j].toLowerCase()) continue;
-    const v = byProbe.get(pb[j].toLowerCase());
+    const v = byProbe.get(norm(pb[j]));
     if (!v) continue; // un derivado: queda calculado con el respaldo
     at.push([j, (c) => `var(${v.name}, ${c})`, `var(${v.name}, ${pa[j]})`]);
   }
@@ -237,7 +241,9 @@ export function mergeSkins(svgs, whens) {
 
   let svg = rewrite(svgs[0], parts[0], at.map(([j, name]) => [j, (c) => `var(${name}, ${c})`, `var(${name})`]));
 
-  const cls = 'pa-skin-' + hash(svgs.join('\u0000'));
+  // El nombre sale de la geometría, no de los colores: dos pasadas que sólo
+  // difieren en color (las de `var()`) dan la misma clase.
+  const cls = 'pa-skin-' + hash(parts[0].filter((_, j) => j % 2 === 0).join('\u0000') + '\u0000' + whens.join('|'));
   const decl = (i) => [...vars.values()].map((v) => `${v.name}:${v.combo[i]}`).join(';');
   const rules = [`.${cls}{${decl(0)}}`];
   for (let i = 0; i < svgs.length; i++) {

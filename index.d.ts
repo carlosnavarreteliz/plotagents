@@ -6,11 +6,13 @@ export type ChartType =
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
   | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap' | 'table' | 'corr' | 'pairplot'
+  | 'spark' | 'bump' | 'waffle' | 'dendrogram' | 'dotplot'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
   | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa' | 'tabla' | 'datatable'
-  | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix';
+  | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix'
+  | 'sparkline' | 'slope' | 'slopegraph' | 'dot-plot';
 
 export type Locale = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'auto';
 
@@ -19,8 +21,20 @@ export interface TableColumn {
   field?: string;
   label?: string;
   /** Indicator. Inferred when omitted: bar on the main measure, delta on change fields, sparkline on lists of numbers, progress on 0–1 goals, badge on status words, check on booleans. */
-  type?: 'text' | 'number' | 'bar' | 'heat' | 'delta' | 'sparkline' | 'progress' | 'badge' | 'check' | 'date' | 'link' | 'rank';
+  type?: 'text' | 'number' | 'bar' | 'heat' | 'delta' | 'sparkline' | 'progress' | 'badge' | 'check' | 'date' | 'link' | 'rank' | 'range';
   format?: Format;
+  /** range: field or fixed number for each part of the rail. */
+  min?: string | number;
+  max?: string | number;
+  /** range: [lo, hi] of the shaded band (e.g. quartiles). */
+  band?: [string | number, string | number];
+  bandLabel?: string;
+  median?: string | number;
+  /** range: reference tick (e.g. the national figure) and its name in the tooltip. */
+  ref?: string | number;
+  refLabel?: string;
+  /** range: one scale for the column (default) or one per row. */
+  scale?: 'shared' | 'row';
   align?: 'left' | 'right' | 'center';
   width?: number;
   /** delta/progress: whether up is good (default) or down (costs). */
@@ -103,10 +117,11 @@ export interface ThemeTokens {
 export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | (Omit<DeepPartial<Theme>, 'grid' | 'font'> & ThemeTokens & { extends?: 'papel' | 'noche' | (string & {}) })
 
 /** matplotlib colormap name (case-insensitive, `_r` reverses), a list of hex colors, or { name | colors, reverse, mid }. */
-export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number };
+/** `breaks` (ascending) turns the scale into discrete classes: `colors` needs breaks.length + 1 entries, or give `name` and it is sampled. */
+export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number; breaks?: number[] };
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
-export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle';
+export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle' | 'preset';
 
 /** A color set for `skins`: patches only colors. */
 export interface Skin {
@@ -118,6 +133,19 @@ export interface Skin {
   colorScale?: ColorScale;
   colors?: Record<string, string>;
 }
+
+export interface TooltipSpec {
+  /** Field for the header. */
+  title?: string;
+  /** "Field: value" lines from the mark's rows. */
+  fields?: Array<string | { field: string; label?: string; format?: Format }>;
+  /** Field with pre-written text (may hold line breaks), appended as is. */
+  text?: string;
+  /** Drop the default lines. */
+  replace?: boolean;
+}
+export interface TooltipContext { title: string; lines: string[]; rows: Row[]; row?: Row; match?: Record<string, unknown> }
+export interface XBand { from: string | number; to?: string | number; label?: string; color?: string }
 
 export interface Spec {
   type?: ChartType;
@@ -163,6 +191,30 @@ export interface Spec {
   yScale?: 'linear' | 'log';
   trend?: boolean;
   xLabel?: string;
+  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. */
+  tooltip?: false | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
+  /** line/area: false writes a tooltip column per x instead of the browser crosshair. */
+  crosshair?: boolean;
+  /** line/area: an interval already computed, drawn as is. */
+  band?: { lower: string; upper: string; label?: string };
+  /** bar: tooltip text for a missing value (never drawn as 0). */
+  missingLabel?: string;
+  /** bar: text written at the base of a missing bar. */
+  missingMark?: string;
+  /** bar (columns), line, area: shaded ranges of the x axis. */
+  xBands?: XBand | XBand[];
+  /** treemap tiles, horizontal bar names, scatter dots: field with the URL to link to. */
+  href?: string;
+  /** scatter/bubble: rows where this field is truthy are hollow dots. */
+  hollow?: string;
+  /** scatter/bubble: rows where this field is falsy are hollow dots. */
+  filled?: string;
+  /** sankey: a heading over each column. */
+  stages?: string[];
+  /** sankey: flows take the source's or the target's color, or one per stage. */
+  linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
+  /** facet: a field written under each panel name. */
+  panelNote?: string | ((key: string, rows: Row[]) => string);
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
   /** Entity → color. Any color may be "var(--name, #fallback)": the page decides it, the fallback is used to compute. */
@@ -176,7 +228,8 @@ export interface Spec {
   hue?: string;
   facet?: string;
   col?: string;
-  sharey?: boolean;
+  /** facet: shared y scale; "span" = same span, own floor. */
+  sharey?: boolean | 'span';
   sharex?: boolean;
   panelHeight?: number;
   time?: string;
@@ -269,6 +322,12 @@ export interface Spec {
   projection?: 'mercator' | 'equalEarth' | 'albersUsa' | 'equirectangular' | 'conic' | 'identity' | 'planar' | { type: string; parallels?: [number, number]; rotate?: number; center?: [number, number] };
   /** Zoom to regions, a [lonMin, latMin, lonMax, latMax] box, or "markers". */
   fitTo?: string | string[] | [number, number, number, number];
+  /** Maps: lines between places (region keys or [lon, lat]); width ∝ value, one color, no arrowheads. */
+  links?: Array<{ from: string | [number, number]; to: string | [number, number]; value?: number }> | { data: Row[]; from?: string; to?: string; value?: string; color?: string; curveness?: number; width?: [number, number]; opacity?: number; label?: string };
+  /** Maps: turn the projected map clockwise (labels stay upright). -90 puts north on the left. */
+  rotate?: 90 | -90 | 180 | 270;
+  /** Maps: "landscape" lays a tall territory on its side (north left); "portrait" stands a wide one up. bar: "horizontal" | "vertical". */
+  orientation?: 'landscape' | 'portrait' | 'horizontal' | 'vertical';
   markers?: Array<{ lon: number; lat: number; label?: string; value?: number; color?: string }> | { data: Row[]; lon?: string; lat?: string; label?: string; size?: string; color?: string; legend?: string; maxRadius?: number; radius?: number; labels?: boolean };
   layers?: Array<{ geo: object | string; label?: string; stroke?: string; width?: number; fill?: string; dash?: boolean | string; opacity?: number; below?: boolean; object?: string }>;
   borderColor?: string;
@@ -283,6 +342,11 @@ export interface Spec {
   curveness?: number;
   nodeId?: string;
   nodeLabel?: string;
+  /** network layout "preset": fields of `nodes` with each node's position (default "x", "y"). */
+  nodeX?: string;
+  nodeY?: string;
+  /** network "preset" and maps with projection "identity": y grows upward instead of downward. */
+  flipY?: boolean;
   /** Largest node / circle radius in px. */
   maxRadius?: number;
   /** network: force-layout iterations. */
@@ -310,7 +374,8 @@ export interface Spec {
   /** [lon, lat] */
   center?: [number, number];
   /** choropleth */
-  missing?: 'hatch' | 'plain';
+  /** choropleth: 'hatch' (default) | 'plain'. heatmap: 'tint' (default) | 'plain' | 'hatch' | 'gap'. */
+  missing?: 'hatch' | 'plain' | 'tint' | 'gap';
   thresholds?: number[];
   classes?: number;
   scale?: 'quantile' | 'equal' | 'continuous' | 'categorical' | number[] | string;
@@ -321,6 +386,7 @@ export interface Spec {
   valueDomain?: [number, number];
   bandwidth?: number;
   bwAdjust?: number;
+  /** kde/violin: density past the data, in bandwidths. dendrogram: height to cut at (colored groups). */
   cut?: number;
   jitter?: number | boolean;
   dodge?: boolean;
@@ -336,6 +402,19 @@ export interface Spec {
   hole?: number;
   thickness?: number;
   cellHeight?: number;
+  /** heatmap: values below `floor` / above `ceiling` are plain empty cells (value kept in the tooltip) and leave the color scale. */
+  floor?: number;
+  ceiling?: number;
+  /** heatmap + binned breaks around 0: the class containing 0 takes the neutral tint. */
+  midClass?: 'neutral';
+  /** heatmap: text written across a row that has no values. */
+  emptyRow?: string;
+  /** Group consecutive categories along the axis (bar: either names the category groups). Nothing is reordered. */
+  xGroup?: string;
+  yGroup?: string;
+  /** Label every Nth category (still thinned further on collision). */
+  xTicks?: { every?: number };
+  yTicks?: { every?: number };
   facetOrder?: string[];
   /** gantt */
   task?: string;
@@ -378,8 +457,38 @@ export interface Spec {
   /** table: totals row. */
   total?: boolean | 'sum' | 'mean' | 'min' | 'max' | Record<string, string | boolean>;
   totalLabel?: string;
-  /** table: "#" column with the position. */
-  rank?: boolean;
+  /** table: "#" column with the position. bump: a field that already holds the rank. */
+  rank?: boolean | string;
+  /** bump: "first-last" draws only the first and last period (slope chart). */
+  ends?: 'all' | 'first-last';
+  /** dendrogram: scipy-style linkage matrix (n − 1 rows [a, b, height, count]); pair with `labels`. */
+  linkage?: number[][];
+  /** dendrogram: names of the groups made by `cut`, in leaf order. */
+  clusters?: string[];
+  /** dendrogram (rows input): field with each row's parent id. */
+  parent?: string;
+  /** dendrogram (rows input): field with the joining height (default "height"). */
+  heightField?: string;
+  /** dendrogram: root left ("horizontal", default) or on top ("vertical"). */
+  orientation?: 'horizontal' | 'vertical';
+  /** dotplot: bin width in units of x. */
+  bin?: number;
+  /** dotplot: your own axis ticks, [value, label] pairs. */
+  ticks?: Array<number | [number, string]>;
+  /** dotplot: largest dot diameter in px. */
+  dotSize?: number;
+  /** spark: false hides the end dot. */
+  dot?: boolean;
+  /** spark: end dot radius. */
+  dotRadius?: number;
+  /** waffle: what one square is worth. */
+  unit?: number;
+  /** waffle: most squares before a round `unit` kicks in (default 400). */
+  maxSquares?: number;
+  /** dendrogram (rows input): field with each row's id (default "id"). */
+  id?: string;
+  /** spark: line width in px. */
+  lineWidth?: number;
   /** table: one card per row. "auto" (default) when the columns do not fit. */
   cards?: boolean | 'auto';
   density?: 'compact' | 'normal' | 'comfortable';
@@ -415,6 +524,8 @@ export declare function resolve(spec: Spec): Spec;
 export declare const schema: Record<string, unknown>;
 /** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
 export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
+/** Add a chart type (the light entries 'plotagents/maps', 'plotagents/table' and 'plotagents/types/*' use it). */
+export declare function registerRenderer(type: string, render: (spec: Spec, theme: Theme) => string): void;
 export interface DashboardSpec {
   title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
   locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];

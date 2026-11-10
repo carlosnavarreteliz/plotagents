@@ -30,6 +30,7 @@ const TYPE_ALIAS = {
   date: 'date', fecha: 'date', time: 'date',
   link: 'link', url: 'link',
   rank: 'rank',
+  range: 'range', rail: 'range', interval: 'range', benchmark: 'range',
 };
 export const COLUMN_TYPES = [...new Set(Object.values(TYPE_ALIAS))];
 export const columnType = (t) => TYPE_ALIAS[String(t || '').toLowerCase()] || null;
@@ -175,7 +176,7 @@ function prepareColumns(spec, data, theme, locale) {
     c.kind = kind;
     c.values = nums;
     c.finite = finite;
-    const numeric = ['number', 'bar', 'heat', 'delta', 'progress'].includes(type);
+    const numeric = ['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type);
     if (numeric && !finite.length && !(type === 'number' && kind === 'year')) c.type = type = 'text';
     // Formato: el de la columna, el del spec (para números) o el que delata el texto crudo.
     const hint = rawHint(raw);
@@ -190,6 +191,15 @@ function prepareColumns(spec, data, theme, locale) {
       c.scale100 = !c.hasTarget && hi > 1.5;
       c.fmt = c.hasTarget ? columnFormat(c.format ?? spec.format ?? hint, finite, locale, null) : makeFormat({ type: 'percent', scale: c.scale100 ? 1 : 100, decimals: 0 }, locale, finite);
       c.pctFmt = makeFormat({ type: 'percent', scale: 100, decimals: 0 }, locale, []);
+    } else if (type === 'range') {
+      // Riel: mínimo–máximo, una banda (lo–hi), la mediana, una referencia y el
+      // valor de la fila como punto. Cada extremo es un campo o un número fijo.
+      const acc = (k) => (typeof k === 'string' ? (r) => num(r[k]) : Number.isFinite(+k) && k !== null && k !== undefined ? () => +k : () => NaN);
+      const band = Array.isArray(c.band) ? c.band : [];
+      c.rg = { min: acc(c.min), max: acc(c.max), lo: acc(band[0]), hi: acc(band[1]), median: acc(c.median), ref: acc(c.ref) };
+      const ends = data.flatMap((r) => [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))]).filter(Number.isFinite);
+      c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      c.fmt = columnFormat(c.format ?? spec.format ?? hint, ends, locale, null);
     } else if (numeric || (type === 'number' && kind === 'year')) {
       c.fmt = kind === 'year' && !c.format ? (v) => String(Math.round(v)) : columnFormat(c.format ?? spec.format ?? hint, finite, locale, null);
     } else if (type === 'sparkline') {
@@ -201,7 +211,7 @@ function prepareColumns(spec, data, theme, locale) {
       c.unit = ts.length ? dateUnit(ts) : 'day';
       c.withYear = c.yearless !== true;
     }
-    c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
+    c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
     if (type === 'bar' || type === 'heat') {
       c.lo = Math.min(0, ...finite);
       c.hi = Math.max(0, ...finite);
@@ -242,7 +252,7 @@ function cellText(c, r, locale, W) {
   if (c.type === 'rank') return String(r.__rank ?? '');
   if (isNil(v)) return '';
   switch (c.type) {
-    case 'number': case 'bar': case 'heat': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
+    case 'number': case 'bar': case 'heat': case 'range': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
     case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = c.fmt(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
     case 'progress': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
     case 'date': { const t = parseDate(v); return Number.isFinite(t) ? formatDate(t, c.unit, locale, c.withYear) : String(v); }
@@ -261,7 +271,7 @@ function sortKey(c, r) {
   if (c.type === 'rank') return r.__rank;
   if (isNil(v)) return null;
   switch (c.type) {
-    case 'number': case 'bar': case 'heat': case 'delta': case 'progress': { const n = num(v); return Number.isFinite(n) ? n : null; }
+    case 'number': case 'bar': case 'heat': case 'delta': case 'progress': case 'range': { const n = num(v); return Number.isFinite(n) ? n : null; }
     case 'date': { const t = parseDate(v); return Number.isFinite(t) ? t : String(v); }
     case 'check': return v === true || YES.test(String(v).trim()) ? 1 : 0;
     case 'sparkline': { const a = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : []; return a.length ? a[a.length - 1] : null; }
@@ -393,6 +403,7 @@ export function table(spec, theme) {
       case 'delta': nat = tw + 13; min = nat; break;
       case 'sparkline': nat = 104; min = 56; break;
       case 'progress': nat = tw + 8 + 96; min = tw + 8 + 40; break;
+      case 'range': nat = tw + 8 + 150; min = tw + 8 + 64; break;
       case 'badge': { const pw = Math.max(0, ...texts.map((t) => measure(t, 12, 500) + 18)); nat = pw; min = Math.min(pw, 84); break; }
       case 'check': nat = 18; min = 18; break;
       case 'text': case 'link': nat = tw; min = Math.min(tw, Math.max(longest, Math.min(tw, 96))); break;
@@ -415,7 +426,7 @@ export function table(spec, theme) {
     if (sumNat <= tableW) {
       // Espacio sobrante: a los indicadores (barras y avances), después al texto.
       let extra = tableW - sumNat;
-      const tracks = cols.filter((c) => !c.fixed && (c.type === 'bar' || c.type === 'progress'));
+      const tracks = cols.filter((c) => !c.fixed && (c.type === 'bar' || c.type === 'progress' || c.type === 'range'));
       for (const c of tracks) { const add = Math.min(extra / tracks.length, 110); c.w += add; }
       extra = tableW - cols.reduce((a, c) => a + c.w, 0);
       const flex = cols.filter((c) => !c.fixed && (c.type === 'text' || c.type === 'link' || c.isLabel));
@@ -426,7 +437,7 @@ export function table(spec, theme) {
       // Falta espacio: ceden primero los minigráficos y las barras, después el
       // texto (que se ajusta en líneas) y al final los estados y los números.
       let need = sumNat - tableW;
-      const ORDER = [['sparkline', 'bar', 'progress'], ['text', 'link'], null];
+      const ORDER = [['sparkline', 'bar', 'progress', 'range'], ['text', 'link'], null];
       for (const group of ORDER) {
         if (need <= 0) break;
         const take = cols.filter((c) => !c.fixed && (group ? group.includes(c.type) : true));
@@ -509,7 +520,7 @@ export function table(spec, theme) {
       if (tv === null) return { out };
       const ts = c.type === 'delta' ? (tv > 0 ? '+' : tv < 0 ? '−' : '') + c.fmt(Math.abs(tv)) : c.fmt(tv);
       // Barras y avances: el total bajo las cifras, no al final de la pista.
-      if ((c.type === 'bar' || c.type === 'progress') && c.align === 'right') put(ts, { x: ix + c.valueW, textAnchor: 'end' });
+      if ((c.type === 'bar' || c.type === 'progress' || c.type === 'range') && c.align === 'right') put(ts, { x: ix + c.valueW, textAnchor: 'end' });
       else put(ts);
       return { out };
     }
@@ -574,6 +585,36 @@ export function table(spec, theme) {
           out.push(el('rect', { x: trackX, y: my - 3, width: Math.max(6, trackW * Math.min(1, ratio)), height: 6, rx: 3, fill }));
         }
         return { out, tip: c.hasTarget && Number.isFinite(t) ? `${c.label}: ${c.fmt(n)} / ${c.fmt(t)} (${c.pctFmt(ratio)})` : null };
+      }
+      case 'range': {
+        const n = num(v);
+        if (!Number.isFinite(n)) { put(s); break; }
+        const vw = c.valueW;
+        out.push(text(ix + vw, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        const trackX = ix + vw + 12, trackW = Math.max(16, ix + iw - trackX - 6);
+        const R = c.rg;
+        const vals = { min: R.min(r), max: R.max(r), lo: R.lo(r), hi: R.hi(r), median: R.median(r), ref: R.ref(r) };
+        // Escala: la de toda la columna (por defecto) o la de la fila (`scale: 'row'`).
+        let a = c.rlo, b = c.rhi;
+        if (c.scale === 'row') {
+          const own = [n, ...Object.values(vals)].filter(Number.isFinite);
+          a = Math.min(...own); b = Math.max(...own);
+        }
+        const span = b - a || 1;
+        const X = (t) => trackX + ((t - a) / span) * trackW;
+        const F = Number.isFinite;
+        if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(vals.min), x2: X(vals.max), y1: my, y2: my, stroke: theme.axis, strokeWidth: 2, strokeLinecap: 'round' }));
+        if (F(vals.lo) && F(vals.hi)) out.push(el('rect', { x: X(Math.min(vals.lo, vals.hi)), y: my - 4, width: Math.max(1.5, Math.abs(X(vals.hi) - X(vals.lo))), height: 8, rx: 2, fill: theme.tint2 }));
+        if (F(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - 6, y2: my + 6, stroke: theme.lede, strokeWidth: 1.5 }));
+        if (F(vals.ref)) out.push(el('line', { x1: X(vals.ref), x2: X(vals.ref), y1: my - 8, y2: my + 8, stroke: theme.ink, strokeWidth: 2, strokeLinecap: 'round' }));
+        out.push(el('circle', { cx: X(n), cy: my, r: 4.5, fill: muted ? dimC : accent, stroke: theme.surface, strokeWidth: 1.5 }));
+        const en = String(locale).startsWith('en');
+        const parts = [`${c.label}: ${s}`];
+        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${c.fmt(vals.min)}–${c.fmt(vals.max)}`);
+        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${c.fmt(vals.lo)}–${c.fmt(vals.hi)}`);
+        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${c.fmt(vals.median)}`);
+        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${c.fmt(vals.ref)}`);
+        return { out, tip: parts.join('\n') };
       }
       case 'sparkline': {
         const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
@@ -645,7 +686,7 @@ export function table(spec, theme) {
       const lines = headLines[i];
       const sorted = st && st.col === c;
       // Barras y avances: el encabezado va sobre la cifra (alineada a la derecha), no sobre la pista.
-      const overValue = (c.type === 'bar' || c.type === 'progress') && c.align === 'right';
+      const overValue = (c.type === 'bar' || c.type === 'progress' || c.type === 'range') && c.align === 'right';
       const headW = Math.max(...lines.map((l) => measure(l, HS, 600)));
       const ax = overValue ? Math.min(c.x + c.w - P, c.x + P + Math.max(c.valueW, headW + (sorted ? 10 : 0))) : c.align === 'right' ? c.x + c.w - P : c.align === 'center' ? c.x + c.w / 2 : c.x + P;
       const anchor = c.align === 'right' ? 'end' : c.align === 'center' ? 'middle' : null;
@@ -665,7 +706,7 @@ export function table(spec, theme) {
       if (c.type !== 'rank' && c.sortable !== false && spec.sortable !== false) {
         attrs['data-sort'] = c.field;
         attrs['aria-sort'] = sorted ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none';
-        attrs['data-num'] = ['number', 'bar', 'heat', 'delta', 'progress', 'sparkline', 'check'].includes(c.type) ? '1' : null;
+        attrs['data-num'] = ['number', 'bar', 'heat', 'delta', 'progress', 'range', 'sparkline', 'check'].includes(c.type) ? '1' : null;
       }
       return g(attrs, parts);
     });
@@ -764,7 +805,7 @@ export function table(spec, theme) {
         }
         const cc = { ...c, align: 'right' };
         // Barras y avances: la cifra y una pista corta, pegadas a la derecha.
-        const boxW = cc.type === 'progress' || cc.type === 'bar' ? Math.min(area.w - keyW, cc.valueW + 8 + 110) : area.w - keyW;
+        const boxW = cc.type === 'progress' || cc.type === 'bar' || cc.type === 'range' ? Math.min(area.w - keyW, cc.valueW + 8 + (cc.type === 'range' ? 140 : 110)) : area.w - keyW;
         const vx = area.x + area.w - boxW - P, vw = boxW + 2 * P;
         const m = cell(cc, r, vx, vw, rowTop, LH + 2 * padY, { total, hl: hlr, chip: true });
         parts.push(g({ role: 'cell', 'data-tip': m.tip ? tip(titleS, m.tip) : null }, m.out));

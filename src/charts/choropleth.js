@@ -5,6 +5,8 @@
 // usan todo el ancho con etiquetas solo donde importan. Los estados de EE. UU.
 // llevan su sigla (y el valor, si cabe); los chicos del noreste, afuera con
 // línea guía. En el navegador: zoom con clic, rueda (+ Ctrl/⌘) o pellizco.
+import { tipper } from '../tooltip.js';
+import { binnedScale } from '../colorscales.js';
 import { el, g, text } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -95,6 +97,9 @@ function quantile(sorted, p) {
 export function colorScale(values, spec, theme) {
   const v = values.filter(Number.isFinite).sort((a, b) => a - b);
   const min = v[0], max = v[v.length - 1], range = max - min;
+  // `colorScale: { colors, breaks }`: las clases las fija quien llama.
+  const bins = binnedScale(spec);
+  if (bins) return classed(bins.breaks, bins.colors, min, max);
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const mode = Array.isArray(spec.scale) || Array.isArray(spec.thresholds) ? 'thresholds' : spec.scale || 'quantile';
   if (mid !== undefined) {
@@ -246,9 +251,15 @@ function prepare(spec, locale) {
   }
   const buckets = new Map();
   const unmatched = [];
+  // La clave con que los datos nombran cada región (CUT, ISO, sigla…): va al SVG como data-key.
+  const keyOf = new Map();
+  const rowsOf = new Map(); // región → sus filas (para `tooltip`)
   for (const r of data) {
     const f = idx.get(normKey(r[key]));
     if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
+    if (!keyOf.has(f)) keyOf.set(f, String(r[key]));
+    if (!rowsOf.has(f)) rowsOf.set(f, []);
+    rowsOf.get(f).push(r);
     if (!buckets.has(f)) buckets.set(f, []);
     buckets.get(f).push(categorical ? r[valueF] : num(r[valueF]));
   }
@@ -271,11 +282,115 @@ function prepare(spec, locale) {
   let lon0 = Infinity, lon1 = -Infinity, latMax = 0;
   for (const f of features) for (const r of rings(f.geometry)) for (const p of r) { if (p[0] < lon0) lon0 = p[0]; if (p[0] > lon1) lon1 = p[0]; if (Math.abs(p[1]) > latMax) latMax = Math.abs(p[1]); }
   const projected = Math.max(Math.abs(lon0), Math.abs(lon1)) > 180.5 || latMax > 90.5;
-  const raw = makeProjection(spec.projection) ?? (projName && projections[projName] ? projections[projName]() : projected ? planar() : lon1 - lon0 > 100 ? equalEarth() : mercator());
+  let raw = makeProjection(spec.projection) ?? (projName && projections[projName] ? projections[projName]() : projected ? planar() : lon1 - lon0 > 100 ? equalEarth() : mercator());
+  // Geometría ya proyectada con y hacia arriba: `identity` + `flipY` es el plano cartesiano.
+  if (spec.flipY && /^(identity|none|pixels)$/i.test(String(spec.projection))) raw = planar();
+  // Un cuarto de vuelta después de proyectar (Chile acostado): encuadre, zonas de
+  // clic, marcadores y etiquetas quedan en el espacio de la pantalla y el texto, derecho.
+  const turn = mapTurn(spec, features, raw);
+  if (turn) raw = rotated(raw, turn);
   // `dashed`: por nombre de región (con los mismos alias) o por un campo de los datos.
   const dm = dashedMatcher(spec, data, key, null, normKey);
   const dashed = new Set(dm ? features.filter((f) => featureKeys(f).some((k) => dm(k))) : []);
-  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories };
+  return { fc, features, values, rank, ranked, unmatched: [...new Set(unmatched)], key, valueF, raw, data, dashed, categorical, categories, keyOf, idx, rowsOf };
+}
+
+/**
+ * Cuánto girar el mapa ya proyectado, en grados (horario, y hacia abajo).
+ * `rotate: 90 | -90 | 180`; `orientation: "landscape"` acuesta una forma más
+ * alta que ancha con el norte a la izquierda (el orden norte→sur se lee de
+ * izquierda a derecha) y `"portrait"` para la que es más ancha que alta.
+ */
+export function mapTurn(spec, features, raw) {
+  const r = Number(spec.rotate);
+  if ([90, -90, 180, 270, -180].includes(r)) return r === 270 ? -90 : r === -180 ? 180 : r;
+  const o = String(spec.orientation ?? '').toLowerCase();
+  if (o !== 'landscape' && o !== 'portrait') return 0;
+  const a = aspectOf(features, raw);
+  if (o === 'landscape' && a > 1) return -90;
+  if (o === 'portrait' && a < 1) return 90;
+  return 0;
+}
+
+/** La proyección `raw` seguida de un giro de `deg` grados (90, -90 o 180). */
+export function rotated(raw, deg) {
+  const f = deg === 90 ? (p) => { const [x, y] = raw(p); return [-y, x]; }
+    : deg === -90 ? (p) => { const [x, y] = raw(p); return [y, -x]; }
+      : (p) => { const [x, y] = raw(p); return [-x, -y]; };
+  f.continuous = raw.continuous;
+  f.turn = deg;
+  return f;
+}
+
+/** La clave estable de una región: la de los datos; si no tiene datos, su código, ISO o nombre. */
+function regionKey(m, f, locale) {
+  const p = f.properties || {};
+  return m.keyOf.get(f) ?? String(p.code ?? p.iso3 ?? p.iso_a3 ?? f.id ?? nameOf(f, locale) ?? '');
+}
+
+// ── Líneas entre lugares (`links`) ─────────────────────────────────────────
+//
+// Una línea es una relación entre dos lugares (comercio, migración, vuelos),
+// no una ruta: va curva, sin punta de flecha, de un solo color y con ancho
+// proporcional al valor. Los extremos son claves de región (las mismas que
+// `key`) o [lon, lat].
+
+/** `links`: [{ from, to, value }] o { data, from, to, value, color, curveness, width: [min, max], opacity }. */
+function linkList(spec, m, theme, locale) {
+  const lk = spec.links;
+  if (!lk) return null;
+  const o = Array.isArray(lk) ? {} : lk;
+  const rows = ensureData({ data: Array.isArray(lk) ? lk : lk.data || [] });
+  const fields = fieldsOf(rows);
+  const fromF = o.from ?? pickF(fields, ['from', 'source', 'origen', 'desde']);
+  const toF = o.to ?? pickF(fields, ['to', 'target', 'destino', 'hasta']);
+  const valF = o.value ?? pickF(fields, ['value', 'valor', 'weight', 'peso']);
+  if (!fromF || !toF) throw new PlotError(T(locale, 'Las líneas (`links`) necesitan un origen y un destino.', 'Lines (`links`) need an origin and a destination.'), 'links: [{ from: "CHL", to: "CHN", value: 120 }]');
+  const end = (v) => {
+    if (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(num(x)))) return { lonlat: [num(v[0]), num(v[1])], name: `${num(v[1])}, ${num(v[0])}`, key: `${num(v[0])},${num(v[1])}` };
+    const f = v === undefined || v === null ? null : m.idx.get(normKey(v));
+    return f ? { f, name: nameOf(f, locale), key: String(v) } : null;
+  };
+  const items = [];
+  const unmatched = [];
+  for (const r of rows) {
+    const a = end(r[fromF]), b = end(r[toF]);
+    if (!a || !b) { unmatched.push(String(!a ? r[fromF] : r[toF])); continue; }
+    const v = valF ? num(r[valF]) : 1;
+    if (valF && !(Number.isFinite(v) && v > 0)) continue;
+    items.push({ a, b, v, row: r });
+  }
+  const w = Array.isArray(o.width) && o.width.length === 2 ? o.width.map(Number) : [0.75, 6];
+  const color = (typeof o.color === 'string' && !fields.includes(o.color) && o.color) || theme.categorical[0];
+  const colorF = typeof o.color === 'string' && fields.includes(o.color) ? o.color : null;
+  return { items, unmatched: [...new Set(unmatched)], valF, width: w, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null };
+}
+
+function drawLinks(L, proj, theme, fmt, locale) {
+  if (!L || !L.items.length) return '';
+  const at = (e) => {
+    if (e.lonlat) return proj(e.lonlat);
+    const p = e.f.properties || {};
+    if (p.labelAt) return proj(p.labelAt);
+    const c = centroid(e.f.geometry, proj);
+    return [c.x, c.y];
+  };
+  const maxV = Math.max(...L.items.map((i) => i.v), 1e-9);
+  const f1 = (v) => Math.round(v * 10) / 10;
+  const out = [];
+  // Las gruesas atrás: las finas quedan encima y se pueden señalar.
+  for (const it of [...L.items].sort((p, q) => q.v - p.v || (p.b.key < q.b.key ? -1 : 1))) {
+    const [x0, y0] = at(it.a), [x1, y1] = at(it.b);
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+    if (!(len > 0.5)) continue;
+    // Curva hacia la izquierda del sentido origen → destino: ida y vuelta no se pisan.
+    const mx = (x0 + x1) / 2 - dy * L.curveness, my = (y0 + y1) / 2 + dx * L.curveness;
+    const sw = L.valF ? Math.max(L.width[0], L.width[1] * (it.v / maxV)) : L.width[0] + 0.75;
+    const c = (L.colorF && it.row[L.colorF]) || L.color;
+    const tip = `${it.a.name} → ${it.b.name}` + (L.valF ? `\n${fmt(it.v)}` : '');
+    out.push(el('path', { class: 'pa-m pa-link', d: `M${f1(x0)},${f1(y0)}Q${f1(mx)},${f1(my)} ${f1(x1)},${f1(y1)}`, fill: 'none', stroke: c, strokeWidth: Math.round(sw * 100) / 100, strokeLinecap: 'round', strokeOpacity: L.opacity, 'data-tip': tip, 'data-color': c, 'data-key': `${it.a.key}→${it.b.key}`, 'data-from': it.a.key, 'data-to': it.b.key }));
+  }
+  return g({ class: 'pa-links' }, out);
 }
 
 // ── Capas extra: marcadores (lon/lat) y GeoJSON superpuesto ─────────────────
@@ -293,8 +408,9 @@ function markerList(spec, theme) {
   const labelF = o.label ?? pickF(fields, ['label', 'name', 'nombre', 'city', 'ciudad', 'title']);
   const sizeF = o.size ?? pickF(fields, ['size', 'value', 'valor']);
   const colorF = typeof o.color === 'string' && fields.includes(o.color) ? o.color : pickF(fields, ['color']);
+  const keyF = o.key ?? pickF(fields, ['key', 'id', 'code', 'codigo', 'código']);
   if (!lonF || !latF) throw new PlotError('Los marcadores necesitan longitud y latitud.', 'markers: [{ lon: -73.05, lat: -36.82, label: "Concepción" }]');
-  const items = rows.map((r) => ({ lon: num(r[lonF]), lat: num(r[latF]), label: labelF ? r[labelF] : undefined, size: sizeF ? num(r[sizeF]) : NaN, color: (colorF && r[colorF]) || (typeof o.color === 'string' && !fields.includes(o.color) ? o.color : null), row: r }))
+  const items = rows.map((r) => ({ lon: num(r[lonF]), lat: num(r[latF]), label: labelF ? r[labelF] : undefined, size: sizeF ? num(r[sizeF]) : NaN, color: (colorF && r[colorF]) || (typeof o.color === 'string' && !fields.includes(o.color) ? o.color : null), row: r, key: keyF && r[keyF] !== undefined && r[keyF] !== null ? String(r[keyF]) : labelF && r[labelF] !== undefined ? String(r[labelF]) : null }))
     .filter((m) => Number.isFinite(m.lon) && Number.isFinite(m.lat));
   const maxS = Math.max(0, ...items.map((m) => Math.abs(m.size)).filter(Number.isFinite));
   for (const m of items) m.r = Number.isFinite(m.size) && maxS ? Math.max(3, Math.sqrt(Math.abs(m.size) / maxS) * (o.maxRadius ?? 14)) : o.radius ?? 4.5;
@@ -333,7 +449,7 @@ function drawMarkers(mk, proj, theme, fmt, placed) {
     m.x = x; m.y = y;
     const c = m.color || mk.color;
     const tipT = [m.label, Number.isFinite(m.size) && mk.sizeF ? fmt(m.size) : null].filter((v) => v !== undefined && v !== null && v !== '').join('\n');
-    dots.push(el('circle', { class: 'pa-m', cx: x, cy: y, r: m.r, fill: c, fillOpacity: m.r > 6 ? 0.8 : 1, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': tipT || null, 'data-color': c }));
+    dots.push(el('circle', { class: 'pa-m', cx: x, cy: y, r: m.r, fill: c, fillOpacity: m.r > 6 ? 0.8 : 1, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': tipT || null, 'data-color': c, 'data-key': m.key }));
   }
   for (const m of mk.items) placed.push([m.x - m.r - 2, m.y - m.r - 2, m.x + m.r + 2, m.y + m.r + 2]);
   if (mk.labels) for (const m of mk.items) {
@@ -420,10 +536,12 @@ function labelColumn(items, x, y0, y1, w, theme, fmt, { bars = true, maxV }) {
 }
 
 /** Etiquetas sobre el mapa (mapas anchos): solo las elegidas y sin choques. */
-function mapLabels(items, theme, placedBoxes = []) {
+function mapLabels(items, theme, placedBoxes = [], bounds = null) {
   const out = [];
-  for (const it of items) {
-    const w = Math.max(measure(it.name, 11, 600), measure(it.label, 11));
+  for (const it0 of items) {
+    const w = Math.max(measure(it0.name, 11, 600), measure(it0.label, 11));
+    // Dentro del área: un rótulo junto al borde (Arica en un Chile acostado) se corre hacia adentro.
+    const it = bounds ? { ...it0, cx: Math.max(bounds.x + w / 2 + 2, Math.min(bounds.x + bounds.w - w / 2 - 2, it0.cx)) } : it0;
     const box = [it.cx - w / 2 - 2, it.cy - 13, it.cx + w / 2 + 2, it.cy + 13];
     if (placedBoxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
     placedBoxes.push(box);
@@ -678,6 +796,7 @@ function zoomLayer(B, children) {
 export function choropleth(spec, theme) {
   const B = baseChart(spec, theme, 'choropleth');
   const { locale, m, fmt, frame, area, gid, body, sc, proj, tall, H, dashedLabel, calloutX, layers, markers } = B;
+  const TT = tipper(spec, m.data, locale);
   const borderC = spec.borderColor ?? theme.surface, borderW = spec.borderWidth ?? 0.75;
   const ptR = spec.pointRadius ?? 5;
   const hl = spec.highlight === undefined ? null : [].concat(spec.highlight).map(normKey);
@@ -694,7 +813,7 @@ export function choropleth(spec, theme) {
     const tipTxt = (has ? `${name}\n${fmt(v)}${m.categorical ? '' : ' · ' + rankText(m.rank.get(f), N, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
     const d = pathD(f.geometry, proj, { r: ptR });
     const isLine = isLineGeom(f.geometry);
-    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': tipTxt, 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name) };
+    const common = { class: 'pa-m', d, strokeLinejoin: 'round', opacity: hl && !isHl(f) ? 0.5 : null, 'data-tip': TT(m.rowsOf.get(f) || [], ...tipTxt.split('\n')), 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? name), 'data-key': regionKey(m, f, locale) };
     let fill = has ? base : spec.missing === 'plain' ? theme.tint : `url(#${gid}-nd)`;
     let stroke = null;
     if (isDashed && has) {
@@ -713,6 +832,8 @@ export function choropleth(spec, theme) {
   }
   const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions' }, regions), dashedRegions.length ? g({ class: 'pa-regions pa-dashed' }, dashedRegions) : '', g({ class: 'pa-outlines' }, outlines), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
+  const links = linkList(spec, m, theme, locale);
+  if (links) layer.push(drawLinks(links, proj, theme, fmt, locale));
   const placed = [];
   if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, placed));
   const after = [];
@@ -728,10 +849,10 @@ export function choropleth(spec, theme) {
     const chosen = new Set(chooseLabeled(m, spec, locale, m.features.length <= 30 ? m.features.length : 0));
     const ordered = items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.area - a.area)
       .map((it) => (isPointGeom(it.f.geometry) ? { ...it, cy: it.cy - ptR - 12 } : it));
-    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme, placed)));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(ordered, theme, placed, area)));
   }
   body.push(...(tall ? layer : zoomLayer(B, layer)), ...after);
-  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map')) + describeExtras(markers, layers, locale);
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map')) + describeExtras(markers, layers, locale, links);
   return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs() });
 }
 
@@ -739,10 +860,11 @@ export function choropleth(spec, theme) {
 export function symbolMap(spec, theme) {
   const B = baseChart(spec, theme, 'symbol');
   const { locale, m, fmt, frame, area, body, proj, tall, gid, H, dashedLabel, rMax, layers, markers } = B;
+  const TT = tipper(spec, m.data, locale);
   const N = m.values.size;
   const maxV = Math.max(...[...m.values.values()].map(Math.abs), 0) || 1;
   const color = (spec.colors && Object.values(spec.colors)[0]) || theme.categorical[0];
-  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5 }), fill: isLineGeom(f.geometry) ? 'none' : theme.tint, stroke: isLineGeom(f.geometry) ? theme.axis : spec.borderColor ?? theme.surface, strokeWidth: isLineGeom(f.geometry) ? 1.5 : spec.borderWidth ?? 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)) }))), insetFrames(m.features, proj, theme),
+  const layer = [...layers.filter((L) => L.below).map((L) => drawLayer(L, proj, theme, locale)), g({ class: 'pa-regions pa-base' }, m.features.map((f) => el('path', { d: pathD(f.geometry, proj, { r: 2.5 }), fill: isLineGeom(f.geometry) ? 'none' : theme.tint, stroke: isLineGeom(f.geometry) ? theme.axis : spec.borderColor ?? theme.surface, strokeWidth: isLineGeom(f.geometry) ? 1.5 : spec.borderWidth ?? 0.75, strokeLinejoin: 'round', 'data-k': normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, locale)), 'data-key': regionKey(m, f, locale) }))), insetFrames(m.features, proj, theme),
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
   const items = m.features.map((f) => {
     const c = centroid(f.geometry, proj);
@@ -754,8 +876,10 @@ export function symbolMap(spec, theme) {
       tip: (v === undefined ? `${name}\n${T(locale, 'Sin dato', 'No data')}` : `${name}\n${fmt(v)} · ${rankText(m.rank.get(f), N, locale)}`) + (isDashed ? `\n${dashedLabel}` : '') };
   });
   const circles = items.filter((it) => !it.missing).sort((a, b) => b.r - a.r)
-    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': it.tip, 'data-color': color,
+    .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': TT(m.rowsOf.get(it.f) || [], ...it.tip.split('\n')), 'data-color': color, 'data-key': regionKey(m, it.f, locale),
       ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
+  const links = linkList(spec, m, theme, locale);
+  if (links) layer.push(drawLinks(links, proj, theme, fmt, locale));
   layer.push(g({ class: 'pa-symbols' }, circles));
   if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, []));
   // Leyenda de tamaños (tres círculos anidados) en la esquina libre.
@@ -772,17 +896,19 @@ export function symbolMap(spec, theme) {
     body.push(...layer, ...labelColumn(items.map((it) => ({ ...it, barColor: color })), x, area.y, area.y + area.h - legH, area.x + area.w - x, theme, fmt, { bars: spec.bars !== false, maxV }));
   } else {
     const chosen = new Set(chooseLabeled(m, spec, locale, Math.min(5, m.values.size)));
-    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme)));
+    layer.push(g({ class: 'pa-zoom-hide' }, mapLabels(items.filter((it) => chosen.has(it.f) && !it.missing).sort((a, b) => b.v - a.v).map((it) => ({ ...it, cy: it.cy - it.r - 10 })), theme, [], area)));
     body.push(...zoomLayer(B, layer));
   }
   if (tall) body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
-  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map')) + describeExtras(markers, layers, locale);
+  const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map')) + describeExtras(markers, layers, locale, links);
   return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs() });
 }
 
-function describeExtras(markers, layers, locale) {
+function describeExtras(markers, layers, locale, links) {
   const en = String(locale).startsWith('en');
   let s = '';
+  if (links?.items.length) s += en ? ` ${links.items.length} lines${links.label ? ` (${links.label})` : ''}.` : ` ${links.items.length} líneas${links.label ? ` (${links.label})` : ''}.`;
+  if (links?.unmatched.length) s += en ? ` Lines with an unknown end: ${links.unmatched.slice(0, 6).join(', ')}.` : ` Líneas con un extremo desconocido: ${links.unmatched.slice(0, 6).join(', ')}.`;
   if (markers?.items.length) s += en ? ` ${markers.items.length} markers${markers.legend ? ` (${markers.legend})` : ''}.` : ` ${markers.items.length} marcadores${markers.legend ? ` (${markers.legend})` : ''}.`;
   const named = layers.filter((L) => L.label).map((L) => L.label);
   if (named.length) s += en ? ` Layers: ${named.join(', ')}.` : ` Capas: ${named.join(', ')}.`;

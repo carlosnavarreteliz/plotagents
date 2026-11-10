@@ -112,7 +112,22 @@ test('css vars: a var() without a usable fallback is an error with a fix', () =>
 
 test('css vars: nest under skins', () => {
   const svg = plot({ ...base, colors: { Minería: 'var(--accent, #0b3f8c)' }, skins: [{}, { when: 'html.classic', colors: { Minería: 'var(--accent, #6e86c8)' } }] });
-  assert.match(svg, /fill:var\(--accent, var\(--pa-s\d+, #0b3f8c\)\)/);
+  // Cada piel define su variable con el var() de la página adentro.
+  assert.match(svg, /\.pa-skin-[a-z0-9]+\{--pa-s0:var\(--accent, #0b3f8c\)/);
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{--pa-s0:var\(--accent, #6e86c8\)/);
+  assert.match(svg, /fill="#0b3f8c" style="fill:var\(--pa-s0\)"/);
+});
+
+test('skins: a contrast choice that differs between skins is just another color', () => {
+  const svg = plot({
+    type: 'bar', horizontal: true, stack: 'percent', width: 500,
+    data: [{ c: 'X', s: 'a', v: 3 }, { c: 'X', s: 'b', v: 7 }], x: 'c', y: 'v', series: 's',
+    skins: [
+      { palette: ['#f0e6c8', '#e8d8b0'], theme: { ink: 'var(--ink, #2f2a24)' } },
+      { when: 'html.classic', palette: ['#0b3f8c', '#10202f'], theme: { ink: 'var(--ink, #10202f)' } },
+    ],
+  });
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{[^}]*#FFFFFF/i);
 });
 
 test('format: a function writes labels, tooltips and ticks', () => {
@@ -120,4 +135,14 @@ test('format: a function writes labels, tooltips and ticks', () => {
   assert.match(svg, />40 u\.</);
   assert.match(svg, /data-tip="[^"]*40 u\./);
   assert.equal(safePlot({ ...base, format: (v) => String(v) }).ok, true);
+});
+
+test('css vars: a fallback right at the contrast threshold does not flip the label ink', () => {
+  // Pale-to-mid ramps: the text on each segment is chosen by contrast; the probe
+  // must not move any segment across the white/ink threshold.
+  for (const base of ['#7f7f7f', '#8a8a8a', '#959595', '#6e86c8', '#d69a2e', '#19a17d']) {
+    const data = [1, 2, 3, 4].map((v, i) => ({ c: 'X', s: `p${i}`, v }));
+    const palette = [base, '#b0b0b0', '#5a5a5a', '#cfcfcf'].map((c, i) => `var(--c${i}, ${c})`);
+    assert.doesNotThrow(() => plot({ type: 'bar', horizontal: true, stack: 'percent', data, x: 'c', y: 'v', series: 's', palette, width: 600 }));
+  }
 });

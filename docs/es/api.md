@@ -166,6 +166,10 @@ El JSON Schema de un spec, publicado también como [`schema.json`](../schema.jso
 | Importación | Contenido |
 |---|---|
 | `plotagents` | Todo lo anterior (módulo ES). |
+| `plotagents/core` | `plot()`, `configure()`, temas, pieles y todos los tipos salvo mapas y tablas. Sin geometrías incluidas, lint, esquema ni tableros: para empaquetadores sin tree-shaking. |
+| `plotagents/types/<archivo>` | La base más una familia: `line` (line, area), `bar` (bar, column, count), `scatter`, `treemap`, `sunburst`, `donut`, `dist`, `regplot`, `categorical`, `radar`, `network`, `chord`, `pyramid`, `flowchart`, `gantt`, `wordcloud`, `heatmap`, `corr`, `sankey`, `kpi`. Se combinan importando varias. |
+| `plotagents/maps` | La base más `choropleth`, `symbolmap`, `pointmap` y `registerGeo()`, sin las geometrías incluidas: pasa tu propio GeoJSON/TopoJSON. |
+| `plotagents/table` | La base más `table`. |
 | `plotagents/schema.json` | El JSON Schema. |
 | `plotagents/browser` | `dist/plotagents.js`: un `<script>` que define `window.plotagents`. |
 | `plotagents/browser/geo` | `dist/plotagents-geo.js`: geometrías de Chile y del mundo para la versión de navegador. |

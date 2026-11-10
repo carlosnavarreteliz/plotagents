@@ -4,7 +4,7 @@
 
 **[Documentation, live examples and playground →](https://carlosnavarrete.cl/plotagents/)**
 
-Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 34 chart types: the ones people reach for in seaborn, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids, flow charts and Gantt charts, plus word clouds, a dashboard builder with best-practice layouts, opt-in time controls, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
+Data and field names go in; an accessible SVG comes out, with careful typography, colorblind-safe colors and tooltips. 39 chart types: the ones people reach for in seaborn, sparklines, bump and slope charts, waffles, dot plots and dendrograms, multi-level treemaps and sunbursts, choropleth maps of Chile, the United States and the world, networks, chord diagrams, population pyramids, flow charts and Gantt charts, plus word clouds, a dashboard builder with best-practice layouts, opt-in time controls, small multiples and fully JSON-configurable themes. Zero dependencies. Runs in Node, Deno, Bun and the browser.
 
 ```bash
 npm install plotagents
@@ -54,11 +54,11 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Purpose | `type` (aliases) |
 |---|---|
 | Compare categories | `bar` (`barplot` with confidence intervals), `count` (`countplot`) |
-| Change over time | `line` (`lineplot`, `ci` for a confidence band), `area` |
-| Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot`, `corr` (correlation matrix; `clustermap` with a dendrogram), `pairplot` (`splom`) |
+| Change over time | `line` (`lineplot`, `ci` for a confidence band), `area`, `spark` (a sparkline for a table cell), `bump` (rank over time; `slope` for first vs last) |
+| Relationships | `scatter`, `bubble`, `regplot` (`lmplot`), `residplot`, `jointplot`, `corr` (correlation matrix; `clustermap` with a dendrogram), `pairplot` (`splom`), `dendrogram` (a tree you already computed, cut into colored groups) |
 | Profiles | `radar` (`spider`) |
-| Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
-| Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie` |
+| Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`), `dotplot` (Wilkinson: one named dot per row) |
+| Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie`, `waffle` (a count as squares) |
 | Maps | `choropleth` (Chile by region, US by state, world by country, or your own GeoJSON / TopoJSON with markers, layers and framing), `symbolmap`, `pointmap` (lat/lon dots over OpenStreetMap or Mapbox tiles) |
 | Projects | `gantt` (`timeline`, `roadmap`): phases that fold and unfold, progress, milestones, dependencies and a today line |
 | Networks and flows | `network`, `chord`, `sankey`, `flowchart` (with swimlanes) |

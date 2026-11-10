@@ -24,6 +24,24 @@ function build(entries, { exclude = new Set(), external = {} } = {}) {
       load(resolve(dirname(file), from));
       return `__req(${JSON.stringify(dep)});`;
     });
+    // Reexportaciones (entradas livianas: src/core.js, src/types/*.js, src/maps.js).
+    let star = 0, reN = 0;
+    code = code.replace(/^export\s*\*\s*from\s*['"]([^'"]+)['"];?/gm, (_, from) => {
+      const dep = relative(root, resolve(dirname(file), from));
+      load(resolve(dirname(file), from));
+      star++;
+      return `__star.push(__req(${JSON.stringify(dep)}));`;
+    });
+    code = code.replace(/^export\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"];?/gm, (_, names, from) => {
+      const dep = relative(root, resolve(dirname(file), from));
+      load(resolve(dirname(file), from));
+      const v = `__re${reN++}`;
+      for (const part of names.split(',').map((x) => x.trim()).filter(Boolean)) {
+        const [local, as] = part.split(/\s+as\s+/);
+        exportsList.push([as || local, `${v}[${JSON.stringify(local)}]`]);
+      }
+      return `const ${v} = __req(${JSON.stringify(dep)});`;
+    });
     code = code.replace(/^import\s+(\w+)\s*,\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"];?/gm, (_, def, names, from) => `import { default as ${def}, ${names} } from '${from}';`);
     code = code.replace(/^import\s+(\w+)\s+from\s*['"]([^'"]+)['"];?/gm, (_, def, from) => `import { default as ${def} } from '${from}';`);
     code = code.replace(/^import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"];?/gm, (_, names, from) => {
@@ -48,7 +66,8 @@ function build(entries, { exclude = new Set(), external = {} } = {}) {
     // Quita comentarios de línea completa (más liviano, mismo código).
     code = code.split('\n').filter((l) => !/^\s*\/\/(?!\s*#)/.test(l)).join('\n');
     const ret = exportsList.map(([k, v]) => `${JSON.stringify(k)}: ${v}`).join(', ');
-    mods.set(file, `__def(${JSON.stringify(id)}, function () {\n${code}\nreturn { ${ret} };\n});`);
+    const body = star ? `var __star = [];\n${code}\nreturn Object.assign({}, ...__star, { ${ret} });` : `${code}\nreturn { ${ret} };`;
+    mods.set(file, `__def(${JSON.stringify(id)}, function () {\n${body}\n});`);
   }
   for (const e of entries) load(join(root, e));
   return mods;
