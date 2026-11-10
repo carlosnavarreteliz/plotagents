@@ -42,7 +42,7 @@ export function rail(spec, theme) {
   const ref = Math.max(2, Math.min(8, my - 1));
   const sizes = {
     ref, median: Math.max(1.5, Math.min(6, ref - 2)), band: Math.max(1.5, Math.min(4, ref / 2)),
-    dot: spec.dotRadius ?? Math.max(2, Math.min(4.5, my - 1.5)), rail: Math.max(1, Math.min(2, H / 9)),
+    dot: spec.dotRadius ?? Math.max(2, Math.min(4.5, my - 1.5)), rail: F(+spec.railWidth) && +spec.railWidth > 0 ? +spec.railWidth : Math.max(1, Math.min(2, H / 9)),
   };
   // Margen a los lados: el punto entero y el chevrón (7 px) caben dentro.
   const inset = Math.max(Math.ceil(sizes.dot + 1), 6);
@@ -61,7 +61,8 @@ export function rail(spec, theme) {
   else if (hasRange) { a = Math.min(...all); b = Math.max(...all); }
 
   const body = [];
-  let desc;
+  const bare = !!spec.bare;
+  let desc, root = null;
   if (a === undefined) {
     // Sin riel: la cifra sola (o nada).
     if (spec.fallback !== 'none' && s) {
@@ -70,18 +71,24 @@ export function rail(spec, theme) {
     }
     desc = s ? `${label}: ${s}` : '';
   } else {
-    const colors = { rail: spec.colors?.rail, band: spec.colors?.band, median: spec.colors?.median, ref: spec.colors?.ref };
+    const colors = { rail: spec.colors?.rail, band: spec.colors?.band, median: spec.colors?.median, ref: spec.colors?.ref, bandStroke: spec.colors?.bandStroke };
     const dot = spec.colors?.value ?? (typeof spec.color === 'string' && spec.color ? spec.color : theme.categorical[0]);
-    const marks = railMarks({ v, vals, a, b, x0, w, my, clipped, track: !hasRange, theme, colors, dot, sizes });
+    const marks = railMarks({ v, vals, a, b, x0, w, my, clipped, track: !hasRange, theme, colors, dot, sizes, halo: spec.halo !== false, compact: bare });
     body.push(...marks.out);
     const tipText = railTip({ en, label, s: s || '—', fr: fmt, vals, row, past: marks.past, scale: clipped ? [a, b] : null,
-      labels: { band: spec.bandLabel, median: spec.medianLabel, min: spec.minLabel, max: spec.maxLabel, domain: spec.domainLabel } });
+      labels: { band: spec.bandLabel, median: spec.medianLabel, min: spec.minLabel, max: spec.maxLabel, domain: spec.domainLabel, outside: spec.outsideLabel } });
     desc = tipText.split('\n').join('; ') + '.';
     // Una sola zona de tooltip para toda la marca: la celda entera responde.
+    // Sin `title`, la primera línea («Valor: 12,3») queda primera en el
+    // data-tip, y un anfitrión que lee «encabezado\nlíneas» la usa de encabezado.
+    // Con `bare`, el data-tip va en la raíz: la caja del <svg> entero responde
+    // sin un rectángulo invisible encima.
     const head = spec.title ?? '';
-    body.push(g({ class: 'pa-m', 'data-tip': TT(data.length ? [row] : null, head, ...tipText.split('\n')) }, [
+    const dt = TT(data.length ? [row] : null, head, ...tipText.split('\n'));
+    if (bare) root = dt ? { 'data-tip': dt } : null;
+    else body.push(g({ class: 'pa-m', 'data-tip': dt }, [
       el('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent' }),
     ]));
   }
-  return frame.finish(body, { desc, type: 'rail' });
+  return frame.finish(body, { desc, type: 'rail', root });
 }

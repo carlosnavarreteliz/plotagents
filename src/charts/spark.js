@@ -90,8 +90,9 @@ export function spark(spec, theme) {
     const lineTxt = vals.map(([k, v]) => (series ? `${k}: ` : '') + (Number.isFinite(v) ? fmt(v) : '—'));
     const cx = px(xn);
     const x0r = Math.max(0, cx - step / 2), x1r = Math.min(frame.width, cx + step / 2);
-    body.push(g({ class: 'pa-m', 'data-tip': TT({ [x]: xs.get(xn) }, xs.get(xn), ...lineTxt) }, [
-      el('rect', { x: x0r, y: 0, width: Math.max(0.5, x1r - x0r), height: frame.height, fill: 'transparent' }),
+    // `bare`: sin la clase del runtime ni los ceros por omisión.
+    body.push(g({ class: spec.bare ? null : 'pa-m', 'data-tip': TT({ [x]: xs.get(xn) }, xs.get(xn), ...lineTxt) }, [
+      el('rect', { x: spec.bare && !x0r ? null : x0r, y: spec.bare ? null : 0, width: Math.max(0.5, x1r - x0r), height: frame.height, fill: 'transparent' }),
     ]));
   }
 

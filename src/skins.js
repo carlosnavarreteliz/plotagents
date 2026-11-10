@@ -29,11 +29,15 @@ const PRESENTATION = new Set(['fill', 'stroke', 'stop-color', 'flood-color', 'li
 // Claves del parche que no son del spec.
 const OWN = new Set(['when', 'name']);
 
+// Con `bare`, un `var(--x, respaldo)` entero es un solo color: dos pieles
+// pueden nombrar variables distintas en el mismo lugar.
+const COLOR_OR_VAR = new RegExp(`var\\(\\s*--[\\w-]+\\s*,\\s*(?:${COLOR.source})\\s*\\)|${COLOR.source}`, 'g');
+
 /** Parte un SVG en [texto, color, texto, color, …, texto]. */
-function tokens(svg) {
+function tokens(svg, re = COLOR) {
   const out = [];
   let last = 0;
-  for (const m of svg.matchAll(COLOR)) {
+  for (const m of svg.matchAll(re)) {
     out.push(svg.slice(last, m.index), m[0]);
     last = m.index + m[0].length;
   }
@@ -92,7 +96,7 @@ function same(parts, msg, fix) {
  * `css(color)`; en un atributo de presentación se suma `prop:decl` al style y
  * el atributo conserva el literal. En data-* y en el texto no se toca.
  */
-function rewrite(svg, base, at) {
+function rewrite(svg, base, at, bare = false) {
   const offsets = [];
   let pos = 0;
   for (const t of base) { offsets.push(pos); pos += t.length; }
@@ -105,10 +109,24 @@ function rewrite(svg, base, at) {
     if (c.kind === 'css' || (c.kind === 'tag' && c.attr === 'style')) {
       svg = svg.slice(0, start) + css(color) + svg.slice(start + color.length);
     } else if (c.kind === 'tag' && PRESENTATION.has(c.attr)) {
+      // `bare`: el color va una sola vez, en el style (con su respaldo); el
+      // atributo sobra en una página con CSS. Se quita antes de tocar el style,
+      // con la posición todavía exacta.
+      if (bare) svg = dropAttr(svg, c.start, start);
       svg = addStyle(svg, c.start, `${c.attr}:${decl}`);
     }
   }
   return svg;
+}
+
+/** Quita el atributo que contiene la posición `at` de la etiqueta que empieza en `start`. */
+function dropAttr(svg, start, at) {
+  const head = svg.slice(start, at);
+  const m = head.match(/\s[\w:-]+="[^"]*$/);
+  if (!m) return svg;
+  const from = start + m.index;
+  const to = svg.indexOf('"', at) + 1;
+  return svg.slice(0, from) + svg.slice(to);
 }
 
 // ── Colores como variables CSS ──────────────────────────────────────────────
@@ -178,7 +196,7 @@ function replaceVars(v, map, which, key) {
 }
 
 /** Dibuja un spec con colores `var(--x, respaldo)`; `draw` es plot() sin variables. */
-export function plotWithVars(spec, map, draw) {
+export function plotWithVars(spec, map, draw, bare = false) {
   const a = draw(replaceVars(spec, map, 'fallback'));
   const b = draw(replaceVars(spec, map, 'probe'));
   const pa = tokens(a);
@@ -193,7 +211,7 @@ export function plotWithVars(spec, map, draw) {
     if (!v) continue; // un derivado: queda calculado con el respaldo
     at.push([j, (c) => `var(${v.name}, ${c})`, `var(${v.name}, ${pa[j]})`]);
   }
-  return rewrite(a, pa, at);
+  return rewrite(a, pa, at, bare);
 }
 
 /** Un hash corto y estable (para el nombre de la clase de la piel). */
@@ -221,12 +239,14 @@ export function skinSpec(spec, patch) {
  * Une los SVG de varias pieles en uno. `svgs[0]` es la piel por defecto;
  * `whens[i]` es el selector CSS (de un ancestro) bajo el que rige la piel i.
  */
-export function mergeSkins(svgs, whens) {
+export function mergeSkins(svgs, whens, { bare = false, style = true } = {}) {
   if (svgs.length === 1) return svgs[0];
-  const parts = svgs.map(tokens);
+  const parts = svgs.map((s) => tokens(s, bare ? COLOR_OR_VAR : COLOR));
   const n = parts[0].length;
   same(parts, (i) => `La piel ${i + 1} cambia algo más que colores (posiciones, textos u orden).`,
-    'Una piel sólo puede traer theme, palette, ramp, colorScale y colors: lo demás va en el spec.');
+    bare ? 'Con `bare`, un color es `var()` en todas las pieles o en ninguna; y una piel sólo puede traer theme, palette, ramp, colorScale y colors.'
+      : 'Una piel sólo puede traer theme, palette, ramp, colorScale y colors: lo demás va en el spec.');
+  if (bare) return mergeBare(svgs, parts, whens, style);
   // Colores que difieren entre pieles → una variable por combinación, en orden de aparición.
   const vars = new Map();
   const at = []; // [índice del token, nombre de la variable]
@@ -255,6 +275,92 @@ export function mergeSkins(svgs, whens) {
   const css = rules.join('');
   if (svg.includes('</style>')) svg = svg.replace('</style>', css + '</style>');
   else svg = svg.replace(/^(<svg\b[^>]*>)/, `$1<style>${css}</style>`);
+  return svg;
+}
+
+// ── Pieles en modo `bare` ───────────────────────────────────────────────────
+//
+// Cientos de marcas chicas en una página no pueden llevar cada una su <style>.
+// Con `bare`, cada piel se dibuja aparte (con sus propias variables) y se unen así:
+//
+//  · un color `var(--x, respaldo)` en todas las pieles: la variable es de la
+//    página, que ya la reasigna en cada piel. Se escribe una vez, con el
+//    respaldo de la primera piel, sin maquinaria: style="stroke:var(--x, #eee4d4)".
+//  · un color que cambia entre pieles (literales, o variables distintas como
+//    --azul y --accent): una variable con nombre por contenido,
+//    --pa-<hash de los colores y los selectores>, y la clase fija `pa-skins` en
+//    la raíz. Las reglas («.pa-skins{--pa-k:#a} html.x .pa-skins{--pa-k:#b}»)
+//    van en un <style> del SVG o, con `bare: { skinCSS: false }`, una sola vez
+//    en la página: skinCSS(specs) las devuelve. Como el nombre sale de los
+//    colores, todos los SVG con la misma combinación comparten la variable.
+//
+// En ambos casos el color va sólo en el style, con el respaldo de la primera
+// piel: sin el CSS de las pieles se ve la primera, nunca un relleno negro.
+
+const VAR_NAME = /^var\(\s*(--[\w-]+)/;
+export const SKINS_CLASS = 'pa-skins';
+
+// Quien recoge las reglas de las pieles mientras se dibuja (skinCSS).
+let sink = null;
+
+/** Corre `fn` y devuelve las pieles `bare` que se dibujaron: [{ whens, vars: [{ name, combo }] }]. */
+export function collectSkins(fn) {
+  const prev = sink;
+  const got = [];
+  sink = got;
+  try { fn(); } finally { sink = prev; }
+  return got;
+}
+
+/** La hoja de estilo de unas pieles `bare` (ver collectSkins), con cada variable una vez. */
+export function skinRules(list) {
+  const groups = new Map(); // selectores → { whens, vars: Map(name → combo) }
+  for (const { whens, vars } of list) {
+    const key = whens.join('\u0000');
+    if (!groups.has(key)) groups.set(key, { whens, vars: new Map() });
+    for (const v of vars) groups.get(key).vars.set(v.name, v.combo);
+  }
+  const out = [];
+  for (const { whens, vars } of groups.values()) {
+    const names = [...vars.keys()].sort();
+    const decl = (i) => names.map((nm) => `${nm}:${vars.get(nm)[i]}`).join(';');
+    out.push(`${whens[0] ? whens[0] + ' ' : ''}.${SKINS_CLASS}{${decl(0)}}`);
+    for (let i = 1; i < whens.length; i++) if (whens[i]) out.push(`${whens[i]} .${SKINS_CLASS}{${decl(i)}}`);
+  }
+  return out.join('');
+}
+
+function mergeBare(svgs, parts, whens, style) {
+  const vars = new Map();
+  const at = [];
+  let pos = 0;
+  for (let j = 1; j < parts[0].length; j += 2) {
+    pos += parts[0][j - 1].length;
+    const at0 = pos;
+    pos += parts[0][j].length;
+    const combo = parts.map((p) => p[j]);
+    if (combo.every((c) => c.toLowerCase() === combo[0].toLowerCase())) continue;
+    // Sólo lo que se pinta: un color en data-* o en el texto queda como en la primera piel.
+    const c = contextAt(svgs[0], at0);
+    if (!(c.kind === 'css' || (c.kind === 'tag' && (c.attr === 'style' || PRESENTATION.has(c.attr))))) continue;
+    // La misma variable en todas: es de la página; queda el respaldo de la primera piel.
+    const v0 = VAR_NAME.exec(combo[0]);
+    if (v0 && combo.every((c) => (VAR_NAME.exec(c) || [])[1] === v0[1])) continue;
+    const key = combo.map((c) => c.toLowerCase().replace(/\s+/g, '')).join('|');
+    if (!vars.has(key)) vars.set(key, { name: '--pa-' + hash(key + '\u0000' + whens.join('|')), combo });
+    at.push([j, vars.get(key).name]);
+  }
+  if (!vars.size) return svgs[0];
+  let svg = rewrite(svgs[0], parts[0], at.map(([j, name]) => [j, (c) => `var(${name}, ${c})`, `var(${name}, ${parts[0][j]})`]), true);
+  svg = svg.replace(/^<svg\b([^>]*?)\sclass="([^"]*)"/, (m, a, c) => `<svg${a} class="${c} ${SKINS_CLASS}"`);
+  if (!svg.includes(SKINS_CLASS)) svg = svg.replace(/^<svg\b/, `<svg class="${SKINS_CLASS}"`);
+  const entry = { whens, vars: [...vars.values()] };
+  if (sink) sink.push(entry);
+  if (style) {
+    const css = skinRules([entry]);
+    if (/^<svg\b[^>]*>(<style>)/.test(svg)) svg = svg.replace('</style>', css + '</style>');
+    else svg = svg.replace(/^(<svg\b[^>]*>)/, `$1<style>${css}</style>`);
+  }
   return svg;
 }
 

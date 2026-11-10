@@ -144,7 +144,7 @@ export function facet(spec, theme, renderOne) {
     const c = i % cols, r = Math.floor(i / cols);
     const px = area.x + c * (pw + gap), py = rowY[r];
     // Panel anidado: se quita el estilo responsivo del SVG raíz del panel.
-    return svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/ style="[^"]*"/, '');
+    return svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/^(<svg\b[^>]*?) style="[^"]*"/, '$1'); // sólo el de la raíz (con `bare` la raíz no lo trae y el primero sería de una marca)
   });
   const en = String(spec.locale || 'es').startsWith('en');
   const desc = (en ? `Small multiples by ${f}: ` : `Paneles por ${f}: `) + keys.join(', ') + '.';

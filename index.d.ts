@@ -54,6 +54,10 @@ export interface TableColumn {
   domainLabel?: string;
   /** range: one scale for the column (default) or one per row. */
   scale?: 'shared' | 'row';
+  /** range: false drops the ring around the dot. */
+  halo?: boolean;
+  /** range: how the tooltip says a value falls past a clipped end. */
+  outsideLabel?: string;
   /** number/bar/heat/delta/range: one format per row — a field holding each row's format, or (value, row) => text. Range rails go per row; no total. */
   formatBy?: string | ((value: number, row: Record<string, unknown>) => string);
   align?: 'left' | 'right' | 'center';
@@ -180,6 +184,8 @@ export interface TooltipSpec {
   text?: string;
   /** Drop the default lines. */
   replace?: boolean;
+  /** Drop only these default lines, by name: "Escala" drops "Escala: 0–40" (the text before the colon, or the whole line). */
+  omit?: Array<string | RegExp>;
 }
 export interface TooltipContext { title: string; lines: string[]; rows: Row[]; row?: Row; match?: Record<string, unknown> }
 export interface XBand { from: string | number; to?: string | number; label?: string; color?: string }
@@ -335,6 +341,13 @@ export interface Spec {
   colors?: Record<string, string>;
   /** Several color sets in one SVG, chosen by page CSS. The first is the default; the rest need `when` (a CSS selector of an ancestor). */
   skins?: Skin[] | null;
+  /**
+   * A light SVG for tiny chrome-less marks repeated in an HTML page that already says what they are (rail, spark):
+   * no <style>, aria-hidden, no <title>/<desc>, no empty groups, background or data-pa-*, no inline max-width.
+   * A var() colour is written once (style="fill:var(--x, #fb)"). With skins, colours that change between skins
+   * live in content-named variables on `.pa-skins`; `{ skinCSS: false }` leaves their rules to skinCSS(specs), once per page.
+   */
+  bare?: boolean | { skinCSS?: boolean };
   theme?: ThemeInput;
   /** Palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
   palette?: string | string[];
@@ -693,6 +706,12 @@ export interface Spec {
   clip?: boolean;
   /** rail: a row with no min/max (and no domain) prints its figure (default) or nothing — never a lone dot. */
   fallback?: 'value' | 'none';
+  /** rail: thickness of the min–max line in px. */
+  railWidth?: number;
+  /** rail: false drops the background-coloured ring around the dot and the value chevron. */
+  halo?: boolean;
+  /** rail: how the tooltip says a value falls past a clipped end (default "fuera de la escala" / "beyond the scale"); text or a field of the row. */
+  outsideLabel?: string;
   /** spark: end dot radius. rail: the dot radius (default 4.5 at 18 px tall). dotplot: dot radius in px, not capped by the bin's pixel width (shrinks only to fit an explicit `height`). */
   dotRadius?: number;
   /** waffle: what one square is worth. */
@@ -725,6 +744,11 @@ export declare class PlotError extends Error { hint?: string }
 
 /** Draws and returns an SVG string. Throws PlotError with a fix hint when the spec cannot be drawn. */
 export declare function plot(spec: Spec): string;
+/**
+ * The skin rules of `bare` specs, to write once in the page when each SVG is drawn with `bare: { skinCSS: false }`:
+ * ".pa-skins{--pa-k:#a}html.x .pa-skins{--pa-k:#b}". Empty when only page var() colours change between skins.
+ */
+export declare function skinCSS(specs: Spec | Spec[]): string;
 /** Never throws: returns the SVG plus errors, warnings and design suggestions. */
 export declare function safePlot(spec: Spec): SafeResult;
 /** Reviews a spec and suggests improvements without drawing. */

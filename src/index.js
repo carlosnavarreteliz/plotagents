@@ -51,14 +51,14 @@ import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
 import { resolveColorScale, colorScaleNames, interpolate as interpolateColor, COLORMAPS, QUALITATIVE } from './colorscales.js';
 
 import './core.js';
-import { RENDERERS, resolve, plot, configure, timeValues, withDefaults, registerRenderer } from './base.js';
+import { RENDERERS, resolve, plot, configure, timeValues, withDefaults, registerRenderer, skinCSS } from './base.js';
 
 // La entrada completa: el núcleo más mapas (con sus geometrías) y tablas.
 registerRenderer('table', (s, t) => table(s, t));
 registerRenderer('choropleth', (s, t) => choropleth(s, t));
 registerRenderer('symbolmap', (s, t) => symbolMap(s, t));
 registerRenderer('pointmap', (s, t) => pointmap(s, t));
-export { resolve, plot, configure, timeValues, registerRenderer };
+export { resolve, plot, configure, timeValues, registerRenderer, skinCSS };
 
 /**
  * Versión que nunca lanza: ideal como herramienta de un agente.
