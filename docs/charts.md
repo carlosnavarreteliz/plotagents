@@ -463,6 +463,7 @@ A map you already computed (the product space, a knowledge network) usually want
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
 | `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+| `rowTip` | Tooltip of each row label, from this field: what belongs to the whole row and need not repeat in every cell. From JS, also a function of the label. |
 | `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
 | `xLabelAngle`, `xLabelPosition` | Column labels turned (`-90` upright, `-45` slanted) when they do not fit side by side, under the grid (default) or over it (`"top"`). The strip grows to fit; a label cut short keeps its full name in the tooltip. |
 | `cellGap` | Space between cells in px (default `2`); `0` joins them with square corners; `[x, y]` per axis. |

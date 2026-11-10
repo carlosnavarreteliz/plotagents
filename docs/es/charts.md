@@ -463,6 +463,7 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
 | `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
+| `rowTip` | Tooltip del rótulo de cada fila, desde este campo: lo que es de toda la fila y no tiene que repetirse en cada celda. Desde JS, también una función del rótulo. |
 | `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
 | `xLabelAngle`, `xLabelPosition` | Rótulos de columna girados (`-90` de pie, `-45` inclinados) cuando no caben de lado, bajo la grilla (por defecto) o sobre ella (`"top"`). La franja crece lo necesario; un rótulo cortado lleva su nombre entero en el tooltip. |
 | `cellGap` | Aire entre celdas en px (`2` por defecto); `0` las junta con esquinas rectas; `[x, y]` por eje. |

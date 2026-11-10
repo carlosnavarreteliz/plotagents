@@ -113,6 +113,10 @@ export function heatmap(spec, theme) {
   // Enlaces en los rótulos de fila y de columna (`rowHref`, `colHref`).
   const rowHrefOf = hrefFor(spec.rowHref, data, y);
   const colHrefOf = hrefFor(spec.colHref, data, x);
+  // `rowTip`: lo que dice el rótulo de una fila al pasar el cursor (lo que es
+  // de toda la fila y no tiene que repetirse en cada celda).
+  const rowTipOf = hrefFor(spec.rowTip, data, y);
+  const tipWrap = (t, node) => (t === undefined || t === null || t === '' ? node : g({ 'data-tip': String(t) }, node));
   const yEvery = Math.max(1, Math.floor(spec.yTicks?.every ?? 1));
 
   const body = [];
@@ -127,14 +131,14 @@ export function heatmap(spec, theme) {
   const rowEmpty = (b) => typeof spec.emptyRow === 'string' && xs.every((a) => !Number.isFinite(val(a, b)));
   ys.forEach((b, j) => {
     if (rowEmpty(b)) {
-      if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.muted, fontSize: 12, textAnchor: 'end' })));
+      if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.muted, fontSize: 12, textAnchor: 'end' }))));
       body.push(g({ class: 'pa-m', 'data-tip': tip(b, spec.emptyRow) }, [
         el('rect', { x: inner.x + gx / 2, y: inner.y + j * ch + gy / 2, width: Math.max(0, inner.w - gx), height: Math.max(0, ch - gy), rx, fill: 'transparent', stroke: theme.grid, strokeWidth: 1 }),
         text(inner.x + inner.w / 2, inner.y + j * ch + ch / 2 + 4, truncate(spec.emptyRow, Math.max(20, inner.w - 12), 11.5), { fill: theme.muted, fontSize: 11.5, textAnchor: 'middle' }),
       ]));
       return;
     }
-    if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'end' })));
+    if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'end' }))));
     xs.forEach((a, i) => {
       const v = val(a, b);
       const cx = inner.x + i * cw + gx / 2, cy = inner.y + j * ch + gy / 2;

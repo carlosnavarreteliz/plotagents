@@ -217,3 +217,11 @@ test('waffle perSquare under skins', () => {
   assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{[^}]*#0b3f8c/);
   assert.equal(tips(svg).length, checks.length);
 });
+
+test('heatmap: rowTip puts the row-wide text on the row label, not on each cell', () => {
+  const data = [{ r: 'A', c: '1', v: 1, n: 'Normal: 10' }, { r: 'A', c: '2', v: 2, n: 'Normal: 10' }, { r: 'B', c: '1', v: 3 }];
+  const svg = plot({ type: 'heatmap', data, x: 'c', y: 'r', value: 'v', rowTip: 'n' });
+  assert.equal((svg.match(/data-tip="Normal: 10"/g) || []).length, 1);
+  assert.doesNotMatch(plot({ type: 'heatmap', data, x: 'c', y: 'r', value: 'v' }), /Normal: 10/);
+  assert.match(plot({ type: 'heatmap', data, x: 'c', y: 'r', value: 'v', rowTip: (l) => `row ${l}` }), /data-tip="row B"/);
+});

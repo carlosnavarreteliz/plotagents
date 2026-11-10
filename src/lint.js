@@ -156,7 +156,7 @@ function lintSpec(spec = {}) {
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
   if (type === 'heatmap' && data.length) {
-    for (const k of ['rowHref', 'colHref', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
+    for (const k of ['rowHref', 'colHref', 'rowTip', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
     if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
       const named = uniq(data.map((r) => r[spec.cellColor]).filter((v) => v !== null && v !== undefined && v !== '' && v !== false).map(String)).filter((v) => !/^(#|rgba?\(|hsla?\(|var\()/i.test(v));
       const bare = named.filter((v) => !(spec.colors && spec.colors[v]));

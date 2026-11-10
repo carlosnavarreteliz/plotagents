@@ -332,6 +332,7 @@ export const schema = {
     ceiling: number('heatmap: values above are drawn as plain empty cells and do not count for the color scale.'),
     midClass: { type: 'string', enum: ['neutral'], description: 'heatmap with binned `colorScale.breaks` around 0: the class that contains 0 is drawn in the neutral tint, so near-zero cells are not painted.' },
     emptyRow: { type: 'string', description: 'heatmap: a row with no values at all is written across with this text (e.g. "no data") instead of empty cells.' },
+    rowTip: field('heatmap: tooltip of each row label, from this field (first row of that label that has it): what belongs to the whole row and need not repeat in every cell. From JS, also a function (label) => text.'),
     rowHref: field('heatmap: row labels link to the URL in this field (first row of that label that has one; paths and http(s) only). From JS, also a function (label) => url.'),
     colHref: field('heatmap: column labels link to the URL in this field. From JS, also a function (label) => url.'),
     xLabelAngle: { type: 'number', minimum: -90, maximum: 90, description: 'heatmap: rotate the column labels (-90 upright, -45 slanted). The label strip grows to fit (long labels are cut, full name in the tooltip); labels are thinned only when they would touch.' },

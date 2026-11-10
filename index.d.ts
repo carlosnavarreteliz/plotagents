@@ -445,6 +445,8 @@ export interface Spec {
   emptyRow?: string;
   /** heatmap: row / column labels link to the URL in this field (paths and http(s) only), or a function of the label. */
   rowHref?: string | ((label: string) => string | undefined);
+  /** heatmap: tooltip of each row label: a field (first row of that label that has it) or, from JS, a function of the label. */
+  rowTip?: string | ((label: string) => string | undefined);
   colHref?: string | ((label: string) => string | undefined);
   /** heatmap: rotate the column labels (-90 upright, -45 slanted); the label strip grows to fit. */
   xLabelAngle?: number;
