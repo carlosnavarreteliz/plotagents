@@ -65,7 +65,7 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Populations | `pyramid` |
 | Grids | `heatmap` |
 | Numbers | `kpi` |
-| Exact values | `table`: an indicator per column (data bars, ▲/▼ changes, cell colors, sparklines, progress against a target, status pills, ✓), pages of 10, cards on phones, click-to-sort and search in the browser, language recognized from the text |
+| Exact values | `table`: an indicator per column (data bars, ▲/▼ changes, cell colors, sparklines, progress against a target, status pills, ✓, range rails), pages of 10, cards on phones, click-to-sort and search in the browser, language recognized from the text; `rail` draws one table row's rail on its own, for an HTML table you keep |
 | Text | `wordcloud` (words sized by frequency, or raw text to count) |
 | Dashboards | `dashboard({ title, kpis, charts, filters })`: a whole HTML dashboard with best-practice layout ([guide](docs/dashboards.md)) |
 

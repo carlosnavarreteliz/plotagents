@@ -68,13 +68,38 @@ export function waffle(spec, theme) {
   const gap = theme.marks?.gap ?? 2;
   const cell = Math.max(3, Math.min(spec.cellSize ?? 22, area.w / cols, spec.height !== undefined ? area.h / rowsN : Infinity));
   const s = cell - gap;
-  const rad = Math.min(theme.marks?.barRadius ?? 4, s / 4);
+  // `cellRadius`: el radio de las esquinas en px (0 = cuadros rectos); por
+  // omisión el de las barras del tema, con un tope de un cuarto del cuadro.
+  const cr = spec.cellRadius;
+  const rad = cr !== undefined && cr !== null && Number.isFinite(+cr) ? Math.max(0, Math.min(+cr, s / 2)) : Math.min(theme.marks?.barRadius ?? 4, s / 4);
   if (spec.height === undefined) frame.setHeight(area.y + rowsN * cell + frame.chrome);
 
   // Un path por serie (una corrida de cuadros), con su tooltip.
   const body = [];
   let idx = 0;
-  keys.forEach((k, i) => {
+  // `perSquare`: cada cuadro es su propia marca, con el tooltip de su fila (una
+  // verificación, una persona). Sólo cuando un cuadro es una unidad: con
+  // `unit` > 1 un cuadro no es una fila y se vuelve a un path por serie.
+  if (spec.perSquare && unit === 1) {
+    const rowsOf = new Map(keys.map((k) => [k, []]));
+    for (const r of data) {
+      const k = String(r[series]);
+      const v = valueF ? num(r[valueF]) : 1;
+      if (!rowsOf.has(k) || !Number.isFinite(v) || v < 0) continue;
+      for (let j = 0; j < Math.round(v); j++) rowsOf.get(k).push(r);
+    }
+    keys.forEach((k, i) => {
+      const list = rowsOf.get(k);
+      for (let j = 0; j < squares[i]; j++, idx++) {
+        const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;
+        // Un <rect> por cuadro (con rx si va redondeado): la misma figura que
+        // el path de arcos, en la mitad de bytes, y `rect:hover` lo alcanza.
+        const sq = el('rect', { x: cx, y: cy, width: s, height: s, rx: rad > 0.5 ? rad : undefined, fill: colorOf(k) });
+        const row = list[Math.min(j, list.length - 1)];
+        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [sq]));
+      }
+    });
+  } else keys.forEach((k, i) => {
     const d = [];
     for (let j = 0; j < squares[i]; j++, idx++) {
       const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;

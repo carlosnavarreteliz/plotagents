@@ -14,13 +14,13 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `series` / `hue` | Field that splits the data into colored groups. |
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. From JavaScript, also a function `(value) => string`: your own number rules for labels, tooltips and axis ticks. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` or `{ prefix, suffix, decimals, currency }`. From JavaScript, also a function `(value) => string`: your own number rules for labels, tooltips and axis ticks. In `line`, `area` and `bar`, `yFormat` writes only the value-axis ticks and `format` the labels and tooltips (`yFormat` defaults to `format`). |
 | `locale` | `"es"` (default: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"`, or `"auto"`: recognized from the title, subtitle, column names and categories. Tables use `"auto"` when `locale` is omitted. |
 | `xLabel`, `yLabel` | Axis titles (horizontal, never rotated). |
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name; an annotation with `panel` goes only to that panel. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, and the same plot size in pixels (axis margins and end-label room are matched across panels), so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name, and every panel reserves the room it needs, so panels never overlap and keep equal plot heights; `panelColor: true` writes each panel name in its series colour (or `{ panel: color }`, or a function `(panel, rows) => color`); panels leave room for their y tick labels as a lone chart does, the same in every panel; an annotation with `panel` goes only to that panel; `legend: false` hides the shared legend. |
 | `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
@@ -32,6 +32,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
 | `tooltip` | What each mark says on hover beyond its value: a list of fields (`"Field: value"` lines from the mark's rows), or `{ title, fields: [field \| { field, label, format }], text, replace }` where `text` is a field with pre-written lines, or `false`. From JavaScript, also `(d) => text \| { title, lines }` with `d.rows`, `d.lines`. A mark made of several rows (a treemap group, a year with several series) shows a field only when its rows agree. |
 | `href` | Treemap tiles, horizontal bar names and scatter dots link to the URL in this field (paths and http(s) only). |
+| `sprite` | Path of an outlines file written once with `mapSprite(spec)`: regions become `<use>`, the page carries no geometry. |
 | `xBands` | Shaded ranges of the x axis behind columns, lines and areas: `[{ from, to, label, color }]`. |
 
 ### In the browser
@@ -56,7 +57,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `labels` | `true`, `false` or `"auto"`. |
 | `barWidth` | Max bar thickness in px. |
 | `xGroup` / `yGroup` | Field that groups consecutive categories (either name works, in both orientations): a tinted band with the group name runs along the category axis, with a thin line between groups. Nothing is reordered, so set `sort: "none"` to keep your order. |
-| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). |
+| `xTicks` / `yTicks` | `{ every: N }`: label every Nth category (thinned further only if labels still collide). A shown label is cut to the room of N categories, not of one. Date categories thin to calendar steps (months 1, 2, 3, 4, 6, 12…; years 1, 2, 5, 10…), measured on the label widths. |
 
 The value axis always ends on the first round value at or above the largest bar, and that last tick is always labeled, also on a phone: the number of ticks follows the width of their labels.
 
@@ -76,7 +77,8 @@ The value axis always ends on the first round value at or above the largest bar,
 | `ci`, `errorbar`, `estimator` | seaborn `lineplot`: mean and confidence band when there are several rows per x. |
 | `curve` | `"linear"` (default), `"smooth"` (monotone, never invents peaks), `"step"`. |
 | `zero` | Force the y axis to include zero (on by default for areas and when it costs little). |
-| `points` | Markers on every point (automatic for short series). |
+| `points` | Markers on every point (automatic for short series); a list of series names (or `{ series: true }`) puts them only on those. |
+| `lineWidths` | Stroke width per series, e.g. `{ "1991–2020 mean": 3.5 }`; the rest keep the default. |
 | `stack` | Areas: `true` (default with series), `"percent"`, or `false` to overlap. |
 | `fill` | Single line: `false` removes the soft gradient. |
 | `xRange` | Visible range `[from, to]`; this is what the range slider sets (`slider: true`). |
@@ -93,6 +95,29 @@ The shape of one series, on its own min–max scale (no zero): it answers "how d
 | `fill` | Soft wash under the line (`true` or an opacity). |
 | `dot`, `dotRadius`, `lineWidth` | End dot (`dot: false` hides it) and stroke. |
 | `yDomain` | Fix the scale (e.g. to compare sparklines in a column). |
+
+### `rail` (`riel`, `range-rail`)
+
+One row of a distribution, sized for a table cell (`width: 160, height: 18` by default; it works from ~130 to ~330 px): a line from `min` to `max`, the middle `band: [lo, hi]` shaded, a `median` notch, the row's `value` as a dot and any number of reference ticks. It is the `range` column of `table` as a mark of its own, for a page that keeps its HTML table (links, icons, notes, a phone layout) and only needs the rail drawn on the server. No chrome: one invisible box carries a `data-tip` that names every part.
+
+```js
+plot({ type: 'rail', data: [row], value: 'chile', min: 'lo', max: 'hi', band: ['q1', 'q3'], median: 'med',
+  refs: [{ field: 'region', label: 'Biobío' }, { value: 12, label: 'Target' }],
+  valueLabel: 'Chile', minLabel: 'lowestName', maxLabel: 'highestName', clip: true, format: (v) => fmt(v) });
+```
+
+| Option | Meaning |
+|---|---|
+| `data` | One row (the first is drawn). Leave it out when every part is a number. |
+| `value`, `min`, `max`, `median` | Each a field of the row or a fixed number. |
+| `band` | `[lo, hi]` of the shaded band (e.g. the quartiles). |
+| `refs` | Reference ticks: `[{ field \| value, label, color }]`; `label` is text or a field of the row. `ref` + `refLabel` is the one-tick shorthand. |
+| `clip` | The scale is `[min, max]`: a value past an end is a chevron at that end (and says so in the tooltip) instead of stretching the scale; a reference past an end is an open chevron. |
+| `domain` | The scale, `[from, to]` as numbers or fields (e.g. `["p5", "p95"]`); clips like `clip`. Without `min`/`max` the rail spans the whole domain. `domainLabel` adds a tooltip line naming it. |
+| `fallback` | A row with no `min`/`max` and no `domain` has no rail: it prints its figure (`"value"`, default) or nothing (`"none"`), never a lone dot. |
+| `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Names in the tooltip (text or a field of the row). With `minLabel`/`maxLabel` the tooltip lists both ends ("Lowest · Colchane: 7.1") instead of "Range: a–b". |
+| `color`, `colors` | The dot's colour; `colors: { rail, band, median, ref, value }` per part. Any colour may be `var(--x, #fallback)`, and `skins` work as in any chart. |
+| `format`, `dotRadius`, `tooltip`, `title` | A format (a function from JS), the dot size, extra tooltip fields, and the tooltip heading (also the `<title>`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 
@@ -201,6 +226,12 @@ How things group, and at what height they join. The tree comes in already comput
 | `orientation` | `"horizontal"` (root left, default) or `"vertical"` (root on top). |
 | `labels` | Leaf labels: `"auto"` (every k-th when they do not fit), `true`, `false`; with `linkage`, the list of leaf names. |
 | `label` | Rows input: field with the display name of each leaf. |
+| `series` | Rows input: a field that colors each leaf (a swatch at its end and the weight bar), with a legend unless `legend: false`. No `cut` needed; `colors` fixes a category's color. |
+| `size` | Rows input: each leaf's weight (how many things hang off it), a bar with its figure beside the name (`sizeFormat` formats it). Each join adds up its leaves. Vertical trees show it in the tooltip only. |
+| `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. |
+| `xLabel` | Title of the height axis ("Ward merge height": a merge height is not a distance, say what it is). |
+| `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
+| `labelWidth` / `treeWidth` | The names column takes at most 30% of the width (120 px vertical); `labelWidth` sets that cap in px. `treeWidth` (horizontal) fixes the tree's width instead and gives the names the rest: `width: 1236, treeWidth: 250`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -245,7 +276,9 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `inner` | Violin: `"box"` (default), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violin with two `hue` levels: one half each. |
 | `scale` | Violin width: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Strip and swarm layout. |
+| `jitter`, `dodge`, `radius` | Strip and swarm layout. Strip and swarm dots carry their own row's `tooltip` (`{ title, text, replace: true }`). |
+| `clamp` | With a value domain (`xDomain` horizontal, `yDomain` vertical): values outside are drawn on its edge, and the edge tick says so ("≤ 0.0001%", "≥ 100%") when some value lies beyond. On a log axis a 0 sits on the low edge. |
+| `yLabelPosition` | Horizontal charts: `"above"` writes each row's name above it, left-aligned, so the value axis keeps the full width (a phone). |
 | `estimator`, `errorbar` | Point plot: `"mean"`/`"median"`/`"sum"` and `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Category and group order. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
@@ -261,7 +294,9 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `series` | Dot colors. |
 | `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
 | `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
-| `dotSize` | Largest dot diameter in px (default 14). |
+| `dotSize` | Largest dot diameter in px (default 14); a dot is also never wider than its bin. |
+| `dotRadius` | The dot radius in px, without the bin-width cap: a fine bin in a narrow box keeps readable dots (neighbouring bins may touch). With an explicit `height` it still shrinks so the tallest stack fits. |
+| `refLines` | Reference values that are not one more dot (the national figure): `[{ x: 18.4, label: "Chile" }]`, drawn as a vertical line behind the dots with its label on top (`label · value`; `showValue: false` writes the label alone, on the line and in the tooltip) and its own tooltip. `dash: true` dashes the line (3 3), or give an SVG pattern (`"4 2"`). `x` may be a field whose rows all hold the same value (with `facet`, each panel's own). The axis widens to include it. |
 
 ## Part-to-whole
 
@@ -275,6 +310,8 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group or its legend key does it (the category fills the whole plot) and breadcrumbs or Esc go back. |
 | `exclude` | Level-1 groups to leave out; the rest fill the plane and shares are recomputed. Shift + click on a legend key does it in the browser. |
 | `showValues` | Append values to the labels. |
+| `tileLabels` | `"wrap"`: a long name goes on as many lines as the tile's height allows, with its share under it whenever that fits at some size; then the name alone; as a last resort it is cut with "…". Default `"auto"`: a name only when it fits whole. A share under 0.05% prints as "<0.1%", never "0%". |
+| `shareOf` | With `focus`: what share each tile prints, `"group"` (default), `"total"` or `"both"` ("53% · 11% of total"). When the figure does not fit, a shorter one instead of none: `"both"` falls back to the group share, `"total"` to the bare figure (the tooltip says what it is a share of). |
 | `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
 | `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
 | `compareData` | Rows of an earlier period to compute changes without `time`. |
@@ -306,7 +343,9 @@ A count drawn as squares: one square per row, or per unit of `value`, by `series
 |---|---|
 | `value` | Field to add up (otherwise one square per row). |
 | `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
+| `perSquare` | Each square is its own mark (a `<rect>`, with `rx` when rounded) with its own row's tooltip (one check, one person), in data order within each series; pair it with `tooltip: { title, text, replace: true }`. Only while a square is one unit; past `maxSquares` it falls back to one tooltip per series. |
 | `columns` | Squares per row (default 10, 20 or 25 by total). |
+| `cellRadius` | Corner radius of each square in px; `0` for square corners (default: the theme's bar radius, at most a quarter of the square). |
 | `order` | Series order (default: largest first). |
 
 ## Maps
@@ -319,15 +358,19 @@ Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world co
 
 | Option | Meaning |
 |---|---|
-| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, or (browser) a URL. |
+| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, paths already projected (`{ paths, points?, names? }`), or (browser) a URL. |
 | `featureKey`, `nameKey` | Feature property to match, and the one with the display name (both detected when omitted). |
-| `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box or `"markers"`. |
+| `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box, `"markers"`, or `"mainland"` (far islands and claims out of the frame). |
+| `views` | Several readings (indicators, years) of one geometry in one SVG; the page flips `data-view`. See below. |
+| `pathPrecision`, `simplify` | Compact paths: relative, rounded to `pathPrecision` decimals, simplified on screen with a tolerance in pixels. |
+| `microstates` | World: Singapore, Malta, Bahrain and 71 more drawn as dots (`true`: those with data; `"all"`). |
+| `href` | Data field with a URL: each region links to it (paths and http(s) only). |
 | `links` | Lines between places, above the regions: `[{ from, to, value }]` or `{ data, from, to, value, color, curveness, width: [min, max], opacity, label }`. Ends are region keys or `[lon, lat]`. |
 | `orientation`, `rotate` | `"landscape"` lays a tall territory on its side, north on the left; `"portrait"` stands a wide one up; `rotate: 90 \| -90 \| 180` turns the projected map clockwise. Labels stay upright. |
 | `markers`, `layers` | Points by lon/lat on top; extra GeoJSON lines, polygons or points over or under the map. |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
-| `missing` | `"plain"` drops the hatch and the "No data" legend entry. |
+| `missing` | `"plain"` drops the hatch and the "No data" legend entry; `"context"` also drops the tooltip (regions drawn only as surroundings). |
 | `labels`, `bars` | Chile gets a north-to-south column with name, bar and value; `bars: false` hides the bars. World maps label the top N. |
 | `projection` | `"mercator"`, `"equalEarth"`, `"albersUsa"`, `"equirectangular"`, `"conic"`, `"identity"`, `"planar"` or `{ type, parallels, rotate }` (picked automatically). |
 | `borderColor`, `borderWidth` | Region borders. |
@@ -352,9 +395,9 @@ plot({
 });
 ```
 
-- **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
+- **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-2, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
 - **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordinates used as they are, y down, for pre-projected or hand-drawn maps; `flipY: true` for y up) or `"planar"` (y up).
-- **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `tall: false` turns off the side column for elongated shapes.
+- **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `fitTo: "mainland"` leaves out far islands and claims (Rapa Nui, Juan Fernández, Antarctica), found by the sea gap that separates them rather than by a list. `tall: false` turns off the side column for elongated shapes.
 - **Markers.** `markers: [{ lon, lat, label, value }]` or `{ data, lon, lat, label, size, color, legend, maxRadius }`: dots on top, area-proportional when there is a `size`, labels placed where they don't collide.
 - **Lines between places.** `links: { data: trade, from: 'origin', to: 'partner', value: 'usd' }` draws one curved line per row from region to region (or `[lon, lat]`), width proportional to the value, one color, no arrowheads: a line is a relation, not a route. Each line is a mark with its own tooltip and `data-key="from→to"`; ends that match no region are listed in the description instead of being drawn. With `labels: false` the map carries no text at all.
 - **Lying down.** `orientation: "landscape"` turns a long, thin territory (Chile, Norway, Vietnam, a river basin) a quarter turn after projecting, north on the left so north-to-south reads left to right; framing, hit areas, markers and links follow, and labels stay upright. `rotate: 90 | -90 | 180` sets the turn by hand.
@@ -362,6 +405,39 @@ plot({
 - **Layers.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` overlays rivers, roads, routes, faults or district lines (or draws them under the regions with `below: true`). A `label` adds a legend key.
 - **Style.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (a named or custom sequential ramp), `palette` and `colors` (categories).
 - **Register once, use by name.** `registerGeo('biobio', comunas, ['comunas-biobio'])` and then `geo: 'biobio'` in every spec, which keeps tool calls short for an agent.
+
+#### Maps for a static site: projected paths, views and no library in the browser
+
+A site that builds its pages ahead of time can draw every map on the server and ship finished SVG, with nothing of plotagents in the browser.
+
+**Paths projected at build time.** `geo: { paths: { id: "M…Z" }, points?: { id: [x, y] }, names?: { id: name } }` takes SVG path strings already projected and simplified (a `map.json` with one outline per comuna), in pixels with y down. No TopoJSON and no projection run: each path is read to points (`M L H V Z C S Q T A`, absolute or relative) and framed, turned (`orientation: "landscape"`), keyed and colored like any map. A value may be `{ d, at: [x, y] }`, where `at` anchors lines; `points` are places too small for an outline, drawn as dots of `pointRadius`.
+
+**Compact paths.** A detailed map weighs what its coordinates weigh. `pathPrecision: 1` (decimals, in pixels) writes relative commands rounded to that grid, and `simplify: 0.5` drops points within half a pixel of the line (Douglas–Peucker on screen). On the 345 comunas of Chile at 1,180 px, the paths go from 516 KB to 176 KB (39 KB gzipped) with no visible change. Without these options paths are written as always.
+
+**Outlines in a file of their own.** A site that shows the same map on hundreds of pages need not repeat its outlines on each. `mapSprite(spec)` writes an SVG with one `<path id>` per region, projected but not framed (its longer side measures 1000); publish it once (`/maps/chile.svg`) and the browser caches it. With `sprite: "/maps/chile.svg"`, each region is a `<use href="/maps/chile.svg#id">` inside a group whose transform frames and turns the file, so one file serves the wide map, the phone map and every framing (`fitTo` a region). Colors, view classes, tooltips and links stay on the `<use>`; dots are still drawn inline. Chile's 345 comunas: the file is 90 KB (26 KB gzipped); each map on a page is 98 KB (12 KB gzipped) with one view, 31 KB gzipped with six. A file loaded from another origin needs CORS, and an SVG opened on its own (in an `<img>`) does not load it.
+
+**Views.** `views: [{ id, label, value, … }, …]` draws several readings of one geometry in one SVG. Each view is a patch of the spec (`value`, `data`, `format`, `colorScale`, `scale`, `classes`, `thresholds`, `colors`, `legendTitle`, `tooltip`, plus `highlight` and `links` for that view only). The first view is drawn as usual. Every other view travels as data: one class per region and view (`pv2-3`: view 2, color class 3), its tooltip in `data-vtip-<id>`, and a `<style>` inside the SVG that paints the view named by `data-view` on the root and hides the other views' legends, labels and lines. Skins and `var(--x, fallback)` colors work as in any chart. Views cannot change the shapes or the frame (`geo`, `key`, `fitTo`, `orientation`, `width`, `title`…).
+
+```js
+plot({
+  type: 'choropleth', geo: { paths: map.paths, names: map.label }, data: comunas, key: 'id',
+  orientation: 'landscape', fitTo: 'mainland', pathPrecision: 1, simplify: 0.5, href: 'url',
+  views: [
+    { id: 'inmigrantes', label: 'Foreign-born', value: 'pct_inmigrantes', format: { suffix: '%' } },
+    { id: 'mayores', label: 'Aged 65+', value: 'pct_65_mas', highlight: 'c05101' },
+  ],
+});
+```
+
+Switching is one attribute. `plotagents/views` (1.2 KB minified, 0.6 KB gzipped, no dependencies) does it and moves each view's tooltip to `data-tip`, which is what any hover layer reads:
+
+```js
+import { setView, bindViews } from 'plotagents/views';
+setView(document.querySelector('#map'), 'mayores');
+bindViews(document);   // <button data-set-view="mayores"> switches the maps on the page
+```
+
+**The world.** Countries match by ISO-2 (`"CL"`), ISO-3 or name. `microstates: true` draws as a dot the states too small for an outline at this scale (Singapore, Malta, Bahrain, Hong Kong…; `"all"` draws every one); lines reach them like any country. **Links** stay what they were: a line is a relation, not a route.
 
 In the browser (`render()` or `toHTML()`), maps are interactive: hovering outlines the shape; clicking a region zooms to fit it (click again, double-click, Esc or the reset button to go back); Ctrl/⌘ + scroll zooms around the pointer (plain scroll keeps scrolling the page, as `chartjs-plugin-zoom` recommends with its `modifierKey`); pinch zooms on touch screens; drag pans when zoomed; +/− buttons work from the keyboard. Each color class in the legend is a key: hover it to light up its regions, click to pin. With `time`, every region's color transitions into the next period's instead of jumping, and the zoom is kept while the slider plays.
 
@@ -419,6 +495,19 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 
+A map you already computed (the product space, a knowledge network) usually wants the nodes to carry the meaning and the edges to recede:
+
+| Option | Meaning |
+|---|---|
+| `filled` / `hollow` | A field of `nodes` (or a list of ids): those nodes stay filled (or go hollow), the rest are rings of the same color with the background inside. A second encoding without a second color, e.g. the groups one institution specializes in, lit on the same map. Filled nodes are named first; hollow ones in a muted ink. |
+| `edgeColor` | `"source"` (default), `"neutral"` (the theme's muted ink) or any color, `var(--line, #e0d6c4)` included. `colors["a→b"]` still pins one edge, drawn on top. |
+| `edgeOpacity` / `edgeWidth` | One number for every edge, or `[min, max]` scaled by value (opacity linearly, width by the square root). |
+| `stretch` | `layout: "preset"` only: x and y are scaled apart to fill the area, for positions already normalized per axis (0–1 MDS). |
+| `minRadius` | Smallest node radius in px (default 2.5). |
+| `labelWidth` | Widest node name in px before it is cut with "…" (default 150). |
+| `edgeTip` | `false` writes no tooltip on the edges (`tooltip: false` also drops them). Hundreds of edges, each with its own text, weigh more than the drawing. |
+| `href` | A field of `nodes` with a URL: each node is a link. |
+
 ### `chord`
 
 `from`, `to`, `value` rows, or `matrix` + `names`. `directed` (default false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
@@ -436,18 +525,36 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 | Option | Meaning |
 |---|---|
 | `colorScale: { colors, breaks }` | Discrete classes instead of a gradient ([color scales](colorscales.md#classes)); the legend becomes a stepped key with the breaks written under it, formatted with `format`. |
-| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. |
+| `midClass: "neutral"` | With breaks around 0, the class that contains 0 is drawn in the neutral tint: cells that barely move are not painted. `midClass: { color }` paints it in that color instead, so a skin patch can set it without replacing the theme. |
+| `missingLabel` | What the tooltip of a cell without a value says (default `"—"`): `"no data"`. |
 | `missing` | Cells without a value: `"tint"` (default), `"plain"` (outline only), `"hatch"` (striped "no data") or `"gap"` (nothing). |
 | `floor` / `ceiling` | Values below / above are drawn as plain empty cells: the value exists (the tooltip shows it) but it is not colored and does not stretch the scale. |
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
-| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
+| `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. A name that does not fit is cut, with the whole name in its tooltip. |
+| `groupColors` | `{ [group]: color }`: each colored group gets a 3 px stripe of its color on the edge of its band that faces the grid (a family's hue under its sectors), instead of the alternate tint. |
+| `cornerLabel` | A title in the empty corner where row labels meet column labels: `"born in ↓ / lives in →"`; `"\n"` breaks it into lines. The row-label column widens to fit it (same cap); what does not fit is cut, whole in the tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+| `rowTip` | Tooltip of each row label, from this field: what belongs to the whole row and need not repeat in every cell. From JS, also a function of the label. |
+| `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
+| `xLabelAngle`, `xLabelPosition` | Column labels turned (`-90` upright, `-45` slanted) when they do not fit side by side, under the grid (default) or over it (`"top"`). The strip grows to fit; a label cut short keeps its full name in the tooltip. |
+| `cellGap` | Space between cells in px (default `2`); `0` joins them with square corners; `[x, y]` per axis. |
+| `diagonal` | Cells where `x` equals `y` (stayed in the same region) drawn apart: their own color, outside the color scale (so a huge diagonal does not flatten the rest), a legend entry and a tooltip line. `true`, a label, or `{ label, color, opacity }`. A missing value stays "no data". |
+| `cellColor` | A field naming each cell's class ("Revised"); those cells take `colors[class]`, outside the scale, with a legend entry and a tooltip line. A value written as a color is used as is. |
+| `labelFormat` | Format of the numeral inside the cells only (tooltip and legend keep `format`). A function returning `""` leaves a cell without a numeral. |
+
+```js
+plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
+  diagonal: { label: 'Born and lives here', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
 
-`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
+`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one. Link paths are written with two decimals; `pathPrecision: 1` (or 0) writes fewer.
+
+Many small nodes stack within a few pixels of each other and their names overprint. `relax: true` separates the labels of each column: every node gets its name and second line, each label moves as little as possible to keep 31 px from its neighbors (a number sets another distance; below 28 px labels are one line), and a label that ended up away from its node gets a thin leader line back to it. Without `height`, the chart grows until the labels fit; with `height`, labels that do not fit drop to one line, then squeeze.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
@@ -504,14 +611,15 @@ plot({
 | `badge` | Status pill | Values are status words (done, at risk, late, in progress… in es/en/pt/fr/de): good, warning, critical, info colors |
 | `check` | ✓ or a dash, with an accessible label | Booleans, or sí/no, yes/no… |
 | `date` | Readable date in the chart's language | ISO dates |
-| `link` | Underlined link; only `http(s)` and `mailto` get an `href` | URLs |
+| `link` | Underlined link: `http(s)` and `mailto` open in a new tab; a site path (`"/es/…"`, `"./x"`, `"#y"`) links in the same tab; anything else is text. `text: 'field'` shows another field instead of the URL | URLs |
 | `rank` | Position under the current sort | `rank: true` |
-| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column | — |
+| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column. `refs: [{ field \| value, label }]` adds several labelled ticks; `clip: true` cuts the scale to min–max and `domain: [from, to]` (numbers or fields, e.g. p5–p95) to any span, drawing what falls past an end as a chevron; `minLabel`, `maxLabel`, `medianLabel`, `domainLabel` name the parts. A row without `min`/`max` in a column that has them prints only its number. Same drawing as the `rail` type | — |
 | `text`, `number` | Text (wraps to 2–3 lines) and plain numbers | Everything else |
 
 | Option | Meaning |
 |---|---|
 | `columns` | Order and type: field names or `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omit to use every field. `x`/`label` picks the row-name column and `y` a list of value columns. |
+| `formatBy` (column) | One format per row, for a table of indicators in different units (percent, count, money): a field whose value is a format (`"percent"`, `{ suffix: " yrs", decimals: 1 }`; decimals inferred among the rows that share it) or, from JS, a function `(value, row) => text`. Works on `number`, `bar`, `heat`, `delta` and `range` (cell, tooltip and card); a `range` column gets `scale: "row"`, and the column has no total. |
 | `sortBy`, `sort` | Column and direction (`"desc"` for numbers, `"asc"` for text by default). `sort: "-sales"` works too. Empty cells always go last. |
 | `pageSize`, `page` | Up to 15 rows are shown whole; beyond that, pages of 10. `pageSize: false` shows everything. The pager is numbers and arrows only (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Keep rows that contain these words, ignoring accents and case. |
@@ -521,6 +629,7 @@ plot({
 | `top` | Keep the first N rows after sorting. |
 | `cards` | `"auto"` (default) turns each row into a card when the columns do not fit (phones): name and main value on top, the bar under them, the other columns as label–value lines. `true` always, `false` never. |
 | `density`, `striped` | `"compact"` / `"comfortable"` rows; zebra stripes for very wide tables. |
+| `missingLabel` | What a missing cell (and its tooltip) prints instead of the dash: `"no data"`. |
 
 In the browser `render()` adds a search box above 20 rows (`search: false` hides it; `true` forces it), click-to-sort headers (natural order, reversed, then the original order), and page buttons; all of them work from the keyboard and announce `aria-sort` and `aria-current`. Resizing re-renders at the new width, so a table becomes cards on a phone and columns again on a desktop.
 

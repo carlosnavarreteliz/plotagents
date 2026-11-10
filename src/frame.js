@@ -44,7 +44,7 @@ export function createFrame(spec, theme, defaults = {}) {
   const X = ctx.textScale; // alturas de línea crecen con la escala de texto
   const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: spec._titleColor ?? theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
   if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {
@@ -52,6 +52,9 @@ export function createFrame(spec, theme, defaults = {}) {
   });
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
+  // Paneles de un facet: el encabezado de todos mide lo que el más alto, para
+  // que el trazado empiece a la misma altura en cada uno.
+  if (spec._headerMin > y) y = spec._headerMin;
 
   const srcText = chrome && spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   // Una fuente larga salta a una segunda línea en vez de salirse por la izquierda.
@@ -101,7 +104,7 @@ export function createFrame(spec, theme, defaults = {}) {
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
-    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '' } = {}) {
+    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '', root = null } = {}) {
       if (legendBottom) {
         const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
@@ -125,13 +128,14 @@ export function createFrame(spec, theme, defaults = {}) {
           'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
           'aria-describedby': role === 'img' ? null : `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
-          class: 'pa-chart',
+          class: 'pa-chart' + (root?.class ? ' ' + root.class : ''),
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
           'data-pa-lang': String(spec.locale || 'es').slice(0, 2),
           'data-pa-top': r2(frame.top),
           'data-pa-tip': theme.tooltip && (theme.tooltip.bg || theme.tooltip.ink) ? `${theme.tooltip.bg || ''},${theme.tooltip.ink || ''}` : null,
           style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
+          ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
           el('title', { id: `${id}-t` }, esc(spec.title || type)),

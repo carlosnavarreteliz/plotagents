@@ -98,6 +98,7 @@ export function fromParents(rows, idF = 'id', parentF = 'parent', hF = 'height')
       const r = build(ch[i], seen);
       node = { left: node, right: r, h: Math.max(h.get(id), node.h, r.h) };
     }
+    node.id = id; // el nodo de la fila (los eslabones intermedios de un codo múltiple no lo llevan)
     return node;
   };
   if (!roots.length) throw new Error('dendrogram: no hay raíz (¿ciclo?)');

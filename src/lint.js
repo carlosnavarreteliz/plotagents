@@ -4,7 +4,7 @@
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
-import { themeFor, themes, palettes, ramps } from './theme.js';
+import { themeFor, themes, palettes, ramps, isColor } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
@@ -44,7 +44,9 @@ function lintSpec(spec = {}) {
   const linkageOnly = Array.isArray(spec.linkage) && !spec.data;
   // Una red con posiciones dadas puede venir sin aristas: basta la tabla `nodes`.
   const presetNodes = spec.data === undefined && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''));
-  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  // Un riel puede venir sin filas: todos sus extremos como números.
+  const railOnly = spec.data === undefined && typeof spec.type === 'string' && normalizeType(spec.type.trim())[0] === 'rail';
+  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly || railOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
@@ -52,10 +54,10 @@ function lintSpec(spec = {}) {
     for (const ff of [].concat(f ?? [])) if (ff && !fields.includes(ff)) err('field', `El campo "${ff}" (${role}) no existe.`, `Campos disponibles: ${fields.join(', ')}`);
   };
   if (data.length) {
-    check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
-    check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
-    check(spec.from, 'from'); check(spec.to, 'to');
-  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+    check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); if (type !== 'network') check(spec.size, 'size');
+    if (!(type === 'rail' && typeof spec.value !== 'string')) check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
+    check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
+  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -155,6 +157,44 @@ function lintSpec(spec = {}) {
     const small = [...counts].filter(([, n]) => n < 5).map(([k]) => k);
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
+  if (type === 'heatmap' && data.length) {
+    for (const k of ['rowHref', 'colHref', 'rowTip', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
+    if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
+      const named = uniq(data.map((r) => r[spec.cellColor]).filter((v) => v !== null && v !== undefined && v !== '' && v !== false).map(String)).filter((v) => !/^(#|rgba?\(|hsla?\(|var\()/i.test(v));
+      const bare = named.filter((v) => !(spec.colors && spec.colors[v]));
+      if (bare.length) sug('cellcolor-no-color', L(`Las clases de \`cellColor\` sin color en \`colors\` van en gris: ${bare.slice(0, 4).join(', ')}.`, `\`cellColor\` classes without a color in \`colors\` are drawn gray: ${bare.slice(0, 4).join(', ')}.`), `colors: { ${JSON.stringify(bare[0])}: "#7A3E9D" }`);
+    }
+    if (spec.groupColors && typeof spec.groupColors === 'object') {
+      const gf = [spec.xGroup, spec.yGroup].filter((f) => typeof f === 'string' && fields.includes(f));
+      if (!gf.length) warn('groupcolors-no-group', L('`groupColors` pinta las bandas de `xGroup` / `yGroup`, y no hay grupos.', '`groupColors` paints the bands of `xGroup` / `yGroup`, and there are no groups.'), L('Agrega `xGroup: "familia"`.', 'Add `xGroup: "family"`.'));
+      else {
+        const names = new Set(gf.flatMap((f) => data.map((r) => String(r[f] ?? ''))));
+        const stray = Object.keys(spec.groupColors).filter((k) => !names.has(k));
+        if (stray.length) sug('groupcolors-unknown', L(`\`groupColors\` nombra grupos que no están en los datos: ${stray.slice(0, 4).join(', ')}.`, `\`groupColors\` names groups that are not in the data: ${stray.slice(0, 4).join(', ')}.`), L('Usa los valores del campo de grupo, tal cual.', 'Use the values of the group field, exactly.'));
+      }
+    }
+    if (spec.midClass && typeof spec.midClass === 'object' && !isColor(spec.midClass.color)) warn('midclass-color', L('`midClass.color` no es un color: la clase del medio va en el tinte del tema.', '`midClass.color` is not a color: the middle class takes the theme tint.'), 'midClass: { color: "#f3ece0" }');
+    if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
+  }
+  {
+    const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+    const br = cs && typeof cs === 'object' && Array.isArray(cs.breaks) ? cs.breaks.map(Number) : [];
+    const rep = br.filter((b, i) => i > 0 && b === br[i - 1]);
+    if (rep.length) sug('colorscale-repeated-breaks', L(`Cortes repetidos (${uniq(rep).join(', ')}): la clase vacía entre ellos se funde y su color no se usa.`, `Repeated breaks (${uniq(rep).join(', ')}): the empty class between them is merged and its color is not used.`), L('Normal con cuantiles de datos con empates; si la leyenda es tuya, dibuja las mismas clases.', 'Expected with quantiles of tied data; if you draw your own key, draw the same classes.'));
+  }
+  if (type === 'dotplot' && data.length && !spec.facet && !spec.col) {
+    for (const r of [].concat(spec.refLines ?? [])) {
+      const f = r && typeof r === 'object' ? r.x ?? r.value : undefined;
+      if (typeof f !== 'string' || !fields.includes(f)) continue;
+      const vs = uniq(data.map((d) => num(d[f])).filter(Number.isFinite));
+      if (vs.length !== 1) warn('refline-field', L(`La referencia lee \`${f}\`, pero sus filas no dicen un solo valor (${vs.length}): no se dibuja.`, `The reference reads \`${f}\`, but its rows do not hold one value (${vs.length}): it is not drawn.`), L('Pasa el número: refLines: [{ x: 18.4, label: "Chile" }].', 'Pass the number: refLines: [{ x: 18.4, label: "Chile" }].'));
+    }
+  }
+  if (type === 'waffle' && spec.perSquare && data.length) {
+    const vf = spec.value ?? (typeof spec.y === 'string' ? spec.y : null);
+    const total = vf && fields.includes(vf) ? data.reduce((t, r) => { const v = num(r[vf]); return t + (Number.isFinite(v) && v > 0 ? v : 0); }, 0) : data.length;
+    if ((spec.unit !== undefined && +spec.unit !== 1) || (spec.unit === undefined && total > (spec.maxSquares ?? 400))) warn('waffle-persquare-unit', L('`perSquare` necesita que cada cuadro sea una unidad: con este total un cuadro vale más de una y se vuelve a un tooltip por serie.', '`perSquare` needs each square to be one unit: with this total a square is worth more than one, so it falls back to one tooltip per series.'), L('Sube `maxSquares` sobre el total, o quita `perSquare`.', 'Raise `maxSquares` above the total, or drop `perSquare`.'));
+  }
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
 
@@ -173,6 +213,12 @@ function lintSpec(spec = {}) {
     if (sf && fields.includes(sf)) { const n = uniq(data.map((r) => String(r[sf]))).length; if (n !== 2) err('pyramid-sides', `La pirámide necesita exactamente 2 grupos en "${sf}" (hay ${n}).`, 'Usa `type: "bar"` con `series` para más grupos.'); }
   }
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
+  // Red: `size`, `href`, `hollow` y `filled` son campos de la tabla `nodes`.
+  if (type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length) {
+    const nf = fieldsOf(spec.nodes);
+    for (const k of ['size', 'href', 'hollow', 'filled']) if (typeof spec[k] === 'string' && !nf.includes(spec[k])) err('node-field', L(`El campo "${spec[k]}" (${k}) no existe en \`nodes\`.`, `The field "${spec[k]}" (${k}) is not in \`nodes\`.`), L(`Campos de nodes: ${nf.join(', ')}`, `Fields of nodes: ${nf.join(', ')}`));
+  }
+  if (type === 'network' && spec.stretch === true && !/^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''))) warn('network-stretch', L('`stretch` sólo aplica a `layout: "preset"`.', '`stretch` only applies to `layout: "preset"`.'), L('Quita `stretch` o usa posiciones dadas.', 'Drop `stretch` or use given positions.'));
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circular"` o `layout: "clusters"`.');
 
   if (type === 'wordcloud') {
@@ -202,6 +248,13 @@ function lintSpec(spec = {}) {
       if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
     }
   }
+  if (type === 'rail') {
+    lintRail(spec, 'rail', { data, fields, check, err, warn, L });
+    if (data.length > 1) warn('rail-rows', L(`Un riel dibuja una fila: se usa la primera de ${data.length}.`, `A rail draws one row: the first of ${data.length} is used.`), L('Un `plot` por celda, con `data: [fila]`; para una tabla entera, `type: "table"` con una columna `range`.', 'One `plot` per cell, with `data: [row]`; for a whole table, `type: "table"` with a `range` column.'));
+    const has = (k) => spec[k] !== undefined && spec[k] !== null;
+    if (!(has('min') && has('max')) && !Array.isArray(spec.domain)) sug('rail-no-range', L('Sin `min` y `max` (ni `domain`) el riel no tiene escala: se escribe sólo la cifra.', 'Without `min` and `max` (or `domain`) the rail has no scale: only the figure is written.'), L('Da `min` y `max` (campos o números), o `domain: [desde, hasta]`.', 'Give `min` and `max` (fields or numbers), or `domain: [from, to]`.'));
+    if (spec.value === undefined && spec.x === undefined && spec.y === undefined) err('rail-value', L('El riel no dice cuál es el valor de la fila.', 'The rail does not say which value is the row\'s.'), L('Usa `value: "campo"` (o un número).', 'Use `value: "field"` (or a number).'));
+  }
   if (type === 'table' && data.length) {
     const cols = Array.isArray(spec.columns) ? spec.columns : [];
     for (const c of cols) {
@@ -213,6 +266,10 @@ function lintSpec(spec = {}) {
       if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
       else if (f !== undefined) check(f, 'columns');
       if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+      if (c && typeof c === 'object' && columnType(c.type) === 'range') lintRail(c, `columns["${f}"]`, { data, fields, check, err, warn, L });
+      if (c && typeof c === 'object' && typeof c.formatBy === 'string') check(c.formatBy, 'columns.formatBy');
+      if (c && typeof c === 'object' && c.formatBy !== undefined && c.type !== undefined && !['number', 'bar', 'heat', 'delta', 'range'].includes(columnType(c.type))) warn('table-formatby-type', L(`\`formatBy\` sólo aplica a columnas number, bar, heat, delta y range (columna "${f}").`, `\`formatBy\` only applies to number, bar, heat, delta and range columns (column "${f}").`), L('Quita `formatBy` o cambia el tipo de la columna.', 'Remove `formatBy` or change the column type.'));
+      if (c && typeof c === 'object' && c.formatBy !== undefined && columnType(c.type) === 'bar') sug('table-formatby-bar', L(`Barras en unidades distintas por fila (columna "${f}") se comparan entre sí aunque no midan lo mismo.`, `Bars in different units per row (column "${f}") are compared with each other although they do not measure the same thing.`), L('Usa `type: "range"` (un riel por fila) o `type: "number"`.', 'Use `type: "range"` (one rail per row) or `type: "number"`.'));
     }
     const by = spec.sortBy ?? spec.orderBy;
     if (by !== undefined && !fields.includes(by) && !cols.some((c) => c && typeof c === 'object' && String(c.label) === String(by)) && !['#', 'rank'].includes(String(by))) {
@@ -385,6 +442,9 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   try { binnedScale(spec); } catch (e) {
     err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
   }
+  if (spec.clamp && !(Array.isArray(spec.xDomain) || Array.isArray(spec.yDomain) || Array.isArray(spec.valueDomain))) {
+    warn('clamp-no-domain', L('`clamp` lleva lo de fuera al borde de un dominio, y no hay dominio: no hace nada.', '`clamp` pulls what lies outside onto the edge of a domain, and there is none: it does nothing.'), L('Agrega `xDomain: [mín, máx]` (horizontal) o `yDomain`.', 'Add `xDomain: [min, max]` (horizontal) or `yDomain`.'));
+  }
   const f = spec.format;
   if (typeof f === 'string') enumCheck('format', f, FORMAT_TYPES, '"number", "compact", "percent", "currency", "integer" o { prefix, suffix, decimals }');
   else if (f && typeof f === 'object') {
@@ -401,10 +461,17 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   for (const k of ['xScale', 'yScale']) if (spec[k] !== undefined) enumCheck(k, spec[k], SCALES, '"linear", "log"');
   if (spec.curve !== undefined) enumCheck('curve', spec.curve, CURVES);
+  if (spec.tileLabels !== undefined) enumCheck('tileLabels', spec.tileLabels, ['auto', 'wrap'], '"auto", "wrap"');
+  if (spec.shareOf !== undefined) enumCheck('shareOf', spec.shareOf, ['group', 'total', 'both'], '"group", "total", "both"');
+  if (spec.lineWidths !== undefined && (typeof spec.lineWidths !== 'object' || Array.isArray(spec.lineWidths) || Object.values(spec.lineWidths).some((v) => !(+v > 0)))) {
+    err('enum-lineWidths', L('`lineWidths` debe ser un objeto { serie: grosor en px }.', '`lineWidths` must be an object { series: width in px }.'), 'lineWidths: { "Media 1991–2020": 3.5 }');
+  }
   if (spec.legend !== undefined && typeof spec.legend !== 'boolean') {
     const pos = typeof spec.legend === 'string' ? spec.legend : spec.legend && typeof spec.legend === 'object' ? spec.legend.position : undefined;
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
+  if (type === 'dendrogram' && typeof spec.size === 'string' && spec.orientation === 'vertical') sug('dendrogram-size-vertical', L('En un dendrograma vertical el peso (`size`) va sólo en el tooltip.', 'In a vertical dendrogram the weight (`size`) only goes to the tooltip.'), L('Usa `orientation: "horizontal"` para ver las barras de peso.', 'Use `orientation: "horizontal"` to see the weight bars.'));
+  if (type === 'sankey' && spec.relax !== undefined && spec.relax !== null && typeof spec.relax !== 'boolean' && !(typeof spec.relax === 'number' && spec.relax > 0)) err('enum-relax', L('`relax` es true o la distancia en px entre rótulos.', '`relax` is true or the distance in px between labels.'), 'relax: true | 31');
   if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid", "preset"');
   if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
   if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);
@@ -415,6 +482,31 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     if (typeof spec.tiles === 'string') enumCheck('tiles', spec.tiles.toLowerCase(), TILES, '"osm", "esri-gray", "esri-dark", "carto-light", "carto-dark", "mapbox-light", "mapbox-dark", { url, attribution } o false');
     if (spec.tileStyle !== undefined) enumCheck('tileStyle', spec.tileStyle, ['muted', 'original']);
   }
+  // Mapas: vistas, trazos compactos y microestados.
+  if (spec.views !== undefined && spec.views !== null) {
+    if (type !== 'choropleth') warn('views-type', L('`views` sólo aplica a mapas coropléticos: se ignora.', '`views` only applies to choropleth maps: it is ignored.'), L('Usa `type: "choropleth"`, o un gráfico por vista.', 'Use `type: "choropleth"`, or one chart per view.'));
+    else if (!Array.isArray(spec.views) || !spec.views.length) err('views-list', L('`views` debe ser una lista de vistas.', '`views` must be a list of views.'), 'views: [{ id: "poblacion", value: "poblacion" }, { id: "inmigrantes", value: "pct_inmigrantes" }]');
+    else {
+      const ids = new Set();
+      spec.views.forEach((v, i) => {
+        if (!v || typeof v !== 'object') return err('views-item', L(`views[${i}] debe ser un objeto.`, `views[${i}] must be an object.`), '{ id: "inmigrantes", value: "pct_inmigrantes" }');
+        const id = v.id === undefined ? String(i) : String(v.id);
+        if (!/^[a-z0-9][a-z0-9_-]*$/.test(id)) err('views-id', L(`views[${i}].id "${id}" no sirve en un atributo.`, `views[${i}].id "${id}" cannot go in an attribute.`), L('Usa minúsculas, dígitos, "-" o "_": id: "inmigrantes".', 'Use lowercase letters, digits, "-" or "_": id: "migrants".'));
+        else if (ids.has(id)) err('views-id', L(`Dos vistas se llaman "${id}".`, `Two views are called "${id}".`), L('Cada vista necesita un `id` distinto.', 'Each view needs its own `id`.'));
+        ids.add(id);
+        const rows = Array.isArray(v.data) ? v.data : data;
+        const rf = rows && rows[0] && typeof rows[0] === 'object' ? Object.keys(rows[0]) : fields;
+        if (typeof v.value === 'string' && rf.length && !rf.includes(v.value)) err('views-field', L(`views[${i}]: el campo "${v.value}" no está en los datos.`, `views[${i}]: field "${v.value}" is not in the data.`), L(`Campos: ${rf.slice(0, 8).join(', ')}.`, `Fields: ${rf.slice(0, 8).join(', ')}.`));
+      });
+      if (spec.views.length > 12) warn('views-many', L(`${spec.views.length} vistas: cada una suma un tooltip por región al SVG.`, `${spec.views.length} views: each adds one tooltip per region to the SVG.`), L('Deja las que el lector va a elegir; el resto, en otra página o en una tabla.', 'Keep the ones readers will pick; put the rest on another page or in a table.'));
+    }
+  }
+  if (spec.sprite !== undefined && spec.sprite !== null && spec.sprite !== false && !/^(https?:\/\/|\/|\.{0,2}\/)[^#"<>\s]*$/i.test(String(spec.sprite).trim())) err('sprite', L('`sprite` es la ruta del archivo de contornos (de mapSprite), sin #.', '`sprite` is the path of the outlines file (from mapSprite), without #.'), 'sprite: "/maps/chile.svg"');
+  if (spec.pathPrecision !== undefined && !(Number.isInteger(+spec.pathPrecision) && +spec.pathPrecision >= 0 && +spec.pathPrecision <= 3)) err('path-precision', L('`pathPrecision` son los decimales de los trazos: un entero de 0 a 3.', '`pathPrecision` is the decimals of the paths: an integer from 0 to 3.'), 'pathPrecision: 1');
+  if (spec.simplify !== undefined && !(+spec.simplify >= 0)) err('simplify', L('`simplify` es una tolerancia en píxeles: un número ≥ 0.', '`simplify` is a tolerance in pixels: a number ≥ 0.'), 'simplify: 0.5');
+  else if (+spec.simplify > 2) warn('simplify-coarse', L(`\`simplify: ${spec.simplify}\` borra detalles que se ven: las costas y las comunas chicas pierden su forma.`, `\`simplify: ${spec.simplify}\` removes visible detail: coastlines and small regions lose their shape.`), L('Entre 0,3 y 1 px no se nota en la página.', '0.3 to 1 px is invisible on a page.'));
+  if (spec.microstates !== undefined && typeof spec.microstates !== 'boolean' && spec.microstates !== 'all') err('enum-microstates', L(`\`microstates: ${q(spec.microstates)}\` no es válido.`, `\`microstates: ${q(spec.microstates)}\` is not valid.`), 'microstates: true | "all"');
+  if (MAPS.has(type) && spec.fitTo === 'mainland' && spec.geo === 'world') warn('fit-mainland-world', L('`fitTo: "mainland"` busca islas lejanas de un país; en el mundo deja fuera continentes.', '`fitTo: "mainland"` looks for one country\'s far islands; on the world it leaves out continents.'), L('Quita `fitTo`, o encuadra con una caja [lon0, lat0, lon1, lat1].', 'Drop `fitTo`, or frame with a box [lon0, lat0, lon1, lat1].'));
   // Un token secreto de Mapbox quedaría a la vista en el SVG.
   const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);
   if (token !== undefined && token !== null && String(token).trim().startsWith('sk.')) err('tiles-secret', L('El token de Mapbox es secreto (empieza con "sk."): quedaría a la vista de cualquiera en el SVG.', 'The Mapbox token is secret (it starts with "sk."): anyone could read it in the SVG.'), L('Usa un token público ("pk.…") restringido a tu dominio, de account.mapbox.com.', 'Use a public token ("pk.…") restricted to your domain, from account.mapbox.com.'));
@@ -484,4 +576,32 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     warn(key + '-unknown', L(`\`${key}\` nombra valores que no están en los datos: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`, `\`${key}\` names values that are not in the data: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`),
       L('Usa el texto exacto de una categoría o serie (se distinguen tildes y espacios).', 'Use the exact text of a category or series (accents and spaces count).'));
   }
+}
+
+/**
+ * Un riel (tipo `rail` o columna `range`): los extremos que nombran un campo
+ * existen, `refs` trae un valor o un campo en cada entrada, `domain` es un par
+ * y `fallback` / `clip` tienen valores válidos.
+ */
+function lintRail(o, where, { data, fields, check, err, L }) {
+  const named = (k, v) => { if (typeof v === 'string' && data.length) check(v, `${where}.${k}`); };
+  for (const k of ['min', 'max', 'median', 'ref']) named(k, o[k]);
+  if (o.band !== undefined) {
+    if (!Array.isArray(o.band) || o.band.length !== 2) err('rail-band', L(`\`band\` (${where}) es un par [desde, hasta].`, `\`band\` (${where}) is a pair [from, to].`), 'band: ["q1", "q3"]');
+    else o.band.forEach((v, i) => named(`band[${i}]`, v));
+  }
+  if (o.domain !== undefined && o.domain !== null) {
+    if (!Array.isArray(o.domain) || o.domain.length !== 2) err('rail-domain', L(`\`domain\` (${where}) es un par [desde, hasta]: números o campos.`, `\`domain\` (${where}) is a pair [from, to]: numbers or fields.`), 'domain: ["p5", "p95"]');
+    else o.domain.forEach((v, i) => named(`domain[${i}]`, v));
+  }
+  if (o.refs !== undefined) {
+    if (!Array.isArray(o.refs)) err('rail-refs', L(`\`refs\` (${where}) es una lista.`, `\`refs\` (${where}) is a list.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+    else o.refs.forEach((r, i) => {
+      if (typeof r === 'number' || typeof r === 'string') { named(`refs[${i}]`, r); return; }
+      if (!r || typeof r !== 'object' || (r.value === undefined && r.field === undefined)) err('rail-refs', L(`\`refs[${i}]\` (${where}) no trae \`value\` ni \`field\`.`, `\`refs[${i}]\` (${where}) has neither \`value\` nor \`field\`.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+      else { named(`refs[${i}].field`, r.field); named(`refs[${i}].value`, r.value); }
+    });
+  }
+  if (o.clip !== undefined && typeof o.clip !== 'boolean') err('rail-clip', L(`\`clip\` (${where}) es true o false.`, `\`clip\` (${where}) is true or false.`), 'clip: true');
+  if (o.fallback !== undefined && !['value', 'none'].includes(o.fallback)) err('enum-fallback', L(`\`fallback\` (${where}) es "value" o "none".`, `\`fallback\` (${where}) is "value" or "none".`), 'fallback: "value"');
 }

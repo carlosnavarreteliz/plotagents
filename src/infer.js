@@ -1,7 +1,7 @@
 // Elige el tipo de gráfico cuando el agente no lo indica (type: "auto").
 import { fieldsOf, fieldKind } from './data.js';
 
-export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot', 'spark', 'bump', 'waffle', 'dendrogram', 'dotplot'];
+export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot', 'spark', 'bump', 'waffle', 'dendrogram', 'dotplot', 'rail'];
 
 // Nombres de seaborn, d3plus y otros: el agente puede usar el que conozca.
 export const ALIASES = {
@@ -25,6 +25,7 @@ export const ALIASES = {
   bumpchart: 'bump', 'bump-chart': 'bump', rank: 'bump', ranking: 'bump', slope: ['bump', { ends: 'first-last' }], slopegraph: ['bump', { ends: 'first-last' }], 'slope-chart': ['bump', { ends: 'first-last' }],
   'waffle-chart': 'waffle', squares: 'waffle', unitchart: 'waffle', 'unit-chart': 'waffle', cuadros: 'waffle',
   dendrograma: 'dendrogram', linkage: 'dendrogram', hclust: 'dendrogram', 'cluster-tree': 'dendrogram',
+  riel: 'rail', 'range-rail': 'rail', 'field-rail': 'rail',
   'dot-plot': 'dotplot', wilkinson: 'dotplot', 'dot-histogram': 'dotplot', 'puntos-apilados': 'dotplot',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };

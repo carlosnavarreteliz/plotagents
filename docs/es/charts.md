@@ -14,13 +14,13 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `series` / `hue` | Campo que divide los datos en grupos de color. |
 | `highlight` | Un nombre o una lista: destaca esos y atenúa el resto. |
 | `colors` | `{ "name": "#hex" }` para fijar el color de una entidad. |
-| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. Desde JavaScript, también una función `(valor) => texto`: tus propias reglas para escribir cifras en etiquetas, tooltips y marcas del eje. |
+| `format`, `xFormat`, `yFormat` | `"number" \| "compact" \| "percent" \| "currency" \| "integer"` o `{ prefix, suffix, decimals, currency }`. Desde JavaScript, también una función `(valor) => texto`: tus propias reglas para escribir cifras en etiquetas, tooltips y marcas del eje. En `line`, `area` y `bar`, `yFormat` escribe sólo las marcas del eje de valores y `format` los rótulos y el tooltip (`yFormat` toma `format` si falta). |
 | `locale` | `"es"` (por defecto: `1.234,5`), `"en"` (`1,234.5`), `"pt"`, `"fr"` (`1 234,5`), `"de"` o `"auto"`: se reconoce a partir del título, el subtítulo, los nombres de columna y las categorías. Las tablas usan `"auto"` cuando omites `locale`. |
 | `xLabel`, `yLabel` | Títulos de los ejes (horizontales, nunca rotados). |
 | `xScale`, `yScale` | `"log"` donde tenga sentido. |
 | `xDomain`, `yDomain` | `[min, max]` fijo. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (o `x`, o `value` para barras). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel; una anotación con `panel` va sólo a ese panel. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, y el mismo tamaño de trazado en píxeles (márgenes de eje y espacio de rótulos finales igualados), así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel, y cada panel reserva su espacio, así ninguno se monta sobre otro y todos conservan el mismo alto de trazado; `panelColor: true` escribe el nombre de cada panel en el color de su serie (o `{ panel: color }`, o una función `(panel, filas) => color`); los paneles dejan lugar a las marcas de su eje y como un gráfico suelto, igual en todos; una anotación con `panel` va sólo a ese panel; `legend: false` oculta la leyenda común. |
 | `time`, `timeValue` | Un período a la vez: el más reciente por defecto, o `timeValue`. El período se agrega al subtítulo. |
 | `slider`, `play` | Controles de tiempo en el navegador, **desactivados por defecto**. `slider: true` agrega botones de período cuando hay pocos períodos (≤ 8) y un deslizador mínimo cuando hay muchos; los gráficos de líneas y de áreas reciben un rango con dos tiradores. `"buttons"` o `"slider"` fuerzan uno; `play: false` oculta el botón de reproducir. |
 | `compare` | Con `time`: compara contra `"previous"` (por defecto), `"first"`, un período dado o `false`. |
@@ -32,6 +32,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `exclude` | Un nombre o una lista: quita esas entradas de la leyenda (series, grupos del primer nivel) y recalcula ejes, proporciones y diseño. Los colores se mantienen y las entradas excluidas siguen en la leyenda, atenuadas y tachadas. |
 | `tooltip` | Lo que dice cada marca al pasar el cursor, además de su valor: una lista de campos (líneas «Campo: valor» de las filas de la marca), o `{ title, fields: [campo \| { field, label, format }], text, replace }`, donde `text` es un campo con líneas ya escritas, o `false`. Desde JavaScript, también `(d) => texto \| { title, lines }` con `d.rows`, `d.lines`. Una marca hecha de varias filas (un grupo del treemap, un año con varias series) muestra un campo sólo si sus filas coinciden. |
 | `href` | Las teselas del treemap, los nombres de las barras horizontales y los puntos de dispersión enlazan a la URL de este campo (sólo rutas y http(s)). |
+| `sprite` | Ruta de un archivo de contornos escrito una vez con `mapSprite(spec)`: las regiones son `<use>` y la página no lleva geometría. |
 | `xBands` | Tramos del eje x sombreados detrás de columnas, líneas y áreas: `[{ from, to, label, color }]`. |
 
 ### En el navegador
@@ -56,7 +57,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `labels` | `true`, `false` o `"auto"`. |
 | `barWidth` | Grosor máximo de la barra en px. |
 | `xGroup` / `yGroup` | Campo que agrupa categorías consecutivas (sirve cualquiera de los dos, en ambas orientaciones): una banda teñida con el nombre del grupo corre junto al eje de categorías, con una línea fina entre grupos. No se reordena nada: usa `sort: "none"` para conservar tu orden. |
-| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N categorías (y ralea más sólo si los rótulos aún chocan). |
+| `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N categorías (y ralea más sólo si los rótulos aún chocan). Un rótulo visible se recorta al espacio de N categorías, no al de una. Las categorías de fecha se ralean en pasos del calendario (meses 1, 2, 3, 4, 6, 12…; años 1, 2, 5, 10…), medidos sobre el ancho de los rótulos. |
 
 El eje de valores siempre termina en el primer valor redondo igual o mayor que la barra más larga, y esa última marca siempre va rotulada, también en un teléfono: cuántas marcas caben depende del ancho de sus rótulos.
 
@@ -76,7 +77,8 @@ El eje de valores siempre termina en el primer valor redondo igual o mayor que l
 | `ci`, `errorbar`, `estimator` | `lineplot` de seaborn: media y banda de confianza cuando hay varias filas por x. |
 | `curve` | `"linear"` (por defecto), `"smooth"` (monótona, nunca inventa picos), `"step"`. |
 | `zero` | Fuerza el eje y a incluir el cero (activado por defecto en áreas y cuando cuesta poco). |
-| `points` | Marcadores en cada punto (automático en series cortas). |
+| `points` | Marcadores en cada punto (automático en series cortas); una lista de series (o `{ serie: true }`) los pone sólo en esas. |
+| `lineWidths` | Grosor de trazo por serie, p. ej. `{ "media 1991–2020": 3.5 }`; las demás conservan el de siempre. |
 | `stack` | Áreas: `true` (por defecto con series), `"percent"` o `false` para superponerlas. |
 | `fill` | Línea única: `false` quita el degradado suave. |
 | `xRange` | Rango visible `[from, to]`; es lo que fija el deslizador de rango (`slider: true`). |
@@ -93,6 +95,29 @@ La forma de una serie, en su propia escala de mínimo a máximo (sin cero): resp
 | `fill` | Un lavado suave bajo la línea (`true` o una opacidad). |
 | `dot`, `dotRadius`, `lineWidth` | El punto final (`dot: false` lo oculta) y el trazo. |
 | `yDomain` | Fija la escala (p. ej. para comparar sparklines de una columna). |
+
+### `rail` (`riel`, `range-rail`)
+
+Una fila de una distribución, del tamaño de una celda de tabla (`width: 160, height: 18` por defecto; sirve de ~130 a ~330 px): una línea de `min` a `max`, la `band: [lo, hi]` del medio sombreada, una muesca en la `median`, el `value` de la fila como punto y cualquier número de marcas de referencia. Es la columna `range` de `table` como marca propia, para una página que conserva su tabla HTML (enlaces, íconos, notas, ficha de teléfono) y sólo necesita el riel dibujado en el servidor. Sin marco: una caja invisible lleva un `data-tip` que nombra cada parte.
+
+```js
+plot({ type: 'rail', data: [fila], value: 'chile', min: 'lo', max: 'hi', band: ['q1', 'q3'], median: 'med',
+  refs: [{ field: 'region', label: 'Biobío' }, { value: 12, label: 'Meta' }],
+  valueLabel: 'Chile', minLabel: 'nombreMin', maxLabel: 'nombreMax', clip: true, format: (v) => fmt(v) });
+```
+
+| Opción | Qué hace |
+|---|---|
+| `data` | Una fila (se dibuja la primera). Se omite si todo viene como número. |
+| `value`, `min`, `max`, `median` | Cada uno, un campo de la fila o un número fijo. |
+| `band` | `[lo, hi]` de la banda sombreada (p. ej. los cuartiles). |
+| `refs` | Marcas de referencia: `[{ field \| value, label, color }]`; `label` es texto o un campo de la fila. `ref` + `refLabel` es el atajo de una sola. |
+| `clip` | La escala es `[min, max]`: un valor pasado un extremo es un chevrón en ese extremo (y el tooltip lo dice), sin estirar la escala; una referencia pasada, un chevrón abierto. |
+| `domain` | La escala, `[desde, hasta]` en números o campos (p. ej. `["p5", "p95"]`); recorta como `clip`. Sin `min`/`max`, el riel cruza todo el dominio. `domainLabel` agrega una línea al tooltip que lo nombra. |
+| `fallback` | Una fila sin `min`/`max` ni `domain` no tiene riel: escribe su cifra (`"value"`, por defecto) o nada (`"none"`), nunca un punto suelto. |
+| `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Nombres en el tooltip (texto o un campo de la fila). Con `minLabel`/`maxLabel` el tooltip lista los dos extremos («Más bajo · Colchane: 7,1») en vez de «Rango: a–b». |
+| `color`, `colors` | El color del punto; `colors: { rail, band, median, ref, value }` por parte. Cualquier color puede ser `var(--x, #respaldo)`, y `skins` funciona como en cualquier gráfico. |
+| `format`, `dotRadius`, `tooltip`, `title` | Un formato (una función desde JS), el tamaño del punto, campos extra del tooltip y su encabezado (también el `<title>`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 
@@ -201,6 +226,12 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `orientation` | `"horizontal"` (raíz a la izquierda, por defecto) o `"vertical"` (raíz arriba). |
 | `labels` | Rótulos de hojas: `"auto"` (una de cada k si no caben), `true`, `false`; con `linkage`, la lista de nombres. |
 | `label` | Entrada por filas: campo con el nombre visible de cada hoja. |
+| `series` | Entrada por filas: un campo que colorea cada hoja (una muestra al pie y la barra de peso), con leyenda salvo `legend: false`. No necesita `cut`; `colors` fija el color de una categoría. |
+| `size` | Entrada por filas: el peso de cada hoja (cuántas cosas cuelgan de ella), una barra con su cifra junto al nombre (`sizeFormat` le da formato). Cada unión suma sus hojas. En vertical va sólo en el tooltip. |
+| `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. |
+| `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
+| `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
+| `labelWidth` / `treeWidth` | La columna de nombres ocupa a lo más el 30 % del ancho (120 px en vertical); `labelWidth` fija ese tope en px. `treeWidth` (horizontal) fija en cambio el ancho del árbol y deja a los nombres todo lo demás: `width: 1236, treeWidth: 250`. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -245,7 +276,9 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `inner` | Violín: `"box"` (por defecto), `"quartiles"`, `"points"`, `"none"`. |
 | `split` | Violín con dos niveles de `hue`: una mitad cada uno. |
 | `scale` | Ancho del violín: `"width"`, `"area"`, `"count"`. |
-| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. |
+| `jitter`, `dodge`, `radius` | Disposición de strip y swarm. Cada punto de strip y swarm lleva el `tooltip` de su fila (`{ title, text, replace: true }`). |
+| `clamp` | Con un dominio de valores (`xDomain` en horizontal, `yDomain` en vertical): lo que cae fuera se dibuja en el borde, y la marca del borde lo dice («≤ 0,0001 %», «≥ 100 %») cuando algún valor quedó más allá. En un eje log, un 0 va al borde de abajo. |
+| `yLabelPosition` | Gráficos horizontales: `"above"` escribe el nombre de cada fila sobre ella, alineado a la izquierda, y el eje de valores se queda con todo el ancho (un teléfono). |
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Eje de categorías con grupos y rótulos raleados, como en `bar`. |
@@ -261,7 +294,9 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `series` | Colores de los puntos. |
 | `highlight` | Un nombre (o lista): ese punto lleva un anillo y su nombre; el resto se aclara. |
 | `ticks` | Marcas propias en el eje: `[[500000, "$500 mil"], [1000000, "$1 M"]]`. |
-| `dotSize` | Diámetro máximo de un punto en px (14 por defecto). |
+| `dotSize` | Diámetro máximo de un punto en px (14 por defecto); además, un punto nunca es más ancho que su tramo. |
+| `dotRadius` | El radio del punto en px, sin el tope del ancho del tramo: un tramo fino en una caja angosta sigue dando puntos que se leen (los de tramos vecinos pueden tocarse). Con `height` explícito se achica igual para que quepa la pila más alta. |
+| `refLines` | Valores de referencia que no son un punto más (la cifra de Chile): `[{ x: 18.4, label: "Chile" }]`, una línea vertical detrás de los puntos con su rótulo arriba (`rótulo · valor`; `showValue: false` escribe sólo el rótulo, en la línea y en el tooltip) y su propio tooltip. `dash: true` la punta (3 3), o da un patrón SVG (`"4 2"`). `x` puede ser un campo cuyas filas digan todas lo mismo (con `facet`, el de cada panel). El eje se abre para incluirla. |
 
 ## Partes de un todo
 
@@ -276,6 +311,8 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `exclude` | Grupos del nivel 1 que se dejan fuera; el resto llena el plano y las proporciones se recalculan. En el navegador lo hace Shift + clic en una clave de la leyenda. |
 | `showValues` | Agrega los valores a las etiquetas. |
 | `colorBy` | `"change"` colorea los rectángulos según el % de cambio respecto del período de comparación (crecimiento en tonos fríos, caída en cálidos); `"label"` colorea por elemento un treemap de un solo nivel. |
+| `tileLabels` | `"wrap"`: un nombre largo va en las líneas que permita el alto de la tesela, con su participación debajo siempre que quepa a algún tamaño; si no, el nombre solo; como último recurso se recorta con «…». Por defecto `"auto"`: el nombre sólo si cabe entero. Una participación bajo 0,05 % se escribe «<0,1%», nunca «0%». |
+| `shareOf` | Con `focus`: qué participación escribe cada tesela, `"group"` (por defecto), `"total"` o `"both"` («53% · 11% del total»). Si la cifra no cabe, una más corta en vez de ninguna: `"both"` pasa a la del grupo y `"total"` a la cifra sola (el tooltip dice de qué es). |
 | `shade` | Pasos sutiles de luminosidad dentro de cada categoría. Desactivado por defecto: un color sólido por categoría. |
 | `compareData` | Filas de un período anterior para calcular cambios sin `time`. |
 | `hole`, `centerValue`, `centerLabel` | Centro del sunburst. |
@@ -306,7 +343,9 @@ Una cuenta hecha cuadros: un cuadro por fila, o por unidad de `value`, por `seri
 |---|---|
 | `value` | Campo a sumar (si no, un cuadro por fila). |
 | `unit`, `maxSquares` | Cuánto vale un cuadro; cuándo entra la unidad redonda. |
+| `perSquare` | Cada cuadro es su propia marca (un `<rect>`, con `rx` si va redondeado) con el tooltip de su fila (una verificación, una persona), en el orden de los datos dentro de cada serie; va bien con `tooltip: { title, text, replace: true }`. Sólo mientras un cuadro es una unidad; sobre `maxSquares` vuelve a un tooltip por serie. |
 | `columns` | Cuadros por fila (10, 20 o 25 según el total). |
+| `cellRadius` | Radio de las esquinas de cada cuadro en px; `0` para esquinas rectas (por omisión, el radio de las barras del tema, a lo más un cuarto del cuadro). |
 | `order` | Orden de las series (por defecto, la mayor primero). |
 
 ## Mapas
@@ -319,15 +358,19 @@ Las regiones de Chile (`geo: "chile"`, por defecto), los estados de EE. UU. (`ge
 
 | Opción | Significado |
 |---|---|
-| `geo` | `"chile"`, `"usa"`, `"world"`, un nombre registrado con `registerGeo()`, un objeto GeoJSON o TopoJSON, o (en el navegador) una URL. |
+| `geo` | `"chile"`, `"usa"`, `"world"`, un nombre registrado con `registerGeo()`, un objeto GeoJSON o TopoJSON, trazos ya proyectados (`{ paths, points?, names? }`), o (en el navegador) una URL. |
 | `featureKey`, `nameKey` | Propiedad de la geometría que se empareja, y la que tiene el nombre para mostrar (ambas se detectan si las omites). |
-| `fitTo` | Amplía a regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`. |
+| `fitTo` | Amplía a regiones, a una caja `[lonMin, latMin, lonMax, latMax]`, a `"markers"` o a `"mainland"` (islas lejanas y reclamos fuera del encuadre). |
+| `views` | Varias lecturas (indicadores, años) de una sola geometría en un SVG; la página cambia `data-view`. Ver más abajo. |
+| `pathPrecision`, `simplify` | Trazos compactos: relativos, redondeados a `pathPrecision` decimales y simplificados en la pantalla con una tolerancia en píxeles. |
+| `microstates` | Mundo: Singapur, Malta, Baréin y 71 más como puntos (`true`: los que tienen datos; `"all"`). |
+| `href` | Campo de los datos con una URL: cada región enlaza a ella (sólo rutas y http(s)). |
 | `links` | Líneas entre lugares, sobre las regiones: `[{ from, to, value }]` o `{ data, from, to, value, color, curveness, width: [mín, máx], opacity, label }`. Los extremos son claves de región o `[lon, lat]`. |
 | `orientation`, `rotate` | `"landscape"` acuesta un territorio más alto que ancho, con el norte a la izquierda; `"portrait"` para uno ancho; `rotate: 90 \| -90 \| 180` gira el mapa proyectado en sentido horario. Las etiquetas quedan derechas. |
 | `markers`, `layers` | Puntos por lon/lat encima; líneas, polígonos o puntos GeoJSON adicionales sobre o bajo el mapa. |
 | `scale`, `classes` | `"quantile"` (por defecto), `"equal"`, `"continuous"` o una lista de cortes; 5 clases por defecto. |
 | `midpoint` / `diverging` | Clases divergentes en torno a un valor (p. ej. 0 para cambios). |
-| `missing` | `"plain"` quita el achurado y la entrada "Sin datos" de la leyenda. |
+| `missing` | `"plain"` quita el achurado y la entrada "Sin datos" de la leyenda; `"context"` quita además el tooltip (regiones que sólo son entorno). |
 | `labels`, `bars` | Chile recibe una columna de norte a sur con nombre, barra y valor; `bars: false` oculta las barras. Los mapas del mundo rotulan los N primeros. |
 | `projection` | `"mercator"`, `"equalEarth"`, `"albersUsa"`, `"equirectangular"`, `"conic"`, `"identity"`, `"planar"` o `{ type, parallels, rotate }` (se elige de forma automática). |
 | `borderColor`, `borderWidth` | Bordes de las regiones. |
@@ -352,9 +395,9 @@ plot({
 });
 ```
 
-- **Emparejamiento sin configuración.** Las filas se emparejan con las claves habituales (código, id, ISO-3, nombre, alias); si algunas filas no calzan, plotagents encuentra la propiedad de la geometría cuyos valores sí calzan (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` fuerza una. Los nombres para mostrar salen de `nameKey`, o de la primera de `name`, `NOMBRE`, `NAME_1`, `ADMIN` y similares.
+- **Emparejamiento sin configuración.** Las filas se emparejan con las claves habituales (código, id, ISO-2, ISO-3, nombre, alias); si algunas filas no calzan, plotagents encuentra la propiedad de la geometría cuyos valores sí calzan (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` fuerza una. Los nombres para mostrar salen de `nameKey`, o de la primera de `name`, `NOMBRE`, `NAME_1`, `ADMIN` y similares.
 - **Proyecciones.** Se eligen según la geometría: Mercator para un país o una región, Equal Earth para el mundo y un plano cartesiano simple cuando las coordenadas no son longitudes y latitudes (metros UTM, por ejemplo). Fija `projection` en `"equirectangular"`, `"conic"` (o `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordenadas tal como vienen, y hacia abajo, para mapas ya proyectados o dibujados a mano; `flipY: true` si y crece hacia arriba) o `"planar"` (y hacia arriba).
-- **Encuadre.** `fitTo` amplía a algunas regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`; el resto del mapa queda recortado como contexto. `tall: false` desactiva la columna lateral para formas alargadas.
+- **Encuadre.** `fitTo` amplía a algunas regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`; el resto del mapa queda recortado como contexto. `fitTo: "mainland"` deja fuera las islas lejanas y los reclamos (Rapa Nui, Juan Fernández, la Antártica), que se hallan por el mar que los separa y no por una lista. `tall: false` desactiva la columna lateral para formas alargadas.
 - **Marcadores.** `markers: [{ lon, lat, label, value }]` o `{ data, lon, lat, label, size, color, legend, maxRadius }`: puntos encima, proporcionales al área cuando hay un `size`, con etiquetas ubicadas donde no chocan.
 - **Líneas entre lugares.** `links: { data: comercio, from: 'origen', to: 'socio', value: 'usd' }` dibuja una línea curva por fila, de región a región (o `[lon, lat]`), con ancho proporcional al valor, un solo color y sin puntas de flecha: una línea es una relación, no una ruta. Cada línea es una marca con su tooltip y `data-key="origen→destino"`; los extremos que no calzan con ninguna región se nombran en la descripción en vez de dibujarse. Con `labels: false` el mapa no lleva texto.
 - **Acostado.** `orientation: "landscape"` gira un cuarto de vuelta un territorio largo y angosto (Chile, Noruega, Vietnam, una cuenca) después de proyectarlo, con el norte a la izquierda para que norte→sur se lea de izquierda a derecha; encuadre, zonas de clic, marcadores y líneas lo siguen, y las etiquetas quedan derechas. `rotate: 90 | -90 | 180` fija el giro a mano.
@@ -362,6 +405,39 @@ plot({
 - **Capas.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` superpone ríos, caminos, rutas, fallas o límites de distritos (o los dibuja bajo las regiones con `below: true`). Un `label` agrega una clave a la leyenda.
 - **Estilo.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (una rampa secuencial con nombre o propia), `palette` y `colors` (categorías).
 - **Regístrala una vez y úsala por nombre.** `registerGeo('biobio', comunas, ['comunas-biobio'])` y luego `geo: 'biobio'` en cada especificación, lo que mantiene cortas las llamadas a herramientas de un agente.
+
+#### Mapas para un sitio estático: trazos proyectados, vistas y nada de la biblioteca en el navegador
+
+Un sitio que arma sus páginas de antemano puede dibujar cada mapa en el servidor y entregar el SVG terminado, sin nada de plotagents en el navegador.
+
+**Trazos proyectados al construir.** `geo: { paths: { id: "M…Z" }, points?: { id: [x, y] }, names?: { id: nombre } }` recibe trazos SVG ya proyectados y simplificados (un `map.json` con un contorno por comuna), en píxeles y con y hacia abajo. No corre TopoJSON ni proyección: cada trazo se lee a puntos (`M L H V Z C S Q T A`, absolutos o relativos) y se encuadra, se gira (`orientation: "landscape"`), se empareja y se colorea como cualquier mapa. Un valor puede ser `{ d, at: [x, y] }`, donde `at` ancla las líneas; `points` son lugares demasiado chicos para un contorno, dibujados como puntos de `pointRadius`.
+
+**Trazos compactos.** Un mapa detallado pesa lo que pesan sus coordenadas. `pathPrecision: 1` (decimales, en píxeles) escribe comandos relativos redondeados a esa grilla, y `simplify: 0.5` quita los puntos a menos de medio píxel de la línea (Douglas–Peucker en la pantalla). En las 345 comunas de Chile a 1.180 px, los trazos bajan de 516 KB a 176 KB (39 KB con gzip) sin cambio visible. Sin estas opciones los trazos se escriben como siempre.
+
+**Los contornos en un archivo aparte.** Un sitio que muestra el mismo mapa en cientos de páginas no tiene por qué repetir sus contornos en cada una. `mapSprite(spec)` escribe un SVG con un `<path id>` por región, proyectado pero sin encuadre (su lado mayor mide 1000); se publica una vez (`/maps/chile.svg`) y el navegador lo guarda. Con `sprite: "/maps/chile.svg"`, cada región es un `<use href="/maps/chile.svg#id">` dentro de un grupo cuya transformación encuadra y gira el archivo, así que un solo archivo sirve al mapa ancho, al de teléfono y a cada encuadre (`fitTo` una región). Colores, clases de las vistas, tooltips y enlaces quedan en el `<use>`; los puntos se siguen dibujando en la página. Las 345 comunas de Chile: el archivo pesa 90 KB (26 KB con gzip); cada mapa de una página, 98 KB (12 KB con gzip) con una vista y 31 KB con gzip con seis. Un archivo de otro origen necesita CORS, y un SVG abierto solo (en un `<img>`) no lo carga.
+
+**Vistas.** `views: [{ id, label, value, … }, …]` dibuja varias lecturas de una sola geometría en un SVG. Cada vista es un parche del spec (`value`, `data`, `format`, `colorScale`, `scale`, `classes`, `thresholds`, `colors`, `legendTitle`, `tooltip`, y `highlight` y `links` sólo para esa vista). La primera vista se dibuja como siempre. Las demás viajan como datos: una clase por región y vista (`pv2-3`: vista 2, clase de color 3), su tooltip en `data-vtip-<id>`, y un `<style>` dentro del SVG que pinta la vista que nombra `data-view` en la raíz y esconde las leyendas, rótulos y líneas de las otras. Las pieles y los colores `var(--x, respaldo)` funcionan como en cualquier gráfico. Una vista no puede cambiar las formas ni el marco (`geo`, `key`, `fitTo`, `orientation`, `width`, `title`…).
+
+```js
+plot({
+  type: 'choropleth', geo: { paths: map.paths, names: map.label }, data: comunas, key: 'id',
+  orientation: 'landscape', fitTo: 'mainland', pathPrecision: 1, simplify: 0.5, href: 'url',
+  views: [
+    { id: 'inmigrantes', label: 'Nacidos en el extranjero', value: 'pct_inmigrantes', format: { suffix: '%' } },
+    { id: 'mayores', label: '65 años o más', value: 'pct_65_mas', highlight: 'c05101' },
+  ],
+});
+```
+
+Cambiar de vista es cambiar un atributo. `plotagents/views` (1,2 KB minificado, 0,6 KB con gzip, sin dependencias) lo hace y pasa el tooltip de la vista a `data-tip`, que es lo que lee cualquier capa de hover:
+
+```js
+import { setView, bindViews } from 'plotagents/views';
+setView(document.querySelector('#mapa'), 'mayores');
+bindViews(document);   // <button data-set-view="mayores"> cambia los mapas de la página
+```
+
+**El mundo.** Los países calzan por ISO-2 (`"CL"`), ISO-3 o nombre. `microstates: true` dibuja como punto los estados demasiado chicos para tener contorno a esta escala (Singapur, Malta, Baréin, Hong Kong…; `"all"` los dibuja todos); las líneas llegan a ellos como a cualquier país. Las **líneas** siguen siendo lo que eran: una relación, no una ruta.
 
 En el navegador (`render()` o `toHTML()`), los mapas son interactivos: al pasar el puntero se remarca la forma; un clic en una región la amplía hasta encuadrarla (vuelve con otro clic, doble clic, Esc o el botón de reinicio); Ctrl/⌘ + rueda amplía en torno al puntero (la rueda sola sigue desplazando la página, como recomienda `chartjs-plugin-zoom` con su `modifierKey`); el gesto de pellizcar amplía en pantallas táctiles; arrastrar desplaza el mapa ampliado; los botones +/− funcionan desde el teclado. Cada clase de color de la leyenda es una clave: pasa el puntero para iluminar sus regiones y haz clic para fijarlas. Con `time`, el color de cada región transita hacia el del período siguiente en vez de saltar, y la ampliación se mantiene mientras se reproduce el deslizador.
 
@@ -419,6 +495,19 @@ Aristas en `data` (`from`, `to`, `value` opcional), `nodes` opcionales con `id`,
 
 `labels` (número, lista o `true`), `highlight` (un nodo y sus vecinos), `focus` (el id de un nodo: va al centro, o a la raíz en `radial`/`tree`, y se destaca con sus vecinos, todos rotulados; en el navegador lo hace un clic con una transición suave, y un segundo clic o Esc vuelve), `iterations`, `maxRadius`, `curveness`.
 
+Un mapa ya calculado (el espacio de productos, una red de conocimiento) suele pedir que el significado lo lleven los nodos y que las aristas se retiren:
+
+| Opción | Significado |
+|---|---|
+| `filled` / `hollow` | Un campo de `nodes` (o una lista de ids): esos nodos quedan rellenos (o huecos) y el resto son anillos del mismo color con el fondo adentro. Una segunda codificación sin un segundo color, p. ej. los grupos en que una institución se especializa, encendidos sobre el mismo mapa. Los rellenos se rotulan primero; los huecos, en tinta tenue. |
+| `edgeColor` | `"source"` (por omisión), `"neutral"` (la tinta tenue del tema) o cualquier color, incluido `var(--line, #e0d6c4)`. `colors["a→b"]` sigue fijando una arista, que va encima. |
+| `edgeOpacity` / `edgeWidth` | Un número para todas las aristas, o `[mín, máx]` según el valor (la opacidad lineal, el ancho por la raíz). |
+| `stretch` | Sólo con `layout: "preset"`: x e y se escalan por separado para llenar el área, para posiciones ya normalizadas por eje (MDS en 0–1). |
+| `minRadius` | Radio mínimo de un nodo en px (2,5 por omisión). |
+| `labelWidth` | Ancho máximo del nombre de un nodo en px antes de cortarlo con «…» (150 por omisión). |
+| `edgeTip` | `false` no escribe tooltip en las aristas (`tooltip: false` también las deja sin él). Cientos de aristas con su propio texto pesan más que el dibujo. |
+| `href` | Un campo de `nodes` con una URL: cada nodo es un enlace. |
+
 ### `chord`
 
 Filas `from`, `to`, `value`, o `matrix` + `names`. `directed` (por defecto false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
@@ -436,18 +525,36 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | Opción | Qué hace |
 |---|---|
 | `colorScale: { colors, breaks }` | Clases discretas en vez de un degradado ([escalas de color](colorscales.md#clases)); la leyenda pasa a ser una clave escalonada con los cortes escritos debajo, con `format`. |
-| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. |
+| `midClass: "neutral"` | Con cortes alrededor de 0, la clase que contiene el 0 va en el tinte neutro: lo que casi no se mueve no se pinta. `midClass: { color }` la pinta en ese color, así un parche de piel la fija sin reemplazar el tema. |
+| `missingLabel` | Lo que dice el tooltip de una celda sin valor (`"—"` por omisión): `"sin dato"`. |
 | `missing` | Celdas sin valor: `"tint"` (por defecto), `"plain"` (sólo el borde), `"hatch"` (rayado de «sin dato») o `"gap"` (nada). |
 | `floor` / `ceiling` | Los valores bajo / sobre se dibujan como celdas vacías: el valor existe (el tooltip lo muestra), pero no se colorea ni estira la escala. |
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
-| `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
+| `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. Un nombre que no cabe se corta, y va entero en su tooltip. |
+| `groupColors` | `{ [grupo]: color }`: cada grupo con color lleva una franja de 3 px de su color en el borde de su banda que mira a la grilla (el matiz de una familia bajo sus sectores), en vez del tinte alterno. |
+| `cornerLabel` | Un título en la esquina vacía donde se encuentran los rótulos de fila y de columna: `"nació en ↓ / vive en →"`; `"\n"` lo parte en líneas. La columna de rótulos de fila se ensancha para que quepa (con el mismo tope); lo que no cabe se corta y va entero en el tooltip. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
+| `rowTip` | Tooltip del rótulo de cada fila, desde este campo: lo que es de toda la fila y no tiene que repetirse en cada celda. Desde JS, también una función del rótulo. |
+| `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
+| `xLabelAngle`, `xLabelPosition` | Rótulos de columna girados (`-90` de pie, `-45` inclinados) cuando no caben de lado, bajo la grilla (por defecto) o sobre ella (`"top"`). La franja crece lo necesario; un rótulo cortado lleva su nombre entero en el tooltip. |
+| `cellGap` | Aire entre celdas en px (`2` por defecto); `0` las junta con esquinas rectas; `[x, y]` por eje. |
+| `diagonal` | Las celdas con `x` igual a `y` (se quedó en la misma región) van aparte: su propio color, fuera de la escala (una diagonal enorme no aplana el resto), una entrada en la leyenda y una línea en el tooltip. `true`, un rótulo o `{ label, color, opacity }`. Un valor que falta sigue siendo «sin dato». |
+| `cellColor` | Un campo que nombra la clase de cada celda («Revisada»); esas celdas toman `colors[clase]`, fuera de la escala, con su entrada en la leyenda y su línea en el tooltip. Un valor escrito como color se usa tal cual. |
+| `labelFormat` | Formato sólo del numeral dentro de las celdas (tooltip y leyenda siguen con `format`). Una función que devuelve `""` deja la celda sin cifra. |
+
+```js
+plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
+  diagonal: { label: 'Nació y vive aquí', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 
 `from`, `to`, `value` (también detecta `source`/`target`). El color parte en la primera etapa con más de un nodo y fluye aguas abajo.
 
-`nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno.
+`nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno. Los trazos de los flujos van con dos decimales; `pathPrecision: 1` (o 0) escribe menos.
+
+Muchos nodos chicos quedan a pocos píxeles unos de otros y sus nombres se enciman. `relax: true` separa los rótulos de cada columna: todo nodo lleva su nombre y su segunda línea, cada rótulo se corre lo mínimo para quedar a 31 px de sus vecinos (un número fija otra distancia; bajo 28 px el rótulo es de una línea) y el que quedó lejos de su nodo lleva una guía fina hasta él. Sin `height`, el gráfico crece hasta que caben; con `height`, los que no caben pasan a una línea y luego se aprietan.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
@@ -504,14 +611,15 @@ plot({
 | `badge` | Píldora de estado | Los valores son palabras de estado (done, at risk, late, in progress… en es/en/pt/fr/de): colores de bien, advertencia, crítico e información |
 | `check` | ✓ o un guion, con una etiqueta accesible | Booleanos, o sí/no, yes/no… |
 | `date` | Fecha legible en el idioma del gráfico | Fechas ISO |
-| `link` | Enlace subrayado; solo `http(s)` y `mailto` reciben un `href` | URLs |
+| `link` | Enlace subrayado: `http(s)` y `mailto` abren en otra pestaña; una ruta del sitio (`"/es/…"`, `"./x"`, `"#y"`) enlaza en la misma; lo demás es texto. `text: 'campo'` muestra otro campo en vez de la URL | URLs |
 | `rank` | Posición según el orden actual | `rank: true` |
-| `range` | Un riel: el valor de la fila como punto sobre `min`–`max`, una `band: [lo, hi]` sombreada, una muesca en la `median` y una marca de referencia `ref` (cada una, un campo o un número fijo). El tooltip lista cada parte; `refLabel` y `bandLabel` las nombran. `scale: "row"` da a cada fila su propia escala (indicadores en unidades distintas); por defecto, una escala para la columna | — |
+| `range` | Un riel: el valor de la fila como punto sobre `min`–`max`, una `band: [lo, hi]` sombreada, una muesca en la `median` y una marca de referencia `ref` (cada una, un campo o un número fijo). El tooltip lista cada parte; `refLabel` y `bandLabel` las nombran. `scale: "row"` da a cada fila su propia escala (indicadores en unidades distintas); por defecto, una escala para la columna. `refs: [{ field \| value, label }]` agrega varias marcas con su rótulo; `clip: true` recorta la escala a mín–máx y `domain: [desde, hasta]` (números o campos, p. ej. p5–p95) a cualquier tramo, y lo que cae pasado un extremo es un chevrón; `minLabel`, `maxLabel`, `medianLabel`, `domainLabel` nombran las partes. Una fila sin `min`/`max` en una columna que los tiene escribe sólo su cifra. El mismo dibujo que el tipo `rail` | — |
 | `text`, `number` | Texto (se divide en 2–3 líneas) y números simples | Todo lo demás |
 
 | Opción | Significado |
 |---|---|
 | `columns` | Orden y tipo: nombres de campo o `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omítelo para usar todos los campos. `x`/`label` elige la columna con el nombre de la fila e `y` una lista de columnas de valores. |
+| `formatBy` (columna) | Un formato por fila, para una tabla de indicadores en unidades distintas (porcentaje, conteo, dinero): un campo cuyo valor es un formato (`"percent"`, `{ suffix: " años", decimals: 1 }`; los decimales se infieren entre las filas que lo comparten) o, desde JS, una función `(valor, fila) => texto`. Sirve en `number`, `bar`, `heat`, `delta` y `range` (celda, tooltip y tarjeta); una columna `range` pasa a `scale: "row"` y la columna no lleva total. |
 | `sortBy`, `sort` | Columna y dirección (`"desc"` para números, `"asc"` para texto por defecto). `sort: "-sales"` también funciona. Las celdas vacías siempre van al final. |
 | `pageSize`, `page` | Hasta 15 filas se muestran completas; sobre eso, páginas de 10. `pageSize: false` muestra todo. El paginador son solo números y flechas (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Conserva las filas que contienen esas palabras, sin importar tildes ni mayúsculas. |
@@ -521,6 +629,7 @@ plot({
 | `top` | Conserva las primeras N filas tras ordenar. |
 | `cards` | `"auto"` (por defecto) convierte cada fila en una tarjeta cuando las columnas no caben (teléfonos): nombre y valor principal arriba, la barra debajo y las demás columnas como líneas etiqueta–valor. `true` siempre, `false` nunca. |
 | `density`, `striped` | Filas `"compact"` / `"comfortable"`; franjas tipo cebra para tablas muy anchas. |
+| `missingLabel` | Lo que escribe una celda sin valor (y su tooltip) en vez del guion: `"sin dato"`. |
 
 En el navegador, `render()` agrega un cuadro de búsqueda sobre 20 filas (`search: false` lo oculta; `true` lo fuerza), encabezados que ordenan con un clic (orden natural, invertido y luego el orden original) y botones de página; todos funcionan desde el teclado y anuncian `aria-sort` y `aria-current`. Al cambiar el tamaño se vuelve a dibujar con el nuevo ancho, así que una tabla se vuelve tarjetas en un teléfono y columnas otra vez en un computador.
 
