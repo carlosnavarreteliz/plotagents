@@ -91,9 +91,22 @@ export function plot(spec) {
   s = applyExclude(s);
   const theme = themeFor(s);
   const textScale = Math.max(0.5, Math.min(4, +(s.textScale ?? s.fontScale ?? s.labelScale ?? 1) || 1));
-  return withContext({ textScale }, () => {
+  const out = withContext({ textScale }, () => {
     if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
     return RENDERERS[s.type](s, theme);
+  });
+  return s.inlineSize === false ? dropInlineSize(out) : out;
+}
+
+/**
+ * `inlineSize: false`: sin `max-width:100%;height:auto` en el style de la raíz,
+ * para que el CSS de la página mande en el tamaño sin !important (el SVG
+ * conserva width, height y viewBox).
+ */
+function dropInlineSize(svg) {
+  return svg.replace(/^(<svg\b[^>]*?)\sstyle="([^"]*)"/, (m, head, st) => {
+    const rest = st.split(';').filter((d) => d.trim() && !/^\s*(max-width|height)\s*:/.test(d)).join(';');
+    return rest ? `${head} style="${rest}"` : head;
   });
 }
 

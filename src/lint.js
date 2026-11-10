@@ -531,7 +531,26 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   for (const lk of [spec.links, ...(Array.isArray(spec.views) ? spec.views.map((v) => v && v.links) : [])]) {
     if (lk && typeof lk === 'object' && !Array.isArray(lk) && lk.widthScale !== undefined) enumCheck('widthScale', lk.widthScale, ['linear', 'sqrt']);
+    const e = lk && typeof lk === 'object' && !Array.isArray(lk) ? lk.ends : null;
+    if (e && typeof e === 'object') {
+      if (e.scale !== undefined) enumCheck('ends.scale', e.scale, ['sqrt', 'linear']);
+      if (Array.isArray(e.radius) && !(e.radius.length === 2 && +e.radius[0] >= 0 && +e.radius[1] >= +e.radius[0])) err('ends-radius', L('`links.ends.radius` es un número o [mín, máx] con 0 ≤ mín ≤ máx.', '`links.ends.radius` is a number or [min, max] with 0 ≤ min ≤ max.'), 'ends: { radius: [1.5, 6] }');
+    }
   }
+  // Marcadores: borde, opacidad, radios y decimales.
+  for (const mk of [spec.markers, ...(Array.isArray(spec.views) ? spec.views.map((v) => v && v.markers) : [])]) {
+    if (!mk || typeof mk !== 'object' || Array.isArray(mk)) continue;
+    if (mk.opacity !== undefined && !(+mk.opacity >= 0 && +mk.opacity <= 1)) err('markers-opacity', L('`markers.opacity` es un número entre 0 y 1.', '`markers.opacity` is a number from 0 to 1.'), 'opacity: 0.8');
+    if (mk.precision !== undefined && ![0, 1, 2, 3].includes(+mk.precision)) err('markers-precision', L('`markers.precision` son decimales: 0, 1, 2 o 3.', '`markers.precision` is decimals: 0, 1, 2 or 3.'), 'precision: 1');
+    for (const k of ['minRadius', 'strokeWidth', 'inset']) if (mk[k] !== undefined && !(+mk[k] >= 0)) err('markers-' + k, L(`\`markers.${k}\` es un número de 0 o más.`, `\`markers.${k}\` is a number of 0 or more.`), `${k}: 1.5`);
+    if (+mk.minRadius > +(mk.maxRadius ?? 14)) warn('markers-min-radius', L('`markers.minRadius` pasa a `maxRadius`: todos los puntos quedan del mismo tamaño.', '`markers.minRadius` is above `maxRadius`: every dot ends up the same size.'), 'minRadius: 1.5, maxRadius: 8');
+  }
+  if (spec.edgeLabels !== undefined && spec.edgeLabels !== null && spec.edgeLabels !== false) {
+    const e = spec.edgeLabels;
+    if (!Array.isArray(e) && !(e && typeof e === 'object' && Array.isArray(e.data))) err('edge-labels', L('`edgeLabels` es una lista [{ at, label }] o { data, side, max }.', '`edgeLabels` is a list [{ at, label }] or { data, side, max }.'), 'edgeLabels: [{ at: "13", label: "Santiago" }]');
+    else if (!Array.isArray(e) && e.side !== undefined) enumCheck('edgeLabels.side', e.side, ['bottom', 'top', 'right', 'left']);
+  }
+  if (spec.inlineSize !== undefined && typeof spec.inlineSize !== 'boolean') err('inline-size', L('`inlineSize` es true o false.', '`inlineSize` is true or false.'), 'inlineSize: false');
   if (MAPS.has(type) && spec.fitTo === 'mainland' && spec.geo === 'world') warn('fit-mainland-world', L('`fitTo: "mainland"` busca islas lejanas de un país; en el mundo deja fuera continentes.', '`fitTo: "mainland"` looks for one country\'s far islands; on the world it leaves out continents.'), L('Quita `fitTo`, o encuadra con una caja [lon0, lat0, lon1, lat1].', 'Drop `fitTo`, or frame with a box [lon0, lat0, lon1, lat1].'));
   // Un token secreto de Mapbox quedaría a la vista en el SVG.
   const token = spec.tilesKey ?? (spec.tiles && typeof spec.tiles === 'object' ? spec.tiles.key ?? (/[?&]access_token=([^&]+)/.exec(String(spec.tiles.url || '')) || [])[1] : undefined);

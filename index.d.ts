@@ -224,6 +224,53 @@ export interface MapView {
   highlightWidth?: number;
   /** This view's lines (replace the spec's). */
   links?: Spec['links'];
+  /** This view's points (replace the spec's); false: none in this view. */
+  markers?: Spec['markers'] | false;
+}
+
+/** Maps: points on top. Dots are lean: border and opacity on the group, one class per color. */
+export interface MapMarkers {
+  data: Row[];
+  lon?: string; lat?: string; label?: string;
+  /** Field with a size: area-proportional circles. */
+  size?: string;
+  /** A color, or a field with one per row (a CSS var with fallback works). */
+  color?: string;
+  /** Field written as data-key (default key, id, code, else the label). */
+  key?: string;
+  /** Legend key with this name (in the marker color). */
+  legend?: string;
+  /** Radius without a size field (default 4.5). */
+  radius?: number;
+  /** Radius of the largest dot of a size field (default 14). */
+  maxRadius?: number;
+  /** Radius of the smallest dot of a size field (default 3). */
+  minRadius?: number;
+  /** false: no text labels next to the dots. */
+  labels?: boolean;
+  /** Dot border: false for none, or a color (default the background). */
+  stroke?: false | string;
+  /** Border width in px (default 1.5). */
+  strokeWidth?: number;
+  /** Fill opacity of every dot (default 0.8 on dots over 6 px, else 1). */
+  opacity?: number;
+  /** Decimals of cx, cy and r (default `pathPrecision`, else 2). */
+  precision?: 0 | 1 | 2 | 3;
+  /** Margin in px kept at the map edge for a dot and its label (default 12). */
+  inset?: number;
+  /** The dot's tooltip, like the chart `tooltip`, over the marker row (title: its label; line: its size). */
+  tooltip?: Spec['tooltip'];
+  /** Number format of the size in the tooltip (default the map's `format`). */
+  format?: Format;
+}
+
+/** Maps: a rail of names along one side, outside the land. */
+export interface EdgeLabel {
+  /** A region key, or a point [x, y] / [lon, lat]. */
+  at: string | number | [number, number];
+  label: string;
+  /** data-key of its <g class="pa-edge"> (default `at` when it is a key). */
+  key?: string;
 }
 
 /** A line end: a region key (same matching as `key`) or a point [lon, lat] ([x, y] on already-projected geometry). */
@@ -240,8 +287,11 @@ export type MapLinks = Array<{ from: MapLinkEnd; to: MapLinkEnd; value?: number 
   fromLabel?: string; toLabel?: string;
   /** Number format of the line's tooltip (default the map's `format`). */
   format?: Format;
-  /** A dot at each place a line joins (true: radius 2.5). */
-  ends?: boolean | { radius?: number };
+  /**
+   * A dot at each place a line joins (true: radius 2.5). `radius: [min, max]` sizes it by the sum of the lines meeting there
+   * (area-proportional with `scale: "sqrt"`, default; or "linear"); `skip`: keys left without a dot; `skipPoints`: point regions too.
+   */
+  ends?: boolean | { radius?: number | [number, number]; scale?: 'sqrt' | 'linear'; skip?: string | string[]; skipPoints?: boolean };
 };
 
 export interface Spec {
@@ -250,6 +300,8 @@ export interface Spec {
   title?: string;
   /** Accessible name (the SVG <title>) without drawing a title; default `title`, else the chart type. */
   ariaLabel?: string;
+  /** false: leave max-width:100% and height:auto out of the root <svg> inline style, so page CSS sizes it without !important. */
+  inlineSize?: boolean;
   /** Base of the SVG's internal ids (aria ids; maps: clip path, no-data pattern). Set it when one chart appears twice on a page. */
   idPrefix?: string;
   subtitle?: string;
@@ -463,7 +515,11 @@ export interface Spec {
   rotate?: 90 | -90 | 180 | 270;
   /** Maps: "landscape" lays a tall territory on its side (north left); "portrait" stands a wide one up. bar: "horizontal" | "vertical". dendrogram: root left ("horizontal", default) or on top ("vertical"). */
   orientation?: 'landscape' | 'portrait' | 'horizontal' | 'vertical';
-  markers?: Array<{ lon: number; lat: number; label?: string; value?: number; color?: string }> | { data: Row[]; lon?: string; lat?: string; label?: string; size?: string; color?: string; legend?: string; maxRadius?: number; radius?: number; labels?: boolean };
+  markers?: Array<{ lon: number; lat: number; label?: string; value?: number; color?: string }> | MapMarkers;
+  /** Maps: draw only these regions (codes or names); with `sprite`, framed in the whole file's coordinates. */
+  only?: string | string[];
+  /** Wide maps: a rail of names along one side, outside the land; hidden ones (collision, past `max`) stay in the SVG with display="none". */
+  edgeLabels?: EdgeLabel[] | { data: Row[]; at?: string; label?: string; key?: string; side?: 'bottom' | 'top' | 'right' | 'left'; max?: number; ticks?: boolean };
   layers?: Array<{ geo: object | string; label?: string; stroke?: string; width?: number; fill?: string; dash?: boolean | string; opacity?: number; below?: boolean; object?: string }>;
   borderColor?: string;
   borderWidth?: number;

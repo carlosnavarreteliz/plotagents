@@ -10,7 +10,7 @@ import { binnedScale } from '../colorscales.js';
 import { el, g, text, linkWrap } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ramp, textOn, colorMap, themeFor } from '../theme.js';
+import { ramp, textOn, colorMap, themeFor, isColor } from '../theme.js';
 import { resolve } from '../base.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
 import { createFrame, hash, domId } from '../frame.js';
@@ -257,6 +257,17 @@ function prepare(spec, locale) {
   if (!spec.antarctica) features = features.filter((f) => (f.properties || {}).iso3 !== 'ATA');
   // `microstates`: los países sin contorno a esta escala (Singapur, Malta…), como punto.
   if (spec.microstates) features = features.concat(microstateFeatures(features, spec.pointRadius ?? 2.5));
+  // `only`: dibuja sólo esas regiones (códigos o nombres). Con `sprite`, el
+  // encuadre del archivo sigue siendo el de todas: cada <use> cae donde debe.
+  // Las filas de las que quedan fuera no cuentan como sin coincidencia.
+  let outside = null;
+  if (spec.only !== undefined && spec.only !== null) {
+    const want = [].concat(spec.only).map(normKey);
+    const keep = features.filter((f) => featureIndexHas(f, want));
+    if (!keep.length) throw new PlotError(T(locale, `\`only\` no calza con ninguna región: ${want.slice(0, 4).join(', ')}.`, `\`only\` matches no region: ${want.slice(0, 4).join(', ')}.`), T(locale, 'Usa los códigos o nombres de las regiones del `geo`.', 'Use the codes or names of the regions in `geo`.'));
+    outside = new Set(features.filter((f) => !keep.includes(f)).flatMap(featureKeys));
+    features = keep;
+  }
   if (!features.length) throw new PlotError(T(locale, 'El `geo` no tiene geometrías para dibujar.', 'The `geo` has no geometries to draw.'), T(locale, 'Pasa un GeoJSON con al menos un Feature con geometría.', 'Pass a GeoJSON with at least one Feature that has a geometry.'));
   // Nombres: `nameKey` o la primera propiedad conocida (NOMBRE, NAME_1, ADMIN…).
   const hasName = (f) => { const p = f.properties || {}; return primitive(p.name) || primitive(p.nameEn) || primitive(p.NAME) || primitive(p.nombre); };
@@ -289,7 +300,7 @@ function prepare(spec, locale) {
   const rowsOf = new Map(); // región → sus filas (para `tooltip`)
   for (const r of data) {
     const f = idx.get(normKey(r[key]));
-    if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
+    if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '' && !(outside && outside.has(normKey(r[key])))) unmatched.push(String(r[key])); continue; }
     if (!keyOf.has(f)) keyOf.set(f, String(r[key]));
     if (!rowsOf.has(f)) rowsOf.set(f, []);
     rowsOf.get(f).push(r);
@@ -417,11 +428,35 @@ function linkList(spec, m, theme, locale) {
   const ws = o.widthScale ?? 'linear';
   if (ws !== 'linear' && ws !== 'sqrt') throw new PlotError(T(locale, `\`links.widthScale\` es "linear" o "sqrt": "${ws}".`, `\`links.widthScale\` is "linear" or "sqrt": "${ws}".`), 'widthScale: "sqrt"');
   const fmt = o.format === undefined || o.format === null ? null : makeFormat(o.format, locale, items.map((i) => i.v));
-  const ends = o.ends === true ? { r: 2.5 } : o.ends && typeof o.ends === 'object' ? { r: Number.isFinite(+o.ends.radius) ? +o.ends.radius : 2.5 } : null;
+  const ends = endsOf(o.ends, locale);
   return { items, unmatched: [...new Set(unmatched)], valF, width: w, widthScale: ws, color, colorF, curveness: Number.isFinite(+o.curveness) ? +o.curveness : 0.2, opacity: o.opacity ?? 0.7, label: o.label ?? o.legend ?? null, fmt, ends };
 }
 
-function drawLinks(L, proj, theme, fmt0, locale) {
+/**
+ * `links.ends`: true (radio 2,5) o { radius, scale, skip, skipPoints }.
+ * `radius: [min, max]` da a cada punto un radio según la suma de las líneas
+ * que llegan a él (área ∝ suma con `scale: "sqrt"`, por omisión; o lineal);
+ * `skip` son claves sin punto (las mismas de `from`/`to`) y `skipPoints: true`
+ * deja sin punto a las regiones que ya son un punto.
+ */
+function endsOf(v, locale) {
+  if (!v) return null;
+  if (v === true) return { r: 2.5, range: null, scale: 'sqrt', skip: [], skipPoints: false };
+  if (typeof v !== 'object') return null;
+  const bad = (k, msg, fix) => new PlotError(T(locale, `\`links.ends.${k}\` ${msg[0]}`, `\`links.ends.${k}\` ${msg[1]}`), fix);
+  let r = 2.5, range = null;
+  if (Array.isArray(v.radius)) {
+    const [a, b] = v.radius.map(Number);
+    if (!(v.radius.length === 2 && Number.isFinite(a) && Number.isFinite(b) && a >= 0 && b >= a)) throw bad('radius', ['es un número o [mín, máx] con 0 ≤ mín ≤ máx.', 'is a number or [min, max] with 0 ≤ min ≤ max.'], 'radius: [1.5, 6]');
+    range = [a, b];
+  } else if (Number.isFinite(+v.radius) && v.radius !== null && v.radius !== '') r = +v.radius;
+  const scale = v.scale ?? 'sqrt';
+  if (scale !== 'sqrt' && scale !== 'linear') throw bad('scale', [`es "sqrt" o "linear": "${scale}".`, `is "sqrt" or "linear": "${scale}".`], 'scale: "sqrt"');
+  const skip = v.skip === undefined || v.skip === null ? [] : [].concat(v.skip).map(normKey);
+  return { r, range, scale, skip, skipPoints: v.skipPoints === true };
+}
+
+function drawLinks(L, proj, theme, fmt0, locale, paint) {
   if (!L || !L.items.length) return '';
   const fmt = L.fmt || fmt0;
   const at = (e) => {
@@ -435,6 +470,9 @@ function drawLinks(L, proj, theme, fmt0, locale) {
   const f1 = (v) => Math.round(v * 10) / 10;
   const out = [];
   const dots = new Map(); // extremo → [x, y, color]: un punto por lugar
+  const sums = new Map(); // extremo → suma de las líneas que llegan a él
+  const E = L.ends;
+  const skipEnd = (e) => !!E && ((E.skip.length && (E.skip.includes(normKey(e.key)) || (e.f && featureIndexHas(e.f, E.skip)))) || (E.skipPoints && e.f && isPointGeom(e.f.geometry)));
   // Las gruesas atrás: las finas quedan encima y se pueden señalar.
   for (const it of [...L.items].sort((p, q) => q.v - p.v || (p.b.key < q.b.key ? -1 : 1))) {
     const [x0, y0] = at(it.a), [x1, y1] = at(it.b);
@@ -447,18 +485,38 @@ function drawLinks(L, proj, theme, fmt0, locale) {
     const c = (L.colorF && it.row[L.colorF]) || L.color;
     const tip = `${it.a.name} → ${it.b.name}` + (L.valF ? `\n${fmt(it.v)}` : '');
     out.push(el('path', { class: 'pa-m pa-link', d: `M${f1(x0)},${f1(y0)}Q${f1(mx)},${f1(my)} ${f1(x1)},${f1(y1)}`, fill: 'none', stroke: c, strokeWidth: Math.round(sw * 100) / 100, strokeLinecap: 'round', strokeOpacity: L.opacity, 'data-tip': tip, 'data-color': c, 'data-key': `${it.a.key}→${it.b.key}`, 'data-from': it.a.key, 'data-to': it.b.key }));
-    if (L.ends) for (const [e, x, y] of [[it.a, x0, y0], [it.b, x1, y1]]) if (!dots.has(e.key)) dots.set(e.key, [x, y, c]);
+    if (E) for (const [e, x, y] of [[it.a, x0, y0], [it.b, x1, y1]]) {
+      if (skipEnd(e)) continue;
+      if (!dots.has(e.key)) dots.set(e.key, [x, y, c]);
+      sums.set(e.key, (sums.get(e.key) || 0) + it.v);
+    }
   }
   // `ends`: un punto en cada lugar que une una línea (encima de las líneas, sin tarjeta propia).
-  const endDots = L.ends && dots.size ? g({ class: 'pa-link-ends', stroke: theme.surface, strokeWidth: 1, 'pointer-events': 'none' }, [...dots].map(([k, [x, y, c]]) => el('circle', { cx: f1(x), cy: f1(y), r: L.ends.r, fill: c, 'data-key': k }))) : '';
+  // El color va en el grupo (uno) o en una clase por color (varios): una regla de la página lo cambia sin !important.
+  let endDots = '';
+  if (E && dots.size) {
+    let list = [...dots].map(([k, [x, y, c]]) => ({ k, x, y, c, r: E.r }));
+    if (E.range) {
+      const top = Math.max(...sums.values(), 1e-12);
+      for (const d of list) { const t = sums.get(d.k) / top; d.r = Math.round(Math.max(E.range[0], E.range[1] * (E.scale === 'linear' ? t : Math.sqrt(t))) * 100) / 100; }
+      // Los grandes atrás: un punto chico junto a uno grande queda a la vista.
+      list = list.sort((p, q) => q.r - p.r || (p.k < q.k ? -1 : 1));
+    }
+    const P = paint.plan(list.map((d) => (d.c = dotColorOk(d.c) ? d.c : L.color)));
+    endDots = g({ class: 'pa-link-ends' + (P.group.class ? ' ' + P.group.class : ''), fill: P.group.fill, stroke: theme.surface, strokeWidth: 1, 'pointer-events': 'none' }, list.map((d) => el('circle', { class: P.cls(d.c), cx: f1(d.x), cy: f1(d.y), r: d.r, 'data-key': d.k })));
+  }
   return g({ class: 'pa-links' }, endDots ? [...out, endDots] : out);
 }
 
 // ── Capas extra: marcadores (lon/lat) y GeoJSON superpuesto ─────────────────
 const pickF = (fields, names) => names.find((n) => fields.includes(n));
 
-/** `markers`: [{ lon, lat, label, value }] o { data, lon, lat, label, size, color, legend }. */
-function markerList(spec, theme) {
+/**
+ * `markers`: [{ lon, lat, label, value }] o { data, lon, lat, label, size,
+ * color, legend, radius, maxRadius, minRadius, labels, stroke, strokeWidth,
+ * opacity, precision, tooltip, format }.
+ */
+function markerList(spec, theme, locale = spec.locale || 'es') {
   const mk = spec.markers;
   if (!mk) return null;
   const o = Array.isArray(mk) ? {} : mk;
@@ -473,9 +531,96 @@ function markerList(spec, theme) {
   if (!lonF || !latF) throw new PlotError('Los marcadores necesitan longitud y latitud.', 'markers: [{ lon: -73.05, lat: -36.82, label: "Concepción" }]');
   const items = rows.map((r) => ({ lon: num(r[lonF]), lat: num(r[latF]), label: labelF ? r[labelF] : undefined, size: sizeF ? num(r[sizeF]) : NaN, color: (colorF && r[colorF]) || (typeof o.color === 'string' && !fields.includes(o.color) ? o.color : null), row: r, key: keyF && r[keyF] !== undefined && r[keyF] !== null ? String(r[keyF]) : labelF && r[labelF] !== undefined ? String(r[labelF]) : null }))
     .filter((m) => Number.isFinite(m.lon) && Number.isFinite(m.lat));
+  const bad = (k, want, fix) => new PlotError(T(locale, `\`markers.${k}\` ${want[0]}: "${o[k]}".`, `\`markers.${k}\` ${want[1]}: "${o[k]}".`), fix);
+  const pos = (k, d, zero = true) => {
+    if (o[k] === undefined || o[k] === null) return d;
+    const n = +o[k];
+    if (!(Number.isFinite(n) && (zero ? n >= 0 : n > 0))) throw bad(k, zero ? ['es un número de 0 o más', 'is a number of 0 or more'] : ['es un número mayor que 0', 'is a number above 0'], `${k}: 2`);
+    return n;
+  };
+  // `minRadius`: el radio del punto más chico de un tamaño por valor (3 por omisión).
+  const minR = pos('minRadius', 3);
   const maxS = Math.max(0, ...items.map((m) => Math.abs(m.size)).filter(Number.isFinite));
-  for (const m of items) m.r = Number.isFinite(m.size) && maxS ? Math.max(3, Math.sqrt(Math.abs(m.size) / maxS) * (o.maxRadius ?? 14)) : o.radius ?? 4.5;
-  return { items, color: (typeof o.color === 'string' && !fields.includes(o.color) && o.color) || theme.ink, legend: o.legend ?? o.title ?? null, labels: o.labels !== false, sizeF };
+  for (const m of items) m.r = Number.isFinite(m.size) && maxS ? Math.max(minR, Math.sqrt(Math.abs(m.size) / maxS) * (o.maxRadius ?? 14)) : o.radius ?? 4.5;
+  // `stroke`: false (sin borde), un color, o el del fondo (lo de siempre).
+  const stroke = o.stroke === false || o.stroke === 'none' ? null : o.stroke === undefined || o.stroke === null || o.stroke === true ? theme.surface : String(o.stroke);
+  const opacity = o.opacity === undefined || o.opacity === null ? null : +o.opacity;
+  if (opacity !== null && !(Number.isFinite(opacity) && opacity >= 0 && opacity <= 1)) throw bad('opacity', ['es un número entre 0 y 1', 'is a number from 0 to 1'], 'opacity: 0.8');
+  const precision = o.precision ?? spec.pathPrecision;
+  if (precision !== undefined && precision !== null && ![0, 1, 2, 3].includes(+precision)) throw bad('precision', ['es 0, 1, 2 o 3 decimales', 'is 0, 1, 2 or 3 decimals'], 'precision: 1');
+  return {
+    items, rows, color: (typeof o.color === 'string' && !fields.includes(o.color) && dotColorOk(o.color) && o.color) || theme.ink, legend: o.legend ?? o.title ?? null, labels: o.labels !== false, sizeF,
+    stroke, strokeWidth: pos('strokeWidth', 1.5), opacity, precision: precision === undefined || precision === null ? null : +precision,
+    tooltip: o.tooltip, format: o.format, locale,
+    // `inset`: el margen (px) que se deja en el borde del mapa para un punto y su rótulo (12).
+    inset: pos('inset', 12),
+  };
+}
+
+/** Un color que puede ir en una regla CSS: literal o `var(--x, respaldo)`, sin llaves ni punto y coma. */
+const dotColorOk = (c) => isColor(c) || (typeof c === 'string' && /^var\(\s*--[\w-]+\s*(,\s*[^;{}<>"]+)?\)$/.test(c.trim()));
+
+/**
+ * Los colores de los puntos (marcadores, extremos de líneas): una clase por
+ * color (`pk0`, `pk1`…) y una regla en el <style> del mapa, con alcance en la
+ * clase `<gid>-dots` del grupo. Así un punto lleva sólo su posición, su radio
+ * y su tarjeta; con `skins` cambia de color la regla, no cada punto, y el
+ * CSS de la página lo pisa sin !important. Un grupo de un solo color literal
+ * lo lleva en su `fill`, sin reglas.
+ */
+function dotPainter(gid) {
+  const idx = new Map();
+  const scope = `${gid}-dots`;
+  return {
+    scope,
+    /** Atributos del grupo y la clase de cada punto, para estos colores. */
+    plan(colors) {
+      const uniq = [...new Set(colors)];
+      if (uniq.length === 1 && isColor(uniq[0])) return { group: { fill: uniq[0] }, cls: () => null };
+      for (const c of colors) if (!idx.has(c)) idx.set(c, idx.size);
+      return { group: { class: scope }, cls: (c) => 'pk' + idx.get(c) };
+    },
+    css() { return [...idx].map(([c, i]) => `.${scope} .pk${i}{fill:${c}}`).join(''); },
+  };
+}
+
+function drawMarkers(mk, proj, theme, fmt0, placed, paint) {
+  const dots = [], labs = [];
+  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  const k = mk.precision === null ? null : 10 ** mk.precision;
+  const rp = (v) => (k === null ? v : Math.round(v * k) / k);
+  const fmt = mk.format === undefined || mk.format === null ? fmt0 : makeFormat(mk.format, mk.locale, mk.items.map((m) => m.size).filter(Number.isFinite));
+  // `tooltip`: como el del resto de la biblioteca, sobre la fila del marcador (título: su rótulo; línea: su tamaño).
+  const TT = tipper({ tooltip: mk.tooltip, format: mk.format ?? undefined }, mk.rows, mk.locale);
+  const sorted = [...mk.items].sort((a, b) => b.r - a.r);
+  for (const m of sorted) { m.c = m.color || mk.color; if (!dotColorOk(m.c)) m.c = mk.color; }
+  const P = paint.plan(sorted.map((m) => m.c));
+  for (const m of sorted) {
+    const [x, y] = proj([m.lon, m.lat]);
+    m.x = x; m.y = y;
+    const sizeLine = Number.isFinite(m.size) && mk.sizeF ? fmt(m.size) : null;
+    const tipT = TT([m.row], m.label === undefined || m.label === null ? undefined : String(m.label), sizeLine);
+    dots.push(el('circle', { class: P.cls(m.c) ? `pa-m ${P.cls(m.c)}` : 'pa-m', cx: rp(x), cy: rp(y), r: rp(m.r), fillOpacity: mk.opacity === null && m.r > 6 ? 0.8 : null, 'data-tip': tipT || null, 'data-color': mk.legend && P.cls(m.c) && m.c === mk.color ? m.c : null, 'data-key': m.key }));
+  }
+  for (const m of mk.items) placed.push([m.x - m.r - 2, m.y - m.r - 2, m.x + m.r + 2, m.y + m.r + 2]);
+  if (mk.labels) for (const m of mk.items) {
+    if (m.label === undefined || m.label === null || m.label === '') continue;
+    const w = measure(String(m.label), 11, 600);
+    const hit = (box) => placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+    // A la derecha del punto; si choca, a la izquierda; si no, encima.
+    const cands = [
+      { box: [m.x + m.r + 3, m.y - 8, m.x + m.r + 6 + w, m.y + 8], x: m.x + m.r + 4, y: m.y + 4, anchor: 'start' },
+      { box: [m.x - m.r - 6 - w, m.y - 8, m.x - m.r - 3, m.y + 8], x: m.x - m.r - 4, y: m.y + 4, anchor: 'end' },
+      { box: [m.x - w / 2 - 2, m.y - m.r - 20, m.x + w / 2 + 2, m.y - m.r - 3], x: m.x, y: m.y - m.r - 7, anchor: 'middle' },
+    ];
+    const c = cands.find((q) => !hit(q.box));
+    if (!c) continue;
+    placed.push(c.box);
+    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...halo }));
+  }
+  // Lo que comparten todos los puntos va en el grupo: borde, opacidad y (si es uno) el color.
+  const group = { class: 'pa-markers' + (P.group.class ? ' ' + P.group.class : ''), fill: P.group.fill, fillOpacity: mk.opacity, stroke: mk.stroke, strokeWidth: mk.stroke ? mk.strokeWidth : null };
+  return [g(group, dots), g({ class: 'pa-map-label pa-marker-labels', 'pointer-events': 'none' }, labs)];
 }
 
 /** `layers`: [{ geo, stroke, fill, width, dash, opacity, label, below }]. */
@@ -500,35 +645,6 @@ function drawLayer(L, proj, theme, locale) {
       strokeLinejoin: 'round', strokeLinecap: 'round', opacity: L.opacity ?? null, 'data-color': L.stroke,
     });
   }));
-}
-
-function drawMarkers(mk, proj, theme, fmt, placed) {
-  const dots = [], labs = [];
-  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
-  for (const m of [...mk.items].sort((a, b) => b.r - a.r)) {
-    const [x, y] = proj([m.lon, m.lat]);
-    m.x = x; m.y = y;
-    const c = m.color || mk.color;
-    const tipT = [m.label, Number.isFinite(m.size) && mk.sizeF ? fmt(m.size) : null].filter((v) => v !== undefined && v !== null && v !== '').join('\n');
-    dots.push(el('circle', { class: 'pa-m', cx: x, cy: y, r: m.r, fill: c, fillOpacity: m.r > 6 ? 0.8 : 1, stroke: theme.surface, strokeWidth: 1.5, 'data-tip': tipT || null, 'data-color': c, 'data-key': m.key }));
-  }
-  for (const m of mk.items) placed.push([m.x - m.r - 2, m.y - m.r - 2, m.x + m.r + 2, m.y + m.r + 2]);
-  if (mk.labels) for (const m of mk.items) {
-    if (m.label === undefined || m.label === null || m.label === '') continue;
-    const w = measure(String(m.label), 11, 600);
-    const hit = (box) => placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
-    // A la derecha del punto; si choca, a la izquierda; si no, encima.
-    const cands = [
-      { box: [m.x + m.r + 3, m.y - 8, m.x + m.r + 6 + w, m.y + 8], x: m.x + m.r + 4, y: m.y + 4, anchor: 'start' },
-      { box: [m.x - m.r - 6 - w, m.y - 8, m.x - m.r - 3, m.y + 8], x: m.x - m.r - 4, y: m.y + 4, anchor: 'end' },
-      { box: [m.x - w / 2 - 2, m.y - m.r - 20, m.x + w / 2 + 2, m.y - m.r - 3], x: m.x, y: m.y - m.r - 7, anchor: 'middle' },
-    ];
-    const c = cands.find((k) => !hit(k.box));
-    if (!c) continue;
-    placed.push(c.box);
-    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...halo }));
-  }
-  return [g({ class: 'pa-markers' }, dots), g({ class: 'pa-map-label pa-marker-labels', 'pointer-events': 'none' }, labs)];
 }
 
 /** Leyenda de categorías (mapas con valores de texto): cuadros enlazados con las regiones. */
@@ -742,7 +858,8 @@ function baseChart(spec, theme, kind, views = null) {
     }
   }
   const aspect = aspectOf(fitFeats, m.raw);
-  const tall = aspect > 1.6 && m.features.length <= 40 && fitFeats === m.features && spec.tall !== false;
+  const edge = edgeLabelList(spec, locale);
+  const tall = aspect > 1.6 && m.features.length <= 40 && fitFeats === m.features && spec.tall !== false && !edge;
   // Alto por defecto según la forma del territorio.
   const defH = tall ? (W < 560 ? 660 : 740) : Math.round(W * Math.min(1.1, aspect) + 150);
   const frame = createFrame(spec, theme, { height: defH });
@@ -850,8 +967,8 @@ function baseChart(spec, theme, kind, views = null) {
     : 0;
   // Mapa ancho: el alto se ajusta al ancho si el agente no fijó `height`.
   if (!tall && spec.height === undefined) {
-    const mapH = (area.w - calloutW) * Math.min(1.1, aspect);
-    frame.setHeight(area.y + mapH + frame.chrome);
+    const mapH = (area.w - calloutW - (edge && !edge.across ? edge.size : 0)) * Math.min(1.1, aspect);
+    frame.setHeight(area.y + mapH + (edge && edge.across ? edge.size : 0) + frame.chrome);
     area = { ...area, h: frame.bottom - area.y };
   }
   let box;
@@ -860,16 +977,92 @@ function baseChart(spec, theme, kind, views = null) {
     let mapW = Math.min(area.w * (1 - colMin), area.h / aspect);
     box = [area.x, area.y, area.x + mapW, area.y + area.h];
   } else box = [area.x, area.y, area.x + area.w - calloutW, area.y + area.h];
+  // `edgeLabels`: una franja fuera de la tierra, del lado pedido.
+  if (edge) {
+    const k = { bottom: 3, top: 1, right: 2, left: 0 }[edge.side];
+    box[k] += k < 2 ? edge.size : -edge.size;
+  }
   // Puntos y marcadores en el borde: margen para el círculo y su etiqueta.
   // (Los puntos de un mapa de áreas —microestados, `points` de unos trazos— no piden margen.)
   const pts = m.features.some((f) => isPointGeom(f.geometry) && !f.properties?.dot);
-  const inset = pts ? (spec.pointRadius ?? 5) + 18 : markers?.items.length ? 12 : 0;
+  const inset = pts ? (spec.pointRadius ?? 5) + 18 : markers?.items.length ? markers.inset : 0;
   if (inset) box = [box[0] + inset * (tall ? 0 : 1), box[1] + inset + (pts ? 12 : 0), box[2] - inset, box[3] - Math.min(inset, 10)];
   // `fitPadding: "12px"`: el margen en píxeles, dentro de la caja del mapa.
   if (fitPad.px && fitFeats !== m.features) { const q = Math.min(fitPad.px, (box[2] - box[0]) / 2 - 1, (box[3] - box[1]) / 2 - 1); if (q > 0) box = [box[0] + q, box[1] + q, box[2] - q, box[3] - q]; }
   const proj = fit(fitFeats, m.raw, box, { align: tall ? 'left' : 'center' });
   const calloutX = calloutW ? proj.bounds.x + proj.bounds.w + 14 : 0;
-  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax, layers, markers, views };
+  return { locale, m, vals, fmt, frame, area, gid, missingAny, body, sc, proj, tall, H, dashedLabel, calloutX, rMax, layers, markers, views, edge, box };
+}
+
+// ── Rótulos en el borde (`edgeLabels`) ───────────────────────────────────
+//
+// Un riel de nombres a lo largo de un lado del mapa, fuera de la tierra: una
+// marca a la altura de cada lugar y su nombre debajo (o al lado). Chile
+// acostado lleva sus regiones bajo la tira, donde no tapan nada. Los nombres
+// se reparten en el orden dado (el primero es el que más importa) y uno que
+// choca con otro, o pasa de `max`, queda escrito pero oculto (display="none",
+// clase pa-edge-off): el CSS de la página lo muestra al pasar el puntero.
+
+const EDGE_SIDES = ['bottom', 'top', 'right', 'left'];
+const EDGE_FS = 10.5;
+
+/** `edgeLabels`: [{ at, label, key? }] o { data, at, label, key, side, max, ticks }. */
+function edgeLabelList(spec, locale) {
+  const v = spec.edgeLabels;
+  if (v === undefined || v === null || v === false) return null;
+  const o = Array.isArray(v) ? { data: v } : v;
+  const bad = (msg, fix) => new PlotError(T(locale, `\`edgeLabels\` ${msg[0]}`, `\`edgeLabels\` ${msg[1]}`), fix);
+  if (!o || typeof o !== 'object' || !Array.isArray(o.data)) throw bad(['es una lista [{ at, label }] o { data, side, max }.', 'is a list [{ at, label }] or { data, side, max }.'], 'edgeLabels: [{ at: "13", label: "Santiago" }]');
+  const side = o.side ?? 'bottom';
+  if (!EDGE_SIDES.includes(side)) throw bad([`side es "bottom", "top", "right" o "left": "${side}".`, `side is "bottom", "top", "right" or "left": "${side}".`], 'side: "bottom"');
+  const atF = o.at ?? 'at', labelF = o.label ?? 'label', keyF = o.key ?? 'key';
+  const items = o.data.filter((r) => r && typeof r === 'object').map((r) => ({ at: r[atF], label: r[labelF] === undefined || r[labelF] === null ? '' : String(r[labelF]), key: r[keyF] ?? (Array.isArray(r[atF]) ? null : r[atF]) }))
+    .filter((it) => it.at !== undefined && it.at !== null);
+  const max = o.max === undefined || o.max === null ? Infinity : Math.max(0, Math.floor(+o.max) || 0);
+  const across = side === 'bottom' || side === 'top';
+  // La franja: la marca (6 px) y una línea de texto; de lado, el nombre más largo.
+  const size = across ? 22 : Math.min(160, 14 + Math.max(0, ...items.map((it) => measure(it.label, EDGE_FS))));
+  return { items, side, across, max, ticks: o.ticks !== false, size };
+}
+
+function drawEdgeLabels(E, m, proj, box, area, theme, locale) {
+  const out = [];
+  const taken = [];
+  let shown = 0;
+  const pos = (at) => {
+    if (Array.isArray(at) && at.length === 2 && at.every((x) => Number.isFinite(num(x)))) return proj([num(at[0]), num(at[1])]);
+    const f = m.idx.get(normKey(at));
+    if (!f) return null;
+    const p = f.properties || {};
+    if (p.labelAt) return proj(p.labelAt);
+    const c = centroid(f.geometry, proj);
+    return [c.x, c.y];
+  };
+  const lo = E.across ? area.x : area.y, hi = E.across ? area.x + area.w : area.y + area.h;
+  for (const it of E.items) {
+    const p = pos(it.at);
+    if (!p) continue;
+    const u = E.across ? p[0] : p[1];
+    if (!(u >= lo - 0.5 && u <= hi + 0.5)) continue;
+    const w = E.across ? measure(it.label, EDGE_FS) : EDGE_FS + 2;
+    const a = Math.max(lo, Math.min(hi - w, u - w / 2));
+    const free = it.label && shown < E.max && !taken.some(([p0, p1]) => a < p1 + 6 && a + w > p0 - 6);
+    if (free) { taken.push([a, a + w]); shown++; }
+    const f1 = (x) => Math.round(x * 10) / 10;
+    let tick, label;
+    if (E.across) {
+      const y0 = E.side === 'bottom' ? box[3] + 2 : box[1] - 2, d = E.side === 'bottom' ? 1 : -1;
+      tick = el('line', { x1: f1(u), x2: f1(u), y1: f1(y0), y2: f1(y0 + 6 * d), stroke: theme.axis });
+      const tx = Math.max(lo + w / 2, Math.min(hi - w / 2, u));
+      label = it.label ? text(f1(tx), f1(E.side === 'bottom' ? y0 + 17 : y0 - 9), it.label, { textAnchor: 'middle', display: free ? null : 'none' }) : '';
+    } else {
+      const x0 = E.side === 'right' ? box[2] + 2 : box[0] - 2, d = E.side === 'right' ? 1 : -1;
+      tick = el('line', { x1: f1(x0), x2: f1(x0 + 6 * d), y1: f1(u), y2: f1(u), stroke: theme.axis });
+      label = it.label ? text(f1(x0 + 9 * d), f1(u + EDGE_FS * 0.36), it.label, { textAnchor: E.side === 'right' ? 'start' : 'end', display: free ? null : 'none' }) : '';
+    }
+    out.push(g({ class: free || !it.label ? 'pa-edge' : 'pa-edge pa-edge-off', 'data-key': it.key === null || it.key === undefined ? null : String(it.key) }, [E.ticks ? tick : '', label]));
+  }
+  return out.length ? g({ class: 'pa-edge-labels', fill: theme.muted, fontSize: EDGE_FS, 'pointer-events': 'none' }, out) : '';
 }
 
 /**
@@ -899,7 +1092,7 @@ function mapId(spec, kind, W, m, views) {
   // Cada región por su código (no por cómo la nombran los datos: "CL" y "CHL" son el mismo mapa).
   const vals = [];
   for (const f of m.features) if (m.values.has(f)) vals.push(normKey(f.properties?.code ?? f.properties?.iso3 ?? nameOf(f, 'es')) + '=' + m.values.get(f));
-  const sig = [spec.title, kind, W, spec.height, JSON.stringify(spec.fitTo ?? null), spec.sprite, m.turn, m.features.length, views ? views.map((V) => V.id + ':' + V.m.valueF + ':' + V.m.values.size).join(',') : '', vals.join(';')].join('|');
+  const sig = [spec.title, kind, W, spec.height, JSON.stringify(spec.fitTo ?? null), spec.sprite, m.turn, m.features.length, views ? views.map((V) => V.id + ':' + V.m.valueF + ':' + V.m.values.size).join(',') : '', vals.join(';'), ...(spec.only !== undefined && spec.only !== null ? [JSON.stringify(spec.only)] : [])].join('|');
   return 'pa-map-' + Math.abs(hash(sig)).toString(36);
 }
 
@@ -977,7 +1170,7 @@ export const spriteId = (f) => { const p = f.properties || {}; return 'g' + norm
 
 /** Las formas que van al sprite: todas las de `geo` (territorios opcionales incluidos), sin importar los datos. */
 function spriteModel(spec) {
-  return prepare({ ...spec, data: [{ __k: '', __v: 0 }], key: '__k', value: '__v', territories: true, microstates: false, fitTo: undefined }, spec.locale || 'es');
+  return prepare({ ...spec, data: [{ __k: '', __v: 0 }], key: '__k', value: '__v', territories: true, microstates: false, fitTo: undefined, only: undefined }, spec.locale || 'es');
 }
 
 /** Las formas del sprite y la escala que lleva lo proyectado a [0, 1000]. */
@@ -1074,6 +1267,12 @@ export function choropleth(spec0, theme0) {
   // `href: "campo"`: la región enlaza a la URL de su fila (sólo rutas y http(s)).
   const hrefOf = (f) => (spec.href ? (m.rowsOf.get(f) || [])[0]?.[spec.href] : undefined);
   if (views) for (const V of views) { V.TT = tipper(V.spec, V.m.data, locale); V.items = []; V.rules = new Map(); }
+  // Una vista sin datos, como la primera y con su mismo fondo, no repinta regiones
+  // (las vistas que sólo cambian `markers` o `links`): sin clases ni reglas. Si
+  // todas son así y la tarjeta de una región es la misma en todas, la región
+  // lleva sólo data-tip.
+  if (views) for (const V of views.slice(1)) V.flat = !V.m.values.size && !m.values.size && (V.spec.missing ?? null) === (spec.missing ?? null) && V.theme.tint === theme.tint && V.theme.muted === theme.muted;
+  const allFlat = !!views && views.slice(1).every((V) => V.flat);
   const valueLine = (V, fm, v) => (V?.label ? `${V.label}: ${fm(v)}` : fm(v));
   // `sprite`: los contornos viven en un archivo aparte; aquí, un <use> por región.
   const sprite = spec.sprite !== undefined && spec.sprite !== null && spec.sprite !== false ? { href: spriteHref(spec, locale) } : null;
@@ -1097,6 +1296,7 @@ export function choropleth(spec0, theme0) {
     if (views) {
       // Las demás vistas: una clase por vista (su clase de color) y su tooltip en data-vtip-<id>.
       const cls = [];
+      const vtips = {};
       const shape = isDashed ? 'd' : isLine ? 's' : '';
       views.forEach((V, i) => {
         const vv = V.m.values.get(f), hv = vv !== undefined && !!V.sc;
@@ -1106,6 +1306,9 @@ export function choropleth(spec0, theme0) {
         const txt = (hv ? `${name}\n${valueLine(V, V.fmt, vv)}${V.m.categorical ? '' : ' · ' + rankText(V.m.rank.get(f), V.m.values.size, locale)}` : `${name}\n${T(locale, 'Sin dato', 'No data')}`) + (isDashed ? `\n${dashedLabel}` : '');
         const c = centroidOf(f);
         V.items.push({ f, name, v: vv, cx: c.x, cy: c.y, area: c.area, label: hv ? V.fmt(vv) : '—', color: hv ? bv : V.theme.tint, fill: hv ? bv : miss, stroke: null, dashedShape: isDashed, missing: !hv, tip: txt });
+        const quietI = !hv && V.spec.missing === 'context';
+        vtips[`data-vtip-${V.id}`] = quietI ? '' : V.TT(V.m.rowsOf.get(f) || [], ...txt.split('\n')) ?? '';
+        if (V.flat) return;
         const k = `pv${i}-${hv ? classIndex(V, vv) : 'n'}${shape}`;
         cls.push(k);
         if (!V.rules.has(k)) {
@@ -1115,10 +1318,9 @@ export function choropleth(spec0, theme0) {
           else decl = { fill: hv ? bv : miss };
           V.rules.set(k, Object.entries(decl).map(([p, c2]) => `${p}:${c2}!important`).join(';'));
         }
-        const quietI = !hv && V.spec.missing === 'context';
-        common[`data-vtip-${V.id}`] = quietI ? '' : V.TT(V.m.rowsOf.get(f) || [], ...txt.split('\n')) ?? '';
       });
-      common.class += ' ' + cls.join(' ');
+      if (!(allFlat && Object.values(vtips).every((t) => t === (common['data-tip'] ?? '')))) Object.assign(common, vtips);
+      if (cls.length) common.class += ' ' + cls.join(' ');
     }
     const wrap = (x) => linkWrap(hrefOf(f), x);
     const R = viaSprite(f) ? spriteRegions : regions, RD = viaSprite(f) ? spriteDashed : dashedRegions;
@@ -1156,15 +1358,25 @@ export function choropleth(spec0, theme0) {
     ...layers.filter((L) => !L.below).map((L) => drawLayer(L, proj, theme, locale))];
   if (views) views.forEach((V, i) => { const o = [...(V.spriteOutlines ? [viaT(V.spriteOutlines)] : []), ...V.outlines]; if (o.length) layer.push(g({ class: `pa-outlines pv${i}`, ...ringG(ringOf(V.spec, V.theme)) }, o)); });
   // Líneas: comunes a todas las vistas, o una tanda por vista si alguna trae las suyas.
+  // Los puntos (marcadores, extremos de líneas) comparten una clase por color en todo el mapa.
+  const paint = dotPainter(gid);
   const links = linkList(views && views.some((V) => V.hasLinks) ? { ...spec, links: views[0].hasLinks ? views[0].links : spec.links } : spec, m, theme, locale);
   if (views && views.some((V) => V.hasLinks)) {
     views.forEach((V, i) => {
       const Li = i ? linkList({ ...V.spec, links: V.hasLinks ? V.links : spec.links }, m, V.theme, locale) : links;
-      if (Li && Li.items.length) layer.push(g({ class: `pv${i}` }, drawLinks(Li, proj, V.theme, V.fmt, locale)));
+      if (Li && Li.items.length) layer.push(g({ class: `pv${i}` }, drawLinks(Li, proj, V.theme, V.fmt, locale, paint)));
     });
-  } else if (links) layer.push(drawLinks(links, proj, theme, fmt, locale));
+  } else if (links) layer.push(drawLinks(links, proj, theme, fmt, locale, paint));
   const placed = [];
-  if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, placed));
+  // Marcadores: comunes a todas las vistas, o una tanda por vista si alguna trae los suyos
+  // (`views[].markers`; `markers: false` en una vista la deja sin puntos).
+  if (views && views.some((V) => V.hasMarkers)) {
+    views.forEach((V, i) => {
+      const Mi = i ? markerList(V.spec, V.theme, locale) : markers;
+      V.placed = [...placed];
+      if (Mi && Mi.items.length) layer.push(g({ class: `pv${i}` }, drawMarkers(Mi, proj, V.theme, V.fmt, V.placed, paint)));
+    });
+  } else if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, placed, paint));
   const after = [];
   /** Rótulos de una vista: columna (mapas altos), siglas o etiquetas sobre el mapa. */
   const labelParts = (its, mv, sp, fm, th, boxes) => {
@@ -1192,14 +1404,15 @@ export function choropleth(spec0, theme0) {
   } else {
     views.forEach((V, i) => {
       const its = i ? V.items : items;
-      const L = labelParts(its, V.m, V.spec, V.fmt, V.theme, [...placed]);
+      const L = labelParts(its, V.m, V.spec, V.fmt, V.theme, [...(V.placed || placed)]);
       layer.push(g({ class: `pv${i}` }, L.inLayer));
       if (L.outside.length) after.push(g({ class: `pv${i}` }, L.outside));
     });
   }
+  if (B.edge) after.push(drawEdgeLabels(B.edge, m, proj, B.box, area, theme, locale));
   body.push(...(tall ? layer : zoomLayer(B, layer)), ...after);
   let desc = describeMap(m, fmt, locale, T(locale, 'Mapa coroplético', 'Choropleth map')) + describeExtras(markers, layers, locale, links);
-  if (!views) return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs() });
+  if (!views) return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs(), css: paint.css() });
   const names = views.map((V) => V.label ?? V.id);
   desc += T(locale, ` ${views.length} vistas: ${names.join(', ')}.`, ` ${views.length} views: ${names.join(', ')}.`);
   // El alcance de las reglas: una clase propia de este mapa (dos mapas con vistas en la misma página no se pisan).
@@ -1207,14 +1420,14 @@ export function choropleth(spec0, theme0) {
   const sel = viewSelectorOf(spec0, locale);
   // Sin `viewSelector`, la vista la dice `data-view` en la raíz; con él, un
   // ancestro (un radio :checked, una clase): la primera se ve si ninguno calza.
-  const css = !sel
+  const css = paint.css() + (!sel
     ? views.map((V, i) => `.${scope}:not([data-view="${V.id}"]) .pv${i}{display:none}`).join('')
       + views.slice(1).map((V) => [...V.rules].map(([k, decl]) => `.${scope}[data-view="${V.id}"] .${k}{${decl}}`).join('')).join('')
     : views.slice(1).map((_, j) => `.${scope} .pv${j + 1}`).join(',') + '{display:none}'
       + views.slice(1).map((V, j) => {
         const a = `${sel(V.id, j + 1)} .${scope}`;
         return `${a} .pv0{display:none}${a} .pv${j + 1}{display:inline}` + [...V.rules].map(([k, decl]) => `${a} .${k}{${decl}}`).join('');
-      }).join('');
+      }).join(''));
   return frame.finish(body, { desc, type: 'choropleth', defs: noDataPattern(`${gid}-nd`, theme) + H.defs(), css, root: { class: `pa-views ${scope}`, 'data-view': views[0].id, 'data-views': views.map((V) => V.id).join(' ') } });
 }
 
@@ -1229,7 +1442,7 @@ export function choropleth(spec0, theme0) {
 // cambiar un atributo: no hay código de la biblioteca en el navegador.
 
 // Lo que una vista no puede cambiar: las formas, el encuadre y el marco son de todas.
-const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'markers', 'time', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories', 'viewSelector', 'highlightMode', 'fitPadding', 'idPrefix', 'ariaLabel'];
+const VIEW_FIXED = ['type', 'sprite', 'geo', 'geoObject', 'key', 'region', 'featureKey', 'nameKey', 'width', 'height', 'projection', 'rotate', 'orientation', 'flipY', 'fitTo', 'views', 'skins', 'facet', 'col', 'layers', 'time', 'only', 'padding', 'title', 'subtitle', 'source', 'dashed', 'href', 'microstates', 'pathPrecision', 'simplify', 'pointRadius', 'antarctica', 'territories', 'viewSelector', 'highlightMode', 'fitPadding', 'idPrefix', 'ariaLabel'];
 const VIEW_ID = /^[a-z0-9][a-z0-9_-]*$/;
 
 /** `views` → [{ id, label, spec, theme, hl, links, hasLinks }]; la vista 0 sin su highlight/links (van aparte). */
@@ -1250,7 +1463,7 @@ export function viewStates(spec) {
     // Un punto medio que se calculó con los datos de la base no vale para otra medida.
     if (spec._autoMid && !('midpoint' in patch) && !('diverging' in patch)) { delete raw.midpoint; delete raw.diverging; delete raw._autoMid; }
     const si = resolve(raw);
-    return { id, label: label === undefined || label === null ? null : String(label), spec: si, theme: themeFor(si), hl: highlight === undefined ? null : [].concat(highlight).map(normKey), hasLinks: 'links' in v, links, outlines: [] };
+    return { id, label: label === undefined || label === null ? null : String(label), spec: si, theme: themeFor(si), hl: highlight === undefined ? null : [].concat(highlight).map(normKey), hasLinks: 'links' in v, links, hasMarkers: 'markers' in v, outlines: [] };
   });
 }
 
@@ -1323,9 +1536,10 @@ export function symbolMap(spec, theme) {
     .map((it) => el('circle', { class: 'pa-m', cx: it.cx, cy: it.cy, r: Math.max(1.5, it.r), 'data-tip': TT(m.rowsOf.get(it.f) || [], ...it.tip.split('\n')), 'data-color': color, 'data-key': regionKey(m, it.f, locale),
       ...(it.dashedShape ? { ...dashedAttrs(H, color, { width: 1.3 }) } : { fill: color, fillOpacity: 0.75, stroke: theme.surface, strokeWidth: 1.5 }) }));
   const links = linkList(spec, m, theme, locale);
-  if (links) layer.push(drawLinks(links, proj, theme, fmt, locale));
+  const paint = dotPainter(gid);
+  if (links) layer.push(drawLinks(links, proj, theme, fmt, locale, paint));
   layer.push(g({ class: 'pa-symbols' }, circles));
-  if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, []));
+  if (markers) layer.push(...drawMarkers(markers, proj, theme, fmt, [], paint));
   // Leyenda de tamaños (tres círculos anidados) en la esquina libre.
   const sizes = [maxV, maxV / 4, maxV / 16].map((v) => ({ v, r: Math.sqrt(v / maxV) * rMax }));
   const lx = tall ? proj.bounds.x + proj.bounds.w + 26 : area.x + 4, ly = tall ? area.y + area.h - 4 : area.y + area.h - 4;
@@ -1344,8 +1558,9 @@ export function symbolMap(spec, theme) {
     body.push(...zoomLayer(B, layer));
   }
   if (tall) body.push(g({ class: 'pa-legend pa-size-legend' }, leg));
+  if (B.edge) body.push(drawEdgeLabels(B.edge, m, proj, B.box, area, theme, locale));
   const desc = describeMap(m, fmt, locale, T(locale, 'Mapa de símbolos', 'Proportional symbol map')) + describeExtras(markers, layers, locale, links);
-  return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs() });
+  return frame.finish(body, { desc, type: 'symbolmap', defs: H.defs(), css: paint.css() });
 }
 
 function describeExtras(markers, layers, locale, links) {

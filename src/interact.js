@@ -158,6 +158,12 @@ export function attach(root) {
       const st = n.getAttribute && n.getAttribute('stroke');
       if (isLit(st) && st.toLowerCase() !== (dark ? '#0b0f2b' : '#fcfbf9')) return skinned(n, 'stroke') || st;
     }
+    // Un punto de mapa (marcador, extremo de línea) lleva el color en su grupo o
+    // en una clase: el que se ve es el calculado.
+    if (node.closest && node.closest('.pa-markers,.pa-link-ends') && typeof getComputedStyle === 'function') {
+      const f = getComputedStyle(node).fill;
+      if (isLit(f)) return f;
+    }
     return null;
   };
   const linesHtml = (txt, color) => {
@@ -281,6 +287,8 @@ export function attach(root) {
     for (const n of body.querySelectorAll('[fill],[stroke],[data-color]')) {
       if (n.closest('.pa-legend')) continue;
       if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c || norm(n.getAttribute('data-color')) === c) {
+        // Un grupo de marcadores de un color lo lleva en su `fill`: las marcas son sus puntos.
+        if (n.classList && n.classList.contains('pa-markers')) { if (norm(n.getAttribute('fill')) === c) n.querySelectorAll('.pa-m').forEach((x) => out.add(x)); continue; }
         const m = n.closest('.pa-m') || n;
         out.add(m);
       }
