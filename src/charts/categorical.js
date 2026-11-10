@@ -12,9 +12,10 @@ import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, r
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { tipper } from '../tooltip.js';
-import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile } from '../stats.js';
+import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile, extent } from '../stats.js';
+import { esEn } from '../i18n.js';
 
-const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
+const T = (en, es, locale) => esEn(locale, es, en);
 
 /** Pseudoaleatorio determinista en [0,1) a partir de un entero. */
 function rand(i) {
@@ -201,7 +202,8 @@ function autoHorizontal(spec, m) {
 }
 
 const finish = (s, desc, type) => s.frame.finish([...s.body.pre, ...s.body.marks, ...s.body.post], { desc, type });
-const extentOf = (vs) => [Math.min(...vs), Math.max(...vs)];
+// Con un bucle: `Math.min(...vs)` desborda la pila con ~150 mil valores.
+const extentOf = extent;
 
 /** Segmento (línea) en coordenadas de categoría/valor. */
 function seg(s, cpos0, v0, cpos1, v1, attrs) {
@@ -277,14 +279,15 @@ export function violin(spec, theme) {
     const vs = m.get(c, h);
     if (!vs.length) continue;
     // Un solo valor (o todos iguales) no tiene densidad: se dibuja como una marca.
-    if (vs.length < 2 || Math.min(...vs) === Math.max(...vs)) {
+    const [vLo, vHi] = extent(vs);
+    if (vs.length < 2 || vLo === vHi) {
       dens.set(c + '\u0000' + h, { single: true, f: fiveNumber(vs), n: vs.length, max: 0 });
       ext.push(vs[0]);
       continue;
     }
     const tv = vs.map(tf);
     const bw = (spec.bandwidth ?? scottBandwidth(tv)) * (spec.bwAdjust ?? 1);
-    const mn = Math.min(...tv), mx = Math.max(...tv);
+    const [mn, mx] = extent(tv);
     const d = kde(tv, { bandwidth: bw, extent: [mn - cut * bw, mx + cut * bw], gridSize: 96 }).map(([v, dd]) => [inv(v), dd]);
     dens.set(c + '\u0000' + h, { d, f: fiveNumber(vs), n: vs.length, max: Math.max(...d.map((p) => p[1])) });
     ext.push(inv(mn - cut * bw), inv(mx + cut * bw));
@@ -414,7 +417,7 @@ export function swarm(spec, theme) {
   }));
   let L = layouts();
   const room = (spec.dodge ? s.slot : s.catS.bandwidth) * 0.98;
-  for (let it = 0; it < 12 && Math.max(...L.flat().map((x) => x.width)) > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
+  for (let it = 0; it < 12 && L.flat().reduce((m, x) => Math.max(m, x.width), -Infinity) > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
   for (const grp of L.flat()) {
     const cpos = spec.dodge ? s.center(grp.c, grp.hi2) : s.catS.center(grp.c);
     const parts = grp.items.map((it, i) => {

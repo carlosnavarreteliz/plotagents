@@ -11,13 +11,13 @@
 import { el, g, text, tip, dotLayer, esc } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, ramp, hexToRgb, rgbToHex } from '../theme.js';
+import { colorMap, ramp, hexToRgb, rgbToHex, mix } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
+import { esEn as T } from '../i18n.js';
 
-const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 const RAD = Math.PI / 180;
 const MAX_LAT = 85.0511287798;
 const TILE = 256;
@@ -122,7 +122,6 @@ export function tileUrl(p, z, x, y) {
 }
 
 // ── Color ───────────────────────────────────────────────────────────────────
-const mix = (a, b, t) => { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A.map((v, i) => v + (B[i] - v) * t)); };
 const isHex = (c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c || ''));
 
 /**

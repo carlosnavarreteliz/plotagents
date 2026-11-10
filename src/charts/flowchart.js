@@ -3,13 +3,13 @@
 // conectores ortogonales con esquinas suaves que no atraviesan nodos.
 import { el, g, text, tip } from '../svg.js';
 import { measure, wrap } from '../text.js';
-import { colorMap, readable, textOn, hexToRgb, rgbToHex } from '../theme.js';
+import { colorMap, readable, textOn, mix } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
+import { esEn } from '../i18n.js';
 
-const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
+const T = (en, es, locale) => esEn(locale, es, en);
 const FS = 12.5, LH = 16, EDGE_FS = 11;
-const mix = (a, b, t) => { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A.map((v, i) => v + (B[i] - v) * t)); };
 
 export function flowchart(spec, theme) {
   const locale = spec.locale || 'es';

@@ -7,7 +7,7 @@
 import { el, g, text, tip, barPath, dotLayer } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { ramp, textOn, colorMap, readable } from '../theme.js';
+import { ramp, textOn, colorMap, readable, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { leaves, elbows } from '../tree.js';
@@ -16,7 +16,6 @@ import { pearson, polyfit, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt } from './dist.js';
 
 const isEN = (spec) => String(spec.locale || 'es').startsWith('en');
-const halo = (theme) => ({ stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' });
 
 // ── Estadística ────────────────────────────────────────────────────────────
 

@@ -9,8 +9,9 @@ import { niceStep, linear } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
+import { esEn } from '../i18n.js';
 
-const T = (en, es, locale) => (String(locale || 'es').startsWith('en') ? en : es);
+const T = (en, es, locale) => esEn(locale, es, en);
 const lead = (s) => { const m = /^\s*(\d+)/.exec(String(s)); return m ? +m[1] : NaN; };
 
 export function pyramid(spec, theme) {

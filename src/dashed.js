@@ -13,6 +13,7 @@
 //   dashedLabel: "Estimación"           → entrada de leyenda y línea en el tooltip
 import { el } from './svg.js';
 import { ramp, readable } from './theme.js';
+import { esEn as T } from './i18n.js';
 
 /** Trazos discontinuos: contornos cortos y finos; líneas algo más largas. */
 export const DASH = { outline: '4 2.5', line: '5 6', legend: '3.5 2.5' };
@@ -85,6 +86,5 @@ export function dashedAttrs(H, color, { width = 1.25 } = {}) {
   return { fill: H.fill(color), stroke: H.stroke(color), strokeWidth: width, strokeDasharray: DASH.outline, 'data-dashed': '1', 'data-color': color };
 }
 
-const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 /** Texto por defecto para la leyenda cuando el agente no da `dashedLabel`. */
 export const dashedDefaultLabel = (locale) => T(locale, 'Estimado', 'Estimate');

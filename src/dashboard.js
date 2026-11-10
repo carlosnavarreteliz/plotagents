@@ -25,6 +25,7 @@ import { ensureData, num, uniq, fieldKind, aggregate, PlotError } from './data.j
 import { makeFormat, formatNumber, parseDate } from './format.js';
 import { esc } from './svg.js';
 import { render } from './runtime.js';
+import { esEn as T } from './i18n.js';
 
 let core = null;
 /** index.js registra plot/resolve/lint aquí (evita una importación circular). */
@@ -37,7 +38,6 @@ function tidy(spec) {
 }
 const hasField = (r, f) => r !== null && typeof r === 'object' && f in r;
 
-const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
 // Ancho (de 12) según el tipo: lo que se lee de izquierda a derecha, ancho.
 const WIDE = new Set(['line', 'area', 'gantt', 'heatmap', 'sankey', 'flowchart', 'network', 'jointplot']);
