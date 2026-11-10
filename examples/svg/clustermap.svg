@@ -22,7 +22,7 @@ n = 120 · p &lt; 0,001"><rect x="268.81" y="282.36" width="69.36" height="69.36
 r = 0,48
 n = 120 · p &lt; 0,001"><rect x="340.18" y="282.36" width="69.36" height="69.36" rx="4" fill="#E68CA6"/><text x="374.86" y="321.73" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,48</text></g><g class="pa-m" data-tip="Escolaridad · Densidad
 r = 0,26
-n = 120 · p = 0,004"><rect x="411.54" y="282.36" width="69.36" height="69.36" rx="4" fill="#EEBBC8"/><text x="446.22" y="321.73" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Escolaridad · Pobreza
+n = 120 · p = 0,005"><rect x="411.54" y="282.36" width="69.36" height="69.36" rx="4" fill="#EEBBC8"/><text x="446.22" y="321.73" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Escolaridad · Pobreza
 r = −0,81
 n = 120 · p &lt; 0,001"><rect x="482.91" y="282.36" width="69.36" height="69.36" rx="4" fill="#4954AD"/><text x="517.59" y="321.73" fill="#FFFFFF" font-size="13" text-anchor="middle" font-weight="500">−0,81</text></g><g class="pa-m" data-tip="Escolaridad · Hacinamiento
 r = −0,73
@@ -62,7 +62,7 @@ n = 120 · p = 0,69"><rect x="625.64" y="425.09" width="69.36" height="69.36" rx
 r = 0,23
 n = 120 · p = 0,01"><rect x="126.08" y="496.46" width="69.36" height="69.36" rx="4" fill="#EEC1CC"/><text x="160.76" y="535.82" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,23</text></g><g class="pa-m" data-tip="Densidad · Escolaridad
 r = 0,26
-n = 120 · p = 0,004"><rect x="197.45" y="496.46" width="69.36" height="69.36" rx="4" fill="#EEBBC8"/><text x="232.13" y="535.82" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Densidad · Áreas verdes
+n = 120 · p = 0,005"><rect x="197.45" y="496.46" width="69.36" height="69.36" rx="4" fill="#EEBBC8"/><text x="232.13" y="535.82" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Densidad · Áreas verdes
 r = −0,15
 n = 120 · p = 0,10"><rect x="268.81" y="496.46" width="69.36" height="69.36" rx="4" fill="#D1D3E4"/><text x="303.49" y="535.82" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">−0,15</text></g><g class="pa-m" data-tip="Densidad · Edad media
 r = −0,16

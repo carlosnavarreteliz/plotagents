@@ -22,7 +22,7 @@ n = 120 · p &lt; 0,001"><rect x="370.76" y="386.68" width="79.56" height="79.56
 r = 0,23
 n = 120 · p = 0,01"><rect x="126.08" y="468.24" width="79.56" height="79.56" rx="4" fill="#EEC1CC"/><text x="165.86" y="512.7" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,23</text></g><g class="pa-m" data-tip="Densidad · Escolaridad
 r = 0,26
-n = 120 · p = 0,004"><rect x="207.64" y="468.24" width="79.56" height="79.56" rx="4" fill="#EEBBC8"/><text x="247.42" y="512.7" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Densidad · Pobreza
+n = 120 · p = 0,005"><rect x="207.64" y="468.24" width="79.56" height="79.56" rx="4" fill="#EEBBC8"/><text x="247.42" y="512.7" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">0,26</text></g><g class="pa-m" data-tip="Densidad · Pobreza
 r = −0,30
 n = 120 · p &lt; 0,001"><rect x="289.2" y="468.24" width="79.56" height="79.56" rx="4" fill="#B2B8E2"/><text x="328.98" y="512.7" fill="#141A3F" font-size="13" text-anchor="middle" font-weight="500">−0,30</text></g><g class="pa-m" data-tip="Densidad · Hacinamiento
 r = 0,06
