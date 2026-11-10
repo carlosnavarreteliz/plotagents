@@ -5,7 +5,7 @@
 // minigráfico, avance contra la meta, estado). En pantallas angostas cada fila
 // se vuelve una tarjeta. Las filas se paginan; en el navegador, render()
 // agrega orden por columna, búsqueda y paso de página.
-import { el, g, text, tip, esc } from '../svg.js';
+import { el, g, text, tip, esc, linkWrap } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js';
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';
@@ -15,6 +15,7 @@ import { ramp, textOn, readable, hexToRgb, rgbToHex, contrast } from '../theme.j
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
 import { words, langOf } from '../i18n.js';
+import { railAccessors, railValues, railExtent, railMarks, railTip } from '../rail.js';
 
 // Tipos de columna (y sus alias): lo que el agente escriba se entiende.
 const TYPE_ALIAS = {
@@ -194,11 +195,16 @@ function prepareColumns(spec, data, theme, locale) {
     } else if (type === 'range') {
       // Riel: mínimo–máximo, una banda (lo–hi), la mediana, una referencia y el
       // valor de la fila como punto. Cada extremo es un campo o un número fijo.
-      const acc = (k) => (typeof k === 'string' ? (r) => num(r[k]) : Number.isFinite(+k) && k !== null && k !== undefined ? () => +k : () => NaN);
-      const band = Array.isArray(c.band) ? c.band : [];
-      c.rg = { min: acc(c.min), max: acc(c.max), lo: acc(band[0]), hi: acc(band[1]), median: acc(c.median), ref: acc(c.ref) };
-      const ends = data.flatMap((r) => [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))]).filter(Number.isFinite);
+      // `refs`: varias referencias, cada una con su rótulo. `clip` / `domain`:
+      // una escala recortada; lo de fuera es un chevrón (ver src/rail.js).
+      c.rg = railAccessors(c);
+      const ends = data.flatMap((r) => railExtent(num(r[c.field]), railValues(c.rg, r)));
       c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      // Con `clip`, la escala de la columna va del menor mínimo al mayor máximo.
+      const mins = data.map((r) => c.rg.min(r)).filter(Number.isFinite), maxs = data.map((r) => c.rg.max(r)).filter(Number.isFinite);
+      c.clo = mins.length ? Math.min(...mins) : c.rlo; c.chi = maxs.length ? Math.max(...maxs) : c.rhi;
+      // Una columna con mínimo y máximo: la fila que no los trae va sin riel.
+      c.ranged = c.min !== undefined && c.min !== null && c.max !== undefined && c.max !== null;
       c.fmt = columnFormat(c.format ?? spec.format ?? hint, ends, locale, null);
     } else if (numeric || (type === 'number' && kind === 'year')) {
       c.fmt = kind === 'year' && !c.format ? (v) => String(Math.round(v)) : columnFormat(c.format ?? spec.format ?? hint, finite, locale, null);
@@ -210,6 +216,32 @@ function prepareColumns(spec, data, theme, locale) {
       const ts = present.map(parseDate).filter(Number.isFinite);
       c.unit = ts.length ? dateUnit(ts) : 'day';
       c.withYear = c.yearless !== true;
+    }
+    // `formatBy`: cada fila con su formato (una tabla de indicadores en unidades
+    // distintas). Un campo cuyo valor es un formato ("percent", { suffix: " años" }…)
+    // —los decimales se infieren entre las filas que comparten formato— o, desde
+    // JS, una función (valor, fila) → texto. Sin total: no se suman unidades distintas.
+    if (c.formatBy !== undefined && c.formatBy !== null && ['number', 'bar', 'heat', 'delta', 'range'].includes(type)) {
+      if (typeof c.formatBy === 'function') {
+        const fn = c.formatBy;
+        c.rowFmt = (r) => { const f = (v) => (v === null || v === undefined || Number.isNaN(v) ? '' : String(fn(v, r))); f.type = 'custom'; return f; };
+      } else if (typeof c.formatBy === 'string') {
+        const by = c.formatBy;
+        const keyOf = (r) => { const v = r[by]; return isNil(v) ? null : typeof v === 'object' ? JSON.stringify(v) : String(v); };
+        const cache = new Map();
+        const valsOf = (r) => (type === 'range' ? railExtent(num(r[c.field]), railValues(c.rg, r)) : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
+        c.rowFmt = (r) => {
+          const k = keyOf(r);
+          if (k === null) return c.fmt;
+          if (!cache.has(k)) {
+            const vals = data.filter((d) => keyOf(d) === k).flatMap(valsOf).filter(Number.isFinite);
+            const f = r[by];
+            cache.set(k, columnFormat(typeof f === 'string' || (f && typeof f === 'object') ? f : undefined, vals, locale, null));
+          }
+          return cache.get(k);
+        };
+      }
+      if (c.rowFmt && type === 'range' && c.scale === undefined) c.scale = 'row';
     }
     c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
     if (type === 'bar' || type === 'heat') {
@@ -246,14 +278,17 @@ function prepareColumns(spec, data, theme, locale) {
   return { cols, labelF, W };
 }
 
+/** El formato de una celda: el de su fila (`formatBy`) o el de la columna. */
+const fmtOf = (c, r) => (c.rowFmt && r ? c.rowFmt(r) : c.fmt);
+
 /** Texto visible de una celda (y su valor para ordenar). */
 function cellText(c, r, locale, W) {
   const v = r[c.field];
   if (c.type === 'rank') return String(r.__rank ?? '');
   if (isNil(v)) return '';
   switch (c.type) {
-    case 'number': case 'bar': case 'heat': case 'range': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
-    case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = c.fmt(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
+    case 'number': case 'bar': case 'heat': case 'range': { const n = num(v); return Number.isFinite(n) ? fmtOf(c, r)(n) : String(v); }
+    case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = fmtOf(c, r)(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
     case 'progress': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
     case 'date': { const t = parseDate(v); return Number.isFinite(t) ? formatDate(t, c.unit, locale, c.withYear) : String(v); }
     case 'check': return v === true || YES.test(String(v).trim()) ? W.yes : W.no;
@@ -368,7 +403,7 @@ export function table(spec, theme) {
   // 4. Fila de totales: `total: true` (suma, o promedio en porcentajes y avances).
   const totalOf = (c) => {
     const pick = c.total ?? (spec.total === true || typeof spec.total === 'string' ? (typeof spec.total === 'string' && spec.total !== 'true' ? spec.total : 'auto') : spec.total && typeof spec.total === 'object' ? spec.total[c.field] ?? 'auto' : undefined);
-    if (pick === undefined || pick === false || c.isLabel || c.type === 'rank') return null;
+    if (pick === undefined || pick === false || c.isLabel || c.type === 'rank' || c.rowFmt) return null;
     if (!['number', 'bar', 'heat', 'progress', 'delta'].includes(c.type) || c.kind === 'year') return null;
     const how = pick === true || pick === 'auto' ? (c.type === 'delta' ? null : (c.type === 'progress' && !c.hasTarget) || c.fmt?.type === 'percent' ? 'mean' : 'sum') : pick; // con meta (gasto vs presupuesto) se suma
     if (!how) return null;
@@ -377,6 +412,9 @@ export function table(spec, theme) {
   };
   const hasTotal = spec.total !== false && cols.some((c) => totalOf(c) !== null);
   const totalLabel = spec.totalLabel ?? (spec.total && typeof spec.total === 'object' ? spec.total.label : undefined) ?? W.total;
+
+  // `missingLabel`: lo que dice una celda sin valor (y su tooltip) en vez de «—».
+  const missingLabel = spec.missingLabel === undefined || spec.missingLabel === null || spec.missingLabel === '' ? null : String(spec.missingLabel);
 
   // 5. Anchos: se miden sobre TODAS las filas, así no saltan al cambiar de página.
   const edge = Math.min(BASE.pad, Math.max(4, frame.pad - 6));
@@ -390,6 +428,8 @@ export function table(spec, theme) {
     const widths = texts.map((t) => measure(t, FS, weight));
     let tw = Math.max(0, ...widths);
     if (hasTotal && c.isLabel) tw = Math.max(tw, measure(totalLabel, FS, 600));
+    // `missingLabel`: la columna que tiene celdas vacías mide también ese rótulo.
+    if (missingLabel !== null && c.type !== 'rank' && sample.some((r) => isNil(r[c.field]))) tw = Math.max(tw, measure(missingLabel, FS, 400));
     const tot = hasTotal ? totalOf(c) : null;
     if (tot !== null) tw = Math.max(tw, measure(c.type === 'progress' && !c.hasTarget ? c.pctFmt(tot / (c.scale100 ? 100 : 1)) : c.fmt(tot), FS, 600));
     const longest = Math.max(0, ...texts.map((t) => Math.max(0, ...String(t).split(/\s+/).map((w) => measure(w, FS, weight)))));
@@ -524,7 +564,13 @@ export function table(spec, theme) {
       else put(ts);
       return { out };
     }
-    if (c.type !== 'rank' && isNil(v)) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+    if (c.type !== 'rank' && isNil(v)) {
+      if (missingLabel === null) { put('—', { fill: theme.muted, fontWeight: 400 }); return { out }; }
+      const ms = truncate(missingLabel, iw, FS, 400);
+      // Barras, avances y rieles: el rótulo va donde iría la cifra.
+      put(ms, { fill: theme.muted, fontWeight: 400, ...((c.type === 'bar' || c.type === 'progress' || c.type === 'range') && c.align === 'right' ? { x: ix + c.valueW, textAnchor: 'end' } : {}) });
+      return { out, tip: `${c.label}: ${missingLabel}` };
+    }
     const s = cellText(c, r, locale, W);
     switch (c.type) {
       case 'rank': put(s, { fill: theme.muted, fontWeight: 400 }); break;
@@ -591,34 +637,33 @@ export function table(spec, theme) {
         if (!Number.isFinite(n)) { put(s); break; }
         const vw = c.valueW;
         out.push(text(ix + vw, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        const vals = railValues(c.rg, r);
+        const F = Number.isFinite;
+        const hasRange = F(vals.min) && F(vals.max);
+        // Sin mínimo ni máximo (en una columna que los tiene) no hay riel: sólo
+        // la cifra, nunca un punto suelto que parezca un rango.
+        if (c.ranged && !hasRange && !vals.domain) break;
         const trackX = ix + vw + 12, trackW = Math.max(16, ix + iw - trackX - 6);
-        const R = c.rg;
-        const vals = { min: R.min(r), max: R.max(r), lo: R.lo(r), hi: R.hi(r), median: R.median(r), ref: R.ref(r) };
-        // Escala: la de toda la columna (por defecto) o la de la fila (`scale: 'row'`).
-        let a = c.rlo, b = c.rhi;
-        if (c.scale === 'row') {
-          const own = [n, ...Object.values(vals)].filter(Number.isFinite);
+        // Escala: la de toda la columna (por defecto) o la de la fila (`scale: 'row'`);
+        // recortada a `domain` o, con `clip`, a mínimo–máximo.
+        let a = c.rlo, b = c.rhi, clipped = false;
+        if (vals.domain) { [a, b] = vals.domain; clipped = true; }
+        else if (c.clip && hasRange && c.scale === 'row') { a = Math.min(vals.min, vals.max); b = Math.max(vals.min, vals.max); clipped = true; }
+        else if (c.clip && c.chi > c.clo) { a = c.clo; b = c.chi; clipped = true; }
+        else if (c.scale === 'row') {
+          const own = railExtent(n, vals);
           a = Math.min(...own); b = Math.max(...own);
         }
-        const span = b - a || 1;
-        const X = (t) => trackX + ((t - a) / span) * trackW;
-        const F = Number.isFinite;
-        if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(vals.min), x2: X(vals.max), y1: my, y2: my, stroke: theme.axis, strokeWidth: 2, strokeLinecap: 'round' }));
-        if (F(vals.lo) && F(vals.hi)) out.push(el('rect', { x: X(Math.min(vals.lo, vals.hi)), y: my - 4, width: Math.max(1.5, Math.abs(X(vals.hi) - X(vals.lo))), height: 8, rx: 2, fill: theme.tint2 }));
-        if (F(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - 6, y2: my + 6, stroke: theme.lede, strokeWidth: 1.5 }));
-        if (F(vals.ref)) out.push(el('line', { x1: X(vals.ref), x2: X(vals.ref), y1: my - 8, y2: my + 8, stroke: theme.ink, strokeWidth: 2, strokeLinecap: 'round' }));
-        out.push(el('circle', { cx: X(n), cy: my, r: 4.5, fill: muted ? dimC : accent, stroke: theme.surface, strokeWidth: 1.5 }));
+        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
+        out.push(...rail.out);
         const en = String(locale).startsWith('en');
-        const parts = [`${c.label}: ${s}`];
-        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${c.fmt(vals.min)}–${c.fmt(vals.max)}`);
-        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${c.fmt(vals.lo)}–${c.fmt(vals.hi)}`);
-        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${c.fmt(vals.median)}`);
-        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${c.fmt(vals.ref)}`);
-        return { out, tip: parts.join('\n') };
+        const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
+          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
+        return { out, tip: tipText };
       }
       case 'sparkline': {
         const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
-        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : '—', { fill: theme.muted }); break; }
+        if (vals.length < 2) { put(vals.length ? c.fmt(vals[0]) : missingLabel ?? '—', { fill: theme.muted }); break; }
         const sw = Math.min(iw, 120), sh = Math.max(10, Math.min(18, h - 2 * padY - 2));
         const sx = c.align === 'right' ? x + w - P - sw : c.align === 'center' ? x + (w - sw) / 2 : ix;
         out.push(spark(sx, my, sw, sh, vals, muted));
@@ -640,7 +685,9 @@ export function table(spec, theme) {
         const lines = wrap(s, iw, FS, 400, c.lines);
         const color = readable(accent, theme);
         const t = lines.map((l, k) => text(tx, by + k * LH, l, { fill: color, fontSize: FS, textAnchor: anchor, textDecoration: 'underline' })).join('');
-        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : t);
+        // Una dirección completa abre en otra pestaña; una ruta del sitio («/es/…»,
+        // «./x», «#y») es un enlace propio y abre en la misma (como en un heatmap).
+        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : linkWrap(href, t));
         return { out, lines: lines.length, tip: lines.join(' ') !== s ? s : null };
       }
       case 'text': case 'date': default: {
@@ -913,7 +960,8 @@ function describeTable({ lang, cols, rows, nRows, page, pages, st, label, query 
   if (query) s += ` ${T.q} "${query}".`;
   if (pages > 1) s += ` ${T.p} ${page} ${T.of} ${pages}.`;
   if (st) s += ` ${T.s} ${st.col.label}, ${st.dir === 'desc' ? T.desc : T.asc}.`;
-  const m = cols.find((c) => c.type === 'bar') || cols.find((c) => ['number', 'heat'].includes(c.type) && !c.isLabel && c.kind === 'number');
+  // Una columna en unidades distintas por fila (`formatBy`) no tiene un «mayor».
+  const m = cols.find((c) => c.type === 'bar' && !c.rowFmt) || cols.find((c) => ['number', 'heat'].includes(c.type) && !c.isLabel && c.kind === 'number' && !c.rowFmt);
   if (m && label && rows.length > 1) {
     let best = null, worst = null;
     for (const r of rows) { const v = num(r[m.field]); if (!Number.isFinite(v)) continue; if (!best || v > best[1]) best = [r, v]; if (!worst || v < worst[1]) worst = [r, v]; }

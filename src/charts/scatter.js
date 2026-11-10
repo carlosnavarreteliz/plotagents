@@ -83,7 +83,7 @@ export function scatter(spec, theme) {
   // Eje y por dentro: si un punto pegado a la izquierda choca con una etiqueta
   // de marca, el rango x arranca pasado la etiqueta más ancha.
   let xPad = 0;
-  if (isInside(theme, undefined) && !spec.xDomain) {
+  if (isInside(theme, undefined) && (!spec.xDomain || spec._xShared)) {
     const axisSize = SIZES.axis;
     const kk = 5 * Math.max(1, ctx.textScale * 0.8);
     const yT = yS.ticks(dy.step);
@@ -97,6 +97,8 @@ export function scatter(spec, theme) {
       if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) { xPad = Math.min(Math.max(0, wMax + 6 - bp + r), inner.w * 0.2); if (xPad >= inner.w * 0.2) break; }
     }
   }
+  if (spec._xPad > xPad) xPad = Math.min(spec._xPad, inner.w * 0.2);
+  if (spec._domains) spec._domains.xPad = xPad;
   const xS = (xLog ? log : linear)(dx.min, dx.max, inner.x + bp + xPad, inner.x + inner.w - bp);
 
   const body = [];

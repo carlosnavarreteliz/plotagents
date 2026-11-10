@@ -19,3 +19,4 @@ export * from './base.js';
 export { default } from './base.js';
 export { registerGeo, getGeo, registeredGeo, toFeatureCollection } from './geo/registry.js';
 export { embedTiles, TILE_PROVIDERS } from './charts/pointmap.js';
+export { mapSprite } from './charts/choropleth.js';

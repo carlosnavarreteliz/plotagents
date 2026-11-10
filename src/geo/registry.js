@@ -7,6 +7,7 @@
 //   · un TopoJSON (Topology); `geoObject` elige el objeto (por defecto, el primero)
 //   · en el navegador, una URL (render() la descarga; ver runtime.js)
 import { PlotError } from '../data.js';
+import { isPathsGeo, pathsToFeatures } from './paths.js';
 
 const REG = new Map();
 
@@ -52,6 +53,12 @@ export function toFeatureCollection(geo, objectName) {
     return geo.features.every((f) => f && f.type === 'Feature') ? geo : { ...geo, features: geo.features.map(asFeature) };
   }
   if (geo.type === 'Feature') return { type: 'FeatureCollection', features: [geo] };
+  // Trazos SVG ya proyectados por id ({ paths, points?, names? }): se leen una vez por objeto.
+  if (isPathsGeo(geo)) {
+    const memo = cache.get(geo) || {};
+    if (!memo.paths) { memo.paths = pathsToFeatures(geo); cache.set(geo, memo); }
+    return memo.paths;
+  }
   if (GEOMS.has(geo.type)) return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: geo }] };
   if (geo.type === 'Topology') {
     const key = objectName ?? '';
@@ -59,7 +66,7 @@ export function toFeatureCollection(geo, objectName) {
     if (!memo[key]) { memo[key] = topoFeatures(geo, objectName); cache.set(geo, memo); }
     return memo[key];
   }
-  throw new PlotError(`No reconozco este \`geo\` (type: "${geo.type}").`, 'Usa un GeoJSON (FeatureCollection, Feature o geometría) o un TopoJSON (type: "Topology").');
+  throw new PlotError(`No reconozco este \`geo\` (type: "${geo.type}").`, 'Usa un GeoJSON (FeatureCollection, Feature o geometría), un TopoJSON (type: "Topology") o trazos ya proyectados ({ paths: { id: "M…Z" } }).');
 }
 
 function asFeature(f) {

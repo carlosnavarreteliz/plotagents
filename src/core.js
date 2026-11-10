@@ -31,6 +31,7 @@ import './types/bump.js';
 import './types/waffle.js';
 import './types/dendrogram.js';
 import './types/dotplot.js';
+import './types/rail.js';
 
 export * from './base.js';
 export { default } from './base.js';

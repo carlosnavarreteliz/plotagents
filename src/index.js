@@ -22,7 +22,7 @@ import { pyramid } from './charts/pyramid.js';
 import { flowchart } from './charts/flowchart.js';
 import { gantt } from './charts/gantt.js';
 import { wordcloud, countWords } from './charts/wordcloud.js';
-import { choropleth, symbolMap } from './charts/choropleth.js';
+import { choropleth, symbolMap, mapSprite } from './charts/choropleth.js';
 import { pointmap, embedTiles, TILE_PROVIDERS } from './charts/pointmap.js';
 import { registerGeo, getGeo, registeredGeo, toFeatureCollection } from './geo/registry.js';
 // Mapas incluidos (Chile por regiones, estados de EE. UU. y países del mundo): listos sin importar nada más.
@@ -144,7 +144,7 @@ export { render };
 export { countWords, dashboardSchema, detectLocale, correlations };
 export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALITATIVE };
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
-export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };
+export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo, mapSprite };
 export { registerTheme, withDefaults as resolveDefaults, embedTiles, TILE_PROVIDERS };
 export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

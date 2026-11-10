@@ -4,7 +4,7 @@
 // aparecen si caben. Drill-down: data-drill + spec.focus.
 import { tipper } from '../tooltip.js';
 import { el, g, text, tip, esc, linkWrap } from '../svg.js';
-import { measure, wrap } from '../text.js';
+import { measure, wrap, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
@@ -143,6 +143,21 @@ export function treemap(spec, theme) {
     return r ? r[spec.href] : undefined;
   };
 
+  // `shareOf`: dentro de un grupo (`focus`), la participación que escribe cada
+  // tesela: la del grupo (por defecto), la del total, o las dos.
+  const shareOf = spec.shareOf ?? 'group';
+  const ofTotal = en ? 'of total' : 'del total';
+  // Si la cifra larga no cabe, una más corta antes que ninguna: con "both", la
+  // del grupo; con "total", la cifra sola (el tooltip dice de qué).
+  const shareText = (n) => {
+    if (!focus.path.length || shareOf === 'group') return share(n.value, total);
+    if (shareOf === 'total') return [`${share(n.value, grand)} ${ofTotal}`, share(n.value, grand)];
+    return [`${share(n.value, total)} · ${share(n.value, grand)} ${ofTotal}`, share(n.value, total)];
+  };
+  // `tileLabels: "wrap"`: el nombre en dos o tres líneas aunque la cifra no
+  // quepa, y si ni así, recortado con «…»; por defecto, sólo si cabe entero.
+  const wrapMode = spec.tileLabels === 'wrap';
+
   function drawLeaf(n, x, y, w, h, relDepth) {
     if (w < 0.6 || h < 0.6) return '';
     const ch = showChange ? changeOf(n) : null;
@@ -150,7 +165,7 @@ export function treemap(spec, theme) {
     const rx = Math.max(0, Math.min(R - 1, w / 6, h / 6));
     const parts = [el('rect', { x, y, width: w, height: h, rx, fill })];
     const extra = [spec.showValues ? fmt(n.value) : null, ch !== null ? pctTxt(ch) : null].filter(Boolean).join(' · ');
-    parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), extra || null, relDepth));
+    parts.push(...tileLabel(n.name, shareText(n), x, y, w, h, textOn(fill, theme), extra || null, relDepth, wrapMode));
     const drill = relDepth === 1 && n.children.length ? JSON.stringify(n.path) : undefined;
     return linkWrap(hrefOf(n), g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts));
   }
@@ -184,29 +199,77 @@ export function treemap(spec, theme) {
   return frame.finish(body, { desc, type: 'treemap' });
 }
 
-/** Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. */
-function tileLabel(name, pct, x, y, w, h, fill, value, depth) {
+/**
+ * Etiqueta dentro del rectángulo solo si cabe; tamaño según el área. `pct` es
+ * la cifra o una lista de cifras de la más larga a la más corta: se escribe la
+ * primera que cabe bajo el nombre. Con `wrapMode`, el nombre toma las líneas
+ * que quepan a lo alto (más de tres si hay lugar) y la cifra va debajo siempre
+ * que quepa a algún tamaño; sólo si no, el nombre solo.
+ */
+function tileLabel(name, pct, x, y, w, h, fill, value, depth, wrapMode = false) {
   const out = [];
   const pad = w < 60 || h < 40 ? 5 : 8;
   const maxSize = depth <= 1 ? 24 : depth === 2 ? 18 : 15;
-  for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) {
-    const lines = wrap(name, w - pad * 2, size, 600, 3);
-    const X = ctx.textScale;
+  const subs = [].concat(pct).map((p) => (value ? `${p} · ${value}` : p));
+  const X = ctx.textScale;
+  const room = w - pad * 2;
+  const sizes = [];
+  for (let size = Math.min(maxSize, Math.max(10, Math.sqrt(w * h) / 8.5)); size >= 9.5; size -= 1) sizes.push(size);
+  // Líneas del nombre: tres como máximo, o en `wrap` las que quepan a lo alto.
+  const linesAt = (size, lh, below) => wrap(name, room, size, 600, wrapMode ? Math.max(3, Math.floor((h - pad * 1.5 - below) / lh)) : 3);
+  const put = (lines, size, lh, sub, pctSize) => {
+    lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
+    if (sub !== undefined) out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
+    return out;
+  };
+  const fitsWidth = (lines, size) => lines.every((l) => measure(l, size, 600) <= room) && !/…$/.test(lines[lines.length - 1]);
+  /** El nombre con su cifra (la primera que quepa), o null. */
+  const withShare = (size, cands = subs) => {
     const lh = size * X * 1.14;
     const pctSize = Math.max(9.5, size * 0.78);
-    const sub = value ? `${pct} · ${value}` : pct;
+    const lines = linesAt(size, lh, pctSize * X + 3);
     const need = pad + lines.length * lh + 3 + pctSize * X + pad * 0.5;
-    const widest = Math.max(...lines.map((l) => measure(l, size, 600)), measure(sub, pctSize));
-    const fitsW = lines.every((l) => measure(l, size, 600) <= w - pad * 2) && !/…$/.test(lines[lines.length - 1]);
-    if (fitsW && widest <= w - pad * 2 && need <= h) {
-      lines.forEach((l, i) => out.push(text(x + pad, y + pad + size * X * 0.88 + i * lh, l, { fill, fontSize: size, fontWeight: 600 })));
-      out.push(text(x + pad, y + pad + size * X * 0.88 + (lines.length - 1) * lh + pctSize * X + 4, sub, { fill, fontSize: pctSize, opacity: 0.86 }));
-      return out;
-    }
-    if (lines.length === 1 && fitsW && pad + lh <= h) {
-      out.push(text(x + pad, y + pad + size * X * 0.88, lines[0], { fill, fontSize: size, fontWeight: 600 }));
-      return out;
-    }
+    if (!fitsWidth(lines, size) || need > h) return null;
+    const names = Math.max(...lines.map((l) => measure(l, size, 600)));
+    for (const sub of cands) if (Math.max(names, measure(sub, pctSize)) <= room) return put(lines, size, lh, sub, pctSize);
+    return null;
+  };
+  /** Sólo el nombre: en una línea, o (en `wrap`) en las que quepan a lo alto. */
+  const nameOnly = (size) => {
+    const lh = size * X * 1.14;
+    const lines = linesAt(size, lh, 0);
+    const fitsW = fitsWidth(lines, size);
+    if (lines.length === 1 && fitsW && pad + lh <= h) return put(lines, size, lh);
+    if (wrapMode && fitsW && pad + lines.length * lh <= h) return put(lines, size, lh);
+    return null;
+  };
+  // Cada cifra, de la más larga a la más corta, a cualquier tamaño: la larga
+  // a un tamaño menor antes que la corta a uno mayor.
+  if (wrapMode || subs.length > 1) {
+    for (const sub of subs) for (const size of sizes) if (withShare(size, [sub])) return out;
+    for (const size of sizes) if (nameOnly(size)) return out;
+    if (!wrapMode) return out;
+  } else {
+    for (const size of sizes) if (withShare(size) || nameOnly(size)) return out;
+    return out;
   }
-  return out;
+  // Ni entero cabe: al tamaño mínimo, en las líneas que quepan, la última
+  // (o una palabra más ancha que la tesela) recortada con «…»; con la cifra
+  // debajo si queda lugar para ella.
+  const size = 9.5, lh = size * X * 1.14, pctSize = 9.5;
+  if (room < measure('Abc…', size, 600)) return out;
+  const cut = (rows) => wrap(name, room, size, 600, rows).map((l) => truncate(l, room, size, 600));
+  const empty = (lines) => lines.every((l) => l === '…' || l.length < 2);
+  const rows = Math.floor((h - pad) / lh);
+  if (rows < 1) return out;
+  const lines = cut(rows);
+  if (empty(lines)) return out;
+  // La cifra, sólo si no le quita líneas al nombre.
+  const rowsS = Math.floor((h - pad - pctSize * X - 4 - pad * 0.5) / lh);
+  const sub = subs.find((t) => measure(t, pctSize) <= room);
+  if (rowsS >= 1 && sub !== undefined) {
+    const withSub = cut(rowsS);
+    if (withSub.length >= lines.length && !empty(withSub)) return put(withSub, size, lh, sub, pctSize);
+  }
+  return put(lines, size, lh);
 }

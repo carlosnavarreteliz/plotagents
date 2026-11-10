@@ -73,6 +73,7 @@ Read `suggestions` too. Check a spec without drawing with `npx plotagents spec.j
 | Change over time | `line` / `area` | `x` date or year, `y`, `series?` |
 | Rank over time (who passed whom) | `bump` / `slope` | `x`, `y` (or `rank`), `series`, `top?` |
 | A series' shape in a table cell | `spark` | `x`, `y`, any `width`/`height` |
+| One row of a distribution in a table cell | `rail` | `value`, `min`, `max`, `band?`, `median?`, `refs?`, `clip?`/`domain?` |
 | Part of a whole (≤ 6 parts) | `donut` / `pie` | `label`, `value` |
 | A count as squares | `waffle` | `series`, `value?` |
 | Hierarchy | `treemap` / `sunburst` | `path: [...]`, `value` |
