@@ -95,8 +95,10 @@ export const projections = {
  */
 export function makeProjection(p) {
   if (!p) return null;
-  if (typeof p === 'string') { const f = projections[p] || projections[p.toLowerCase()]; return f ? f() : null; }
-  if (typeof p === 'object') { const f = projections[p.type || p.name]; return f ? f(p) : null; }
+  // Sin distinguir mayúsculas ni guiones: "equalearth", "Equal-Earth" y "equalEarth" son lo mismo.
+  const find = (n) => { const k = String(n ?? '').toLowerCase().replace(/[-_\s]/g, ''); const hit = Object.keys(projections).find((x) => x.toLowerCase().replace(/[-_\s]/g, '') === k); return hit ? projections[hit] : null; };
+  if (typeof p === 'string') { const f = projections[p] || find(p); return f ? f() : null; }
+  if (typeof p === 'object') { const f = projections[p.type || p.name] || find(p.type || p.name); return f ? f(p) : null; }
   return null;
 }
 

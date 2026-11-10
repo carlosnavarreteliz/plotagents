@@ -120,7 +120,7 @@ export function sankey(spec, theme) {
     const x0 = l.sn.x + NW, x1 = l.tn.x, xm = (x0 + x1) / 2, w = l.v * ky;
     const d = `M${x0},${l.y0}C${xm},${l.y0} ${xm},${l.y1} ${x1},${l.y1}L${x1},${l.y1 + w}C${xm},${l.y1 + w} ${xm},${l.y0 + w} ${x0},${l.y0 + w}Z`;
     const share = l.sn.value ? Math.round((l.v / l.sn.value) * 100) : 0;
-    linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-tip': `${l.s} → ${l.t}\n${fmt(l.v)} · ${share}% de ${l.s}` }));
+    linkG.push(el('path', { class: 'pa-m', d, fill: linkColor(l), fillOpacity: theme.link, 'data-tip': `${l.s} → ${l.t}\n${fmt(l.v)} · ${share}% ${en ? 'of' : 'de'} ${l.s}` }));
   }
   body.push(g({ class: 'pa-links' }, linkG));
   for (const [ci, c] of cols.entries()) for (const n of c) {

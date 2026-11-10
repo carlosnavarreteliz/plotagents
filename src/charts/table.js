@@ -34,7 +34,7 @@ const TYPE_ALIAS = {
 export const COLUMN_TYPES = [...new Set(Object.values(TYPE_ALIAS))];
 export const columnType = (t) => TYPE_ALIAS[String(t || '').toLowerCase()] || null;
 
-const DELTA_RE = /(^|[\s_.-])(var|vars|delta|change|chg|cambio|crec|growth|yoy|mom|qoq|diff|dif|difference|diferencia|variaci[oó]n|varia[cç][aã]o|ver[äa]nderung|[ée]volution|evoluci[oó]n|\+\/-)/i;
+const DELTA_RE = /(^|[\s_.-])((var|vars|chg|yoy|mom|qoq|diff|dif)(?![a-z\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1])|delta|change|cambio|crec|growth|difference|diferencia|variaci[oó]n|varia[cç][aã]o|ver[äa]nderung|[ée]volution|evoluci[oó]n|\+\/-)/i;
 const PCT_NAME_RE = /(%|pct|percent|porc|porcentaje|tasa|rate|share|participaci|anteil|taux|part\b)/i;
 const PROGRESS_RE = /(progress|avance|progreso|complet|cumplim|ejecuci[oó]n|achiev|logro|fortschritt|avancement|andamento)/i;
 // Nombres que solo indican avance si los valores son fracciones (0,96 = 96% de la meta).
@@ -360,12 +360,12 @@ export function table(spec, theme) {
     const pick = c.total ?? (spec.total === true || typeof spec.total === 'string' ? (typeof spec.total === 'string' && spec.total !== 'true' ? spec.total : 'auto') : spec.total && typeof spec.total === 'object' ? spec.total[c.field] ?? 'auto' : undefined);
     if (pick === undefined || pick === false || c.isLabel || c.type === 'rank') return null;
     if (!['number', 'bar', 'heat', 'progress', 'delta'].includes(c.type) || c.kind === 'year') return null;
-    const how = pick === true || pick === 'auto' ? (c.type === 'delta' ? null : c.type === 'progress' || c.fmt?.type === 'percent' ? 'mean' : 'sum') : pick;
+    const how = pick === true || pick === 'auto' ? (c.type === 'delta' ? null : (c.type === 'progress' && !c.hasTarget) || c.fmt?.type === 'percent' ? 'mean' : 'sum') : pick; // con meta (gasto vs presupuesto) se suma
     if (!how) return null;
     const v = aggregate(rows.map((r) => num(r[c.field])), how);
     return Number.isFinite(v) ? v : null;
   };
-  const hasTotal = spec.total !== undefined && spec.total !== false && cols.some((c) => totalOf(c) !== null);
+  const hasTotal = spec.total !== false && cols.some((c) => totalOf(c) !== null);
   const totalLabel = spec.totalLabel ?? (spec.total && typeof spec.total === 'object' ? spec.total.label : undefined) ?? W.total;
 
   // 5. Anchos: se miden sobre TODAS las filas, así no saltan al cambiar de página.

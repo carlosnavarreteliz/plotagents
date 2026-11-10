@@ -49,7 +49,7 @@ try { raw = input ? readFileSync(input, 'utf8') : readFileSync(0, 'utf8'); } cat
 let spec;
 try { spec = JSON.parse(raw); } catch (e) { console.error('El spec no es JSON válido:', e.message); process.exit(2); }
 
-const isDashboard = (s) => !!s && typeof s === 'object' && !Array.isArray(s) && Array.isArray(s.charts);
+const isDashboard = (s) => !!s && typeof s === 'object' && !Array.isArray(s) && (Array.isArray(s.charts) || (Array.isArray(s.kpis) && s.type === undefined));
 
 if (flag('--lint')) {
   const list = Array.isArray(spec) ? spec : [spec];

@@ -30,6 +30,13 @@ let core = null;
 /** index.js registra plot/resolve/lint aquí (evita una importación circular). */
 export function _bindDashboard(fns) { core = fns; }
 
+/** Spec tolerante: charts/kpis/filters siempre listas de objetos (los nulos y valores sueltos se descartan). */
+function tidy(spec) {
+  const list = (v) => (v == null || v === false ? [] : [].concat(v)).filter((x) => x != null);
+  return { ...spec, charts: list(spec.charts).filter((c) => typeof c === 'object'), kpis: list(spec.kpis), filters: list(spec.filters).filter((f) => typeof f === 'string' || (typeof f === 'object' && typeof f.field === 'string')) };
+}
+const hasField = (r, f) => r !== null && typeof r === 'object' && f in r;
+
 const T = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
 
 // Ancho (de 12) según el tipo: lo que se lee de izquierda a derecha, ancho.
@@ -131,6 +138,7 @@ const colorField = (s) => s.series ?? s.hue ?? (Array.isArray(s.path) ? s.path[0
 export function planDashboard(spec = {}) {
   if (!core) throw new PlotError('plotagents no está inicializado.');
   if (!spec || typeof spec !== 'object') throw new PlotError('El dashboard debe ser un objeto.', 'dashboard({ title, kpis, charts: [...] })');
+  spec = tidy(spec);
   const locale = spec.locale || 'es';
   const shared = spec.data ? ensureData(spec) : null;
   const base = {};
@@ -191,7 +199,7 @@ export function planDashboard(spec = {}) {
   const filters = [].concat(spec.filters || []).map((f) => {
     const o = typeof f === 'string' ? { field: f } : { ...f };
     const pool = [...(shared || []), ...panels.flatMap((p) => (Array.isArray(p.spec.data) && p.spec.data !== shared ? p.spec.data : []))];
-    const vals = uniq(pool.map((r) => r[o.field]).filter((v) => v !== undefined && v !== null && v !== ''));
+    const vals = uniq(pool.filter((r) => hasField(r, o.field)).map((r) => r[o.field]).filter((v) => v !== undefined && v !== null && v !== ''));
     const kind = pool.length ? fieldKind(pool, o.field) : 'category';
     vals.sort((a, b) => (kind === 'date' ? parseDate(a) - parseDate(b) : kind === 'year' || kind === 'number' ? num(a) - num(b) : 0));
     return { field: o.field, label: o.label ?? o.field.charAt(0).toUpperCase() + o.field.slice(1), values: vals.map(String), control: o.control ?? (vals.length <= 6 ? 'buttons' : 'select'), value: o.value ?? o.default ?? null, all: o.all ?? T(locale, 'Todos', 'All') };
@@ -205,6 +213,7 @@ export function planDashboard(spec = {}) {
 
 // ── Revisión (lint) ────────────────────────────────────────────────────────
 export function lintDashboard(spec = {}) {
+  spec = tidy(spec && typeof spec === 'object' ? spec : {});
   const locale = spec.locale || 'es';
   const L = (es, en) => T(locale, es, en);
   const errors = [], warnings = [], suggestions = [];
@@ -226,7 +235,7 @@ export function lintDashboard(spec = {}) {
   if (untitled) suggestions.push({ code: 'dash-chart-titles', message: L(`${untitled} gráfico(s) sin título.`, `${untitled} chart(s) without a title.`), fix: L('Cada panel necesita su hallazgo como título.', 'Every panel needs its finding as the title.') });
   for (const f of [].concat(spec.filters || [])) {
     const field = typeof f === 'string' ? f : f.field;
-    const has = [spec.data, ...charts.map((c) => c.data)].some((d) => Array.isArray(d) && d.some((r) => r && field in r));
+    const has = [spec.data, ...charts.map((c) => c.data)].some((d) => Array.isArray(d) && d.some((r) => hasField(r, field)));
     if (!has) warnings.push({ code: 'dash-filter-field', message: L(`El filtro "${field}" no existe en los datos de ningún gráfico.`, `The filter "${field}" is not in any chart's data.`), fix: L('Usa un campo de `data`.', 'Use a field of `data`.') });
   }
   // Revisión de cada gráfico, con su número y título.
@@ -291,7 +300,9 @@ export function kpiMarkup(plan, rows) {
     if (k.trendBy && !k.trend && rows && rows.length) {
       const by = new Map();
       for (const r of cmp ? inPeriod(cmp.current) : rows) { const key = r[k.trendBy]; if (!by.has(key)) by.set(key, []); by.get(key).push(r); }
-      const ks = [...by.keys()].sort((x, y) => (String(x) < String(y) ? -1 : 1));
+      // Periodos numéricos (1…12) se ordenan como números; el resto, como texto (fechas ISO).
+      const allNum = [...by.keys()].every((x) => Number.isFinite(num(x)));
+      const ks = [...by.keys()].sort((x, y) => (allNum ? num(x) - num(y) : String(x) < String(y) ? -1 : String(x) > String(y) ? 1 : 0));
       k = { ...k, trend: ks.map((x) => computeKpi(k, by.get(x))) };
     }
     const fmt = makeFormat(k.format, locale, [v]);
@@ -344,7 +355,7 @@ export function filterSpec(spec, plan, active, locale) {
     const v = active[i];
     if (v === null || v === undefined || v === '') return;
     if (s.time === f.field) { s = { ...s, timeValue: v }; return; }
-    if (Array.isArray(s.data) && s.data.some((r) => r && f.field in r)) { s = { ...s, data: s.data.filter((r) => String(r[f.field]) === String(v)) }; tags.push(`${f.label}: ${v}`); }
+    if (Array.isArray(s.data) && s.data.some((r) => hasField(r, f.field))) { s = { ...s, data: s.data.filter((r) => hasField(r, f.field) && String(r[f.field]) === String(v)) }; tags.push(`${f.label}: ${v}`); }
   });
   if (tags.length) s = { ...s, subtitle: [s.subtitle, tags.join(' · ')].filter(Boolean).join(' · ') };
   return s;
@@ -368,7 +379,7 @@ export function mountDashboard(root, plan) {
     }
     // KPIs calculados: se recalculan con los filtros.
     if (plan.data && plan.kpis.some((k) => k.value === undefined)) {
-      const rows = plan.data.filter((r) => plan.filters.every((f, i) => active[i] === null || active[i] === '' || !(f.field in r) || String(r[f.field]) === String(active[i])));
+      const rows = plan.data.filter((r) => plan.filters.every((f, i) => active[i] === null || active[i] === '' || !hasField(r, f.field) || String(r[f.field]) === String(active[i])));
       const slot = root.querySelector('.pa-kslot');
       if (slot) slot.innerHTML = kpiMarkup(plan, rows);
     }
@@ -430,9 +441,11 @@ ${bundle ? `<script>${bundle.replace(/<\/(script)/gi, '<\\/$1')}</script>
 
 /** Nunca lanza: { ok, html, plan, errors, warnings, suggestions } (para agentes). */
 export function safeDashboard(spec) {
-  const rep = lintDashboard(spec || {});
+  let rep;
+  try { rep = lintDashboard(spec || {}); }
+  catch (e) { return { ok: false, html: null, plan: null, errors: [{ code: 'render', message: String(e.message).split('\n')[0], fix: e.hint || 'Revisa que `charts` sea una lista de specs y `kpis` una lista de objetos.' }], warnings: [], suggestions: [] }; }
   if (!rep.ok) return { ...rep, html: null, plan: null };
   try { const html = dashboard(spec); return { ...rep, ok: true, html, plan: planDashboard(spec) }; }
-  catch (e) { return { ...rep, ok: false, html: null, plan: null, errors: [...rep.errors, { code: 'render', message: e.message.split('\n')[0], fix: e.hint }] }; }
+  catch (e) { return { ...rep, ok: false, html: null, plan: null, errors: [...rep.errors, { code: 'render', message: e.message.split('\n')[0], fix: e.hint || 'Revisa `charts`, `kpis` y `data` del dashboard.' }] }; }
 }
 

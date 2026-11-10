@@ -15,7 +15,16 @@ import { COLUMN_TYPES, columnType } from './charts/table.js';
 let RENDER_PROBE = null;
 export const _setProbe = (fn) => { RENDER_PROBE = fn; };
 
+/** Nunca lanza: si la revisión misma falla con un spec raro, lo dice como aviso y sigue. */
 export function lint(spec = {}) {
+  try { return lintSpec(spec); }
+  catch (e) {
+    const type = spec && typeof spec === 'object' && typeof spec.type === 'string' ? spec.type : 'auto';
+    return { ok: true, type, errors: [], warnings: [{ code: 'lint-failed', message: `No se pudo revisar el spec por completo: ${String(e && e.message).split('\n')[0]}`, fix: 'Revisa que cada opción tenga el tipo del schema (`toolDefinition()`): textos donde van textos, listas donde van listas.' }], suggestions: [] };
+  }
+}
+
+function lintSpec(spec = {}) {
   if (!spec || typeof spec !== 'object') spec = {};
   // Idioma de los mensajes: el del gráfico (con `locale: "auto"`, y en tablas sin locale, el reconocido del texto).
   const autoLang = spec.locale === 'auto' || (spec.locale === undefined && /^(table|tabla|tables|datatable|data-table|grid)$/i.test(String(spec.type || '')));
@@ -32,7 +41,7 @@ export function lint(spec = {}) {
   let data = [];
   const rawWords = !spec.data && (typeof spec.text === 'string' || Array.isArray(spec.text));
   try { data = spec.type === 'kpi' || spec.items || rawWords ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
-  const type = spec.type && spec.type !== 'auto' ? normalizeType(spec.type)[0] : inferType(spec, data);
+  const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
   const check = (f, role) => {
@@ -45,7 +54,7 @@ export function lint(spec = {}) {
   } else if (type !== 'kpi' && !rawWords && !errors.length) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
-  else if (!/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
+  else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
   if (!spec.source) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
 
   const series = spec.series ?? spec.color;
@@ -414,7 +423,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
         const base = String(nameOf).replace(/_r$/i, '');
         const near = didYouMean(base, all);
         err('colorscale-unknown', L(`La escala de color "${nameOf}" no existe.`, `The color scale "${nameOf}" does not exist.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Usa un nombre de matplotlib ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` invierte) o una lista de colores hex.', 'Use a matplotlib name ("viridis", "Blues", "RdBu", "coolwarm"…; `_r` reverses) or a list of hex colors.'));
-      } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores hex (["#FFF", "#123"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two hex colors (["#FFF", "#123"]) or { name, reverse, mid }.'));
+      } else err('colorscale-unknown', L(`\`${key}\` no se entiende.`, `\`${key}\` is not understood.`), L('Usa un nombre ("viridis"), al menos dos colores (["#FFF", "steelblue"]) o { name, reverse, mid }.', 'Use a name ("viridis"), at least two colors (["#FFF", "steelblue"]) or { name, reverse, mid }.'));
     } else if (cs.kind === 'qualitative') {
       err('colorscale-qualitative', L(`"${cs.name}" es una paleta cualitativa: no sirve para una escala continua.`, `"${cs.name}" is a qualitative palette: it cannot be a continuous scale.`), L(`Usa \`palette: "${cs.name}"\` para categorías, o una escala como "viridis" o "Blues".`, `Use \`palette: "${cs.name}"\` for categories, or a scale such as "viridis" or "Blues".`));
     } else if (RAINBOW.has(cs.name.replace(/_r$/, ''))) {

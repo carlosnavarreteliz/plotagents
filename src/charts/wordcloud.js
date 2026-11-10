@@ -31,15 +31,26 @@ const STOP = new Set((
   + ' a about above after again all am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its itself just me more most my no nor not now of off on once only or other our ours out over own same she should so some such than that the their them then there these they this those through to too under until up very was we were what when where which while who whom why will with would you your yours also get got really much many one two'
 ).split(/\s+/));
 
+// Palabras vacías extra por idioma (se suman a es/en solo si el locale las pide).
+const STOP_BY = {
+  pt: 'não uma uns umas dos das nas nos pelo pela pelos pelas com para por que mas como mais muito já também são foi era tem têm ele ela eles elas isso isto esse essa este esta aos àquele seu sua seus suas meu minha nós você vocês ser estar ter há então quando onde',
+  fr: 'les des une dans pour que qui est sont mais comme plus par sur pas avec ces cette cet aux ils elles nous vous ont été être avoir fait très aussi donc ainsi sans sous entre leur leurs son ses mes tes notre votre',
+  de: 'der die das den dem des ein eine einer einem einen und oder aber nicht mit von zu für auf ist sind war waren wird werden hat haben auch als wie bei nach aus über sich es sie wir ihr ich du er an im am zum zur dass noch nur sehr',
+};
+// Compara sin tildes: "tambien" y "también" son la misma palabra vacía.
+const plain = (w) => w.normalize('NFD').replace(/\p{M}/gu, '');
+const STOP_PLAIN = new Set([...STOP].map(plain));
+
 /** Texto crudo → [{ text, value }] por frecuencia. */
 export function countWords(input, { locale, minLength = 3, stopwords = [] } = {}) {
   const extra = new Set([].concat(stopwords).map((w) => String(w).toLowerCase()));
+  for (const w of (STOP_BY[String(locale || '').slice(0, 2)] || '').split(' ')) if (w) extra.add(w);
   const counts = new Map(), shown = new Map();
   const docs = [].concat(input).filter((d) => typeof d === 'string');
   for (const d of docs) for (const m of d.matchAll(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)) {
     const raw = m[0].replace(/['’-]+$/, '');
     const k = raw.toLowerCase();
-    if (k.length < minLength || STOP.has(k) || extra.has(k) || /^\d+$/.test(k)) continue;
+    if (k.length < minLength || STOP.has(k) || STOP_PLAIN.has(plain(k)) || extra.has(k) || /^\d+$/.test(k)) continue;
     counts.set(k, (counts.get(k) || 0) + 1);
     // Se muestra la forma más común (respeta "Biobío", "IA", "ChatGPT").
     const f = shown.get(k) || new Map();
@@ -76,9 +87,12 @@ export function wordcloud(spec, theme) {
       if (!t) continue;
       const v = valueF ? num(r[valueF]) : 1;
       if (!Number.isFinite(v) || v <= 0) continue;
-      const e = acc.get(t) || { text: t, value: 0, group: groupF ? String(r[groupF]) : null };
+      // Con `series`, la misma palabra en dos grupos son dos entradas (no se funde con el primero).
+      const gk = groupF ? String(r[groupF]) : null;
+      const key = gk === null ? t : gk + '\u0000' + t;
+      const e = acc.get(key) || { text: t, value: 0, group: gk };
       e.value += v;
-      acc.set(t, e);
+      acc.set(key, e);
     }
     words = [...acc.values()];
   }

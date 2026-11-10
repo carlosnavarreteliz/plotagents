@@ -72,14 +72,14 @@ export function kpi(spec, theme) {
     if (it.target !== undefined) {
       y += 24 * X;
       const t = num(it.target);
-      const f = Math.max(0, Math.min(1, value / (t || 1)));
+      const f = Number.isFinite(value) ? Math.max(0, Math.min(1, value / (t || 1))) : 0; // valor no numérico: riel vacío, nunca NaN
       const w = tw - P * 2;
       const upGood = (it.good ?? 'up') === 'up';
       const ratio = upGood ? value / (t || 1) : (t || 1) / (value || 1);
       const fill = ratio >= 1 ? theme.status.good : ratio >= 0.8 ? theme.categorical[0] : theme.status.critical;
       parts.push(el('rect', { x: cx + P, y, width: w, height: 6, rx: 3, fill: theme.tint2 }));
       parts.push(el('rect', { x: cx + P, y, width: Math.max(6, w * f), height: 6, rx: 3, fill }));
-      const lab = (en ? 'Target ' : 'Meta ') + fmt(t) + ' · ' + formatNumber((value / (t || 1)) * 100, 0, locale) + '%';
+      const lab = (en ? 'Target ' : 'Meta ') + fmt(t) + ' · ' + (Number.isFinite(value) ? formatNumber((value / (t || 1)) * 100, 0, locale) + '%' : '—');
       parts.push(text(cx + P, y - 7, lab, { fill: theme.lede, fontSize: 11.5 }));
     }
 

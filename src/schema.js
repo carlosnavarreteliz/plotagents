@@ -330,7 +330,6 @@ export const dashboardSchema = {
   title: 'plotagents dashboard',
   description: 'A dashboard with best-practice defaults: KPIs on top, the main chart wide, the rest in balanced full rows of a 12-column grid, one color per entity across charts, shared filters, one source line.',
   type: 'object',
-  required: ['charts'],
   properties: {
     title: { type: 'string', description: 'The question the dashboard answers, e.g. "How are southern sales doing?"' },
     subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
@@ -347,6 +346,7 @@ export const dashboardSchema = {
         scale: { type: 'number', description: 'Multiply the computed value (e.g. 1000 to show thousands).' },
         compare: { type: 'object', description: 'Current vs previous period: { field: "year", current: 2025, previous: 2024 }.', properties: { field: { type: 'string' }, current: {}, previous: {} } },
         trendBy: { type: 'string', description: 'Field to draw a sparkline by (e.g. "month").' },
+        previous: { type: 'number', description: 'Previous value: the change is computed from it.' }, display: { type: 'string', description: 'Text shown instead of the formatted value.' },
         format: {}, good: { type: 'string', enum: ['up', 'down'] }, trend: { type: 'array', items: { type: 'number' } },
       } },
     },
@@ -354,6 +354,12 @@ export const dashboardSchema = {
     filters: { type: 'array', description: 'Fields to filter every chart and computed KPI by: "region" or { field, label, control: "buttons" | "select", value }.', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } },
     layout: { type: 'string', enum: ['auto', 'executive', 'grid'], description: 'auto (default): balanced rows by chart type. executive: main chart full width, the rest in pairs. grid: equal panels.' },
     colors: { type: 'object', additionalProperties: { type: 'string' }, description: 'Pin colors to entities across every chart.' },
+    order: { type: 'string', enum: ['given'], description: '"given" keeps the charts in the order you wrote them (otherwise the main time series goes first).' },
+    note: { type: 'string', description: 'Short note next to the source, at the bottom.' },
+    font: { description: 'Font for every chart: a Google Fonts name, a CSS stack or { family, import }.', anyOf: [{ type: 'string' }, { type: 'object' }] },
+    palette: { description: 'Categorical palette for every chart: a name ("tab10", "okabe-ito") or a list of colors.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    ramp: { description: 'Sequential ramp for every chart.', anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    textScale: { type: 'number', description: 'Multiplies every text (1.5 for presentations).' },
   },
 };
 

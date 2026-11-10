@@ -23,6 +23,9 @@ const MAX_LAT = 85.0511287798;
 const TILE = 256;
 const MAX_TILES = 48;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// Mínimo y máximo sin `...` (con cientos de miles de puntos desborda la pila).
+const lo = (a) => a.reduce((m, v) => (v < m ? v : m), Infinity);
+const hi = (a) => a.reduce((m, v) => (v > m ? v : m), -Infinity);
 
 // ── Web Mercator (EPSG:3857) en coordenadas normalizadas [0, 1] ─────────────
 /** Longitud → x de Web Mercator en [0, 1] (0 = 180° O). */
@@ -235,10 +238,10 @@ export function pointmap(spec, theme) {
   let unwrapped = false;
   {
     const lons = pts.map((p) => p.lon);
-    const span = Math.max(...lons) - Math.min(...lons);
+    const span = hi(lons) - lo(lons);
     if (span > 180) {
       const alt = lons.map((l) => (l < 0 ? l + 360 : l));
-      if (Math.max(...alt) - Math.min(...alt) < span) { for (const p of pts) if (p.lon < 0) p.lon += 360; unwrapped = true; }
+      if (hi(alt) - lo(alt) < span) { for (const p of pts) if (p.lon < 0) p.lon += 360; unwrapped = true; }
     }
   }
   for (const p of pts) { p.mx = mercX(p.lon); p.my = mercY(p.lat); }
@@ -267,7 +270,7 @@ export function pointmap(spec, theme) {
     colorOf = (p) => cmap.get(p.k) || theme.other;
     if (keys.length > 1) legend = keys.map((k) => ({ label: k, color: cmap.get(k) }));
   } else if (valueF && values.length) {
-    const vmin = Math.min(...values), vmax = Math.max(...values);
+    const vmin = lo(values), vmax = hi(values);
     const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
     let stops, at;
     if (mid !== undefined) {
@@ -295,7 +298,7 @@ export function pointmap(spec, theme) {
   let area = frame.layout(legend);
 
   // Radios: área proporcional a `size` (raíz cuadrada), o uno fijo según la densidad.
-  const maxS = Math.max(0, ...sizes.map(Math.abs));
+  const maxS = sizes.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
   const wk = Math.max(0.6, Math.min(1.2, area.w / 672));
   const rMax = sizeF && maxS ? spec.maxRadius ?? Math.round((n <= 40 ? 22 : n <= 150 ? 15 : n <= 600 ? 10 : 6) * wk) : 0;
   const rBase = spec.radius ?? (dense ? 2.2 : n > 500 ? 3 : n > 120 ? 4 : 5.5);
@@ -513,8 +516,8 @@ function describePointmap({ pts, n, provider, world, hueF, keys, sizeF, valueF, 
   const en = String(locale).startsWith('en');
   const W = en ? 'W' : 'O';
   const lats = pts.map((p) => p.lat), lons = pts.map((p) => (p.lon > 180 ? p.lon - 360 : p.lon));
-  const la0 = Math.min(...lats), la1 = Math.max(...lats);
-  const lo0 = Math.min(...lons), lo1 = Math.max(...lons);
+  const la0 = lo(lats), la1 = hi(lats);
+  const lo0 = lo(lons), lo1 = hi(lons);
   const base = provider ? provider.name || provider.attribution : world ? (en ? 'a world outline' : 'un contorno del mundo') : '';
   const where = n === 1 || (la1 - la0 < 0.05 && lo1 - lo0 < 0.05)
     ? (en ? ` at ${deg(la0, 'N', 'S', locale)}, ${deg(lo0, 'E', W, locale)}` : ` en ${deg(la0, 'N', 'S', locale)}, ${deg(lo0, 'E', W, locale)}`)

@@ -432,13 +432,15 @@ export function render(target, spec, opts = {}) {
     set();
   }
 
-  host.addEventListener('keydown', (e) => {
+  // El oyente se guarda para quitarlo en update()/destroy(): si no, cada redibujo (filtros de un dashboard) suma uno más.
+  const onEsc = (e) => {
     if (e.key !== 'Escape') return;
     if (state.focus !== undefined && state.type === 'network') { state = { ...state, focus: undefined }; draw(); return; }
     // Treemap/sunburst: Esc sube un nivel; en la raíz, vuelve a sumar lo excluido.
     if (Array.isArray(state.focus) && state.focus.length) { state = { ...state, focus: state.focus.slice(0, -1) }; draw(); return; }
     if (state.exclude && [].concat(state.exclude).length) { state = { ...state, exclude: undefined }; draw(); }
-  });
+  };
+  host.addEventListener('keydown', onEsc);
 
   draw();
   if (state.width === undefined && typeof ResizeObserver !== 'undefined') {
@@ -449,8 +451,8 @@ export function render(target, spec, opts = {}) {
   return {
     get svg() { return chart.querySelector('svg'); },
     get spec() { return state; },
-    update(next) { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); return render(host, next, opts); },
-    destroy() { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.innerHTML = ''; },
+    update(next) { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.removeEventListener('keydown', onEsc); return render(host, next, opts); },
+    destroy() { clearInterval(timer); clearTimeout(searchTimer); ro && ro.disconnect(); host.removeEventListener('keydown', onEsc); host.innerHTML = ''; },
   };
 }
 

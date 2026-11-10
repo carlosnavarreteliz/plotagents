@@ -66,6 +66,12 @@ export function findNode(root, focus = []) {
   return node;
 }
 
+/** Nodo de foco para dibujar: una hoja no se puede "abrir" (quedaría vacío), se usa su padre. */
+export function focusNode(root, focus = []) {
+  const n = findNode(root, focus);
+  return !n.children.length && n.parent ? n.parent : n;
+}
+
 export const height = (n) => (n.children.length ? 1 + Math.max(...n.children.map(height)) : 0);
 export const descendants = (n) => [n, ...n.children.flatMap(descendants)];
 

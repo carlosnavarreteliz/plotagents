@@ -276,13 +276,16 @@ function spanningTree(nodes, edges, byId, root) {
   // Hojas numeradas en orden DFS; cada padre queda en el promedio de sus hijos.
   const pos = new Map();
   let leaf = 0;
-  const visit = (id) => {
-    const ch = children.get(id);
-    if (!ch.length) { pos.set(id, leaf++); return; }
-    for (const c of ch) visit(c);
-    pos.set(id, ch.reduce((a, c) => a + pos.get(c), 0) / ch.length);
-  };
-  visit(root.id);
+  // Iterativo: una cadena larga (miles de niveles) desbordaría la pila.
+  const stack = [[root.id, 0]];
+  while (stack.length) {
+    const top = stack[stack.length - 1];
+    const ch = children.get(top[0]);
+    if (!ch.length) { pos.set(top[0], leaf++); stack.pop(); continue; }
+    if (top[1] < ch.length) { stack.push([ch[top[1]++], 0]); continue; }
+    pos.set(top[0], ch.reduce((a, c) => a + pos.get(c), 0) / ch.length);
+    stack.pop();
+  }
   const maxDepth = Math.max(0, ...depth.values());
   const rest = nodes.filter((n) => !depth.has(n.id)).sort(byGroup);
   return { depth, pos, leaves: leaf, maxDepth, rest, treeEdges, children };
@@ -504,7 +507,9 @@ export function network(spec, theme) {
 
   // Foco (clic en un nodo): va al centro y se destacan sus vecinos, con nombre.
   const focusNode = spec.focus !== undefined && spec.focus !== null ? byId.get(String([].concat(spec.focus)[0])) ?? null : null;
-  const hl = focusNode ? new Set([focusNode.id]) : spec.highlight === undefined || spec.highlight === null ? null : new Set([].concat(spec.highlight).map(String));
+  // Un `highlight` que no existe en la red se ignora (si no, todo quedaría atenuado).
+  const hlIds = spec.highlight === undefined || spec.highlight === null ? [] : [].concat(spec.highlight).map(String).filter((id) => byId.has(id));
+  const hl = focusNode ? new Set([focusNode.id]) : hlIds.length ? new Set(hlIds) : null;
   const near = new Set();
   if (hl) { for (const id of hl) near.add(id); for (const e of edges) { if (hl.has(e.s)) near.add(e.t); if (hl.has(e.t)) near.add(e.s); } }
   const on = (n) => !hl || near.has(n.id);

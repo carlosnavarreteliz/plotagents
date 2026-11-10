@@ -5,7 +5,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, textOn } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
@@ -39,6 +39,8 @@ export function donut(spec, theme) {
     const k = String(r[labelF]);
     sums.set(k, (sums.get(k) || 0) + v);
   }
+  // Sin ningún valor positivo no hay nada que repartir: error claro en vez de un anillo vacío con "0".
+  if (!sums.size) throw new PlotError(en ? `No positive values in \`${valueF}\`.` : `No hay valores positivos en \`${valueF}\`.`, en ? 'A donut or pie needs at least one value greater than 0 (zero, negative and empty values are skipped).' : 'La dona o torta necesita al menos un valor mayor que 0 (se omiten ceros, negativos y vacíos).');
   let slices = [...sums.entries()].map(([k, v]) => ({ k, v }));
   if ((spec.sort ?? 'desc') === 'desc') slices.sort((a, b) => b.v - a.v);
   const max = spec.maxSlices ?? 6;

@@ -39,7 +39,8 @@ export function niceDomain(min, max, count = 5, { integer = false } = {}) {
   step = st(hi - lo);
   lo = Math.floor(min / step + 1e-9) * step;
   hi = Math.ceil(max / step - 1e-9) * step;
-  return { min: lo, max: hi, step };
+  // Sin ruido de punto flotante (0,30000000000000004 → 0,3).
+  return { min: +lo.toPrecision(15), max: +hi.toPrecision(15), step: +step.toPrecision(15) };
 }
 
 export function linear(d0, d1, r0, r1) {
@@ -57,7 +58,7 @@ export function linear(d0, d1, r0, r1) {
     if ((hi - lo) / st > 1000) st = niceStep(hi - lo, 5);
     const start = Math.ceil(lo / st - 1e-9) * st;
     if (start + st === start) return [lo];
-    for (let i = 0, v = start; v <= hi + st * 1e-9 && i <= 1000; i++, v = start + i * st) out.push(Math.abs(v) < st * 1e-9 ? 0 : +v.toPrecision(12));
+    for (let i = 0, v = start; v <= hi + st * 1e-9 && i <= 1000; i++, v = start + i * st) out.push(Math.abs(v) < st * 1e-9 ? 0 : +v.toPrecision(15));
     return out;
   };
   return s;

@@ -10,7 +10,7 @@ import { formatNumber } from '../format.js';
 import { humanize } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { buildHierarchy, findNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
 export function squarify(items, x, y, w, h) {
@@ -57,7 +57,7 @@ export function treemap(spec, theme) {
   const locale = spec.locale || 'es';
   const en = String(locale).startsWith('en');
   const { root, fields, valueField } = buildHierarchy(spec);
-  const focus = findNode(root, spec.focus);
+  const focus = focusNode(root, spec.focus);
   const levels = height(focus);
   // El color sigue a la entidad: se asigna sobre el árbol completo, así al
   // entrar a un grupo sus elementos conservan la familia de color del padre.
