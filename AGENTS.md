@@ -27,6 +27,7 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | A project plan or schedule | `gantt` | `task`, `start`, `end` (or `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volume over time | `area` | like `line`; stacks with `series` |
 | The shape of a series in a table cell | `spark` | `x`, `y`, `width`/`height` any size (e.g. 108×26), `fill?`, `series?` |
+| One row of a distribution in a table cell | `rail` | `value`, `min`, `max`, `band?: [lo, hi]`, `median?`, `refs?: [{ field \| value, label }]`, `clip?` / `domain?` (past an end → chevron); 160×18 by default |
 | Who passed whom over time | `bump` (`slope` for first vs last) | `x` period, `y` value (or `rank`), `series`, `top?`, `ends?: "first-last"` |
 | Measures on different scales | `line` + `index: true`, or `facet` | **there is no dual axis** |
 | Exponential growth | `line` + `yScale: "log"` | |

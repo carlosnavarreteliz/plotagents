@@ -6,15 +6,23 @@ export type ChartType =
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
   | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap' | 'table' | 'corr' | 'pairplot'
-  | 'spark' | 'bump' | 'waffle' | 'dendrogram' | 'dotplot'
+  | 'spark' | 'bump' | 'waffle' | 'dendrogram' | 'dotplot' | 'rail'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
   | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa' | 'tabla' | 'datatable'
   | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix'
-  | 'sparkline' | 'slope' | 'slopegraph' | 'dot-plot';
+  | 'sparkline' | 'slope' | 'slopegraph' | 'dot-plot' | 'riel' | 'range-rail';
 
 export type Locale = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'auto';
+
+/** rail / table range: a reference tick. `field` reads the row; `value` is a fixed number; `label` is text or a field of the row. */
+export interface RailRef {
+  value?: number;
+  field?: string;
+  label?: string;
+  color?: string;
+}
 
 /** table: one column. A bare field name infers everything. */
 export interface TableColumn {
@@ -33,6 +41,17 @@ export interface TableColumn {
   /** range: reference tick (e.g. the national figure) and its name in the tooltip. */
   ref?: string | number;
   refLabel?: string;
+  /** range: several reference ticks, each with its label (text or a field of the row) in the tooltip. */
+  refs?: RailRef[];
+  /** range: the scale is min–max (the column's, or the row's with scale: "row"); a value past an end is a chevron, a ref an open chevron. */
+  clip?: boolean;
+  /** range: each row's scale, [from, to] as numbers or fields (e.g. ["p5", "p95"]); past an end, a chevron. */
+  domain?: [string | number, string | number];
+  /** range: names in the tooltip (text, or a field of the row): the two ends (instead of "Range: a–b"), the median, the domain. */
+  minLabel?: string;
+  maxLabel?: string;
+  medianLabel?: string;
+  domainLabel?: string;
   /** range: one scale for the column (default) or one per row. */
   scale?: 'shared' | 'row';
   /** number/bar/heat/delta/range: one format per row — a field holding each row's format, or (value, row) => text. Range rails go per row; no total. */
@@ -49,7 +68,7 @@ export interface TableColumn {
   total?: boolean | 'sum' | 'mean' | 'min' | 'max' | 'count';
   /** Text: lines before truncating (default 2, 3 for long text). */
   lines?: number;
-  /** link: field with the text shown instead of the URL. */
+  /** link: field with the text shown instead of the URL. A full URL opens in a new tab; a site path ("/es/…", "./x", "#y") in the same tab. */
   text?: string;
   /** badge: { value: "#hex" }. */
   colors?: Record<string, string>;
@@ -207,7 +226,8 @@ export interface Spec {
   y?: string | string[];
   series?: string;
   color?: string;
-  value?: string;
+  /** Value field. rail: the row value drawn as the dot (a field, or a number). */
+  value?: string | number;
   label?: string;
   group?: string;
   path?: string[];
@@ -244,9 +264,9 @@ export interface Spec {
   points?: boolean | string[] | Record<string, boolean>;
   /** line: stroke width per series, in px. Legend and end labels are unchanged. */
   lineWidths?: Record<string, number>;
-  /** treemap: "wrap" writes long names on 2–3 lines (without the share if needed), then truncates with "…". */
+  /** treemap: "wrap" writes long names on as many lines as the tile's height allows, with the share under them whenever it fits at some size; then the name alone; then truncated with "…". */
   tileLabels?: 'auto' | 'wrap';
-  /** treemap with `focus`: the share each tile prints — of the group (default), of the whole, or both. */
+  /** treemap with `focus`: the share each tile prints — of the group (default), of the whole, or both. When it does not fit, a shorter one: "both" falls back to the group share, "total" to the bare figure. */
   shareOf?: 'group' | 'total' | 'both';
   xScale?: 'linear' | 'log';
   yScale?: 'linear' | 'log';
@@ -256,9 +276,9 @@ export interface Spec {
   tooltip?: boolean | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
   /** line/area: false writes a tooltip column per x instead of the browser crosshair. */
   crosshair?: boolean;
-  /** line/area: an interval already computed, drawn as is. */
-  band?: { lower: string; upper: string; label?: string };
-  /** bar: tooltip text for a missing value (never drawn as 0). heatmap: tooltip text of a cell without a value (default "—"). */
+  /** line/area: an interval already computed, drawn as is. rail: [lo, hi] fields (or numbers) of the shaded band. */
+  band?: { lower: string; upper: string; label?: string } | [string | number, string | number];
+  /** bar: tooltip text for a missing value (never drawn as 0). heatmap: tooltip text of a cell without a value (default "—"). table: what a missing cell and its tooltip print instead of "—". */
   missingLabel?: string;
   /** bar: text written at the base of a missing bar. */
   missingMark?: string;
@@ -278,6 +298,8 @@ export interface Spec {
   linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
   /** facet: a field written under each panel name; every panel reserves room for it. */
   panelNote?: string | ((key: string, rows: Row[]) => string);
+  /** facet: each panel name in a colour — true: its series colour; { panel: color }; or (panel, rows) => color. Hex colours are darkened if needed to stay readable. */
+  panelColor?: boolean | Record<string, string> | ((key: string, rows: Row[]) => string | null | undefined);
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
   /** Entity → color. Any color may be "var(--name, #fallback)": the page decides it, the fallback is used to compute. */
@@ -592,7 +614,31 @@ export interface Spec {
   dotSize?: number;
   /** spark: false hides the end dot. */
   dot?: boolean;
-  /** spark: end dot radius. dotplot: dot radius in px, not capped by the bin's pixel width (shrinks only to fit an explicit `height`). */
+  /** rail: low and high ends (a field of the row, or a number). */
+  min?: string | number;
+  max?: string | number;
+  /** rail: the median notch. */
+  median?: string | number;
+  /** rail: one reference tick (same as a one-entry `refs`), named by `refLabel`. */
+  ref?: string | number;
+  /** rail: reference ticks, each with its own label in the tooltip. */
+  refs?: Array<RailRef | number | string>;
+  /** rail: tooltip names (text, or a field of the row). minLabel/maxLabel list both ends instead of "Range: a–b". */
+  valueLabel?: string;
+  minLabel?: string;
+  maxLabel?: string;
+  bandLabel?: string;
+  medianLabel?: string;
+  refLabel?: string;
+  /** rail: with `domain`, a tooltip line naming the scale. */
+  domainLabel?: string;
+  /** rail: the scale as [from, to] numbers or fields (e.g. ["p5", "p95"]); past an end, a chevron. */
+  domain?: [string | number, string | number];
+  /** rail: the scale is [min, max]; a value past an end is a chevron, not a stretched scale. */
+  clip?: boolean;
+  /** rail: a row with no min/max (and no domain) prints its figure (default) or nothing — never a lone dot. */
+  fallback?: 'value' | 'none';
+  /** spark: end dot radius. rail: the dot radius (default 4.5 at 18 px tall). dotplot: dot radius in px, not capped by the bin's pixel width (shrinks only to fit an explicit `height`). */
   dotRadius?: number;
   /** waffle: what one square is worth. */
   unit?: number;

@@ -20,7 +20,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `xScale`, `yScale` | `"log"` donde tenga sentido. |
 | `xDomain`, `yDomain` | `[min, max]` fijo. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (o `x`, o `value` para barras). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, y el mismo tamaño de trazado en píxeles (márgenes de eje y espacio de rótulos finales igualados), así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel, y cada panel reserva su espacio, así ninguno se monta sobre otro y todos conservan el mismo alto de trazado; una anotación con `panel` va sólo a ese panel; `legend: false` oculta la leyenda común. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, y el mismo tamaño de trazado en píxeles (márgenes de eje y espacio de rótulos finales igualados), así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel, y cada panel reserva su espacio, así ninguno se monta sobre otro y todos conservan el mismo alto de trazado; `panelColor: true` escribe el nombre de cada panel en el color de su serie (o `{ panel: color }`, o una función `(panel, filas) => color`); los paneles dejan lugar a las marcas de su eje y como un gráfico suelto, igual en todos; una anotación con `panel` va sólo a ese panel; `legend: false` oculta la leyenda común. |
 | `time`, `timeValue` | Un período a la vez: el más reciente por defecto, o `timeValue`. El período se agrega al subtítulo. |
 | `slider`, `play` | Controles de tiempo en el navegador, **desactivados por defecto**. `slider: true` agrega botones de período cuando hay pocos períodos (≤ 8) y un deslizador mínimo cuando hay muchos; los gráficos de líneas y de áreas reciben un rango con dos tiradores. `"buttons"` o `"slider"` fuerzan uno; `play: false` oculta el botón de reproducir. |
 | `compare` | Con `time`: compara contra `"previous"` (por defecto), `"first"`, un período dado o `false`. |
@@ -95,6 +95,29 @@ La forma de una serie, en su propia escala de mínimo a máximo (sin cero): resp
 | `fill` | Un lavado suave bajo la línea (`true` o una opacidad). |
 | `dot`, `dotRadius`, `lineWidth` | El punto final (`dot: false` lo oculta) y el trazo. |
 | `yDomain` | Fija la escala (p. ej. para comparar sparklines de una columna). |
+
+### `rail` (`riel`, `range-rail`)
+
+Una fila de una distribución, del tamaño de una celda de tabla (`width: 160, height: 18` por defecto; sirve de ~130 a ~330 px): una línea de `min` a `max`, la `band: [lo, hi]` del medio sombreada, una muesca en la `median`, el `value` de la fila como punto y cualquier número de marcas de referencia. Es la columna `range` de `table` como marca propia, para una página que conserva su tabla HTML (enlaces, íconos, notas, ficha de teléfono) y sólo necesita el riel dibujado en el servidor. Sin marco: una caja invisible lleva un `data-tip` que nombra cada parte.
+
+```js
+plot({ type: 'rail', data: [fila], value: 'chile', min: 'lo', max: 'hi', band: ['q1', 'q3'], median: 'med',
+  refs: [{ field: 'region', label: 'Biobío' }, { value: 12, label: 'Meta' }],
+  valueLabel: 'Chile', minLabel: 'nombreMin', maxLabel: 'nombreMax', clip: true, format: (v) => fmt(v) });
+```
+
+| Opción | Qué hace |
+|---|---|
+| `data` | Una fila (se dibuja la primera). Se omite si todo viene como número. |
+| `value`, `min`, `max`, `median` | Cada uno, un campo de la fila o un número fijo. |
+| `band` | `[lo, hi]` de la banda sombreada (p. ej. los cuartiles). |
+| `refs` | Marcas de referencia: `[{ field \| value, label, color }]`; `label` es texto o un campo de la fila. `ref` + `refLabel` es el atajo de una sola. |
+| `clip` | La escala es `[min, max]`: un valor pasado un extremo es un chevrón en ese extremo (y el tooltip lo dice), sin estirar la escala; una referencia pasada, un chevrón abierto. |
+| `domain` | La escala, `[desde, hasta]` en números o campos (p. ej. `["p5", "p95"]`); recorta como `clip`. Sin `min`/`max`, el riel cruza todo el dominio. `domainLabel` agrega una línea al tooltip que lo nombra. |
+| `fallback` | Una fila sin `min`/`max` ni `domain` no tiene riel: escribe su cifra (`"value"`, por defecto) o nada (`"none"`), nunca un punto suelto. |
+| `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Nombres en el tooltip (texto o un campo de la fila). Con `minLabel`/`maxLabel` el tooltip lista los dos extremos («Más bajo · Colchane: 7,1») en vez de «Rango: a–b». |
+| `color`, `colors` | El color del punto; `colors: { rail, band, median, ref, value }` por parte. Cualquier color puede ser `var(--x, #respaldo)`, y `skins` funciona como en cualquier gráfico. |
+| `format`, `dotRadius`, `tooltip`, `title` | Un formato (una función desde JS), el tamaño del punto, campos extra del tooltip y su encabezado (también el `<title>`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 
@@ -288,8 +311,8 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `exclude` | Grupos del nivel 1 que se dejan fuera; el resto llena el plano y las proporciones se recalculan. En el navegador lo hace Shift + clic en una clave de la leyenda. |
 | `showValues` | Agrega los valores a las etiquetas. |
 | `colorBy` | `"change"` colorea los rectángulos según el % de cambio respecto del período de comparación (crecimiento en tonos fríos, caída en cálidos); `"label"` colorea por elemento un treemap de un solo nivel. |
-| `tileLabels` | `"wrap"`: un nombre largo va en dos o tres líneas aunque ya no quepa su participación, y como último recurso se recorta con «…». Por defecto `"auto"`: el nombre sólo si cabe entero. Una participación bajo 0,05 % se escribe «<0,1%», nunca «0%». |
-| `shareOf` | Con `focus`: qué participación escribe cada tesela, `"group"` (por defecto), `"total"` o `"both"` («53% · 11% del total»). |
+| `tileLabels` | `"wrap"`: un nombre largo va en las líneas que permita el alto de la tesela, con su participación debajo siempre que quepa a algún tamaño; si no, el nombre solo; como último recurso se recorta con «…». Por defecto `"auto"`: el nombre sólo si cabe entero. Una participación bajo 0,05 % se escribe «<0,1%», nunca «0%». |
+| `shareOf` | Con `focus`: qué participación escribe cada tesela, `"group"` (por defecto), `"total"` o `"both"` («53% · 11% del total»). Si la cifra no cabe, una más corta en vez de ninguna: `"both"` pasa a la del grupo y `"total"` a la cifra sola (el tooltip dice de qué es). |
 | `shade` | Pasos sutiles de luminosidad dentro de cada categoría. Desactivado por defecto: un color sólido por categoría. |
 | `compareData` | Filas de un período anterior para calcular cambios sin `time`. |
 | `hole`, `centerValue`, `centerLabel` | Centro del sunburst. |
@@ -588,9 +611,9 @@ plot({
 | `badge` | Píldora de estado | Los valores son palabras de estado (done, at risk, late, in progress… en es/en/pt/fr/de): colores de bien, advertencia, crítico e información |
 | `check` | ✓ o un guion, con una etiqueta accesible | Booleanos, o sí/no, yes/no… |
 | `date` | Fecha legible en el idioma del gráfico | Fechas ISO |
-| `link` | Enlace subrayado; solo `http(s)` y `mailto` reciben un `href` | URLs |
+| `link` | Enlace subrayado: `http(s)` y `mailto` abren en otra pestaña; una ruta del sitio (`"/es/…"`, `"./x"`, `"#y"`) enlaza en la misma; lo demás es texto. `text: 'campo'` muestra otro campo en vez de la URL | URLs |
 | `rank` | Posición según el orden actual | `rank: true` |
-| `range` | Un riel: el valor de la fila como punto sobre `min`–`max`, una `band: [lo, hi]` sombreada, una muesca en la `median` y una marca de referencia `ref` (cada una, un campo o un número fijo). El tooltip lista cada parte; `refLabel` y `bandLabel` las nombran. `scale: "row"` da a cada fila su propia escala (indicadores en unidades distintas); por defecto, una escala para la columna | — |
+| `range` | Un riel: el valor de la fila como punto sobre `min`–`max`, una `band: [lo, hi]` sombreada, una muesca en la `median` y una marca de referencia `ref` (cada una, un campo o un número fijo). El tooltip lista cada parte; `refLabel` y `bandLabel` las nombran. `scale: "row"` da a cada fila su propia escala (indicadores en unidades distintas); por defecto, una escala para la columna. `refs: [{ field \| value, label }]` agrega varias marcas con su rótulo; `clip: true` recorta la escala a mín–máx y `domain: [desde, hasta]` (números o campos, p. ej. p5–p95) a cualquier tramo, y lo que cae pasado un extremo es un chevrón; `minLabel`, `maxLabel`, `medianLabel`, `domainLabel` nombran las partes. Una fila sin `min`/`max` en una columna que los tiene escribe sólo su cifra. El mismo dibujo que el tipo `rail` | — |
 | `text`, `number` | Texto (se divide en 2–3 líneas) y números simples | Todo lo demás |
 
 | Opción | Significado |
@@ -606,6 +629,7 @@ plot({
 | `top` | Conserva las primeras N filas tras ordenar. |
 | `cards` | `"auto"` (por defecto) convierte cada fila en una tarjeta cuando las columnas no caben (teléfonos): nombre y valor principal arriba, la barra debajo y las demás columnas como líneas etiqueta–valor. `true` siempre, `false` nunca. |
 | `density`, `striped` | Filas `"compact"` / `"comfortable"`; franjas tipo cebra para tablas muy anchas. |
+| `missingLabel` | Lo que escribe una celda sin valor (y su tooltip) en vez del guion: `"sin dato"`. |
 
 En el navegador, `render()` agrega un cuadro de búsqueda sobre 20 filas (`search: false` lo oculta; `true` lo fuerza), encabezados que ordenan con un clic (orden natural, invertido y luego el orden original) y botones de página; todos funcionan desde el teclado y anuncian `aria-sort` y `aria-current`. Al cambiar el tamaño se vuelve a dibujar con el nuevo ancho, así que una tabla se vuelve tarjetas en un teléfono y columnas otra vez en un computador.
 

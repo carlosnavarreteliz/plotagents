@@ -20,7 +20,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, and the same plot size in pixels (axis margins and end-label room are matched across panels), so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name, and every panel reserves the room it needs, so panels never overlap and keep equal plot heights; an annotation with `panel` goes only to that panel; `legend: false` hides the shared legend. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, and the same plot size in pixels (axis margins and end-label room are matched across panels), so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name, and every panel reserves the room it needs, so panels never overlap and keep equal plot heights; `panelColor: true` writes each panel name in its series colour (or `{ panel: color }`, or a function `(panel, rows) => color`); panels leave room for their y tick labels as a lone chart does, the same in every panel; an annotation with `panel` goes only to that panel; `legend: false` hides the shared legend. |
 | `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
@@ -95,6 +95,29 @@ The shape of one series, on its own min–max scale (no zero): it answers "how d
 | `fill` | Soft wash under the line (`true` or an opacity). |
 | `dot`, `dotRadius`, `lineWidth` | End dot (`dot: false` hides it) and stroke. |
 | `yDomain` | Fix the scale (e.g. to compare sparklines in a column). |
+
+### `rail` (`riel`, `range-rail`)
+
+One row of a distribution, sized for a table cell (`width: 160, height: 18` by default; it works from ~130 to ~330 px): a line from `min` to `max`, the middle `band: [lo, hi]` shaded, a `median` notch, the row's `value` as a dot and any number of reference ticks. It is the `range` column of `table` as a mark of its own, for a page that keeps its HTML table (links, icons, notes, a phone layout) and only needs the rail drawn on the server. No chrome: one invisible box carries a `data-tip` that names every part.
+
+```js
+plot({ type: 'rail', data: [row], value: 'chile', min: 'lo', max: 'hi', band: ['q1', 'q3'], median: 'med',
+  refs: [{ field: 'region', label: 'Biobío' }, { value: 12, label: 'Target' }],
+  valueLabel: 'Chile', minLabel: 'lowestName', maxLabel: 'highestName', clip: true, format: (v) => fmt(v) });
+```
+
+| Option | Meaning |
+|---|---|
+| `data` | One row (the first is drawn). Leave it out when every part is a number. |
+| `value`, `min`, `max`, `median` | Each a field of the row or a fixed number. |
+| `band` | `[lo, hi]` of the shaded band (e.g. the quartiles). |
+| `refs` | Reference ticks: `[{ field \| value, label, color }]`; `label` is text or a field of the row. `ref` + `refLabel` is the one-tick shorthand. |
+| `clip` | The scale is `[min, max]`: a value past an end is a chevron at that end (and says so in the tooltip) instead of stretching the scale; a reference past an end is an open chevron. |
+| `domain` | The scale, `[from, to]` as numbers or fields (e.g. `["p5", "p95"]`); clips like `clip`. Without `min`/`max` the rail spans the whole domain. `domainLabel` adds a tooltip line naming it. |
+| `fallback` | A row with no `min`/`max` and no `domain` has no rail: it prints its figure (`"value"`, default) or nothing (`"none"`), never a lone dot. |
+| `valueLabel`, `minLabel`, `maxLabel`, `bandLabel`, `medianLabel` | Names in the tooltip (text or a field of the row). With `minLabel`/`maxLabel` the tooltip lists both ends ("Lowest · Colchane: 7.1") instead of "Range: a–b". |
+| `color`, `colors` | The dot's colour; `colors: { rail, band, median, ref, value }` per part. Any colour may be `var(--x, #fallback)`, and `skins` work as in any chart. |
+| `format`, `dotRadius`, `tooltip`, `title` | A format (a function from JS), the dot size, extra tooltip fields, and the tooltip heading (also the `<title>`). |
 
 ### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
 
@@ -287,8 +310,8 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group or its legend key does it (the category fills the whole plot) and breadcrumbs or Esc go back. |
 | `exclude` | Level-1 groups to leave out; the rest fill the plane and shares are recomputed. Shift + click on a legend key does it in the browser. |
 | `showValues` | Append values to the labels. |
-| `tileLabels` | `"wrap"`: a long name goes on two or three lines even when its share no longer fits, and as a last resort is cut with "…". Default `"auto"`: a name only when it fits whole. A share under 0.05% prints as "<0.1%", never "0%". |
-| `shareOf` | With `focus`: what share each tile prints, `"group"` (default), `"total"` or `"both"` ("53% · 11% of total"). |
+| `tileLabels` | `"wrap"`: a long name goes on as many lines as the tile's height allows, with its share under it whenever that fits at some size; then the name alone; as a last resort it is cut with "…". Default `"auto"`: a name only when it fits whole. A share under 0.05% prints as "<0.1%", never "0%". |
+| `shareOf` | With `focus`: what share each tile prints, `"group"` (default), `"total"` or `"both"` ("53% · 11% of total"). When the figure does not fit, a shorter one instead of none: `"both"` falls back to the group share, `"total"` to the bare figure (the tooltip says what it is a share of). |
 | `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
 | `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
 | `compareData` | Rows of an earlier period to compute changes without `time`. |
@@ -588,9 +611,9 @@ plot({
 | `badge` | Status pill | Values are status words (done, at risk, late, in progress… in es/en/pt/fr/de): good, warning, critical, info colors |
 | `check` | ✓ or a dash, with an accessible label | Booleans, or sí/no, yes/no… |
 | `date` | Readable date in the chart's language | ISO dates |
-| `link` | Underlined link; only `http(s)` and `mailto` get an `href` | URLs |
+| `link` | Underlined link: `http(s)` and `mailto` open in a new tab; a site path (`"/es/…"`, `"./x"`, `"#y"`) links in the same tab; anything else is text. `text: 'field'` shows another field instead of the URL | URLs |
 | `rank` | Position under the current sort | `rank: true` |
-| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column | — |
+| `range` | A rail: the row's value as a dot on `min`–`max`, a shaded `band: [lo, hi]`, a `median` notch and a `ref` tick (each a field or a fixed number). The tooltip lists every part; `refLabel` and `bandLabel` name them. `scale: "row"` gives each row its own scale (indicators in different units); the default is one scale for the column. `refs: [{ field \| value, label }]` adds several labelled ticks; `clip: true` cuts the scale to min–max and `domain: [from, to]` (numbers or fields, e.g. p5–p95) to any span, drawing what falls past an end as a chevron; `minLabel`, `maxLabel`, `medianLabel`, `domainLabel` name the parts. A row without `min`/`max` in a column that has them prints only its number. Same drawing as the `rail` type | — |
 | `text`, `number` | Text (wraps to 2–3 lines) and plain numbers | Everything else |
 
 | Option | Meaning |
@@ -606,6 +629,7 @@ plot({
 | `top` | Keep the first N rows after sorting. |
 | `cards` | `"auto"` (default) turns each row into a card when the columns do not fit (phones): name and main value on top, the bar under them, the other columns as label–value lines. `true` always, `false` never. |
 | `density`, `striped` | `"compact"` / `"comfortable"` rows; zebra stripes for very wide tables. |
+| `missingLabel` | What a missing cell (and its tooltip) prints instead of the dash: `"no data"`. |
 
 In the browser `render()` adds a search box above 20 rows (`search: false` hides it; `true` forces it), click-to-sort headers (natural order, reversed, then the original order), and page buttons; all of them work from the keyboard and announce `aria-sort` and `aria-current`. Resizing re-renders at the new width, so a table becomes cards on a phone and columns again on a desktop.
 
