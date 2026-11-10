@@ -230,6 +230,9 @@ function lintSpec(spec = {}) {
       if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
       else if (f !== undefined) check(f, 'columns');
       if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+      if (c && typeof c === 'object' && typeof c.formatBy === 'string') check(c.formatBy, 'columns.formatBy');
+      if (c && typeof c === 'object' && c.formatBy !== undefined && c.type !== undefined && !['number', 'bar', 'heat', 'delta', 'range'].includes(columnType(c.type))) warn('table-formatby-type', L(`\`formatBy\` sólo aplica a columnas number, bar, heat, delta y range (columna "${f}").`, `\`formatBy\` only applies to number, bar, heat, delta and range columns (column "${f}").`), L('Quita `formatBy` o cambia el tipo de la columna.', 'Remove `formatBy` or change the column type.'));
+      if (c && typeof c === 'object' && c.formatBy !== undefined && columnType(c.type) === 'bar') sug('table-formatby-bar', L(`Barras en unidades distintas por fila (columna "${f}") se comparan entre sí aunque no midan lo mismo.`, `Bars in different units per row (column "${f}") are compared with each other although they do not measure the same thing.`), L('Usa `type: "range"` (un riel por fila) o `type: "number"`.', 'Use `type: "range"` (one rail per row) or `type: "number"`.'));
     }
     const by = spec.sortBy ?? spec.orderBy;
     if (by !== undefined && !fields.includes(by) && !cols.some((c) => c && typeof c === 'object' && String(c.label) === String(by)) && !['#', 'rank'].includes(String(by))) {

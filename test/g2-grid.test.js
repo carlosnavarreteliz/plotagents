@@ -137,3 +137,48 @@ test('dotplot lint: a reference field that does not hold one value is flagged', 
   assert.ok(lint({ ...dp, data: split, refLines: [{ x: 'chile', label: 'Chile' }] }).warnings.some((w) => w.code === 'refline-field'));
   assert.ok(!lint({ ...dp, refLines: [{ x: 'chile', label: 'Chile' }] }).warnings.some((w) => w.code === 'refline-field'));
 });
+
+// ── table formatBy ─────────────────────────────────────────────────────────
+const indicators = [
+  { name: 'Poverty', unit: 'percent', chile: 17.3, lo: 2.1, hi: 41.5, q1: 9, q3: 22, med: 14.8 },
+  { name: 'Schooling', unit: { type: 'number', suffix: ' yrs', decimals: 1 }, chile: 11.6, lo: 7.2, hi: 15.1, q1: 9.8, q3: 11.2, med: 10.4 },
+  { name: 'Households', unit: 'integer', chile: 6522000, lo: 120, hi: 512000, q1: 2500, q3: 21000, med: 6800 },
+  { name: 'Income', unit: null, chile: 712345.5, lo: 300000, hi: 2100000, q1: 500000, q3: 800000, med: 610000 },
+];
+const rangeCol = { field: 'chile', type: 'range', min: 'lo', max: 'hi', band: ['q1', 'q3'], median: 'med', formatBy: 'unit' };
+
+test('table formatBy: each row with its own format, in the cell and in the tooltip', () => {
+  const svg = plot({ type: 'table', data: indicators, columns: ['name', rangeCol], locale: 'en', width: 720 });
+  const t = texts(svg);
+  assert.ok(t.includes('17.3%'), t.join('|'));
+  assert.ok(t.includes('11.6 yrs'), t.join('|'));
+  assert.ok(t.includes('6,522,000'), t.join('|'));
+  assert.ok(tips(svg).some((s) => s.includes('Range: 7.2 yrs–15.1 yrs') && s.includes('Median: 10.4 yrs')), tips(svg).join(' ## '));
+  assert.ok(tips(svg).some((s) => s.includes('Range: 2.1%–41.5%')));
+});
+
+test('table formatBy: a function (value, row) for site formatters; no totals across units; per-row rail scale', () => {
+  const fn = (v, r) => `${r.name[0]}:${v}`;
+  const svg = plot({ type: 'table', data: indicators, columns: ['name', { ...rangeCol, formatBy: fn }, { field: 'med', formatBy: fn }], total: true, locale: 'en', width: 760 });
+  const t = texts(svg);
+  assert.ok(t.includes('P:17.3') && t.includes('H:6522000') && t.includes('S:10.4'), t.join('|'));
+  assert.ok(!t.includes('Total'), 'no total row over mixed units');
+  // Rails: each row its own scale, so Chile's dot is not squeezed by another unit.
+  const dots = [...svg.matchAll(/<circle cx="([\d.]+)" cy="[\d.]+" r="4.5"/g)].map((m) => +m[1]);
+  assert.equal(dots.length, 4);
+  assert.ok(new Set(dots.map(Math.round)).size > 1);
+});
+
+test('table formatBy: cards on a phone keep each row format', () => {
+  const svg = plot({ type: 'table', data: indicators, columns: ['name', rangeCol, { field: 'med', formatBy: 'unit' }], locale: 'en', width: 358, cards: true });
+  assert.ok(texts(svg).includes('10.4 yrs'), texts(svg).join('|'));
+});
+
+test('table formatBy lint: the field must exist; only numeric column types; bars across units get a suggestion', () => {
+  const base = { type: 'table', data: indicators, locale: 'en' };
+  assert.ok(lint({ ...base, columns: ['name', { ...rangeCol, formatBy: 'nope' }] }).errors.some((e) => e.code === 'field'));
+  assert.ok(lint({ ...base, columns: ['name', { field: 'chile', type: 'text', formatBy: 'unit' }] }).warnings.some((w) => w.code === 'table-formatby-type'));
+  assert.ok(lint({ ...base, columns: ['name', { field: 'chile', type: 'bar', formatBy: 'unit' }] }).suggestions.some((w) => w.code === 'table-formatby-bar'));
+  const ok = lint({ ...base, columns: ['name', rangeCol] });
+  assert.equal(ok.errors.length, 0, JSON.stringify(ok.errors));
+});

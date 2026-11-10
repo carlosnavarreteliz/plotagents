@@ -525,6 +525,7 @@ plot({
 | Opción | Significado |
 |---|---|
 | `columns` | Orden y tipo: nombres de campo o `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omítelo para usar todos los campos. `x`/`label` elige la columna con el nombre de la fila e `y` una lista de columnas de valores. |
+| `formatBy` (columna) | Un formato por fila, para una tabla de indicadores en unidades distintas (porcentaje, conteo, dinero): un campo cuyo valor es un formato (`"percent"`, `{ suffix: " años", decimals: 1 }`; los decimales se infieren entre las filas que lo comparten) o, desde JS, una función `(valor, fila) => texto`. Sirve en `number`, `bar`, `heat`, `delta` y `range` (celda, tooltip y tarjeta); una columna `range` pasa a `scale: "row"` y la columna no lleva total. |
 | `sortBy`, `sort` | Columna y dirección (`"desc"` para números, `"asc"` para texto por defecto). `sort: "-sales"` también funciona. Las celdas vacías siempre van al final. |
 | `pageSize`, `page` | Hasta 15 filas se muestran completas; sobre eso, páginas de 10. `pageSize: false` muestra todo. El paginador son solo números y flechas (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Conserva las filas que contienen esas palabras, sin importar tildes ni mayúsculas. |

@@ -525,6 +525,7 @@ plot({
 | Option | Meaning |
 |---|---|
 | `columns` | Order and type: field names or `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omit to use every field. `x`/`label` picks the row-name column and `y` a list of value columns. |
+| `formatBy` (column) | One format per row, for a table of indicators in different units (percent, count, money): a field whose value is a format (`"percent"`, `{ suffix: " yrs", decimals: 1 }`; decimals inferred among the rows that share it) or, from JS, a function `(value, row) => text`. Works on `number`, `bar`, `heat`, `delta` and `range` (cell, tooltip and card); a `range` column gets `scale: "row"`, and the column has no total. |
 | `sortBy`, `sort` | Column and direction (`"desc"` for numbers, `"asc"` for text by default). `sort: "-sales"` works too. Empty cells always go last. |
 | `pageSize`, `page` | Up to 15 rows are shown whole; beyond that, pages of 10. `pageSize: false` shows everything. The pager is numbers and arrows only (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Keep rows that contain these words, ignoring accents and case. |

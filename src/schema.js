@@ -177,6 +177,7 @@ export const schema = {
           band: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2, description: 'range: [lo, hi] fields of the shaded band (e.g. quartiles).' }, bandLabel: { type: 'string' },
           median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: notch.' }, ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: reference tick (e.g. the national figure).' }, refLabel: { type: 'string' },
           scale: { type: 'string', enum: ['shared', 'row'], description: 'range: one scale for the column (default) or one per row (indicators in different units).' },
+          formatBy: { type: 'string', description: 'number/bar/heat/delta/range: one format per row (indicators in different units). A field whose value is a format ("percent", { suffix: " yrs" }); from JS also a function (value, row) => text. Range rails go per row; no total.' },
           total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
         } }] } },
       ],

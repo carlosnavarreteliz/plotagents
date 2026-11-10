@@ -35,6 +35,8 @@ export interface TableColumn {
   refLabel?: string;
   /** range: one scale for the column (default) or one per row. */
   scale?: 'shared' | 'row';
+  /** number/bar/heat/delta/range: one format per row — a field holding each row's format, or (value, row) => text. Range rails go per row; no total. */
+  formatBy?: string | ((value: number, row: Record<string, unknown>) => string);
   align?: 'left' | 'right' | 'center';
   width?: number;
   /** delta/progress: whether up is good (default) or down (costs). */
