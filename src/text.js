@@ -40,9 +40,11 @@ export function measure(str, size = 12, weight = 400) {
 /** Recorta con elipsis para caber en `max` px. */
 export function truncate(str, max, size = 12, weight = 400) {
   str = String(str ?? '');
-  if (measure(str, size, weight) <= max) return str;
+  // Con holgura de redondeo: un ancho calculado como suma y resta de medidas
+  // (rightW − 10 − leadW) puede quedar 1e-14 bajo la medida del mismo texto.
+  if (measure(str, size, weight) <= max + 1e-9) return str;
   let s = str;
-  while (s.length > 1 && measure(s + '…', size, weight) > max) s = s.slice(0, -1);
+  while (s.length > 1 && measure(s + '…', size, weight) > max + 1e-9) s = s.slice(0, -1);
   return s.trimEnd() + '…';
 }
 

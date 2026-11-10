@@ -10,6 +10,7 @@ import { withContext } from './context.js';
 import { autoLocale } from './i18n.js';
 import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
 import { facet } from './facet.js';
+import { resolveIds } from './frame.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { resolveColorScale } from './colorscales.js';
@@ -92,8 +93,9 @@ export function plot(spec) {
   const theme = themeFor(s);
   const textScale = Math.max(0.5, Math.min(4, +(s.textScale ?? s.fontScale ?? s.labelScale ?? 1) || 1));
   const out = withContext({ textScale }, () => {
-    if (s.facet || s.col) return facet(s, theme, (p) => RENDERERS[s.type](p, themeFor(p)));
-    return RENDERERS[s.type](s, theme);
+    // Cada dibujo (y cada panel) resuelve sus ids internos por su contenido.
+    if (s.facet || s.col) return resolveIds(facet(s, theme, (p) => resolveIds(RENDERERS[s.type](p, themeFor(p)))));
+    return resolveIds(RENDERERS[s.type](s, theme));
   });
   return s.inlineSize === false ? dropInlineSize(out) : out;
 }

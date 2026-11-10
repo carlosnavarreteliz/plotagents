@@ -22,7 +22,7 @@ import { timeTicks, niceStep, linear } from '../scale.js';
 import { colorMap, ramp, textOn, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { xLabels } from '../axes.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 
 const DAY = 864e5;
@@ -161,7 +161,7 @@ export function gantt(spec, theme) {
   const critColor = spec.criticalColor || theme.status?.critical || theme.categorical[1];
 
   // ── Marco ───────────────────────────────────────────────────────────────
-  const gid = 'pa-gantt-' + Math.abs(hash(String(spec.title) + tasks.length)).toString(36);
+  const gid = chartId(spec, 'gantt');
   const H = hatcher(theme, gid);
   const dm = dashedMatcher(spec, data, taskF, groupF);
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);

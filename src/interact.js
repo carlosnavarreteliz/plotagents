@@ -164,6 +164,9 @@ export function attach(root) {
       const f = getComputedStyle(node).fill;
       if (isLit(f)) return f;
     }
+    // `leanDots`: el color va en el grupo de los puntos.
+    const grp = node.closest && node.closest('.pa-dots');
+    if (grp && isLit(grp.getAttribute('fill'))) return skinned(grp, 'fill') || grp.getAttribute('fill');
     return null;
   };
   const linesHtml = (txt, color) => {
@@ -289,6 +292,8 @@ export function attach(root) {
       if (norm(n.getAttribute('fill')) === c || norm(n.getAttribute('stroke')) === c || norm(n.getAttribute('data-color')) === c) {
         // Un grupo de marcadores de un color lo lleva en su `fill`: las marcas son sus puntos.
         if (n.classList && n.classList.contains('pa-markers')) { if (norm(n.getAttribute('fill')) === c) n.querySelectorAll('.pa-m').forEach((x) => out.add(x)); continue; }
+        // `leanDots`: el grupo lleva el color; se iluminan sus puntos.
+        if (n.classList.contains('pa-dots')) { for (const d of n.querySelectorAll('.pa-m')) out.add(d); continue; }
         const m = n.closest('.pa-m') || n;
         out.add(m);
       }

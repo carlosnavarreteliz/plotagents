@@ -11,7 +11,7 @@ import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
 import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
-import { createFrame, SIZES, hash } from '../frame.js';
+import { createFrame, SIZES, chartId } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
@@ -101,6 +101,9 @@ export function bar(spec, theme) {
   const multi = m.series && seriesKeys.length > 1;
   const stack = multi ? spec.stack ?? false : false;
   const pct = stack === 'percent' || stack === 'normalize';
+  // `stackGap`: px entre segmentos apilados (2 por defecto; 0 los junta: con
+  // muchas series, el blanco entre segmentos finos los lava).
+  const SG = Number.isFinite(+spec.stackGap) && spec.stackGap !== null && spec.stackGap !== '' && +spec.stackGap >= 0 ? +spec.stackGap : 2;
   const k = seriesKeys.length;
 
   // Valores apilados
@@ -157,7 +160,7 @@ export function bar(spec, theme) {
   const legend = multi && spec.legend !== false ? seriesKeys.map((s) => ({ label: s, color: hlSeries && !hl.has(s) ? theme.dim : cmap.get(s), shape: 'square' })) : [];
 
   // Barras punteadas (estimaciones, cifras provisorias): relleno rayado + borde discontinuo.
-  const H = hatcher(theme, 'pa-b' + Math.abs(hash(String(spec.title) + theme.mode + frame.width)).toString(36));
+  const H = hatcher(theme, chartId(spec, 'hatch'));
   const dm = dashedMatcher(spec, m.data, m.x, m.series);
   // Tooltip: las filas de la marca (su categoría y, si hay, su serie).
   const T = tipper(spec, m.data, locale);
@@ -252,7 +255,7 @@ export function bar(spec, theme) {
           if (!s.vv) return;
           const ya = yS(s.from), yb = yS(s.to);
           let top = Math.min(ya, yb), h = Math.abs(yb - ya);
-          const gap = s.from !== 0 ? 2 : 0;
+          const gap = s.from !== 0 ? SG : 0;
           if (s.vv > 0) h -= gap; else { top += gap; h -= gap; }
           const outer = s.vv > 0 ? i === lastPos : i === lastNeg;
           const d = barPath(x0, top, w, Math.max(0, h), s.vv > 0 ? 'up' : 'down', outer ? RAD : 0);
@@ -343,7 +346,7 @@ export function bar(spec, theme) {
           if (!s.vv) return;
           const xa = xS(s.from), xb2 = xS(s.to);
           let left = Math.min(xa, xb2), w = Math.abs(xb2 - xa);
-          if (s.from !== 0) { if (s.vv > 0) left += 2; w -= 2; }
+          if (s.from !== 0) { if (s.vv > 0) left += SG; w -= SG; }
           const d = barPath(left, y0b, Math.max(0, w), h, s.vv > 0 ? 'right' : 'left', i === lastPos || i === lastNeg ? RAD : 0);
           const fill = colorFor(c, i);
           const lab = pct ? fmt(s.vv) : '';

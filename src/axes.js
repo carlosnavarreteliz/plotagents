@@ -18,7 +18,7 @@ export function gridY(ticks, y, area, theme, fmt, { labels = true, baseline = 0 
 }
 
 /** Líneas de grilla verticales con etiquetas abajo. */
-export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0, lines = true } = {}) {
+export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0, lines = true, labelY } = {}) {
   const out = [];
   const items = ticks.map((t) => ({ pos: Math.round(x(t)) + 0.5, label: fmt(t), t }));
   for (const it of items) {
@@ -26,7 +26,8 @@ export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0,
   }
   // Un eje de valores siempre rotula su última marca: el primer valor redondo
   // sobre el máximo es lo que dice hasta dónde llega la escala.
-  if (labels) out.push(xLabels(items, area, theme, { keepLast: true }));
+  // `labelY`: la línea base de los rótulos (sobre el área, con el eje arriba).
+  if (labels) out.push(xLabels(items, area, theme, { keepLast: true, ...(labelY !== undefined ? { y: labelY } : {}) }));
   return g({ class: 'pa-axis pa-axis-x' }, out);
 }
 

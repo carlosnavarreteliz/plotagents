@@ -78,8 +78,10 @@ export function createFrame(spec, theme, defaults = {}) {
      * Dibuja la leyenda y devuelve el área de trazado restante. La leyenda va
      * arriba por defecto; `legend: "bottom" | "left" | "right"` la mueve.
      */
-    layout(legend = [], opts = {}) {
+    layout(legend = [], opts0 = {}) {
       let ly = y;
+      // El degradado de una rampa: un id del gráfico, no de sus colores (pieles).
+      const opts = { rampId: chartId(spec, 'ramp'), ...opts0 };
       const items = withExcluded(legend, spec, theme);
       const extraBottom = Math.max(0, (XS - 1) * 22);
       if (items.length && (legendPos === 'left' || legendPos === 'right')) {
@@ -110,18 +112,18 @@ export function createFrame(spec, theme, defaults = {}) {
         header.push(svg);
       }
       srcLines.forEach((l, i) => parts.push(text(width - pad, height - pad - 2 - (srcLines.length - 1 - i) * srcLH, l, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' })));
-      // Id estable pero distinto entre gráficos sin título del mismo tipo (aria-labelledby).
       // `idPrefix`: una base propia (dos gráficos iguales en una página no se pisan).
       const label = spec.ariaLabel === undefined || spec.ariaLabel === null || spec.ariaLabel === '' ? null : String(spec.ariaLabel);
-      const id = spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '' ? domId(spec.idPrefix)
-        : 'pa' + Math.abs(hash((spec.title || '') + type + width + desc + (label ? '|' + label : ''))).toString(36);
+      // Sin `idPrefix`, la huella del dibujo (resolveIds): dos gráficos chicos sin
+      // título y con la misma descripción ya no comparten `-t`/`-d`.
+      const id = spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '' ? domId(spec.idPrefix) : 'pa' + ID_MARK;
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
-      if (spec.bare) return bareSvg({ spec, theme, width, height, header, body, parts, defs, css: fontImport + css, root });
+      if (spec.bare) return resolveIds(bareSvg({ spec, theme, width, height, header, body, parts, defs, css: fontImport + css, root }));
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
         + (/^(choropleth|symbolmap|pointmap)$/.test(type) ? '.pa-zoom path,.pa-zoom circle,.pa-zoom rect{vector-effect:non-scaling-stroke}.pa-zoom-hide{transition:opacity .2s ease}.pa-zoomed .pa-zoom-hide{opacity:0}' : '')
         + css;
-      return el(
+      return resolveIds(el(
         'svg',
         {
           xmlns: 'http://www.w3.org/2000/svg',
@@ -152,7 +154,7 @@ export function createFrame(spec, theme, defaults = {}) {
           g({ class: 'pa-body' }, body),
           parts.join(''),
         ]
-      );
+      ));
     },
   };
   return frame;
@@ -224,7 +226,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
   const X = ctx.textScale;
   const rowH = Math.round((opts.vertical ? 22 : 20) * X);
   const vertical = !!opts.vertical;
-  let x = x0, y = y0, rows = 1;
+  let x = x0, y = y0, rows = 1, ramps = 0;
   for (const it of items) {
     // Clave escalonada (escala por clases): un cuadro por clase y los cortes
     // rotulados debajo, entre cuadro y cuadro. Ocupa dos filas.
@@ -256,7 +258,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     if (it.type === 'ramp') {
       if (vertical && x > x0) { x = x0; y += rowH; rows++; }
       const w = Math.min(220, maxW);
-      const gid = 'pa-ramp-' + Math.abs(hash(it.stops.join(''))).toString(36);
+      const gid = (opts.rampId || 'pa-ramp-' + Math.abs(hash(it.stops.join(''))).toString(36)) + (ramps++ ? '-' + ramps : '');
       const stops = it.stops.map((c, i) => el('stop', { offset: `${(i / (it.stops.length - 1)) * 100}%`, stopColor: c }));
       out.push(el('defs', {}, el('linearGradient', { id: gid }, stops)));
       if (it.title) {
@@ -304,4 +306,40 @@ export function hash(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return h;
+}
+
+// ── Ids internos ────────────────────────────────────────────────────────────
+//
+// Un SVG en línea comparte ids con toda la página: dos gráficos que den el
+// mismo `pa-clip-…` se pisan el recorte (y si el primero está oculto, el
+// segundo pierde el suyo). Cada id se escribe con una marca (ID_MARK) y, ya
+// dibujado el gráfico, resolveIds() la cambia por una huella del SVG entero
+// sin sus colores: dos gráficos que se dibujan distinto (otros datos, series,
+// dominios, ancho, alto) dan ids distintos, y una opción que no cambia el
+// dibujo no cambia el id. Sin colores, porque las pieles y los `var(--x)`
+// dibujan el mismo gráfico con otros y tienen que dar los mismos ids.
+// Con `idPrefix`, cada id es `<idPrefix>-<tipo>` y no hay marca.
+
+/** Lo que resolveIds() reemplaza por la huella (un carácter de uso privado). */
+export const ID_MARK = '\uE000';
+// Un color, o una variable con su respaldo (como los separa src/skins.js).
+const ID_COLOR = /var\(\s*--[\w-]+\s*,\s*(?:#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\))\s*\)|#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g;
+
+/**
+ * Id interno de un gráfico: `<idPrefix>-<kind>` si el spec trae `idPrefix`;
+ * si no, `pa-<kind>-<huella>` (la huella la pone resolveIds()). Dos ids de un
+ * mismo gráfico se distinguen por `kind`.
+ */
+export function chartId(spec, kind) {
+  if (spec && spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '') return domId(spec.idPrefix) + '-' + kind;
+  return 'pa-' + kind + '-' + ID_MARK;
+}
+
+/** Cambia cada ID_MARK de un SVG terminado por la huella de su contenido sin colores. */
+export function resolveIds(svg) {
+  if (typeof svg !== 'string' || svg.indexOf(ID_MARK) < 0) return svg;
+  const s = svg.replace(ID_COLOR, '');
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return svg.split(ID_MARK).join((h >>> 0).toString(36));
 }

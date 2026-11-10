@@ -8,7 +8,7 @@ import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
-import { createFrame, SIZES, hash } from '../frame.js';
+import { createFrame, SIZES, chartId } from '../frame.js';
 import { extent } from '../stats.js';
 import { ctx } from '../context.js';
 
@@ -122,7 +122,7 @@ export function scatter(spec, theme) {
     const P = (lx) => [xS(xLog ? 10 ** lx : lx), yS(yLog ? 10 ** (a + b * lx) : a + b * lx)];
     const [ax, ay] = P(lx0), [bx, by] = P(lx1);
     // id único por gráfico: varios SVG en una página no comparten el recorte.
-    const clipId = 'pa-clip-trend-' + Math.abs(hash(String(spec.title) + x + y + inner.w + pts.length)).toString(36);
+    const clipId = chartId(spec, 'clip-trend');
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
     body.push(el('line', { x1: ax, y1: ay, x2: bx, y2: by, stroke: theme.ink, strokeWidth: 1.5, opacity: 0.55, clipPath: `url(#${clipId})` }));
     const r2s = `R² = ${r2v.toFixed(2).replace('.', String(locale).startsWith('en') ? '.' : ',')}`;

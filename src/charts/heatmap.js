@@ -7,8 +7,9 @@ import { makeFormat } from '../format.js';
 import { ramp, textOn, isColor, hexToRgb, rgbToHex } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize } from '../data.js';
 import { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
-import { createFrame, hash, SIZES } from '../frame.js';
+import { createFrame, chartId, SIZES } from '../frame.js';
 import { binnedScale, withMidClass } from '../colorscales.js';
+import { ctx } from '../context.js';
 
 const CS = 11.5; // cuerpo del título de la esquina
 
@@ -65,7 +66,7 @@ export function heatmap(spec, theme) {
   // Celdas sin valor: 'tint' (por defecto, un tinte), 'plain' (sólo el borde),
   // 'hatch' (rayado de «sin dato») o 'gap' (nada).
   const missing = ['tint', 'plain', 'hatch', 'gap'].includes(spec.missing) ? spec.missing : 'tint';
-  const ndId = 'pa-hm-nd-' + Math.abs(hash(String(valueF) + xs.length + ys.length + (spec.title || ''))).toString(36);
+  const ndId = chartId(spec, 'hm-nd');
   const colorOf = (v) => {
     if (!Number.isFinite(v)) return missing === 'hatch' ? `url(#${ndId})` : theme.tint;
     if (bins) return bins.color(v);
@@ -87,17 +88,29 @@ export function heatmap(spec, theme) {
   const sin = Math.sin((angle * Math.PI) / 180), cos = Math.cos((angle * Math.PI) / 180);
   const labCap = (w) => Math.min(Math.max(60, Math.min(180, w * 0.3)), Math.max(0, ...xs.map((a) => measure(a, XS))));
   const extraH = rot ? Math.max(0, Math.ceil(labCap(+spec.width || 720) * Math.abs(sin) + XS * Math.abs(cos)) + 10 - 26) : 0;
-  const frame = createFrame(spec, theme, { height: Math.min(640, 140 + ys.length * 34) + extraH });
+  // `yLabelPosition: "above"`: el nombre de cada fila va sobre ella, a todo
+  // el ancho (para un teléfono); la columna de rótulos desaparece.
+  const above = spec.yLabelPosition === 'above';
+  const LH = above ? Math.round(12 * ctx.textScale + 5) : 0;
+  const frame = createFrame(spec, theme, { height: Math.min(640, 140 + ys.length * 34) + extraH + ys.length * LH });
   const area = frame.layout(legend);
   const xRuns = spec.xGroup ? (requireField(data, spec.xGroup, 'xGroup'), groupRuns(xs, data, x, spec.xGroup)) : null;
   const yRuns = spec.yGroup ? (requireField(data, spec.yGroup, 'yGroup'), groupRuns(ys, data, y, spec.yGroup)) : null;
-  const gW = yRuns ? groupBandWidth(yRuns, area.w * 0.22) : 0;
-  const gH = xRuns ? GROUP_BAND : 0;
+  // `groupLabels: false`: sin la banda de nombres de grupo (en un teléfono se
+  // leen «Indus…», «Co…»); las franjas de `groupColors` quedan en el borde de
+  // la grilla, con el nombre del grupo en su tooltip.
+  const noBand = spec.groupLabels === false;
+  const gW = yRuns && !noBand ? groupBandWidth(yRuns, area.w * 0.22) : 0;
+  const gH = xRuns && !noBand ? GROUP_BAND : 0;
   // `cornerLabel`: el título de la esquina vacía (qué es fila y qué columna);
   // un salto de línea (\n) lo parte, y la columna de rótulos de fila se ensancha
   // para que quepa (con el mismo tope).
   const corner = spec.cornerLabel === undefined || spec.cornerLabel === null || spec.cornerLabel === '' ? null : String(spec.cornerLabel).split('\n');
-  const yW = Math.min(area.w * 0.3, Math.max(...ys.map((v) => measure(v, 12)), ...(corner ? corner.map((l) => measure(l, CS, 500)) : []))) + 12;
+  // `rowLabelWidth`: el tope de la columna de rótulos de fila, en px (> 1) o
+  // como fracción del ancho (≤ 1); 30 % por defecto.
+  const rlw = +spec.rowLabelWidth;
+  const yCap = spec.rowLabelWidth != null && Number.isFinite(rlw) && rlw > 0 ? (rlw <= 1 ? area.w * rlw : rlw) : area.w * 0.3;
+  const yW = above ? 0 : Math.min(yCap, Math.max(...ys.map((v) => measure(v, 12)), ...(corner ? corner.map((l) => measure(l, CS, 500)) : []))) + 12;
   // Rótulos de columna: abajo (por defecto) o arriba (`xLabelPosition`), y
   // girados (`xLabelAngle`) cuando no caben de lado. Girados, la franja mide lo
   // que mide el rótulo más largo (con un tope; lo cortado va entero en el tooltip).
@@ -111,8 +124,14 @@ export function heatmap(spec, theme) {
   const reserve = towardRight ? Math.max(0, maxLab * Math.abs(cos) - cw0 / 2) : 0;
   const inner = { x: area.x + gW + yW, y: area.y + (top ? headH : 0), w: area.w - gW - yW - (reserve > 1 ? reserve : 0), h: area.h - headH - gH };
   const below = top ? (gH ? 4 : 0) : headH;
-  const cw = inner.w / xs.length, ch = Math.min(inner.h / ys.length, spec.cellHeight ?? 56);
-  inner.h = ch * ys.length;
+  const cw = inner.w / xs.length, ch = Math.min(inner.h / ys.length - LH, spec.cellHeight ?? 56);
+  inner.h = (ch + LH) * ys.length;
+  // Borde superior de la celda de la fila j (bajo su nombre, con `above`).
+  const rowY = (j) => inner.y + j * (ch + LH) + LH;
+  // El nombre de la fila: a la izquierda (por defecto) o sobre ella.
+  const rowLabel = (b, j, fill) => (above
+    ? text(inner.x, rowY(j) - 4, truncate(b, inner.w, 12), { fill, fontSize: 12 })
+    : text(inner.x - 10, rowY(j) + ch / 2 + 4, truncate(b, yW - 12, 12), { fill, fontSize: 12, textAnchor: 'end' }));
   if (spec.height === undefined) frame.setHeight(inner.y + inner.h + below + gH + frame.chrome);
   // `cellGap`: aire entre celdas en px (2 por defecto; 0 las junta; [x, y] por eje).
   const [gx, gy] = cellGap(spec.cellGap);
@@ -142,17 +161,17 @@ export function heatmap(spec, theme) {
   const rowEmpty = (b) => typeof spec.emptyRow === 'string' && xs.every((a) => !Number.isFinite(val(a, b)));
   ys.forEach((b, j) => {
     if (rowEmpty(b)) {
-      if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.muted, fontSize: 12, textAnchor: 'end' }))));
+      if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), rowLabel(b, j, theme.muted))));
       body.push(g({ class: 'pa-m', 'data-tip': tip(b, spec.emptyRow) }, [
-        el('rect', { x: inner.x + gx / 2, y: inner.y + j * ch + gy / 2, width: Math.max(0, inner.w - gx), height: Math.max(0, ch - gy), rx, fill: 'transparent', stroke: theme.grid, strokeWidth: 1 }),
-        text(inner.x + inner.w / 2, inner.y + j * ch + ch / 2 + 4, truncate(spec.emptyRow, Math.max(20, inner.w - 12), 11.5), { fill: theme.muted, fontSize: 11.5, textAnchor: 'middle' }),
+        el('rect', { x: inner.x + gx / 2, y: rowY(j) + gy / 2, width: Math.max(0, inner.w - gx), height: Math.max(0, ch - gy), rx, fill: 'transparent', stroke: theme.grid, strokeWidth: 1 }),
+        text(inner.x + inner.w / 2, rowY(j) + ch / 2 + 4, truncate(spec.emptyRow, Math.max(20, inner.w - 12), 11.5), { fill: theme.muted, fontSize: 11.5, textAnchor: 'middle' }),
       ]));
       return;
     }
-    if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), text(inner.x - 10, inner.y + j * ch + ch / 2 + 4, truncate(b, yW - 12, 12), { fill: theme.lede, fontSize: 12, textAnchor: 'end' }))));
+    if (j % yEvery === 0) body.push(linkWrap(rowHrefOf(b), tipWrap(rowTipOf(b), rowLabel(b, j, theme.lede))));
     xs.forEach((a, i) => {
       const v = val(a, b);
-      const cx = inner.x + i * cw + gx / 2, cy = inner.y + j * ch + gy / 2;
+      const cx = inner.x + i * cw + gx / 2, cy = rowY(j) + gy / 2;
       const box = { x: cx, y: cy, width: Math.max(0, cw - gx), height: Math.max(0, ch - gy), rx };
       const sp = apart.none || !Number.isFinite(v) ? null : apart.of(a, b);
       const tipTxt = TT({ [x]: a, [y]: b }, `${b} · ${a}`, Number.isFinite(v) ? fmt(v) : missingLabel, sp ? sp.label : '');
@@ -200,26 +219,27 @@ export function heatmap(spec, theme) {
   // del lado de los rótulos (entre los rótulos y las celdas: arriba con
   // `xLabelPosition: 'top'`), y la banda de grupos queda sólo con los nombres.
   const gc = spec.groupColors && typeof spec.groupColors === 'object' ? spec.groupColors : undefined;
-  const atLabels = !!gc && spec.groupStripe === 'labels';
+  const atLabels = !!gc && (spec.groupStripe === 'labels' || noBand);
   const xPos = (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1];
-  const yPos = (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1];
-  if (xRuns) body.push(groupBandX(xRuns, xPos, inner.y + inner.h + below, theme, inner.y, undefined, gc, !atLabels));
-  if (yRuns) body.push(groupBandY(yRuns, yPos, area.x, gW, theme, inner.x + inner.w, undefined, gc, !atLabels));
+  const yPos = (j) => [rowY(j) + 1 - (j && LH ? LH : 0), rowY(j) + ch - 1];
+  if (xRuns && !noBand) body.push(groupBandX(xRuns, xPos, inner.y + inner.h + below, theme, inner.y, undefined, gc, !atLabels));
+  if (yRuns && !noBand) body.push(groupBandY(yRuns, yPos, area.x, gW, theme, inner.x + inner.w, undefined, gc, !atLabels));
+  const stripeTip = (grp) => (noBand && grp ? { 'data-tip': String(grp) } : {});
   if (atLabels) {
     const stripes = [];
     for (const r of xRuns || []) {
       if (!isColor(gc[r.group])) continue;
       const a = xPos(r.from)[0], b = xPos(r.to)[1];
-      stripes.push(el('rect', { x: a, y: top ? inner.y - 5 : inner.y + inner.h + 2, width: Math.max(0, b - a), height: 3, fill: gc[r.group] }));
+      stripes.push(el('rect', { x: a, y: top ? inner.y - 5 : inner.y + inner.h + 2, width: Math.max(0, b - a), height: 3, fill: gc[r.group], ...stripeTip(r.group) }));
     }
     for (const r of yRuns || []) {
       if (!isColor(gc[r.group])) continue;
       const a = yPos(r.from)[0], b = yPos(r.to)[1];
-      stripes.push(el('rect', { x: inner.x - 5, y: a, width: 3, height: Math.max(0, b - a), fill: gc[r.group] }));
+      stripes.push(el('rect', { x: inner.x - 5, y: a, width: 3, height: Math.max(0, b - a), fill: gc[r.group], ...stripeTip(r.group) }));
     }
     body.push(g({ class: 'pa-group-stripes' }, stripes));
   }
-  if (corner) {
+  if (corner && !above) {
     // En la esquina: alineado a la derecha sobre los rótulos de fila, pegado a
     // la franja de rótulos de columna. Lo que no cabe va entero en el tooltip.
     const room = Math.max(0, inner.x - 10 - (area.x + gW));

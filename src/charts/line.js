@@ -13,7 +13,7 @@ import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickL
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
-import { hash } from '../frame.js';
+import { chartId } from '../frame.js';
 import { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 
 export function prepareLine(spec) {
@@ -373,8 +373,8 @@ export function line(spec, theme, variant = 'line') {
     }
   }
   // Con xDomain/yDomain los datos fuera del rango no se salen del área de trazado.
-  const clipD = spec.xDomain || spec.yDomain ? 'pa-clip-' + Math.abs(hash(String(spec.title) + m.y + inner.w + inner.h)).toString(36) : null;
-  const gidD = 'pa-dash-' + Math.abs(hash(String(spec.title) + m.y + inner.w + theme.mode)).toString(36);
+  const clipD = spec.xDomain || spec.yDomain ? chartId(spec, 'clip') : null;
+  const gidD = chartId(spec, 'dash');
   const H = hatcher(theme, gidD);
   // Recortes para pintar áreas: firme a la izquierda de cutX, rayado a la derecha.
   const clipL = `${gidD}-l`, clipR = `${gidD}-r`;
@@ -387,7 +387,7 @@ export function line(spec, theme, variant = 'line') {
   const drawOrder = stack ? [...m.lines].reverse() : ordered;
   const lw = M.lineWidth ?? 2.25;
   const maxPts = Math.max(64, Math.round(2 * inner.w));
-  const gid = 'pa-grad-' + Math.abs(hash(String(spec.title) + m.y + inner.w)).toString(36);
+  const gid = chartId(spec, 'grad');
   let defs = '';
   const washSingle = !multi && !isArea && spec.fill !== false && !m.errorbar && zero;
   for (const l of drawOrder) {

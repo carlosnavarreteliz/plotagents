@@ -13,7 +13,7 @@ import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, ramp, hexToRgb, rgbToHex } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
-import { createFrame, hash } from '../frame.js';
+import { createFrame, chartId } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
 
@@ -347,7 +347,7 @@ export function pointmap(spec, theme) {
   for (const p of pts) [p.x, p.y] = P(p.mx, p.my);
   const view = { mx0: mcx - (cxp - box.x) / k, mx1: mcx + (box.x + box.w - cxp) / k, my0: mcy - (cyp - box.y) / k, my1: mcy + (box.y + box.h - cyp) / k };
 
-  const gid = 'pa-pm-' + Math.abs(hash(String(spec.title) + 'pointmap' + W + n)).toString(36);
+  const gid = chartId(spec, 'pm');
   const defs = [];
   const layer = [];
   // 1) Agua (tinte del tema) y respaldo vectorial: se ve si las teselas no cargan.
