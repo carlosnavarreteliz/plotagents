@@ -1,5 +1,6 @@
 // Playground: edita un spec y mira el gráfico, los errores y las sugerencias en vivo.
 (function () {
+  var t = (window.site && site.t) || function (en) { return en; };
   var presets = JSON.parse(document.getElementById('pa-presets').textContent);
   var byId = {};
   presets.forEach(function (p) { byId[p.id] = p; });
@@ -61,19 +62,19 @@
   function run() {
     var p = parse(ta.value);
     if (p.error) {
-      msgs.innerHTML = '<div class="msg error"><b>Invalid JSON</b>' + esc(p.error) + '</div>';
+      msgs.innerHTML = '<div class="msg error"><b>' + t('Invalid JSON', 'JSON no válido') + '</b>' + esc(p.error) + '</div>';
       return;
     }
     var spec = withFiles(p.spec);
     if (spec.__missing) {
-      msgs.innerHTML = '<div class="msg error"><b>Missing file</b>' + esc(spec.__missing) + '<span class="fix">Drop the file on the editor (or use “Insert GeoJSON…”) to load it again.</span></div>';
+      msgs.innerHTML = '<div class="msg error"><b>' + t('Missing file', 'Falta un archivo') + '</b>' + esc(spec.__missing) + '<span class="fix">' + t('Drop the file on the editor (or use “Insert GeoJSON…”) to load it again.', 'Suelta el archivo sobre el editor (o usa “Insertar GeoJSON…”) para cargarlo de nuevo.') + '</span></div>';
       return;
     }
     var r = plotagents.safePlot(spec);
-    var html = list('error', 'Error', r.errors) + list('warning', 'Warning', r.warnings) + list('suggestion', 'Suggestion', r.suggestions);
-    if (r.ok && !r.errors.length && !r.warnings.length && !r.suggestions.length) html = '<div class="msg ok"><b>Looks good</b>No errors, warnings or suggestions.</div>';
+    var html = list('error', 'Error', r.errors) + list('warning', t('Warning', 'Advertencia'), r.warnings) + list('suggestion', t('Suggestion', 'Sugerencia'), r.suggestions);
+    if (r.ok && !r.errors.length && !r.warnings.length && !r.suggestions.length) html = '<div class="msg ok"><b>' + t('Looks good', 'Todo bien') + '</b>' + t('No errors, warnings or suggestions.', 'Sin errores, advertencias ni sugerencias.') + '</div>';
     msgs.innerHTML = html;
-    desc.innerHTML = r.ok && r.description ? '<b>Alt text:</b> ' + esc(r.description) : '';
+    desc.innerHTML = r.ok && r.description ? '<b>' + t('Alt text:', 'Texto alternativo:') + '</b> ' + esc(r.description) : '';
     if (!r.ok) return;
     lastSpec = spec;
     if (entry) site.unmount(entry);
@@ -87,7 +88,7 @@
     var out = Object.assign({}, spec);
     if (out.geo) out.geo = res(out.geo);
     if (Array.isArray(out.layers)) out.layers = out.layers.map(function (L) { return L && L.geo ? Object.assign({}, L, { geo: res(L.geo) }) : L; });
-    if (miss) out.__missing = '"' + miss + '" is not loaded in this page.';
+    if (miss) out.__missing = '"' + miss + '" ' + t('is not loaded in this page.', 'no está cargado en esta página.');
     return out;
   }
 
@@ -95,9 +96,9 @@
   var NAME_KEYS = ['name', 'NAME', 'nombre', 'NOMBRE', 'Nombre', 'NOM_COM', 'NOM_COMUNA', 'NOM_REG', 'NOM_REGION', 'NAME_1', 'NAME_2', 'ADMIN', 'admin', 'name_en', 'region', 'Region', 'REGION', 'comuna', 'COMUNA', 'label', 'title', 'id', 'ID', 'code', 'CODE'];
   function insertGeo(obj, filename) {
     var fc;
-    try { fc = plotagents.toFeatureCollection(obj); } catch (e) { msgs.innerHTML = '<div class="msg error"><b>Not a map</b>' + esc(e.message) + '</div>'; return; }
+    try { fc = plotagents.toFeatureCollection(obj); } catch (e) { msgs.innerHTML = '<div class="msg error"><b>' + t('Not a map', 'No es un mapa') + '</b>' + esc(e.message) + '</div>'; return; }
     var feats = fc.features.filter(function (f) { return f && f.geometry; });
-    if (!feats.length) { msgs.innerHTML = '<div class="msg error"><b>Empty map</b>The file has no features with geometry.</div>'; return; }
+    if (!feats.length) { msgs.innerHTML = '<div class="msg error"><b>' + t('Empty map', 'Mapa vacío') + '</b>' + t('The file has no features with geometry.', 'El archivo no tiene features con geometría.') + '</div>'; return; }
     var props = feats[0].properties || {};
     var key = NAME_KEYS.filter(function (k) { return props[k] !== undefined && props[k] !== null && typeof props[k] !== 'object'; })[0]
       || Object.keys(props).filter(function (k) { return typeof props[k] === 'string'; })[0];
@@ -114,12 +115,12 @@
     var spec = {
       type: 'choropleth',
       geo: 'file:' + name,
-      title: 'Your map: ' + feats.length + ' shapes from ' + name,
-      subtitle: 'Placeholder values: replace `data` with your own (one row per shape)',
-      source: 'illustrative data',
+      title: t('Your map: ' + feats.length + ' shapes from ' + name, 'Tu mapa: ' + feats.length + ' formas de ' + name),
+      subtitle: t('Placeholder values: replace `data` with your own (one row per shape)', 'Valores de relleno: cambia `data` por los tuyos (una fila por forma)'),
+      source: t('illustrative data', 'datos ilustrativos'),
       data: data.slice(0, 400),
       key: 'area', value: 'value',
-      locale: 'en',
+      locale: t('en', 'es'),
     };
     if (key) spec.featureKey = key;
     if (!key) delete spec.featureKey;
@@ -131,7 +132,7 @@
     var rd = new FileReader();
     rd.onload = function () {
       try { insertGeo(JSON.parse(rd.result), file.name); }
-      catch (e) { msgs.innerHTML = '<div class="msg error"><b>Could not read ' + esc(file.name) + '</b>' + esc(e.message) + '</div>'; }
+      catch (e) { msgs.innerHTML = '<div class="msg error"><b>' + t('Could not read ', 'No se pudo leer ') + esc(file.name) + '</b>' + esc(e.message) + '</div>'; }
     };
     rd.readAsText(file);
   }
@@ -191,7 +192,7 @@
     if (!p.spec) return;
     var b64 = btoa(unescape(encodeURIComponent(JSON.stringify(p.spec)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     history.replaceState(null, '', '#spec=' + b64);
-    if (typeof p.spec.geo === 'string' && p.spec.geo.indexOf('file:') === 0 && !/^file:(geojson-propio|geojson-en)\.geojson$/.test(p.spec.geo)) msgs.insertAdjacentHTML('afterbegin', '<div class="msg warning"><b>Heads-up</b>The link keeps the spec but not your file: whoever opens it will need to drop it again.</div>');
+    if (typeof p.spec.geo === 'string' && p.spec.geo.indexOf('file:') === 0 && !/^file:(geojson-propio|geojson-en)\.geojson$/.test(p.spec.geo)) msgs.insertAdjacentHTML('afterbegin', '<div class="msg warning"><b>' + t('Heads-up', 'Ojo') + '</b>' + t('The link keeps the spec but not your file: whoever opens it will need to drop it again.', 'El enlace guarda el spec pero no tu archivo: quien lo abra tendrá que soltarlo de nuevo.') + '</div>');
     site.copyText(location.href, e.currentTarget);
   });
   window.addEventListener('hashchange', fromHash);

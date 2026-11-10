@@ -135,8 +135,11 @@ export function markdown(src, opts = {}) {
     if (h) {
       flush();
       const level = h[1].length;
+      // `## Título {#anchor}` fija el id (las traducciones conservan los anclajes del inglés).
+      const fixed = /\s*\{#([\w-]+)\}$/.exec(h[2]);
+      if (fixed) h[2] = h[2].slice(0, fixed.index);
       const html = inline(h[2], o);
-      let id = headingId(html);
+      let id = fixed ? fixed[1] : headingId(html);
       const n = used.get(id) || 0;
       used.set(id, n + 1);
       if (n) id += '-' + n;
