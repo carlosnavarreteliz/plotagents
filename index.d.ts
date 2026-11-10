@@ -203,12 +203,12 @@ export interface Spec {
   missingMark?: string;
   /** bar (columns), line, area: shaded ranges of the x axis. */
   xBands?: XBand | XBand[];
-  /** treemap tiles, horizontal bar names, scatter dots: field with the URL to link to. */
+  /** treemap tiles, horizontal bar names, scatter dots, network nodes (field of `nodes`): field with the URL to link to. */
   href?: string;
-  /** scatter/bubble: rows where this field is truthy are hollow dots. */
-  hollow?: string;
-  /** scatter/bubble: rows where this field is falsy are hollow dots. */
-  filled?: string;
+  /** scatter/bubble: rows where this field is truthy are hollow dots. network: a field of `nodes` or a list of node ids drawn hollow. */
+  hollow?: string | string[];
+  /** scatter/bubble: rows where this field is falsy are hollow dots. network: a field of `nodes` or a list of ids that stay filled; the rest are hollow. */
+  filled?: string | string[];
   /** sankey: a heading over each column. */
   stages?: string[];
   /** sankey: separate crowded node labels (true = 31 px between centers, or a number of px), with leader lines to moved ones; grows the height when it is not set. */
@@ -351,6 +351,16 @@ export interface Spec {
   flipY?: boolean;
   /** Largest node / circle radius in px. */
   maxRadius?: number;
+  /** network: smallest node radius in px (default 2.5). */
+  minRadius?: number;
+  /** network layout "preset": scale x and y separately to fill the area (positions normalized per axis). */
+  stretch?: boolean;
+  /** network: "source" (default), "neutral" (muted ink) or one color for every edge. */
+  edgeColor?: 'source' | 'neutral' | (string & {});
+  /** network: one opacity for every edge, or [min, max] by value. */
+  edgeOpacity?: number | [number, number];
+  /** network: one width in px for every edge, or [min, max] by √value. */
+  edgeWidth?: number | [number, number];
   /** network: force-layout iterations. */
   iterations?: number;
   /** chord: square flow matrix with `names`. */

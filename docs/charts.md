@@ -419,6 +419,17 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 
+A map you already computed (the product space, a knowledge network) usually wants the nodes to carry the meaning and the edges to recede:
+
+| Option | Meaning |
+|---|---|
+| `filled` / `hollow` | A field of `nodes` (or a list of ids): those nodes stay filled (or go hollow), the rest are rings of the same color with the background inside. A second encoding without a second color, e.g. the groups one institution specializes in, lit on the same map. Filled nodes are named first; hollow ones in a muted ink. |
+| `edgeColor` | `"source"` (default), `"neutral"` (the theme's muted ink) or any color, `var(--line, #e0d6c4)` included. `colors["a→b"]` still pins one edge, drawn on top. |
+| `edgeOpacity` / `edgeWidth` | One number for every edge, or `[min, max]` scaled by value (opacity linearly, width by the square root). |
+| `stretch` | `layout: "preset"` only: x and y are scaled apart to fill the area, for positions already normalized per axis (0–1 MDS). |
+| `minRadius` | Smallest node radius in px (default 2.5). |
+| `href` | A field of `nodes` with a URL: each node is a link. |
+
 ### `chord`
 
 `from`, `to`, `value` rows, or `matrix` + `names`. `directed` (default false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.

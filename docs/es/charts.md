@@ -419,6 +419,17 @@ Aristas en `data` (`from`, `to`, `value` opcional), `nodes` opcionales con `id`,
 
 `labels` (número, lista o `true`), `highlight` (un nodo y sus vecinos), `focus` (el id de un nodo: va al centro, o a la raíz en `radial`/`tree`, y se destaca con sus vecinos, todos rotulados; en el navegador lo hace un clic con una transición suave, y un segundo clic o Esc vuelve), `iterations`, `maxRadius`, `curveness`.
 
+Un mapa ya calculado (el espacio de productos, una red de conocimiento) suele pedir que el significado lo lleven los nodos y que las aristas se retiren:
+
+| Opción | Significado |
+|---|---|
+| `filled` / `hollow` | Un campo de `nodes` (o una lista de ids): esos nodos quedan rellenos (o huecos) y el resto son anillos del mismo color con el fondo adentro. Una segunda codificación sin un segundo color, p. ej. los grupos en que una institución se especializa, encendidos sobre el mismo mapa. Los rellenos se rotulan primero; los huecos, en tinta tenue. |
+| `edgeColor` | `"source"` (por omisión), `"neutral"` (la tinta tenue del tema) o cualquier color, incluido `var(--line, #e0d6c4)`. `colors["a→b"]` sigue fijando una arista, que va encima. |
+| `edgeOpacity` / `edgeWidth` | Un número para todas las aristas, o `[mín, máx]` según el valor (la opacidad lineal, el ancho por la raíz). |
+| `stretch` | Sólo con `layout: "preset"`: x e y se escalan por separado para llenar el área, para posiciones ya normalizadas por eje (MDS en 0–1). |
+| `minRadius` | Radio mínimo de un nodo en px (2,5 por omisión). |
+| `href` | Un campo de `nodes` con una URL: cada nodo es un enlace. |
+
 ### `chord`
 
 Filas `from`, `to`, `value`, o `matrix` + `names`. `directed` (por defecto false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
