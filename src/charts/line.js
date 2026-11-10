@@ -261,7 +261,9 @@ export function line(spec, theme, variant = 'line') {
     : pointsOpt && typeof pointsOpt === 'object' ? !!pointsOpt[k] : pointsOpt ?? autoDots);
   const widthOf = (k, w) => { const v = spec.lineWidths && typeof spec.lineWidths === 'object' ? +spec.lineWidths[k] : NaN; return Number.isFinite(v) && v > 0 ? v : w; };
   let xPad = 0;
-  if (isInside(theme, inside) && !singleX && !spec.xDomain) {
+  // Un facet comparte el dominio x (`_xShared`): el eje y por dentro igual
+  // reserva su lugar, y el facet iguala ese margen entre paneles (`_xPad`).
+  if (isInside(theme, inside) && !singleX && (!spec.xDomain || spec._xShared)) {
     const axisSize = theme.type?.axis ?? 12;
     const k = 5 * Math.max(1, ctx.textScale * 0.8);
     // Caja de cada etiqueta: su ancho real, de la altura de las mayúsculas a la línea base.
@@ -275,6 +277,8 @@ export function line(spec, theme, variant = 'line') {
       if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) xPad = Math.max(xPad, Math.min(Math.max(...boxes.map((b) => b.w)) + 8, inner.w * 0.25));
     }
   }
+  if (spec._xPad > xPad) xPad = Math.min(spec._xPad, inner.w * 0.25);
+  if (spec._domains) spec._domains.xPad = xPad;
   const xS = (xLog ? log : linear)(x0, x1, inner.x + xPad, inner.x + inner.w);
   // Formateadores creados una vez (no por punto).
   const xNumFmt = m.kind === 'number' ? makeFormat(spec.xFormat, locale, xsAll) : null;

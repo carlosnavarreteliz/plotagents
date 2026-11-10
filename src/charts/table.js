@@ -5,7 +5,7 @@
 // minigráfico, avance contra la meta, estado). En pantallas angostas cada fila
 // se vuelve una tarjeta. Las filas se paginan; en el navegador, render()
 // agrega orden por columna, búsqueda y paso de página.
-import { el, g, text, tip, esc } from '../svg.js';
+import { el, g, text, tip, esc, linkWrap } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js';
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';
@@ -15,6 +15,7 @@ import { ramp, textOn, readable, hexToRgb, rgbToHex, contrast } from '../theme.j
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
 import { words, langOf } from '../i18n.js';
+import { railAccessors, railValues, railExtent, railMarks, railTip } from '../rail.js';
 
 // Tipos de columna (y sus alias): lo que el agente escriba se entiende.
 const TYPE_ALIAS = {
@@ -194,11 +195,16 @@ function prepareColumns(spec, data, theme, locale) {
     } else if (type === 'range') {
       // Riel: mínimo–máximo, una banda (lo–hi), la mediana, una referencia y el
       // valor de la fila como punto. Cada extremo es un campo o un número fijo.
-      const acc = (k) => (typeof k === 'string' ? (r) => num(r[k]) : Number.isFinite(+k) && k !== null && k !== undefined ? () => +k : () => NaN);
-      const band = Array.isArray(c.band) ? c.band : [];
-      c.rg = { min: acc(c.min), max: acc(c.max), lo: acc(band[0]), hi: acc(band[1]), median: acc(c.median), ref: acc(c.ref) };
-      const ends = data.flatMap((r) => [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))]).filter(Number.isFinite);
+      // `refs`: varias referencias, cada una con su rótulo. `clip` / `domain`:
+      // una escala recortada; lo de fuera es un chevrón (ver src/rail.js).
+      c.rg = railAccessors(c);
+      const ends = data.flatMap((r) => railExtent(num(r[c.field]), railValues(c.rg, r)));
       c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      // Con `clip`, la escala de la columna va del menor mínimo al mayor máximo.
+      const mins = data.map((r) => c.rg.min(r)).filter(Number.isFinite), maxs = data.map((r) => c.rg.max(r)).filter(Number.isFinite);
+      c.clo = mins.length ? Math.min(...mins) : c.rlo; c.chi = maxs.length ? Math.max(...maxs) : c.rhi;
+      // Una columna con mínimo y máximo: la fila que no los trae va sin riel.
+      c.ranged = c.min !== undefined && c.min !== null && c.max !== undefined && c.max !== null;
       c.fmt = columnFormat(c.format ?? spec.format ?? hint, ends, locale, null);
     } else if (numeric || (type === 'number' && kind === 'year')) {
       c.fmt = kind === 'year' && !c.format ? (v) => String(Math.round(v)) : columnFormat(c.format ?? spec.format ?? hint, finite, locale, null);
@@ -223,7 +229,7 @@ function prepareColumns(spec, data, theme, locale) {
         const by = c.formatBy;
         const keyOf = (r) => { const v = r[by]; return isNil(v) ? null : typeof v === 'object' ? JSON.stringify(v) : String(v); };
         const cache = new Map();
-        const valsOf = (r) => (type === 'range' ? [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))] : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
+        const valsOf = (r) => (type === 'range' ? railExtent(num(r[c.field]), railValues(c.rg, r)) : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
         c.rowFmt = (r) => {
           const k = keyOf(r);
           if (k === null) return c.fmt;
@@ -620,31 +626,29 @@ export function table(spec, theme) {
         if (!Number.isFinite(n)) { put(s); break; }
         const vw = c.valueW;
         out.push(text(ix + vw, by, s, { fill: ink, fontSize: FS, fontWeight: weight, textAnchor: 'end' }));
+        const vals = railValues(c.rg, r);
+        const F = Number.isFinite;
+        const hasRange = F(vals.min) && F(vals.max);
+        // Sin mínimo ni máximo (en una columna que los tiene) no hay riel: sólo
+        // la cifra, nunca un punto suelto que parezca un rango.
+        if (c.ranged && !hasRange && !vals.domain) break;
         const trackX = ix + vw + 12, trackW = Math.max(16, ix + iw - trackX - 6);
-        const R = c.rg;
-        const vals = { min: R.min(r), max: R.max(r), lo: R.lo(r), hi: R.hi(r), median: R.median(r), ref: R.ref(r) };
-        // Escala: la de toda la columna (por defecto) o la de la fila (`scale: 'row'`).
-        let a = c.rlo, b = c.rhi;
-        if (c.scale === 'row') {
-          const own = [n, ...Object.values(vals)].filter(Number.isFinite);
+        // Escala: la de toda la columna (por defecto) o la de la fila (`scale: 'row'`);
+        // recortada a `domain` o, con `clip`, a mínimo–máximo.
+        let a = c.rlo, b = c.rhi, clipped = false;
+        if (vals.domain) { [a, b] = vals.domain; clipped = true; }
+        else if (c.clip && hasRange && c.scale === 'row') { a = Math.min(vals.min, vals.max); b = Math.max(vals.min, vals.max); clipped = true; }
+        else if (c.clip && c.chi > c.clo) { a = c.clo; b = c.chi; clipped = true; }
+        else if (c.scale === 'row') {
+          const own = railExtent(n, vals);
           a = Math.min(...own); b = Math.max(...own);
         }
-        const span = b - a || 1;
-        const X = (t) => trackX + ((t - a) / span) * trackW;
-        const F = Number.isFinite;
-        if (F(vals.min) && F(vals.max)) out.push(el('line', { x1: X(vals.min), x2: X(vals.max), y1: my, y2: my, stroke: theme.axis, strokeWidth: 2, strokeLinecap: 'round' }));
-        if (F(vals.lo) && F(vals.hi)) out.push(el('rect', { x: X(Math.min(vals.lo, vals.hi)), y: my - 4, width: Math.max(1.5, Math.abs(X(vals.hi) - X(vals.lo))), height: 8, rx: 2, fill: theme.tint2 }));
-        if (F(vals.median)) out.push(el('line', { x1: X(vals.median), x2: X(vals.median), y1: my - 6, y2: my + 6, stroke: theme.lede, strokeWidth: 1.5 }));
-        if (F(vals.ref)) out.push(el('line', { x1: X(vals.ref), x2: X(vals.ref), y1: my - 8, y2: my + 8, stroke: theme.ink, strokeWidth: 2, strokeLinecap: 'round' }));
-        out.push(el('circle', { cx: X(n), cy: my, r: 4.5, fill: muted ? dimC : accent, stroke: theme.surface, strokeWidth: 1.5 }));
+        const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
+        out.push(...rail.out);
         const en = String(locale).startsWith('en');
-        const fr = fmtOf(c, r);
-        const parts = [`${c.label}: ${s}`];
-        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${fr(vals.min)}–${fr(vals.max)}`);
-        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${fr(vals.lo)}–${fr(vals.hi)}`);
-        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${fr(vals.median)}`);
-        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${fr(vals.ref)}`);
-        return { out, tip: parts.join('\n') };
+        const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
+          labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
+        return { out, tip: tipText };
       }
       case 'sparkline': {
         const vals = Array.isArray(v) ? v.map(num).filter(Number.isFinite) : [];
@@ -670,7 +674,9 @@ export function table(spec, theme) {
         const lines = wrap(s, iw, FS, 400, c.lines);
         const color = readable(accent, theme);
         const t = lines.map((l, k) => text(tx, by + k * LH, l, { fill: color, fontSize: FS, textAnchor: anchor, textDecoration: 'underline' })).join('');
-        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : t);
+        // Una dirección completa abre en otra pestaña; una ruta del sitio («/es/…»,
+        // «./x», «#y») es un enlace propio y abre en la misma (como en un heatmap).
+        out.push(SAFE_URL.test(href) ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t) : linkWrap(href, t));
         return { out, lines: lines.length, tip: lines.join(' ') !== s ? s : null };
       }
       case 'text': case 'date': default: {

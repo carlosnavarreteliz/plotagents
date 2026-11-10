@@ -44,7 +44,9 @@ function lintSpec(spec = {}) {
   const linkageOnly = Array.isArray(spec.linkage) && !spec.data;
   // Una red con posiciones dadas puede venir sin aristas: basta la tabla `nodes`.
   const presetNodes = spec.data === undefined && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''));
-  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
+  // Un riel puede venir sin filas: todos sus extremos como números.
+  const railOnly = spec.data === undefined && typeof spec.type === 'string' && normalizeType(spec.type.trim())[0] === 'rail';
+  try { data = spec.type === 'kpi' || spec.items || rawWords || presetNodes || linkageOnly || railOnly ? [] : ensureData(spec); } catch (e) { err('data', e.message.split('\n')[0], 'Pasa `data` como arreglo de filas: [{ categoria: "A", valor: 10 }]'); }
   const type = spec.type && spec.type !== 'auto' ? normalizeType(String(spec.type).trim())[0] : inferType(spec, data);
   if (!KNOWN_TYPES.has(type)) err('type', `Tipo "${spec.type}" no soportado.`, `Usa uno de: ${[...KNOWN_TYPES].join(', ')}`);
   const fields = fieldsOf(data);
@@ -53,9 +55,9 @@ function lintSpec(spec = {}) {
   };
   if (data.length) {
     check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); if (type !== 'network') check(spec.size, 'size');
-    check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
+    if (!(type === 'rail' && typeof spec.value !== 'string')) check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
     check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
-  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
+  } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
   else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
@@ -230,6 +232,13 @@ function lintSpec(spec = {}) {
       if (data.length > 25 && spec.collapsed === undefined) sug('gantt-collapse', L(`${data.length} tareas: plegar las fases terminadas acorta la carta.`, `${data.length} tasks: collapsing finished phases shortens the chart.`), L(`Agrega \`collapsed: ["${phases[0]}"]\` (o \`true\` para ver solo el resumen).`, `Add \`collapsed: ["${phases[0]}"]\` (or \`true\` for the summary only).`));
     }
   }
+  if (type === 'rail') {
+    lintRail(spec, 'rail', { data, fields, check, err, warn, L });
+    if (data.length > 1) warn('rail-rows', L(`Un riel dibuja una fila: se usa la primera de ${data.length}.`, `A rail draws one row: the first of ${data.length} is used.`), L('Un `plot` por celda, con `data: [fila]`; para una tabla entera, `type: "table"` con una columna `range`.', 'One `plot` per cell, with `data: [row]`; for a whole table, `type: "table"` with a `range` column.'));
+    const has = (k) => spec[k] !== undefined && spec[k] !== null;
+    if (!(has('min') && has('max')) && !Array.isArray(spec.domain)) sug('rail-no-range', L('Sin `min` y `max` (ni `domain`) el riel no tiene escala: se escribe sólo la cifra.', 'Without `min` and `max` (or `domain`) the rail has no scale: only the figure is written.'), L('Da `min` y `max` (campos o números), o `domain: [desde, hasta]`.', 'Give `min` and `max` (fields or numbers), or `domain: [from, to]`.'));
+    if (spec.value === undefined && spec.x === undefined && spec.y === undefined) err('rail-value', L('El riel no dice cuál es el valor de la fila.', 'The rail does not say which value is the row\'s.'), L('Usa `value: "campo"` (o un número).', 'Use `value: "field"` (or a number).'));
+  }
   if (type === 'table' && data.length) {
     const cols = Array.isArray(spec.columns) ? spec.columns : [];
     for (const c of cols) {
@@ -241,6 +250,7 @@ function lintSpec(spec = {}) {
       if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
       else if (f !== undefined) check(f, 'columns');
       if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+      if (c && typeof c === 'object' && columnType(c.type) === 'range') lintRail(c, `columns["${f}"]`, { data, fields, check, err, warn, L });
       if (c && typeof c === 'object' && typeof c.formatBy === 'string') check(c.formatBy, 'columns.formatBy');
       if (c && typeof c === 'object' && c.formatBy !== undefined && c.type !== undefined && !['number', 'bar', 'heat', 'delta', 'range'].includes(columnType(c.type))) warn('table-formatby-type', L(`\`formatBy\` sólo aplica a columnas number, bar, heat, delta y range (columna "${f}").`, `\`formatBy\` only applies to number, bar, heat, delta and range columns (column "${f}").`), L('Quita `formatBy` o cambia el tipo de la columna.', 'Remove `formatBy` or change the column type.'));
       if (c && typeof c === 'object' && c.formatBy !== undefined && columnType(c.type) === 'bar') sug('table-formatby-bar', L(`Barras en unidades distintas por fila (columna "${f}") se comparan entre sí aunque no midan lo mismo.`, `Bars in different units per row (column "${f}") are compared with each other although they do not measure the same thing.`), L('Usa `type: "range"` (un riel por fila) o `type: "number"`.', 'Use `type: "range"` (one rail per row) or `type: "number"`.'));
@@ -547,4 +557,32 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     warn(key + '-unknown', L(`\`${key}\` nombra valores que no están en los datos: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`, `\`${key}\` names values that are not in the data: ${bad.slice(0, 4).map((b) => `"${b}"`).join(', ')}.`),
       L('Usa el texto exacto de una categoría o serie (se distinguen tildes y espacios).', 'Use the exact text of a category or series (accents and spaces count).'));
   }
+}
+
+/**
+ * Un riel (tipo `rail` o columna `range`): los extremos que nombran un campo
+ * existen, `refs` trae un valor o un campo en cada entrada, `domain` es un par
+ * y `fallback` / `clip` tienen valores válidos.
+ */
+function lintRail(o, where, { data, fields, check, err, L }) {
+  const named = (k, v) => { if (typeof v === 'string' && data.length) check(v, `${where}.${k}`); };
+  for (const k of ['min', 'max', 'median', 'ref']) named(k, o[k]);
+  if (o.band !== undefined) {
+    if (!Array.isArray(o.band) || o.band.length !== 2) err('rail-band', L(`\`band\` (${where}) es un par [desde, hasta].`, `\`band\` (${where}) is a pair [from, to].`), 'band: ["q1", "q3"]');
+    else o.band.forEach((v, i) => named(`band[${i}]`, v));
+  }
+  if (o.domain !== undefined && o.domain !== null) {
+    if (!Array.isArray(o.domain) || o.domain.length !== 2) err('rail-domain', L(`\`domain\` (${where}) es un par [desde, hasta]: números o campos.`, `\`domain\` (${where}) is a pair [from, to]: numbers or fields.`), 'domain: ["p5", "p95"]');
+    else o.domain.forEach((v, i) => named(`domain[${i}]`, v));
+  }
+  if (o.refs !== undefined) {
+    if (!Array.isArray(o.refs)) err('rail-refs', L(`\`refs\` (${where}) es una lista.`, `\`refs\` (${where}) is a list.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+    else o.refs.forEach((r, i) => {
+      if (typeof r === 'number' || typeof r === 'string') { named(`refs[${i}]`, r); return; }
+      if (!r || typeof r !== 'object' || (r.value === undefined && r.field === undefined)) err('rail-refs', L(`\`refs[${i}]\` (${where}) no trae \`value\` ni \`field\`.`, `\`refs[${i}]\` (${where}) has neither \`value\` nor \`field\`.`), 'refs: [{ field: "region", label: "Región" }, { value: 12, label: "Meta" }]');
+      else { named(`refs[${i}].field`, r.field); named(`refs[${i}].value`, r.value); }
+    });
+  }
+  if (o.clip !== undefined && typeof o.clip !== 'boolean') err('rail-clip', L(`\`clip\` (${where}) es true o false.`, `\`clip\` (${where}) is true or false.`), 'clip: true');
+  if (o.fallback !== undefined && !['value', 'none'].includes(o.fallback)) err('enum-fallback', L(`\`fallback\` (${where}) es "value" o "none".`, `\`fallback\` (${where}) is "value" or "none".`), 'fallback: "value"');
 }

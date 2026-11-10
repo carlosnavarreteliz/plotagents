@@ -44,7 +44,7 @@ export function createFrame(spec, theme, defaults = {}) {
   const X = ctx.textScale; // alturas de línea crecen con la escala de texto
   const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
   titleLines.forEach((l, i) => {
-    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
+    header.push(text(pad, y + T.title * X * 0.9 + i * tlh, l, { fill: spec._titleColor ?? theme.ink, fontSize: T.title, fontWeight: tw, letterSpacing: '-0.01em' }));
   });
   if (titleLines.length) y += titleLines.length * tlh + 2;
   subLines.forEach((l, i) => {

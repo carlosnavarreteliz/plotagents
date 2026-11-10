@@ -38,7 +38,7 @@ export const schema = {
       type: 'string',
       enum: [...new Set(['auto', ...TYPES, 'pointmap', ...Object.keys(ALIASES)])],
       description:
-        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
+        'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, spark (a sparkline for a table cell), rail (one row of a distribution for a table cell: min–max, a band, the median, the value and reference ticks), network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
       description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
@@ -53,7 +53,7 @@ export const schema = {
     series: field('Field that splits the data into colored series. Alias: hue.'),
     color: field('Alias of series when it names a field (a "#hex" value is a fixed color instead).'),
     hue: field('Alias of series (seaborn naming).'),
-    value: field('Value field for treemap, sunburst, donut, heatmap, sankey and radar.'),
+    value: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'Value field for treemap, sunburst, donut, heatmap, sankey and radar. rail: the row value drawn as the dot (a field of the row, or a number).' },
     label: field('Name field (treemap, donut, point labels in scatter/regplot).'),
     group: field('Level-1 group field for a two-level treemap (shortcut for path). gantt: phase/workstream field (one colored section per phase). table: rows grouped under a header per value.'),
     path: { type: 'array', items: { type: 'string' }, description: 'Hierarchy for treemap/sunburst, any depth: [level1, level2, …].' },
@@ -176,7 +176,7 @@ export const schema = {
     col: field('Alias of facet (seaborn naming).'),
     facetOrder: { type: 'array', items: { type: 'string' }, description: 'facet: panel order (values of the facet field; the rest follow).' },
     columns: {
-      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and a reference tick; `scale: "row"` gives each row its own scale). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row. waffle: squares per row.',
+      description: 'table: the columns, in order: field names or objects { field, label, type, format, align, width, good, target, colorScale, total, lines }. Column types: text, number, bar (data bar), heat (cell color), delta (▲/▼ change, colored by `good`), sparkline (field holds a list of numbers), progress (meter vs `target` field/number, or 0–1 / 0–100), badge (status pill; status words in es/en/pt/fr/de get good/warning/critical colors), check (booleans as ✓), date, link, rank, range (a rail: the row value as a dot on min–max, with a band [lo, hi], a median notch and reference ticks (`ref` or `refs: [{ field | value, label }]`); `scale: "row"` gives each row its own scale; `clip: true` cuts the scale to min–max and `domain: [from, to]` (numbers or fields) to any span, drawing what falls past an end as a chevron; a row without min/max in a column that has them prints only its number). link: a URL (opens in a new tab) or a site path such as "/es/x" (same tab). Omit to infer everything. facet: panels per row (an integer, seaborn col_wrap). kpi: tiles per row. waffle: squares per row.',
       anyOf: [
         { type: 'integer' },
         { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
@@ -187,6 +187,10 @@ export const schema = {
           min: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: field (or fixed number) with the low end of the rail.' }, max: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: high end of the rail.' },
           band: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2, description: 'range: [lo, hi] fields of the shaded band (e.g. quartiles).' }, bandLabel: { type: 'string' },
           median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: notch.' }, ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'range: reference tick (e.g. the national figure).' }, refLabel: { type: 'string' },
+          refs: { type: 'array', items: { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'object', properties: { value: { type: 'number' }, field: { type: 'string' }, label: { type: 'string' }, color: { type: 'string' } } }] }, description: 'range: several reference ticks, each with its label in the tooltip.' },
+          clip: { type: 'boolean', description: 'range: the scale is min–max (the column\'s, or the row\'s with scale: "row"); what falls past an end is a chevron.' },
+          domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'range: each row\'s scale, [from, to] as numbers or fields (e.g. p5–p95); past an end, a chevron.' },
+          minLabel: { type: 'string' }, maxLabel: { type: 'string' }, medianLabel: { type: 'string' }, domainLabel: { type: 'string' },
           scale: { type: 'string', enum: ['shared', 'row'], description: 'range: one scale for the column (default) or one per row (indicators in different units).' },
           formatBy: { type: 'string', description: 'number/bar/heat/delta/range: one format per row (indicators in different units). A field whose value is a format ("percent", { suffix: " yrs" }); from JS also a function (value, row) => text. Range rails go per row; no total.' },
           total: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['sum', 'mean', 'min', 'max', 'count'] }] }, lines: { type: 'integer', minimum: 1, maximum: 6 }, text: { type: 'string', description: 'link: field with the text to show instead of the URL.' }, sortable: { type: 'boolean' },
@@ -211,8 +215,24 @@ export const schema = {
     bin: number('dotplot: bin width in units of `x` (or `bins` for a count).'),
     ticks: { type: 'array', description: 'dotplot: your own axis ticks, [[value, label], …] (e.g. income brackets), instead of the automatic ones.', items: { anyOf: [{ type: 'number' }, { type: 'array' }] } },
     dotSize: number('dotplot: largest dot diameter in px (default 14).'),
+    // rail: una fila de una distribución en una celda (y la columna `range` de las tablas).
+    min: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: low end of the rail (a field of the row, or a number).' },
+    max: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: high end of the rail.' },
+    median: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: the median notch.' },
+    ref: { anyOf: [{ type: 'string' }, { type: 'number' }], description: 'rail: one reference tick (same as a one-entry `refs`), named by `refLabel`.' },
+    refs: { type: 'array', description: 'rail and table `range` columns: reference ticks, each with its own label in the tooltip: [{ field: "region", label: "Biobío" }, { value: 12, label: "Target", color }]. `label` may name a field of the row. A ref outside a clipped scale is an open chevron at that end.', items: { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'object', properties: { value: { type: 'number' }, field: { type: 'string' }, label: { type: 'string' }, color: { type: 'string' } } }] } },
+    refLabel: { type: 'string', description: 'rail: name of `ref` in the tooltip (default "Reference").' },
+    bandLabel: { type: 'string', description: 'rail: name of the band in the tooltip (default "Middle half").' },
+    medianLabel: { type: 'string', description: 'rail: name of the median in the tooltip (default "Median").' },
+    minLabel: { type: 'string', description: 'rail: name of the low end in the tooltip, or a field of the row holding it (e.g. the lowest place). With minLabel/maxLabel the tooltip lists both ends instead of "Range: a–b".' },
+    maxLabel: { type: 'string', description: 'rail: name of the high end in the tooltip, or a field of the row holding it.' },
+    valueLabel: { type: 'string', description: 'rail: name of the dot in the tooltip (default: the value field), or a field of the row holding it.' },
+    domainLabel: { type: 'string', description: 'rail: with `domain`, a tooltip line naming the scale (e.g. "Middle 90% of communes").' },
+    domain: { type: 'array', minItems: 2, maxItems: 2, items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, description: 'rail: the scale, [from, to] as numbers or fields (e.g. ["p5", "p95"]). Anything past an end is drawn as a chevron at that end instead of stretching the scale; without min/max the rail spans the whole domain.' },
+    clip: bool('rail: the scale is [min, max]; a value or reference past an end is a chevron at that end (it does not stretch the scale).'),
+    fallback: { type: 'string', enum: ['value', 'none'], description: 'rail: what a row without min/max (and no `domain`) shows: the figure alone (default) or nothing. Never a lone dot.' },
     dot: bool('spark: false hides the end dot.'),
-    dotRadius: number('spark: end dot radius in px.'),
+    dotRadius: number('spark: end dot radius in px. rail: the dot radius (default 4.5 at 18 px tall).'),
     unit: number('waffle: what one square is worth (default 1, or a round number when the total passes `maxSquares`).'),
     maxSquares: { type: 'integer', description: 'waffle: most squares before each square is worth a round `unit` (default 400).' },
     perSquare: bool('waffle: each square is its own mark with its own row\'s tooltip (one check, one person), in data order within each series. Only while one square is one unit.'),
@@ -225,6 +245,7 @@ export const schema = {
     panelHeight: number('facet: height of each panel in px (a `panelNote` adds its own lines on top).'),
     sharey: { description: 'facet: same y scale in every panel (default true). "span": the same span in every panel, each with its own floor, and the same plot size in pixels, so a slope means the same change everywhere.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['span'] }] },
     panelNote: field('facet: a field whose value is written under each panel name (e.g. the latest value and its change). Space is reserved for it in every panel, so panels never overlap and keep the same plot height.'),
+    panelColor: { anyOf: [{ type: 'boolean' }, { type: 'object', additionalProperties: { type: 'string' } }], description: 'facet: write each panel name in a colour: true takes the panel\'s series colour (facet and series on the same field, or one series per panel); an object { panel: color }; from JS a function (panel, rows) => color. Hex colours are darkened as needed to stay readable.' },
     time: field('Time field (d3plus-style): shows one period at a time (the latest by default, or `timeValue`). Add `slider: true` only when the person asks to move through periods.'),
     timeValue: { description: 'Period to show when `time` is set.' },
     slider: { description: 'Browser time controls, OFF by default; set them only when the person asks. true: period buttons when there are few periods (≤ 8), a minimal slider otherwise; line/area get a range slider. "buttons" or "slider" force one.', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['buttons', 'slider'] }] },
@@ -294,7 +315,7 @@ export const schema = {
       anyOf: [{ type: 'boolean' }, { type: 'string' }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object' }] } }, { type: 'object', properties: { title: { type: 'string' }, fields: { type: 'array' }, text: { type: 'string' }, replace: { type: 'boolean' } } }],
     },
     crosshair: bool('line/area: false writes one tooltip column per x (with `data-tip`) instead of the browser crosshair: for pages that bring their own tooltip layer. Implied by `tooltip`.'),
-    band: { type: 'object', properties: { lower: { type: 'string' }, upper: { type: 'string' }, label: { type: 'string' } }, required: ['lower', 'upper'], description: 'line/area: an interval that comes already computed (a model\'s 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`.' },
+    band: { anyOf: [{ type: 'object', properties: { lower: { type: 'string' }, upper: { type: 'string' }, label: { type: 'string' } }, required: ['lower', 'upper'] }, { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'number' }] }, minItems: 2, maxItems: 2 }], description: 'line/area: an interval that comes already computed (a model\'s 80% interval, a published range), drawn as is with no estimator. `label` names it in the legend. Combines with `dashedFrom`. rail: [lo, hi] fields (or numbers) of the shaded band, e.g. the quartiles.' },
     missingLabel: { type: 'string', description: 'bar: what the tooltip says for a value that is missing (default "sin dato" / "no data"). A missing value is never drawn as 0.' },
     missingMark: { type: 'string', description: 'bar: text written at the base where a bar is missing ("n/a").' },
     xBands: { description: 'bar (columns) and line/area: shaded ranges of the x axis behind the marks: [{ from, to, label, color }].', anyOf: [{ type: 'object' }, { type: 'array', items: { type: 'object', properties: { from: {}, to: {}, label: { type: 'string' }, color: { type: 'string' } } } }] },
@@ -450,7 +471,7 @@ export function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = 
   }
   name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, rail (one row of a distribution sized for a table cell), table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

@@ -3,7 +3,7 @@
 // correcta a 8 líneas enredadas o a un doble eje.
 import { el, g } from './svg.js';
 import { createFrame } from './frame.js';
-import { colorMap, themeFor } from './theme.js';
+import { colorMap, themeFor, readable } from './theme.js';
 import { ensureData, requireField, uniq, fieldKind, num } from './data.js';
 import { niceDomain } from './scale.js';
 
@@ -99,15 +99,39 @@ export function facet(spec, theme, renderOne) {
     if (shareX && !xDomain && xs.length) xDomain = [Math.min(...xs.map((d) => d[0])), Math.max(...xs.map((d) => d[1]))];
   }
 
-  const svgs = keys.map((k, i) => {
+  // `panelColor`: el nombre de cada panel en el color de su serie (true), en
+  // el de un objeto { panel: color } o en el que diga una función (panel, filas).
+  const pc = spec.panelColor;
+  const titleColors = keys.map((k, i) => {
+    if (!pc) return undefined;
+    let c;
+    if (typeof pc === 'function') c = pc(k, subsets[i]);
+    else if (typeof pc === 'object') c = pc[k];
+    else if (pc === true || typeof pc === 'string') {
+      const own = sf ? uniq(subsets[i].map((r) => String(r[sf]))) : [];
+      c = colors[k] ?? (own.length === 1 ? colors[own[0]] : undefined) ?? (typeof pc === 'string' ? pc : undefined);
+    }
+    if (typeof c !== 'string' || !c) return undefined;
+    return /^#[0-9a-f]{3,8}$/i.test(c) ? readable(c, theme) : c;
+  });
+
+  // Con el eje x compartido, cada panel deja lugar a las marcas del eje y como
+  // un gráfico suelto (`_xShared`); si los paneles piden distinto, se dibujan
+  // otra vez con el mayor, para que todos tengan la misma escala x.
+  const draw = (k, i, extra = {}) => {
     try {
       // Anotaciones con `panel` van sólo a ese panel; sin `panel`, a todos.
       const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
-      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}) });
+      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
     } catch (e) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
     }
-  });
+  };
+  const xd = keys.map(() => ({}));
+  let svgs = keys.map((k, i) => draw(k, i, xDomain ? { _xShared: true, _domains: xd[i] } : {}));
+  const xPads = xd.map((d) => d.xPad).filter((v) => Number.isFinite(v));
+  const xPadMax = xPads.length ? Math.max(...xPads) : 0;
+  if (xPadMax > 0 && xPads.some((v) => v !== xPadMax)) svgs = keys.map((k, i) => draw(k, i, { _xShared: true, _xPad: xPadMax }));
   // Cada fila mide lo que su panel más alto: un panel que creció (un trazado
   // que no cabía) empuja la fila de abajo en vez de montarse encima.
   const heightOf = (svg) => +((/^<svg\b[^>]*?\sheight="([\d.]+)"/.exec(svg) || [])[1]) || ph;
