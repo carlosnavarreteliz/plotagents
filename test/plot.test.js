@@ -82,7 +82,7 @@ test('describe, HTML, schema y definición de herramienta', () => {
   assert.match(describe({ type: 'bar', data: ventas, x: 'region', y: 'ventas' }), /Mayor: Biobío con 1\.240/);
   const html = toHTML([{ data: ventas, title: 'Uno' }, { data: ventas, title: 'Dos', theme: 'noche' }]);
   assert.ok(html.startsWith('<!doctype html>') && html.includes('pa-chart'));
-  assert.equal(schema.required[0], 'data');
+  assert.ok(!(schema.required || []).includes('data'));
   assert.equal(toolDefinition().name, 'plot');
   assert.equal(toolDefinition({ flavor: 'openai' }).type, 'function');
 });

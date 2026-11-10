@@ -12,12 +12,18 @@ export function attach(root) {
   const dark = svg.getAttribute('data-pa-mode') === 'dark';
   const tipEl = document.createElement('div');
   tipEl.setAttribute('role', 'tooltip');
+  tipEl.id = 'pa-tip-' + Math.random().toString(36).slice(2, 8);
+  // Tooltip como tarjeta: fondo del tema (o `theme.tooltip`), cabecera del color de la marca.
+  const custom = (svg.getAttribute('data-pa-tip') || '').split(',');
+  const tipBg = custom[0] || (dark ? '#151A3D' : '#FFFFFF');
+  const tipInk = custom[1] || (dark ? '#F2F3FA' : '#141A3F');
   tipEl.style.cssText = [
     'position:absolute', 'pointer-events:none', 'z-index:10', 'opacity:0', 'transition:opacity .12s',
     'padding:8px 10px', 'border-radius:8px', 'font:12.5px/1.45 ' + (svg.getAttribute('font-family') || 'system-ui'),
-    'white-space:nowrap', 'max-width:280px',
-    dark ? 'background:#F2F3FA;color:#141A3F' : 'background:#141A3F;color:#FCFBF9',
-    'box-shadow:0 6px 24px rgba(11,15,43,.18)',
+    'width:max-content', 'max-width:280px', 'overflow:hidden', 'overflow-wrap:anywhere', 'font-variant-numeric:tabular-nums',
+    `background:${tipBg};color:${tipInk}`,
+    dark ? 'border:1px solid rgba(242,243,250,.14)' : 'border:1px solid rgba(20,26,63,.10)',
+    'box-shadow:0 8px 28px rgba(11,15,43,' + (dark ? '.45' : '.16') + ')',
   ].join(';');
   root.appendChild(tipEl);
   const NS = 'http://www.w3.org/2000/svg';
@@ -27,25 +33,77 @@ export function attach(root) {
   let on = null;
   let pinned = null;
 
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  const show = (html, ev) => {
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  // Colores que llegan desde atributos de datos: solo hex o rgb() (nada que rompa el HTML).
+  const col = (c) => (/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(String(c || '').trim()) ? String(c).trim() : '#888888');
+  // Posición: junto a la marca (no al cursor), nunca sobre el título ni la
+  // bajada, y dentro del gráfico. Prueba arriba, derecha, izquierda y abajo
+  // (en barras horizontales, derecha primero) y conserva el lado anterior
+  // mientras siga sirviendo, para que no salte.
+  let lastSide = null;
+  const headerBottom = (r) => {
+    const t = +svg.getAttribute('data-pa-top');
+    const m = svg.getScreenCTM && svg.getScreenCTM();
+    return t && m ? t * m.d + m.f - r.top : 0;
+  };
+  const show = (html, ev, anchor, order) => {
     tipEl.innerHTML = html;
     tipEl.style.opacity = '1';
     const r = root.getBoundingClientRect();
-    let x = ev.clientX - r.left + 14, y = ev.clientY - r.top + 14;
-    const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
-    if (x + w > r.width) x = ev.clientX - r.left - w - 14;
-    if (y + h > r.height) y = Math.max(0, ev.clientY - r.top - h - 14);
+    const w = tipEl.offsetWidth, h = tipEl.offsetHeight, G = 10, M = 4;
+    const cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+    let a = null;
+    if (anchor && anchor.l !== undefined) a = anchor;
+    else if (anchor && anchor.getBoundingClientRect) {
+      const b = anchor.getBoundingClientRect(), sb = svg.getBoundingClientRect();
+      // Marcas grandes (celdas de treemap, regiones, sectores): mejor el puntero.
+      if (b.width > 0 && b.width * b.height < 0.2 * sb.width * sb.height) a = { l: b.left - r.left, r: b.right - r.left, t: b.top - r.top, b: b.bottom - r.top };
+    }
+    if (!a) a = { l: cx - 8, r: cx + 8, t: cy - 8, b: cy + 8 };
+    const minY = Math.min(Math.max(M, headerBottom(r) + M), Math.max(M, r.height - h - M));
+    const maxY = Math.max(minY, r.height - h - M), maxX = Math.max(M, r.width - w - M);
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const hx = clamp(cx, a.l, a.r) - w / 2, vy = clamp(cy, a.t, a.b) - h / 2;
+    const C = {
+      top: [clamp(hx, M, maxX), a.t - G - h, 'y'],
+      bottom: [clamp(hx, M, maxX), a.b + G, 'y'],
+      right: [a.r + G, clamp(vy, minY, maxY), 'x'],
+      left: [a.l - G - w, clamp(vy, minY, maxY), 'x'],
+    };
+    const ok = ([x, y]) => x >= M - 0.5 && x <= maxX + 0.5 && y >= minY - 0.5 && y <= maxY + 0.5;
+    const sides = order || (a.r - a.l > a.b - a.t && a.r - a.l > 40 ? ['right', 'top', 'left', 'bottom'] : ['top', 'right', 'left', 'bottom']);
+    const pick = [lastSide, ...sides].find((sd) => sd && C[sd] && ok(C[sd]));
+    let x, y;
+    if (pick) { [x, y] = C[pick]; lastSide = pick; }
+    else { x = clamp(cx + 14, M, maxX); y = clamp(cy + 14, minY, maxY); lastSide = null; }
     tipEl.style.left = x + 'px';
     tipEl.style.top = y + 'px';
   };
   const type = svg.getAttribute('data-pa-type') || '';
-  const isMap = type === 'choropleth' || type === 'symbolmap';
+  const isMap = type === 'choropleth' || type === 'symbolmap' || type === 'pointmap';
   const zoomG = svg.querySelector('.pa-zoom');
   const mapOverlay = document.createElementNS(NS, 'g');
   mapOverlay.setAttribute('pointer-events', 'none');
   if (zoomG) zoomG.appendChild(mapOverlay);
+  // Red: al pasar sobre un nodo se encienden sus vecinos y sus aristas (como
+  // emphasis.focus: 'adjacency' de ECharts); el resto se apaga.
+  let extraOn = [];
+  const adjacency = (node) => {
+    extraOn.forEach((n) => n.classList.remove('pa-on'));
+    extraOn = [];
+    const id = node && node.getAttribute && node.getAttribute('data-node');
+    const net = id !== null && id !== undefined && node.closest && node.closest('.pa-net');
+    if (!net) return;
+    const near = new Set([id]);
+    for (const e of net.querySelectorAll('.pa-links [data-s]')) {
+      const a = e.getAttribute('data-s'), b = e.getAttribute('data-t');
+      if (a === id || b === id) { near.add(a); near.add(b); e.classList.add('pa-on'); extraOn.push(e); }
+    }
+    for (const c of net.querySelectorAll('.pa-nodes [data-node]')) if (near.has(c.getAttribute('data-node')) && c !== node) { c.classList.add('pa-on'); extraOn.push(c); }
+  };
   const hide = () => {
+    extraOn.forEach((n) => n.classList.remove('pa-on'));
+    extraOn = [];
     tipEl.style.opacity = '0';
     if (on) on.classList.remove('pa-on');
     on = null;
@@ -53,19 +111,27 @@ export function attach(root) {
     mapOverlay.innerHTML = '';
     if (!pinned) svg.classList.remove('pa-focus');
   };
-  // El título del tooltip hereda el color de la categoría, aclarado u
-  // oscurecido hasta leerse bien sobre el fondo del tooltip; el resto, neutro.
-  const tipBg = dark ? '#F2F3FA' : '#141A3F';
-  const rgb = (h) => { h = String(h).replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  // Cabecera del tooltip con el color de la marca de fondo y texto blanco u
+  // oscuro según el contraste (≥ 4,5:1; si ninguno llega, se ajusta el fondo).
+  const rgb = (h) => { h = String(h).replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h.slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
   const lum = (c) => { const [r, g, b] = rgb(c).map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
   const hex = (a) => '#' + a.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
-  const onTip = (c) => {
-    if (!/^#[0-9a-f]{3,6}$/i.test(c || '')) return null;
-    const to = dark ? [20, 26, 63] : [255, 255, 255];
-    const A = rgb(c);
-    for (let t = 0; t <= 1.001; t += 0.05) { const m = hex(A.map((v, i) => v + (to[i] - v) * t)); if (ratio(m, tipBg) >= 4.5) return m; }
-    return null;
+  const toHex = (c) => {
+    c = String(c || '').trim();
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c)) return c;
+    const m = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(c);
+    return m ? hex([+m[1], +m[2], +m[3]]) : null;
+  };
+  const headerInk = (c) => {
+    let bg = toHex(c);
+    if (!bg) return null;
+    const DARK = '#141A3F', LIGHT = '#FFFFFF';
+    const fg = ratio(LIGHT, bg) >= ratio(DARK, bg) ? LIGHT : DARK;
+    const to = fg === LIGHT ? [0, 0, 0] : [255, 255, 255];
+    const A = rgb(bg);
+    for (let t = 0.05; ratio(fg, bg) < 4.5 && t <= 1.001; t += 0.05) bg = hex(A.map((v, i) => v + (to[i] - v) * t));
+    return { bg, fg };
   };
   const markColor = (node) => {
     if (!node) return null;
@@ -83,10 +149,17 @@ export function attach(root) {
     return null;
   };
   const linesHtml = (txt, color) => {
-    const c = onTip(color);
-    return String(txt).split('\n').map((l, i) => (i === 0
-      ? `<div style="font-weight:600${c ? ';color:' + c : ''}">${c ? `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:6px;vertical-align:1px"></span>` : ''}${esc(l)}</div>`
-      : `<div style="opacity:.86">${esc(l)}</div>`)).join('');
+    const hd = headerInk(color);
+    return String(txt).split('\n').map((l, i) => {
+      if (i === 0) return hd
+        ? `<div style="margin:-8px -10px 6px;padding:6px 10px;background:${hd.bg};color:${hd.fg};font-weight:600">${esc(l)}</div>`
+        : `<div style="font-weight:600;margin-bottom:2px">${esc(l)}</div>`;
+      // "Etiqueta: valor" → etiqueta a la izquierda y valor en negrita a la derecha.
+      const m = /^(.{1,40}?):\s+(.+)$/.exec(l);
+      return m
+        ? `<div style="display:flex;gap:12px;justify-content:space-between"><span style="opacity:.78">${esc(m[1])}</span><b style="font-weight:600">${esc(m[2])}</b></div>`
+        : `<div style="opacity:.86">${esc(l)}</div>`;
+    }).join('');
   };
 
   const toSvg = (ev) => {
@@ -105,10 +178,12 @@ export function attach(root) {
       for (const d of data) if (Math.abs(d.x - p.x) < Math.abs(best.x - p.x)) best = d;
       const y0 = +t.getAttribute('data-y0'), y1 = +t.getAttribute('data-y1');
       overlay.innerHTML =
-        `<line x1="${best.x}" x2="${best.x}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
-        best.v.map((v) => `<circle cx="${best.x}" cy="${v[2]}" r="4.5" fill="${v[1]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
-      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${v[1]}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
-      show(`<div style="font-weight:600;margin-bottom:2px">${esc(best.t)}</div>${rows}`, ev);
+        `<line x1="${+best.x}" x2="${+best.x}" y1="${y0}" y2="${y1}" stroke="${dark ? '#8A90B4' : '#7C819C'}" stroke-width="1"/>` +
+        best.v.map((v) => `<circle cx="${+best.x}" cy="${+v[2]}" r="4.5" fill="${col(v[1])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`).join('');
+      const rows = [...best.v].sort((a, b) => a[2] - b[2]).map((v) => `<div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:${col(v[1])}"></span><span style="opacity:.86;flex:1">${esc(v[0])}</span><b style="font-weight:600;margin-left:12px">${esc(v[3])}</b></div>`).join('');
+      const m = svg.getScreenCTM(), rr = root.getBoundingClientRect();
+      const lx = m ? best.x * m.a + m.e - rr.left : ev.clientX - rr.left, ly = ev.clientY - rr.top;
+      show(`<div style="font-weight:600;margin-bottom:4px">${esc(best.t)}</div>${rows}`, ev, { l: lx - 6, r: lx + 6, t: ly - 4, b: ly + 4 }, ['right', 'left', 'top', 'bottom']);
       return;
     }
     if (t && t.classList && t.classList.contains('pa-near')) {
@@ -118,8 +193,8 @@ export function attach(root) {
       let best = null, bd = 196;
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) { hide(); return; }
-      overlay.innerHTML = `<circle cx="${best[0]}" cy="${best[1]}" r="6" fill="${best[3]}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
-      if (best[2]) show(linesHtml(best[2], best[3]), ev); else tipEl.style.opacity = '0';
+      overlay.innerHTML = `<circle cx="${+best[0]}" cy="${+best[1]}" r="6" fill="${col(best[3])}" stroke="${dark ? '#0B0F2B' : '#FCFBF9'}" stroke-width="2"/>`;
+      if (best[2]) { const m = svg.getScreenCTM(), rr = root.getBoundingClientRect(); const px = best[0] * m.a + m.e - rr.left, py = best[1] * m.d + m.f - rr.top; show(linesHtml(best[2], best[3]), ev, { l: px - 6, r: px + 6, t: py - 6, b: py + 6 }); } else tipEl.style.opacity = '0';
       return;
     }
     const tg = t && t.closest ? t.closest('[data-tip]') : null;
@@ -131,13 +206,55 @@ export function attach(root) {
       if (isMap) {
         // Mapas: sin atenuar el resto; un contorno marcado sobre la región (o su círculo).
         mapOverlay.innerHTML = '';
-        if (on && on.tagName === 'path') mapOverlay.innerHTML = `<path d="${on.getAttribute('d')}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+        if (on && on.tagName === 'path') mapOverlay.innerHTML = `<path d="${esc(on.getAttribute('d'))}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
         else if (on && on.tagName === 'circle') mapOverlay.innerHTML = `<circle cx="${on.getAttribute('cx')}" cy="${on.getAttribute('cy')}" r="${on.getAttribute('r')}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
-      } else if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); } else svg.classList.remove('pa-focus');
+      } else if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); adjacency(on); } else svg.classList.remove('pa-focus');
     }
-    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev);
+    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev, mark || tg);
   });
-  svg.addEventListener('pointerleave', hide);
+  // Táctil: un toque muestra el tooltip y lo deja abierto hasta otro toque fuera.
+  let touchTip = false;
+  svg.addEventListener('pointerdown', (ev) => {
+    if (ev.pointerType !== 'touch') return;
+    const tg = ev.target && ev.target.closest ? ev.target.closest('[data-tip]') : null;
+    if (!tg) { touchTip = false; hide(); return; }
+    touchTip = true;
+    const mark = tg.classList.contains('pa-m') ? tg : null;
+    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev, mark || tg);
+  });
+  svg.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'touch' && touchTip) return; hide(); });
+
+  // Teclado: Tab entra al gráfico; flechas recorren las marcas con datos,
+  // Home/End van al extremo y Esc cierra. El tooltip se ancla a la marca.
+  const lang = svg.getAttribute('data-pa-lang') === 'en';
+  svg.setAttribute('role', 'graphics-document');
+  svg.setAttribute('aria-roledescription', lang ? 'chart' : 'gráfico');
+  if (!svg.hasAttribute('tabindex')) svg.setAttribute('tabindex', '0');
+  const live = document.createElement('div');
+  live.setAttribute('aria-live', 'polite');
+  live.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+  root.appendChild(live);
+  let kIdx = -1;
+  const kMarks = () => [...svg.querySelectorAll('.pa-body [data-tip]')].filter((n) => !n.parentElement.closest('[data-tip]') && n.getAttribute('data-tip'));
+  svg.addEventListener('keydown', (ev) => {
+    if (ev.target !== svg) return;
+    if (ev.key === 'Escape') { kIdx = -1; hide(); return; }
+    const d = ev.key === 'ArrowRight' || ev.key === 'ArrowDown' ? 1 : ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ? -1 : ev.key === 'Home' ? -1e9 : ev.key === 'End' ? 1e9 : 0;
+    if (!d) return;
+    const ms = kMarks();
+    if (!ms.length) return;
+    ev.preventDefault();
+    kIdx = Math.max(0, Math.min(ms.length - 1, kIdx < 0 ? (d > 0 ? 0 : ms.length - 1) : kIdx + d));
+    const tg = ms[kIdx];
+    const b = tg.getBoundingClientRect();
+    const mark = tg.classList.contains('pa-m') ? tg : tg.querySelector('.pa-m');
+    if (on) on.classList.remove('pa-on');
+    on = mark;
+    if (!isMap && on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); }
+    show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), { clientX: b.left + b.width / 2, clientY: b.top + b.height / 2 }, tg);
+    live.textContent = tg.getAttribute('data-tip').replace(/\n/g, '. ');
+  });
+  svg.addEventListener('blur', () => { kIdx = -1; hide(); });
 
   // Leyenda conectada: pasar sobre una clave destaca sus marcas (mismo color);
   // un clic la deja fija, otro clic la suelta.
@@ -173,9 +290,13 @@ export function attach(root) {
     k.setAttribute('role', 'button');
     k.addEventListener('pointerenter', () => { if (!pinned) focusColor(k.getAttribute('data-color')); });
     k.addEventListener('pointerleave', () => { if (!pinned) focusColor(null); });
-    const toggle = () => { pinned = pinned === k ? null : k; focusColor(pinned ? k.getAttribute('data-color') : null); };
+    const toggle = (e) => {
+      // render() puede tomar el clic (zoom en treemap, shift + clic = excluir).
+      if (root.__paLegend && root.__paLegend(k, e || {})) return;
+      pinned = pinned === k ? null : k; focusColor(pinned ? k.getAttribute('data-color') : null);
+    };
     k.addEventListener('click', toggle);
-    k.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    k.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
   }
 
   if (zoomG) mapZoom(root, svg, zoomG, { dark, hide });

@@ -113,8 +113,8 @@ export function aggregate(values, how = 'sum') {
   if (!v.length) return NaN;
   switch (how) {
     case 'mean': case 'avg': return v.reduce((a, b) => a + b, 0) / v.length;
-    case 'max': return Math.max(...v);
-    case 'min': return Math.min(...v);
+    case 'max': return v.reduce((a, b) => (b > a ? b : a), -Infinity); // sin spread: no desborda con 150 mil filas
+    case 'min': return v.reduce((a, b) => (b < a ? b : a), Infinity);
     case 'count': return v.length;
     case 'last': return v[v.length - 1];
     case 'first': return v[0];

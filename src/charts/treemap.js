@@ -85,7 +85,8 @@ export function treemap(spec, theme) {
   if (byChange) (function walk(n) { if (!n.children.length) { const c = changeOf(n); if (c !== null) cMax = Math.max(cMax, Math.abs(c)); } n.children.forEach(walk); })(focus);
   cMax = spec.changeDomain ?? (Math.ceil(Math.min(1, cMax || 0.1) * 20) / 20);
   // Crecimiento en el tono frío, caída en el cálido; gris neutro sin cambio.
-  const divRamp = [...theme.diverging].reverse();
+  // Con una colormap propia (cmap) se respeta su orientación: bajo → alto.
+  const divRamp = theme.cmap ? [...theme.diverging] : [...theme.diverging].reverse();
   const changeColor = (c) => (c === null ? theme.tint : ramp(divRamp, 0.5 + Math.max(-1, Math.min(1, c / cMax)) / 2));
 
   // Leyenda del primer nivel visible, con su participación: la leyenda también informa.
@@ -93,12 +94,14 @@ export function treemap(spec, theme) {
   let legend = [];
   if (byChange && spec.legend !== false) {
     const lab = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatNumber(Math.abs(v) * 100, 0, locale)}%`;
-    legend = [{ type: 'ramp', stops: [...theme.diverging].reverse(), min: lab(-cMax), max: lab(cMax), title: (en ? 'Change' : 'Variación') + (prevLabel ? (en ? ' vs ' : ' vs ') + prevLabel : '') }];
-  } else if (levels > 1 && top.length > 1 && spec.legend !== false && !focus.path.length) {
-    const shown = top.filter((c) => !c.folded);
-    const sh0 = shareFmt(locale);
-    legend = shown.map((c) => ({ label: `${c.name} ${sh0(c.value, focus.value)}`, color: c.color, shape: 'square' }));
-    if (top.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
+    legend = [{ type: 'ramp', stops: divRamp, min: lab(-cMax), max: lab(cMax), title: (en ? 'Change' : 'Variación') + (prevLabel ? (en ? ' vs ' : ' vs ') + prevLabel : '') }];
+  } else if (height(root) > 1 && root.children.length > 1 && spec.legend !== false) {
+    // Leyenda del primer nivel, también al entrar a un grupo: clic = ver solo
+    // esa categoría en todo el plano; shift + clic = quitarla (en el navegador).
+    const tops = root.children;
+    const active = focus.path[0];
+    legend = tops.filter((c) => !c.folded).map((c) => ({ label: `${c.name} ${share(c.value, root.value)}`, value: c.name, color: c.color, shape: 'square', active: active === undefined ? undefined : active === c.name }));
+    if (tops.some((c) => c.folded)) legend.push({ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' });
   }
 
   // En pantallas angostas el treemap crece hacia abajo: rectángulos legibles.

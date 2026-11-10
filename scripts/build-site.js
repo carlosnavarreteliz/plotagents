@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { plot, lint, safePlot, resolve as resolveSpec, TYPES } from '../src/index.js';
+import { plot, lint, safePlot, resolve as resolveSpec, TYPES, colorScaleNames, resolveColorScale } from '../src/index.js';
 import { FONT_CSS } from '../src/theme.js';
 import { gallery, ORDER, nameOf, noteOf, sectionName, slug, snippet } from '../examples/gallery.js';
 import { markdown, highlight, esc } from '../site/md.js';
@@ -70,6 +70,10 @@ const ICON = {
   mark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5C4.8 3.5 4.5 5 4.5 6.5v3c0 1.2-.6 2.1-2 2.5 1.4.4 2 1.3 2 2.5v3c0 1.5.3 3 2.5 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="9.5" y="12" width="3" height="8" rx="1" fill="#E8A33D"/><rect x="14" y="8" width="3" height="12" rx="1" fill="var(--accent)"/><rect x="18.5" y="4" width="3" height="16" rx="1" fill="#6170E0"/></svg>',
 };
 
+// Favicon = la marca del logo (llave + tres barras), con tinta clara en pestañas oscuras.
+const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><style>.b{stroke:#141A3F}.m{fill:#D42A5E}@media (prefers-color-scheme:dark){.b{stroke:#F2F3FA}.m{fill:#FF4D7D}}</style><path class="b" d="M7 3.5C4.8 3.5 4.5 5 4.5 6.5v3c0 1.2-.6 2.1-2 2.5 1.4.4 2 1.3 2 2.5v3c0 1.5.3 3 2.5 3" fill="none" stroke-width="2.2" stroke-linecap="round"/><rect x="9.5" y="12" width="3" height="8" rx="1" fill="#E8A33D"/><rect class="m" x="14" y="8" width="3" height="12" rx="1"/><rect x="18.5" y="4" width="3" height="16" rx="1" fill="#6170E0"/></svg>';
+write('favicon.svg', FAVICON);
+
 const THEME_BOOT = `<script>addEventListener('scroll',function(){document.documentElement.classList.toggle('scrolled',scrollY>8)},{passive:true});(function(){var d=document.documentElement,p='auto';try{p=localStorage.getItem('pa-theme')||'auto'}catch(e){}if(p==='light'||p==='dark')d.setAttribute('data-theme',p);d.setAttribute('data-pref',p)})()</script>`;
 
 function layout({ p, active = '', title, description, body, scripts = '', bodyClass = '' }) {
@@ -86,7 +90,7 @@ function layout({ p, active = '', title, description, body, scripts = '', bodyCl
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#FCFBF9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0F2B" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#141A3F"/><rect x="7" y="16" width="4" height="9" rx="1.5" fill="#E8A33D"/><rect x="14" y="10" width="4" height="15" rx="1.5" fill="#D42A5E"/><rect x="21" y="6" width="4" height="19" rx="1.5" fill="#6170E0"/></svg>')}">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(FAVICON)}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONT_CSS}">
@@ -128,6 +132,7 @@ const DOCS = [
   { slug: 'getting-started', file: 'docs/getting-started.md', label: 'Getting started', group: 'Guide' },
   { slug: 'charts', file: 'docs/charts.md', label: 'Chart reference', group: 'Guide' },
   { slug: 'themes', file: 'docs/themes.md', label: 'Themes and colors', group: 'Guide' },
+  { slug: 'colorscales', file: 'docs/colorscales.md', label: 'Color scales', group: 'Guide' },
   { slug: 'dashboards', file: 'docs/dashboards.md', label: 'Dashboards', group: 'Guide' },
   { slug: 'api', file: 'docs/api.md', label: 'API reference', group: 'Reference' },
   { slug: 'agents', file: 'AGENTS.md', label: 'Guide for AI agents', group: 'Reference', title: 'Guide for AI agents' },
@@ -169,10 +174,24 @@ const sidebar = (cur) => {
 <h4>More</h4><ul><li><a href="../dashboard/">Live dashboard</a></li><li><a href="../examples/">Examples</a></li><li><a href="../playground/">Playground</a></li><li><a href="../schema.json">schema.json</a></li></ul></aside>`;
 };
 
+/** Franjas de todas las escalas de color, agrupadas por tipo (página Color scales). */
+function colorScaleGallery() {
+  const groups = colorScaleNames();
+  const title = { sequential: 'Sequential', diverging: 'Diverging', cyclic: 'Cyclic', qualitative: 'Qualitative (for palette)' };
+  return Object.entries(groups).map(([kind, names]) => `<h3 id="cs-${kind}">${title[kind]}</h3>\n<div class="cscales">${names.map((n) => {
+    const cs = resolveColorScale(n);
+    const bg = kind === 'qualitative'
+      ? `linear-gradient(to right,${cs.stops.map((c, i) => `${c} ${(i / cs.stops.length) * 100}% ${((i + 1) / cs.stops.length) * 100}%`).join(',')})`
+      : `linear-gradient(to right,${cs.stops.map((c, i) => `${c} ${(i / (cs.stops.length - 1)) * 100}%`).join(',')})`;
+    return `<div class="cs"><span class="cs-bar" style="background:${bg}"></span><code>${esc(n)}</code></div>`;
+  }).join('')}</div>`).join('\n');
+}
+
 for (const [i, d] of DOCS.entries()) {
   const md = markdown(read(d.file), { link: docLink(d.file), afterHeading: d.slug === 'charts' ? examplesFor : () => '' });
   let html = md.html;
   if (d.title) html = html.replace(/<h1 id="[^"]*">[\s\S]*?<\/h1>/, `<h1 id="top">${esc(d.title)}</h1>`);
+  if (d.slug === 'colorscales') html = html.replace(/<p>\{\{colorscales\}\}<\/p>/, colorScaleGallery());
   if (d.slug === 'agents') html = html.replace('</h1>', `</h1>\n<p>A short guide meant to be pasted into an agent's system prompt. The same text is published as plain Markdown at <a href="../AGENTS.md">AGENTS.md</a> and <a href="../llms.txt">llms.txt</a>.</p>`);
   const prev = DOCS[i - 1], next = DOCS[i + 1];
   const toc = md.toc.filter((t) => t.level >= 2);

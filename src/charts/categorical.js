@@ -7,7 +7,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
@@ -45,8 +45,8 @@ function prepare(spec) {
   if (cat) requireField(data, cat, 'x (categoría)');
   if (hue) requireField(data, hue, 'hue');
   const catOf = (r) => (cat ? String(r[cat] ?? '') : '');
-  const cats = spec.order ? spec.order.map(String) : uniq(data.map(catOf));
-  const hues = hue ? (spec.hueOrder ? spec.hueOrder.map(String) : uniq(data.map((r) => String(r[hue])))) : [''];
+  const cats = Array.isArray(spec.order) ? spec.order.map(String) : uniq(data.map(catOf));
+  const hues = hue ? (Array.isArray(spec.hueOrder) ? spec.hueOrder.map(String) : uniq(data.map((r) => String(r[hue])))) : [''];
   const groups = new Map();
   for (const r of data) {
     const v = num(r[val]);
@@ -57,6 +57,13 @@ function prepare(spec) {
   }
   const get = (c, h) => groups.get(c + '\u0000' + h) || [];
   const all = [...groups.values()].flat();
+  // Sin un solo número no hay eje de valores que dibujar.
+  if (!all.length) {
+    const en = String(spec.locale || 'es').startsWith('en');
+    throw en
+      ? new PlotError(`No numeric values in \`${val}\`.`, `\`${val}\` must hold numbers (empty, null and non-finite values are skipped). To count rows per category, use \`type: "countplot"\`.`)
+      : new PlotError(`No hay valores numéricos en \`${val}\`.`, `\`${val}\` debe tener números (se omiten vacíos, nulos y valores no finitos). Para contar filas por categoría usa \`type: "countplot"\`.`);
+  }
   return { data, cat, val, hue, cats, hues, get, all, swapped };
 }
 
@@ -134,7 +141,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
 
   if (spec._domains && typeof spec._domains === 'object') spec._domains.y = [nd.min, nd.max];
   // Líneas de referencia en el eje de valores (metas, umbrales).
-  const refs = (spec.refLines || []).map((r) => ({ ...r, y: r.value ?? r.y ?? r.x }));
+  const refs = [].concat(spec.refLines ?? []).filter((r) => r && typeof r === 'object').map((r) => ({ ...r, y: r.value ?? r.y ?? r.x }));
   if (refs.length) body.post.push(vertical ? refLinesY(refs, valS, inner, theme, fmt) : refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), valS, inner, theme, fmt));
 
   // Posición en el eje de categorías: centro de cada grupo (con "dodge" por hue).
@@ -229,7 +236,13 @@ export function violin(spec, theme) {
   const tf = logV ? Math.log10 : (v) => v, inv = logV ? (v) => 10 ** v : (v) => v;
   for (const c of m.cats) for (const h of m.hues) {
     const vs = m.get(c, h);
-    if (vs.length < 2) continue;
+    if (!vs.length) continue;
+    // Un solo valor (o todos iguales) no tiene densidad: se dibuja como una marca.
+    if (vs.length < 2 || Math.min(...vs) === Math.max(...vs)) {
+      dens.set(c + '\u0000' + h, { single: true, f: fiveNumber(vs), n: vs.length, max: 0 });
+      ext.push(vs[0]);
+      continue;
+    }
     const tv = vs.map(tf);
     const bw = (spec.bandwidth ?? scottBandwidth(tv)) * (spec.bwAdjust ?? 1);
     const mn = Math.min(...tv), mx = Math.max(...tv);
@@ -239,8 +252,8 @@ export function violin(spec, theme) {
   }
   const s = setup(spec, theme, m, extentOf(ext), { type: 'violin', dodge: !split });
   const scaleMode = ['width', 'count', 'area'].includes(spec.scale) ? spec.scale : spec.densityNorm ?? 'width';
-  const gMax = Math.max(...[...dens.values()].map((x) => x.max));
-  const nMax = Math.max(...[...dens.values()].map((x) => x.n));
+  const gMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.max), 0);
+  const nMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.n), 1);
   const inner = spec.inner ?? 'box';
   const op = Math.min(0.5, (theme.marks?.bandOpacity ?? 0.16) * 2.2);
   m.cats.forEach((c) => m.hues.forEach((h, hi2) => {
@@ -252,6 +265,17 @@ export function violin(spec, theme) {
     const norm = scaleMode === 'width' ? D.max : scaleMode === 'count' ? gMax * (nMax / D.n) : gMax;
     const wOf = (d) => (d / (norm || 1)) * half;
     const side = split ? (hi2 === 0 ? -1 : 1) : 0;
+    if (D.single) {
+      // Sin forma que estimar: una raya a lo ancho del violín y un punto en el valor.
+      const v = D.f.median, w = Math.min(half, 18);
+      const [x, y] = s.P(cpos, v);
+      const parts = [
+        seg(s, cpos - (side === 1 ? 0 : w), v, cpos + (side === -1 ? 0 : w), v, { stroke: color, strokeWidth: 2, strokeLinecap: 'round' }),
+        el('circle', { cx: x, cy: y, r: 3.5, fill: color, stroke: theme.surface, strokeWidth: 1.5 }),
+      ];
+      s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T('Value', 'Valor', s.locale)}: ${s.fmt(v)}`) }, parts));
+      return;
+    }
     const right = D.d.map(([v, d]) => s.P(cpos + (side === -1 ? 0 : wOf(d)), v));
     const left = D.d.map(([v, d]) => s.P(cpos - (side === 1 ? 0 : wOf(d)), v)).reverse();
     const pts = side === -1 ? [...D.d.map(([v]) => s.P(cpos, v)), ...left] : side === 1 ? [...right, ...D.d.map(([v]) => s.P(cpos, v)).reverse()] : [...right, ...left];

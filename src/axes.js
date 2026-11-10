@@ -10,7 +10,7 @@ export function gridY(ticks, y, area, theme, fmt, { labels = true, baseline = 0 
   for (const t of ticks) {
     const py = Math.round(y(t)) + 0.5;
     const isBase = t === baseline;
-    out.push(el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: isBase ? theme.axis : theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+    out.push(el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: isBase ? theme.axis : theme.grid, ...gridAttrs(theme, isBase) }));
     if (labels) out.push(text(area.x - 8, py + 4, fmt(t), { fill: theme.muted, fontSize: SIZES.axis, textAnchor: 'end' }));
   }
   return g({ class: 'pa-axis pa-axis-y' }, out);
@@ -21,7 +21,7 @@ export function gridX(ticks, x, area, theme, fmt, { labels = true, baseline = 0,
   const out = [];
   const items = ticks.map((t) => ({ pos: Math.round(x(t)) + 0.5, label: fmt(t), t }));
   for (const it of items) {
-    if (lines) out.push(el('line', { x1: it.pos, x2: it.pos, y1: area.y, y2: area.y + area.h, stroke: it.t === baseline ? theme.axis : theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' }));
+    if (lines) out.push(el('line', { x1: it.pos, x2: it.pos, y1: area.y, y2: area.y + area.h, stroke: it.t === baseline ? theme.axis : theme.grid, ...gridAttrs(theme, it.t === baseline) }));
   }
   if (labels) out.push(xLabels(items, area, theme));
   return g({ class: 'pa-axis pa-axis-x' }, out);
@@ -76,7 +76,7 @@ export const yAxisTop = (theme, inside) => (isInside(theme, inside) ? 14 * ctx.t
 export function yGrid(ticks, y, area, theme, { baseline = 0 } = {}) {
   return g({ class: 'pa-grid' }, ticks.map((t) => {
     const py = Math.round(y(t)) + 0.5;
-    return el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: t === baseline ? theme.axis : theme.grid, strokeWidth: 1, shapeRendering: 'crispEdges' });
+    return el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: t === baseline ? theme.axis : theme.grid, ...gridAttrs(theme, t === baseline) });
   }));
 }
 
@@ -141,4 +141,12 @@ export function quietCorner(points, inner, w, h = 14, pad = 8) {
     if (n < bestN) { bestN = n; best = c; }
   }
   return { x: best.tx, y: best.ty, anchor: best.anchor };
+}
+
+/** Trazo de grilla y base según el tema (theme.grid { dash, width }, theme.axis { width }). */
+export function gridAttrs(theme, base = false) {
+  const st = base ? theme.axisStyle : theme.gridStyle;
+  const w = st && Number.isFinite(+st.width) ? +st.width : 1;
+  const dash = !base && st && st.dash && /^[\d.\s,]+$/.test(String(st.dash)) ? String(st.dash) : null;
+  return { strokeWidth: w, strokeDasharray: dash, shapeRendering: dash ? null : 'crispEdges' };
 }

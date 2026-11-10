@@ -25,9 +25,16 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
 | `theme`, `palette`, `ramp` | See [themes](themes.md). |
+| `colorScale` (`cmap`) | Any matplotlib colormap (`"viridis"`, `"RdBu_r"`…) or your own list of colors. See [color scales](colorscales.md). |
 | `font`, `textScale` | Typeface (Google Fonts name, CSS stack or `{ family, import }`) and a text-size multiplier (aliases `fontScale`, `labelScale`). Set them for every chart with `configure()`. |
 | `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
-| `legend` | `false` hides the legend. |
+| `legend` | Position: `"top"` (default), `"bottom"`, `"left"`, `"right"`, or `false` to hide it. Side legends move to the bottom below 520 px. Setting a position also forces a legend where the chart would otherwise label lines directly. |
+| `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
+
+### In the browser
+
+- **Tooltips** sit next to the hovered mark, never over the title or subtitle, and stay inside the chart. Their header takes the mark's color, with white or dark text depending on contrast.
+- **Legend**: hovering a key highlights its marks; a click pins the highlight. **Shift + click** excludes that entry (click it again to bring it back). In treemaps and sunbursts a plain click zooms the whole plot to that category; click it again, a breadcrumb, or press Esc to go back.
 
 ## Compare
 
@@ -100,6 +107,9 @@ plot({
 | `highlight` | Emphasize a task or a whole phase. |
 | `sort` | `"start"` orders tasks by date (default: data order, grouped by phase). |
 | `rowHeight`, `xLabel`, `unit` | Row height in px; axis title and unit for numeric axes. |
+| `collapsed`, `collapsible` | Phases drawn as one summary row (duration-weighted progress, milestone diamonds): a list of names or `true`. In the browser a click on a phase toggles it (Alt + click toggles all); the time axis and name column stay put. `collapsible: false` hides the chevrons. |
+| `critical`, `criticalColor` | Outline the critical path: tasks with zero slack along `dependsOn` (working days on day dates), with accent arrows. |
+| `weekends` | Weekend bands on day-date plans of up to 120 days; `false` turns them off. |
 
 `lint` warns about tasks that end before they start and suggests a `today` line. The alt text names the span, the longest task, the milestones and the overall progress weighted by duration.
 
@@ -167,7 +177,8 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | Option | Meaning |
 |---|---|
 | `depth` | Show only the first N levels. |
-| `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group does it and breadcrumbs go back. |
+| `focus` | Path to drill into, e.g. `["Mining"]`. In the browser, clicking a group or its legend key does it (the category fills the whole plot) and breadcrumbs or Esc go back. |
+| `exclude` | Level-1 groups to leave out; the rest fill the plane and shares are recomputed. Shift + click on a legend key does it in the browser. |
 | `showValues` | Append values to the labels. |
 | `colorBy` | `"change"` colors tiles by % change vs the comparison period (growth cool, decline warm); `"label"` colors a single-level treemap by item. |
 | `shade` | Subtle lightness steps inside each category. Off by default: one solid color per category. |
@@ -245,6 +256,25 @@ In the browser (`render()` or `toHTML()`), maps are interactive: hovering outlin
 
 `lint` warns about rows that match no region or country. Sources: Natural Earth 1:110m (public domain) for the world; Biblioteca del Congreso Nacional for Chilean regions (attribution in `src/geo/data/chile-regiones.js`); U.S. Census Bureau cartographic boundaries 1:10m (public domain) via us-atlas 3.0.1 for US states. In the browser, `dist/plotagents-geo.js` adds the geometries; `toHTML()` includes it only when a page has a map.
 
+### `pointmap` (`dotmap`, `tilemap`)
+
+Dots at longitude/latitude over a real basemap in Web Mercator. Fields `lon`/`lat` are found by name (lon, lng, longitude, longitud / lat, latitude, latitud). `size` → circle area (key in the corner, largest labeled); `hue` → category colors with a legend; numeric `value` → sequential ramp (`midpoint` for diverging, `colorScale` for any matplotlib map). Zoom and center fit the points (`zoom`, `center: [lon, lat]` to fix them).
+
+```js
+plot({ type: 'pointmap', data: cities, lon: 'lon', lat: 'lat', size: 'population', label: 'city',
+  title: 'Santiago concentrates 40% of the population', source: 'INE' });
+```
+
+| Option | Meaning |
+|---|---|
+| `tiles` | `"osm"` (default, OpenStreetMap), `"esri-gray"`, `"esri-dark"`, `"carto-light"` / `"carto-dark"` (free key: carto.com/basemaps/apikey), `"mapbox-light"` / `"mapbox-dark"` (public `pk.` token in `tilesKey`; `sk.` tokens are refused), `{ url, attribution, subdomains, maxZoom, retina }`, or `false` (vector world outline only). |
+| `tilesKey` | Key or token for CARTO, Mapbox or Esri. |
+| `tileStyle` | `"muted"` (default) desaturates and tints the tiles to the theme (a navy night map on `noche`); `"original"` keeps them as they are. |
+| `tileOpacity`, `zoom`, `center` | Tile opacity, fixed zoom level and `[lon, lat]` center. |
+| `labels`, `labelValues` | How many dots to name (8 largest by default), or a list; `labelValues: false` hides values. |
+
+The attribution is always drawn. Tiles are external images: they show in inline SVG, `render()` and `toHTML()`, **not** when the SVG is used as `<img>`, opened from a PDF converter, or offline; then the vector world outline underneath still gives context. `await embedTiles(svg)` inlines them as data: URIs (not for OSM, whose tile policy forbids bulk downloads; use `esri-gray` or your own server). For heavy traffic, use a provider with a key or your own tiles: OSM's servers are donated.
+
 ## Dashed shapes: estimates, projections, provisional figures
 
 Some numbers are not firm yet. Instead of a new color (which reads as a new category), plotagents keeps the shape's color and changes its texture: a hatched fill (stripes of the color over a light tint of it) and a dashed outline at 3:1 contrast. Lines get a dashed stroke with hollow points. It works in `bar`, `line`, `area`, `donut`/`pie`, `choropleth` and `symbolmap`.
@@ -261,7 +291,21 @@ This follows the Chart.js advice of using patterns (as `patternomaly` does) and 
 
 ### `network` (`graph`)
 
-Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `group` and `size`. Deterministic force layout fitted to the whole area, or `layout: "circle"`. `labels` (number or list), `highlight` (a node and its neighbors), `focus` (a node id: it is pinned at the center and highlighted with its neighbors, all of them labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`.
+Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `group` and `size`. Node area ∝ weight (weighted degree by default), color by group; edges curve in the color of their source node (`curveness`, default 0.3; `0` = straight), 1 px wide without a value field. The largest nodes are named (ink with a halo, never overlapping each other or a node); every name is in the tooltip. Hovering a node lights up its neighbors and their edges.
+
+`layout` picks the placement (all deterministic, all fitted to the area):
+
+| `layout` | Placement |
+|---|---|
+| `force` (default) | Force-directed (Barnes–Hut above 150 nodes). |
+| `circular` (`circle`) | Around a circle by group, a gap between groups, names rotated outward. |
+| `radial` | A tree from `focus` (or the most connected node); each ring is one step further. Links outside the tree are faint. |
+| `concentric` | Rings by weight, the largest in the centre, by group within each ring. |
+| `clusters` | One sunflower cluster per group, space ∝ √size. |
+| `tree` | The radial tree laid flat (left → right on wide areas), S-shaped connectors. |
+| `grid` | A grid ordered by group and weight, every node named. |
+
+`labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 
 ### `chord`
 

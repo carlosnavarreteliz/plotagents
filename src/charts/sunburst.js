@@ -34,9 +34,10 @@ export function sunburst(spec, theme) {
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
 
-  const top = focus.children;
-  const legend = top.length > 1 && spec.legend !== false && !focus.path.length
-    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, color: c.color, shape: 'square' })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
+  const top = root.children;
+  const active = focus.path[0];
+  const legend = top.length > 1 && spec.legend !== false
+    ? [...top.filter((c) => !c.folded).map((c) => ({ label: c.name, value: c.name, color: c.color, shape: 'square', active: active === undefined ? undefined : active === c.name })), ...(top.some((c) => c.folded) ? [{ label: en ? 'Other' : 'Otros', color: theme.other, shape: 'square' }] : [])]
     : [];
 
   const frame = createFrame(spec, theme, { height: (spec.width || 720) < 560 ? Math.round((spec.width || 720) + 190) : Math.min(560, Math.max(380, (spec.width || 720) * 0.7)) });
@@ -126,7 +127,7 @@ export function sunburst(spec, theme) {
     measure(small, 11.5) <= r0 * 1.7 ? text(cx, cy + bigSize * 0.3 + 16, small, { fill: theme.lede, fontSize: 11.5, textAnchor: 'middle' }) : '',
   ]));
 
-  const top3 = top.slice(0, 3).map((c) => `${c.name} ${share(c.value, total)}`).join(', ');
+  const top3 = focus.children.slice(0, 3).map((c) => `${c.name} ${share(c.value, total)}`).join(', ');
   const what = humanize(valueField);
   const desc = en
     ? `Sunburst of ${what} in ${fields.length} levels, total ${fmt(total)}. Largest groups: ${top3}.`

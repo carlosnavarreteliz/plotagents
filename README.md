@@ -41,10 +41,11 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 - **Labels at the end of every line**, always. When they collide they are spread apart and joined to their point by a thin leader line; a legend appears only when needed.
 - **Every pixel for the data.** The y axis sits inside the plot on its gridline; margins and type scale down on phones; treemaps, sunbursts, horizontal bars, heatmaps and KPI tiles size their own height.
 - **Color follows the entity.** Eight validated colors in a fixed order; "Copper" keeps its color when you filter, drill down or move through periods. One solid color per category.
-- **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin; line labels and tooltip headers wear their series color.
+- **Legend and chart are connected.** Hover a legend key to light up its marks, click to pin, shift + click to drop that entry (axes and shares recompute, colors stay put). In treemaps a click zooms the whole plot to the category. The legend goes top by default, or `legend: "bottom" | "left" | "right"`.
+- **Tooltips that never cover the title.** They sit next to the hovered mark, stay inside the chart, and their header wears the mark's color with white or dark text picked by contrast. Arrow keys walk through the data.
 - **Estimates look like estimates.** `dashed` hatches the shapes that are projections or provisional figures (same color, striped fill, dashed outline) and `dashedFrom: 2025` turns lines, areas and columns dashed from that point on, over a soft labeled band. The legend says what the hatching means; hovering it lights up just those shapes.
 - **Maps you can explore.** Click a state or region to zoom to it, Ctrl/⌘ + scroll or pinch to zoom, drag to pan; +/−/reset buttons for the keyboard. Hovering outlines the shape instead of dimming the map, and each color class in the legend lights up its regions. Moving through years, colors glide from one to the next.
-- **Networks you can explore.** Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
+- **Networks you can explore.** Curved edges in the source node's color, sized nodes and labels that never pile up. Pick the placement with `layout` (force, circular, radial, concentric, clusters, tree, grid). Click a node and it glides to the center with its connections highlighted; click again or press Esc to go back.
 - **Thin marks, quiet grid.** 4 px rounded data ends, 2.25 px lines, 2 px surface gaps instead of borders.
 - **Locale-aware numbers.** Spanish (Chile) by default: `1.234,5`, `56,1%`, `$18.500`. `locale: 'en'` gives `1,234.5`.
 
@@ -58,8 +59,8 @@ Agents are good at data and bad at charts: dual axes, 12-slice pies, titles that
 | Profiles | `radar` (`spider`) |
 | Distributions | `hist` (`histplot`), `kde` (`kdeplot`), `ecdf`, `box` (`boxplot`), `violin`, `strip`, `swarm` (`beeswarm`), `point` (`pointplot`) |
 | Part-to-whole | `treemap` (any depth, with % change over time), `sunburst`, `donut`, `pie` |
-| Maps | `choropleth` (Chile by region, US by state, world by country, or your own GeoJSON / TopoJSON with markers, layers and framing), `symbolmap` |
-| Projects | `gantt` (`timeline`, `roadmap`): phases, progress, milestones, dependencies and a today line |
+| Maps | `choropleth` (Chile by region, US by state, world by country, or your own GeoJSON / TopoJSON with markers, layers and framing), `symbolmap`, `pointmap` (lat/lon dots over OpenStreetMap or Mapbox tiles) |
+| Projects | `gantt` (`timeline`, `roadmap`): phases that fold and unfold, progress, milestones, dependencies and a today line |
 | Networks and flows | `network`, `chord`, `sankey`, `flowchart` (with swimlanes) |
 | Populations | `pyramid` |
 | Grids | `heatmap` |
@@ -126,6 +127,15 @@ plot({
   },
 });
 ```
+
+Register it once and every chart uses it; the default look never changes unless you ask:
+
+```js
+registerTheme('acme', { background: '#FFF', text: '#111827', grid: { color: '#EEF0F4', dash: '2 3' }, categorical: 'tab10', font: 'Inter' });
+configure({ theme: 'acme' });
+```
+
+Every matplotlib colormap works by name for heatmaps, maps and treemaps by change: `colorScale: 'viridis'`, `'RdBu_r'`, or your own list of colors ([color scales](docs/colorscales.md)).
 
 `validatePalette(colors)` checks a custom palette with the same tests the built-in one passed (lightness band, chroma floor, colorblind separation, normal-vision separation), and `lint` runs it for you.
 

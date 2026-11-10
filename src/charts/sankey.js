@@ -3,7 +3,7 @@
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 
 export function sankey(spec, theme) {
@@ -16,24 +16,39 @@ export function sankey(spec, theme) {
   requireField(data, to, 'to');
   requireField(data, valueF, 'value');
   const locale = spec.locale || 'es';
+  const en = String(locale).startsWith('en');
 
-  // Enlaces agregados
+  // Enlaces agregados (valores no finitos o ≤ 0 se ignoran).
   const lmap = new Map();
   for (const r of data) {
     const v = num(r[valueF]);
-    if (!(v > 0)) continue;
+    if (!(v > 0) || !Number.isFinite(v)) continue;
     const s = String(r[from]), t = String(r[to]);
     if (s === t) continue;
     const k = s + '\u0000' + t;
     lmap.set(k, (lmap.get(k) || 0) + v);
   }
   const links = [...lmap.entries()].map(([k, v]) => { const [s, t] = k.split('\u0000'); return { s, t, v }; });
+  if (!links.length) {
+    throw en
+      ? new PlotError('The sankey has no positive flows between different nodes.', `Check \`${valueF}\`: it needs values > 0, and \`${from}\` must differ from \`${to}\` (self-loops are dropped).`)
+      : new PlotError('El sankey no tiene flujos positivos entre nodos distintos.', `Revisa \`${valueF}\`: necesita valores > 0, y \`${from}\` debe ser distinto de \`${to}\` (los bucles se omiten).`);
+  }
   const names = [...new Set(links.flatMap((l) => [l.s, l.t]))];
   const nodes = new Map(names.map((n) => [n, { name: n, in: [], out: [], depth: 0 }]));
   for (const l of links) { l.sn = nodes.get(l.s); l.tn = nodes.get(l.t); l.sn.out.push(l); l.tn.in.push(l); }
   for (const n of nodes.values()) n.value = Math.max(sum(n.in), sum(n.out));
 
-  // Profundidad = camino más largo desde un origen (con tope por si hay ciclos).
+  // Un sankey fluye en una dirección: un ciclo (a → b → a) no tiene etapas.
+  const cycle = findCycle(nodes);
+  if (cycle) {
+    const path = cycle.join(' → ');
+    throw en
+      ? new PlotError(`The sankey has a cycle (${path}): flows must go one way, stage by stage.`, 'Name each stage apart ("Chile (origin)" → "Chile (destination)"), drop the return flows, or use `type: "chord"` for two-way exchanges.')
+      : new PlotError(`El sankey tiene un ciclo (${path}): los flujos deben ir en una sola dirección, etapa por etapa.`, 'Distingue las etapas ("Chile (origen)" → "Chile (destino)"), quita los flujos de vuelta o usa `type: "chord"` para intercambios en ambos sentidos.');
+  }
+
+  // Profundidad = camino más largo desde un origen.
   for (let it = 0; it < names.length; it++) {
     let changed = false;
     for (const l of links) if (l.tn.depth < l.sn.depth + 1) { l.tn.depth = l.sn.depth + 1; changed = true; }
@@ -124,10 +139,31 @@ export function sankey(spec, theme) {
     }
     body.push(g({ 'data-tip': `${n.name}\n${fmt(n.value)}` }, parts));
   }
-  const en = String(locale).startsWith('en');
   const top = [...links].sort((a, b) => b.v - a.v).slice(0, 3).map((l) => `${l.s} → ${l.t} (${fmt(l.v)})`).join('; ');
   const desc = en ? `Sankey diagram with ${nodes.size} nodes and ${links.length} flows. Largest flows: ${top}.` : `Diagrama de Sankey con ${nodes.size} nodos y ${links.length} flujos. Mayores flujos: ${top}.`;
   return frame.finish(body, { desc, type: 'sankey' });
 }
 
 const sum = (ls) => ls.reduce((a, l) => a + l.v, 0);
+
+/** Primer ciclo encontrado (lista de nombres, cerrada) o null. DFS iterativo. */
+function findCycle(nodes) {
+  const state = new Map(); // 1 = en la pila, 2 = terminado
+  for (const start of nodes.values()) {
+    if (state.has(start)) continue;
+    const stack = [[start, 0]];
+    const trail = [start];
+    state.set(start, 1);
+    while (stack.length) {
+      const top = stack[stack.length - 1];
+      const [n, i] = top;
+      if (i < n.out.length) {
+        top[1]++;
+        const m = n.out[i].tn;
+        if (state.get(m) === 1) return [...trail.slice(trail.indexOf(m)), m].map((x) => x.name);
+        if (!state.has(m)) { state.set(m, 1); stack.push([m, 0]); trail.push(m); }
+      } else { state.set(n, 2); stack.pop(); trail.pop(); }
+    }
+  }
+  return null;
+}

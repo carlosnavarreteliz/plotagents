@@ -1,4 +1,4 @@
-/*! plotagents 0.6.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
+/*! plotagents 0.7.0 · MIT · https://github.com/carlosnavarreteliz/plotagents */
 (function (global) {
 'use strict';
 var __defs = {}, __cache = {};

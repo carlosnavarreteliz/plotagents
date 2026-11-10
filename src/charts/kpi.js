@@ -8,7 +8,8 @@ import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 
 export function kpi(spec, theme) {
-  const items = (spec.items || spec.data || []).map((it) => ({ ...it }));
+  // Un solo indicador como objeto también vale: items: { label, value }.
+  const items = [].concat(spec.items || spec.data || []).filter((it) => it && typeof it === 'object').map((it) => ({ ...it }));
   const locale = spec.locale || 'es';
   const en = String(locale).startsWith('en');
   const frame = createFrame(spec, theme, { height: 200 });
@@ -28,14 +29,16 @@ export function kpi(spec, theme) {
 
   const body = [];
   // Mismo tamaño de cifra en todas las tarjetas (se ajusta a la más ancha).
-  const shown = items.map((it) => it.display ?? makeFormat(it.format ?? spec.format, locale, [num(it.value), ...(it.trend || []).map(num)])(num(it.value)));
+  const trendOf = (it) => (Array.isArray(it.trend) ? it.trend.map(num).filter(Number.isFinite) : []);
+  const show = (it, extra = trendOf(it)) => it.display ?? (Number.isFinite(num(it.value)) ? makeFormat(it.format ?? spec.format, locale, [num(it.value), ...extra])(num(it.value)) : '—');
+  const shown = items.map((it) => show(it));
   let vSize = 34;
   while (vSize > 20 && shown.some((s) => measure(s, vSize, 600) > tw - 36)) vSize -= 2;
   items.forEach((it, i) => {
     const cx = area.x + (i % cols) * (tw + gap);
     const cy = area.y + Math.floor(i / cols) * (th + gap);
     const value = num(it.value);
-    const fmt = makeFormat(it.format ?? spec.format, locale, [value, ...(it.trend || []).map(num)]);
+    const fmt = makeFormat(it.format ?? spec.format, locale, [value, ...trendOf(it)].filter(Number.isFinite));
     const parts = [el('rect', { x: cx, y: cy, width: tw, height: th, rx: 12, fill: theme.tint })];
     const P = 18;
     parts.push(text(cx + P, cy + P + 12 * X, truncate(it.label ?? '', tw - P * 2, 13), { fill: theme.lede, fontSize: 13 }));
@@ -81,8 +84,8 @@ export function kpi(spec, theme) {
     }
 
     // Tendencia: línea recesiva, último punto en el acento.
-    if (Array.isArray(it.trend) && it.trend.length > 1) {
-      const vals = it.trend.map(num).filter(Number.isFinite);
+    if (trendOf(it).length > 1) {
+      const vals = trendOf(it);
       const mn = Math.min(...vals), mx = Math.max(...vals);
       const sx = cx + P, sw = tw - P * 2, sy = cy + th - P - 26, sh = 26;
       const pts = vals.map((v, k) => [sx + (k / (vals.length - 1)) * sw, sy + sh - ((v - mn) / (mx - mn || 1)) * sh]);
@@ -92,6 +95,6 @@ export function kpi(spec, theme) {
     }
     body.push(g({ 'data-tip': tip(it.label, valStr, it.period ? `${it.period}` : '') }, parts));
   });
-  const desc = items.map((it) => `${it.label}: ${it.display ?? makeFormat(it.format ?? spec.format, locale, [num(it.value)])(num(it.value))}`).join('. ');
+  const desc = items.map((it) => `${it.label ?? ''}: ${show(it, [])}`).join('. ');
   return frame.finish(body, { desc, type: 'kpi' });
 }

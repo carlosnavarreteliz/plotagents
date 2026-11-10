@@ -4,17 +4,25 @@
 import { el, g, text, tip, barPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
+import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median } from '../stats.js';
+import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
 
 // ── Utilidades compartidas (también las usa regplot.js) ───────────────────
 
 const EN = (spec) => String(spec.locale || 'es').startsWith('en');
+
+/** Error con pista cuando el campo no tiene ningún número graficable. */
+function noNumbers(field, en, isLog) {
+  const logNote = isLog ? (en ? ' (on a log scale only values > 0 count)' : ' (en escala log solo cuentan valores > 0)') : '';
+  return en
+    ? new PlotError(`No numeric values in \`${field}\`${logNote}.`, `\`${field}\` must hold numbers (empty, null and text values are skipped), or pick another field with x: "field".`)
+    : new PlotError(`No hay valores numéricos en \`${field}\`${logNote}.`, `\`${field}\` debe tener números (se omiten vacíos, nulos y textos), o elige otro campo con x: "campo".`);
+}
 
 /** Campo de grupo: `hue` (seaborn), `series` o `color` (si no es un hex). */
 export function hueField(spec) {
@@ -38,15 +46,15 @@ export function groupValues(data, field, hue) {
  * Dominio de un eje numérico (lineal o log), con override `[min, max]`.
  * Devuelve { min, max, step, isLog, ticks, scale(r0, r1) }.
  */
-export function axisDomain(values, { domain, type, count = 5, zero = false, nice = true } = {}) {
+export function axisDomain(values, { domain, type, count = 5, zero = false, nice = true, integer = false } = {}) {
   const fin = finite(values);
   if (type === 'log') {
     const pos = fin.filter((v) => v > 0);
-    const d = domain ? { min: domain[0], max: domain[1] } : logDomain(Math.min(...pos), Math.max(...pos));
+    const d = domain ? { min: domain[0], max: domain[1] } : logDomain(...extent(pos));
     const ticks = log(d.min, d.max, 0, 1).ticks();
     return { min: d.min, max: d.max, step: null, isLog: true, ticks, scale: (r0, r1) => log(d.min, d.max, r0, r1) };
   }
-  let lo = fin.length ? Math.min(...fin) : 0, hi = fin.length ? Math.max(...fin) : 1;
+  let [lo, hi] = fin.length ? extent(fin) : [0, 1];
   if (zero) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
   let d;
   if (domain) {
@@ -59,16 +67,18 @@ export function axisDomain(values, { domain, type, count = 5, zero = false, nice
     d = { min: a, max: hi + span * 0.04, step: niceStep(span * 1.08, count) };
   } else if (!nice) {
     d = { min: lo, max: hi === lo ? lo + 1 : hi, step: niceStep((hi === lo ? 1 : hi - lo), count) };
-  } else d = niceDomain(lo, hi, count);
+  } else d = niceDomain(lo, hi, count, { integer });
   // Sin pasos de 2,5: con decimales redondeados se leen mal (2,5 → "3").
   const mag = 10 ** Math.floor(Math.log10(d.step));
   if (Math.abs(d.step / mag - 2.5) < 1e-9) d.step = 2 * mag;
+  // Conteos: paso entero (nunca marcas en 0,5).
+  if (integer) d.step = intStep(d.step);
   const ticks = linear(d.min, d.max, 0, 1).ticks(d.step);
   return { min: d.min, max: d.max, step: d.step, isLog: false, ticks, scale: (r0, r1) => linear(d.min, d.max, r0, r1) };
 }
 
 /** Formateador de marcas para un eje (lineal o log). */
-export const tickFmt = (fmt, ax) => (ax.isLog ? fmt : fmt.tick(ax.step));
+export const tickFmt = (fmt, ax) => (ax.isLog ? fmt : fmt.tick(ax.step, ax.ticks));
 
 /** Títulos de eje horizontales: y arriba a la izquierda, x abajo a la derecha. */
 export function axisTitles(body, theme, area, inner, { x, y }) {
@@ -108,7 +118,7 @@ export function hist(spec, theme) {
   const tr = T(isLog);
   const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
   const all = groups.flatMap((gr) => gr.values);
-  if (!all.length) return emptyChart(spec, theme, en);
+  if (!all.length) throw noNumbers(field, en, isLog);
   const N = all.length;
   const stat = spec.stat || 'count';
   const multiple = groups.length > 1 ? spec.multiple || 'layer' : 'layer';
@@ -174,7 +184,7 @@ export function hist(spec, theme) {
   if (kdes && multiple === 'stack') {
     for (let i = 0; i < kdes[0].length; i++) { let acc = 0; for (const k of kdes) { acc += k[i][1]; k[i][1] = acc; } }
   }
-  const kdeMax = kdes ? Math.max(...kdes.flatMap((k) => k.map((p) => p[1]))) : 0;
+  const kdeMax = kdes ? extent(kdes.flatMap((k) => k.map((p) => p[1])))[1] : 0;
 
   const cmap = colorMap(groups.map((gr) => gr.key), theme, spec.colors);
   const single = K === 1;
@@ -185,9 +195,9 @@ export function hist(spec, theme) {
   const area = frame.layout(legend);
   const body = [];
   const M = theme.marks || {};
-  const vMax = Math.max(...tops, kdeMax);
+  const vMax = Math.max(extent(tops)[1], kdeMax);
   const valueOverride = horizontal ? spec.xDomain : spec.yDomain;
-  const vAx = axisDomain([0, vMax], { domain: multiple === 'fill' ? [0, 1] : valueOverride, count: Math.max(3, Math.round((horizontal ? area.w / 110 : area.h / 64))), zero: true });
+  const vAx = axisDomain([0, vMax], { domain: multiple === 'fill' ? [0, 1] : valueOverride, count: Math.max(3, Math.round((horizontal ? area.w / 110 : area.h / 64))), zero: true, integer: stat === 'count' && multiple !== 'fill' });
   const binDom = dom ? [dom[0], dom[1]] : [bins[0].x0, bins[bins.length - 1].x1];
   const clipId = 'pa-clip-h' + Math.abs(hashStr((spec.title || '') + field + area.w)).toString(36);
   const writeDomains = (bin, val) => { if (spec._domains && typeof spec._domains === 'object') { spec._domains[horizontal ? 'y' : 'x'] = bin; spec._domains[horizontal ? 'x' : 'y'] = val; } };
@@ -314,7 +324,9 @@ export function kde(spec, theme) {
   const locale = spec.locale || 'es';
   const isLog = spec.xScale === 'log';
   const tr = T(isLog);
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length > 1);
+  const groups0 = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
+  if (!groups0.some((gr) => gr.values.length)) throw noNumbers(field, en, isLog);
+  const groups = groups0.filter((gr) => gr.values.length > 1);
   if (!groups.length) return emptyChart(spec, theme, en);
   const all = groups.flatMap((gr) => gr.values);
   const N = all.length;
@@ -326,8 +338,9 @@ export function kde(spec, theme) {
   const adjust = spec.bwAdjust ?? spec.bw_adjust ?? 1;
   // Grilla común
   const bws = groups.map((gr) => scottBandwidth(gr.values.map(tr.f)) * adjust);
-  let lo = Math.min(...groups.map((gr, i) => Math.min(...gr.values.map(tr.f)) - cut * bws[i]));
-  let hi = Math.max(...groups.map((gr, i) => Math.max(...gr.values.map(tr.f)) + cut * bws[i]));
+  const ext = groups.map((gr) => extent(gr.values.map(tr.f)));
+  let lo = Math.min(...ext.map((e, i) => e[0] - cut * bws[i]));
+  let hi = Math.max(...ext.map((e, i) => e[1] + cut * bws[i]));
   if (spec.clip) { lo = Math.max(lo, tr.f(spec.clip[0])); hi = Math.min(hi, tr.f(spec.clip[1])); }
   if (spec.xDomain) { lo = tr.f(spec.xDomain[0]); hi = tr.f(spec.xDomain[1]); }
   const G = 200;
@@ -349,7 +362,7 @@ export function kde(spec, theme) {
       }
     }
   }
-  const yMax = Math.max(...curves.flatMap((c) => c.map((p) => p[1])));
+  const yMax = extent(curves.flatMap((c) => c.map((p) => p[1])))[1];
   const cmap = colorMap(groups.map((gr) => gr.key), theme, spec.colors);
   const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[k].key));
@@ -445,7 +458,7 @@ export function ecdf(spec, theme) {
   const locale = spec.locale || 'es';
   const isLog = spec.xScale === 'log';
   const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
-  if (!groups.length) return emptyChart(spec, theme, en);
+  if (!groups.length) throw noNumbers(field, en, isLog);
   const all = groups.flatMap((gr) => gr.values);
   const K = groups.length;
   const cmap = colorMap(groups.map((gr) => gr.key), theme, spec.colors);
@@ -476,12 +489,16 @@ export function ecdf(spec, theme) {
     const comp = !!spec.complementary;
     const Y = (p) => (comp ? 1 - p : p);
     let d = `M${xS(Math.max(xAx.min, pts[0][0])).toFixed(2)},${yS(Y(0)).toFixed(2)}`;
-    let prev = 0;
+    // Escalones a menos de medio píxel se funden en uno (50 mil valores → ~1 por columna).
+    let prev = 0, colX = NaN, colP0 = 0, colP1 = 0;
+    const flush = () => { if (Number.isFinite(colX)) { const px = colX.toFixed(2); d += `L${px},${yS(Y(colP0)).toFixed(2)}L${px},${yS(Y(colP1)).toFixed(2)}`; } };
     for (const [x, p] of pts) {
-      const px = xS(Math.min(xAx.max, Math.max(xAx.min, x))).toFixed(2);
-      d += `L${px},${yS(Y(prev)).toFixed(2)}L${px},${yS(Y(p)).toFixed(2)}`;
+      const fx0 = xS(Math.min(xAx.max, Math.max(xAx.min, x)));
+      if (Number.isFinite(colX) && Math.abs(fx0 - colX) < 0.5) colP1 = p;
+      else { flush(); colX = fx0; colP0 = prev; colP1 = p; }
       prev = p;
     }
+    flush();
     d += `L${xS(xAx.max).toFixed(2)},${yS(Y(1)).toFixed(2)}`;
     const vs = [...groups[k].values].sort((a, b) => a - b);
     body.push(g({ class: 'pa-m', 'data-tip': tip(groups[k].key || humanize(field), `P25: ${fx(quantile(vs, 0.25))}`, `${en ? 'Median' : 'Mediana'}: ${fx(quantile(vs, 0.5))}`, `P75: ${fx(quantile(vs, 0.75))}`, `P90: ${fx(quantile(vs, 0.9))}`) }, [

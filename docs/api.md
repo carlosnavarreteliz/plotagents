@@ -54,7 +54,7 @@ Returns a text description of the chart, such as "Highest: Biobío with 1,240 (3
 
 ### `render(target, spec, opts?)`
 
-Draws into an element (a CSS selector or a DOM node) with tooltips, responsive width, time controls when the spec asks for them (`slider: true`), drill-down for treemaps and sunbursts, and click-to-focus for networks.
+Draws into an element (a CSS selector or a DOM node) with tooltips, responsive width, time controls when the spec asks for them (`slider: true`), drill-down for treemaps and sunbursts, click-to-focus for networks, collapsible Gantt phases, and legend clicks (shift + click excludes an entry; in treemaps and sunbursts a click zooms to the category).
 
 ```js
 const chart = plotagents.render('#chart', spec);
@@ -94,7 +94,20 @@ configure();       // returns the current defaults
 configure(null);   // clears them
 ```
 
-It accepts any spec option: `font`, `textScale`, `locale`, `theme`, `palette`, `ramp` and so on.
+It accepts any spec option: `font`, `textScale`, `locale`, `theme`, `palette`, `ramp`, `colorScale`, `legend` and so on. A spec's own `theme` object is merged over the global one.
+
+### `registerTheme(name, theme)`
+
+Registers a named theme (merged over `extends`, `papel` by default) so `theme: name` and `configure({ theme: name })` can use it. See [Themes](themes.md#your-own-theme-everywhere).
+
+```js
+registerTheme('acme', { background: '#FFF', text: '#111', categorical: 'tab10', grid: { dash: '2 3' } });
+configure({ theme: 'acme' });
+```
+
+### `colorScaleNames()` · `resolveColorScale(name)`
+
+All color scale names grouped by kind (`sequential`, `diverging`, `cyclic`, `qualitative`), and the stops of one scale: `{ name, stops, kind }`. `interpolateColor(stops, t)` returns the color at `t ∈ [0, 1]` (OKLab).
 
 ### `validatePalette(colors, opts?)`
 

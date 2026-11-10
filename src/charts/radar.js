@@ -5,7 +5,7 @@ import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 
 export function radar(spec, theme) {
@@ -46,6 +46,12 @@ export function radar(spec, theme) {
   }
   const n = axes.length;
   const raw = [...values.values()].flatMap((m) => [...m.values()]).filter(Number.isFinite);
+  if (!raw.length) {
+    const vf = Array.isArray(spec.axes) && spec.axes.length ? axes.join('`, `') : (spec.value ?? spec.y ?? 'value');
+    throw en
+      ? new PlotError(`No numeric values in \`${vf}\`.`, 'A radar needs a number per axis and series (empty, null and non-finite values are skipped).')
+      : new PlotError(`No hay valores numéricos en \`${vf}\`.`, 'El radar necesita un número por eje y serie (se omiten vacíos, nulos y valores no finitos).');
+  }
   const fmt = makeFormat(spec.format, locale, raw);
 
   // Normalización por eje (cada eje a 0–1 según su máximo).

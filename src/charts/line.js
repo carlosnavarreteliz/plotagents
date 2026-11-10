@@ -5,13 +5,13 @@
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
-import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep } from '../scale.js';
+import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize } from '../data.js';
-import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels } from '../axes.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError } from '../data.js';
+import { xLabels, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { meanCI, mean, sd } from '../stats.js';
+import { meanCI, mean, sd, extent } from '../stats.js';
 import { hash } from '../frame.js';
 import { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 
@@ -91,17 +91,26 @@ export function line(spec, theme, variant = 'line') {
   const pct = stack && (spec.stack === 'percent' || spec.normalize);
   const xsAll = uniq(m.lines.flatMap((l) => l.points.map((p) => p.x))).sort((a, b) => a - b);
   if (!xsAll.length) return createFrame(spec, theme).finish([], { desc: '', type: variant });
+  const en = String(locale).startsWith('en');
+  if (!m.lines.some((l) => l.points.some((p) => Number.isFinite(p.y))))
+    throw new PlotError(
+      en ? `No numeric values in \`${m.y}\` to plot.` : `No hay valores numéricos en \`${m.y}\` para graficar.`,
+      en ? `Check that "${m.y}" holds numbers (not empty or text), or pick another field with y: "field".` : `Revisa que "${m.y}" tenga números (no vacíos ni texto), o elige otro campo con y: "campo".`
+    );
 
-  // Apilado (áreas), opcionalmente al 100%.
+  // Apilado (áreas), opcionalmente al 100%. Positivos y negativos se apilan por
+  // separado desde cero (como `stackStrategy: 'samesign'` de ECharts).
   if (stack) {
     const tot = new Map(xsAll.map((xv) => [xv, 0]));
-    for (const l of m.lines) for (const p of l.points) if (Number.isFinite(p.y)) tot.set(p.x, tot.get(p.x) + p.y);
-    const base = new Map(xsAll.map((xv) => [xv, 0]));
+    for (const l of m.lines) for (const p of l.points) if (Number.isFinite(p.y)) tot.set(p.x, tot.get(p.x) + Math.abs(p.y));
+    const pos = new Map(xsAll.map((xv) => [xv, 0]));
+    const neg = new Map(xsAll.map((xv) => [xv, 0]));
     for (const l of m.lines) {
       const byX = new Map(l.points.map((p) => [p.x, p.y]));
       l.points = xsAll.map((xv) => {
         let v = Number.isFinite(byX.get(xv)) ? byX.get(xv) : 0;
         if (pct) v = tot.get(xv) ? v / tot.get(xv) : 0;
+        const base = v < 0 ? neg : pos;
         const y0 = base.get(xv);
         base.set(xv, y0 + v);
         return { x: xv, y: y0 + v, y0, v };
@@ -109,12 +118,18 @@ export function line(spec, theme, variant = 'line') {
     }
   }
 
-  const allY = m.lines.flatMap((l) => l.points.flatMap((p) => [p.y, p.lo, p.hi])).filter(Number.isFinite);
-  const rawY = m.lines.flatMap((l) => l.points.map((p) => p.v ?? p.y)).filter(Number.isFinite);
+  const allY = [], rawY = [];
+  for (const l of m.lines) for (const p of l.points) {
+    if (Number.isFinite(p.y)) allY.push(p.y);
+    if (Number.isFinite(p.lo)) allY.push(p.lo);
+    if (Number.isFinite(p.hi)) allY.push(p.hi);
+    const r = p.v ?? p.y;
+    if (Number.isFinite(r)) rawY.push(r);
+  }
   const fmt = pct
     ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale)
     : spec.index ? makeFormat({ type: 'number', decimals: spec.format?.decimals ?? 0 }, locale) : makeFormat(spec.format, locale, rawY);
-  let ymin = Math.min(...allY), ymax = Math.max(...allY);
+  let [ymin, ymax] = extent(allY);
   const refs = spec.refLines || [];
   for (const r of refs) if (r.y !== undefined) { ymin = Math.min(ymin, r.y); ymax = Math.max(ymax, r.y); }
   const yLog = spec.yScale === 'log' && ymin > 0;
@@ -149,23 +164,40 @@ export function line(spec, theme, variant = 'line') {
   const frame = createFrame(spec, theme, { height: 400 });
   const want = labelMode !== false;
   // Leyenda solo si alguna serie queda sin etiqueta final.
+  const lh = labelSize * ctx.textScale + 3;
   const provisionalH = frame.bottom - frame.top - 40;
-  const maxLabels = Math.max(1, Math.floor(provisionalH / (labelSize * ctx.textScale + 3)));
-  const labeled = want ? m.lines.filter((l) => focus(l.key)).sort((a, b) => (lastOf(b)?.y ?? -Infinity) - (lastOf(a)?.y ?? -Infinity)).slice(0, maxLabels) : [];
-  const allLabeled = labeled.length === m.lines.filter((l) => focus(l.key)).length;
-  const needLegend = multi && (!want || !allLabeled || spec.legend === true) && spec.legend !== false;
+  const maxLabels = Math.max(1, Math.floor(provisionalH / lh));
+  // Series sin ningún dato válido no llevan etiqueta (ni rompen el cálculo).
+  const labelable = m.lines.filter((l) => focus(l.key) && lastOf(l));
+  let labeled = want ? [...labelable].sort((a, b) => lastOf(b).y - lastOf(a).y).slice(0, maxLabels) : [];
+  const allLabeled = labeled.length === labelable.length;
+  const needLegend = multi && (!want || !allLabeled || spec.legend === true || (spec.legend && typeof spec.legend !== 'boolean')) && spec.legend !== false;
   const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line', dashed: dashedSeries(s) })) : [];
   const area = frame.layout(legend);
+  const inside = stack ? false : spec.axisInside;
+  // Alto vertical fijo alrededor del área de trazado (marca superior, eje x, títulos).
+  const yChrome = yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0) + 24 * ctx.textScale + (spec.xLabel ? 16 * ctx.textScale : 0);
+  // Una leyenda larga en un gráfico bajo no aplasta el trazado: el SVG crece lo justo.
+  const MIN_INNER_H = 90 * ctx.textScale;
+  if (area.h - yChrome < MIN_INNER_H) {
+    const grow = Math.ceil(MIN_INNER_H - (area.h - yChrome));
+    frame.setHeight(frame.height + grow);
+    area.h += grow;
+  }
+  // Con el alto real, rotular solo las que caben (la leyenda cubre al resto).
+  const capacity = Math.max(1, Math.floor((area.h - yChrome + 8 - lh / 2) / lh) + 1);
+  if (labeled.length > capacity) labeled = labeled.slice(0, capacity);
 
   const endW = labeled.length
     ? Math.max(...labeled.map((l) => { const t = endText(l); return t ? measure(t.val, labelSize, 600) + (t.name ? measure(t.name, labelSize, 500) * 1.04 + 6 * ctx.textScale : 0) : 0; })) + 22
     : 10;
 
   // Escala y
-  const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)));
-  const tickF = yLog ? (v) => fmt.tick(v)(v) : fmt.tick(nd.step);
+  // Valores enteros (conteos): nunca marcas en 0,5.
+  const intY = !pct && !spec.index && rawY.length > 0 && rawY.every(Number.isInteger);
+  const nd = yLog ? logDomain(ymin, ymax) : spec.yDomain ? { min: ymin, max: ymax, step: niceStep(ymax - ymin, Math.max(3, Math.round(area.h / 64))) } : niceDomain(ymin, ymax, Math.max(3, Math.round(area.h / 64)), { integer: intY });
   const yTicksArr = (yLog ? log(nd.min, nd.max, 0, 1) : linear(nd.min, nd.max, 0, 1)).ticks(nd.step);
-  const inside = stack ? false : spec.axisInside;
+  const tickF = yLog ? (v) => fmt.tick(v)(v) : fmt.tick(nd.step, yTicksArr);
   const leftM = yAxisMargin(yTicksArr, tickF, theme, inside);
   const yTop = area.y + yAxisTop(theme, inside) + (spec.yLabel ? 16 : 0);
   const inner = { x: area.x + leftM, y: yTop, w: Math.max(80, area.w - leftM - endW), h: area.y + area.h - yTop - 24 * ctx.textScale - (spec.xLabel ? 16 * ctx.textScale : 0) };
@@ -174,27 +206,56 @@ export function line(spec, theme, variant = 'line') {
   // Escala x
   let x0 = xsAll[0], x1 = xsAll[xsAll.length - 1];
   if (spec.xDomain) [x0, x1] = spec.xDomain.map((v) => (typeof v === 'number' ? v : m.kind === 'date' ? parseDate(v) : num(v)));
+  // Un solo x: centrado, con media unidad a cada lado (media unidad de tiempo en fechas).
+  const du = m.kind === 'date' ? dateUnit(xsAll) : null;
+  const singleX = x0 === x1;
+  if (singleX) { const hw = m.kind === 'date' ? halfUnit(du) : 0.5; x0 -= hw; x1 += hw; }
   if (spec._domains) { spec._domains.y = [nd.min, nd.max]; spec._domains.x = [x0, x1]; }
   const xLog = spec.xScale === 'log' && x0 > 0;
-  const xS = (xLog ? log : linear)(x0, x1 === x0 ? x0 + 1 : x1, inner.x, inner.x + inner.w);
+  // Con el eje y por dentro, si el primer punto choca con una etiqueta de marca,
+  // el trazado arranca pasado la etiqueta más ancha.
+  let xPad = 0;
+  if (isInside(theme, inside) && !singleX && !spec.xDomain) {
+    const axisSize = theme.type?.axis ?? 12;
+    const k = 5 * Math.max(1, ctx.textScale * 0.8);
+    // Caja de cada etiqueta: su ancho real, de la altura de las mayúsculas a la línea base.
+    const boxes = yTicksArr.map((t) => { const base = Math.round(yS(t)) + 0.5 - k; return { w: measure(tickF(t), axisSize), y0: base - axisSize * 0.75 * ctx.textScale, y1: base + 1 }; });
+    const xS0 = (xLog ? log : linear)(x0, x1, inner.x, inner.x + inner.w);
+    const dots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
+    const r = dots ? (M.pointRadius ?? 4) : (M.lineWidth ?? 2.25) / 2 + 0.5;
+    for (const l of m.lines) {
+      const p = l.points.find((q) => Number.isFinite(q.y));
+      if (!p) continue;
+      const px = xS0(p.x), py = yS(p.y);
+      if (boxes.some((b) => px - r < inner.x + b.w + 1 && py + r > b.y0 && py - r < b.y1)) xPad = Math.max(xPad, Math.min(Math.max(...boxes.map((b) => b.w)) + 8, inner.w * 0.25));
+    }
+  }
+  const xS = (xLog ? log : linear)(x0, x1, inner.x + xPad, inner.x + inner.w);
+  // Formateadores creados una vez (no por punto).
+  const xNumFmt = m.kind === 'number' ? makeFormat(spec.xFormat, locale, xsAll) : null;
   const xFmt = (xv) => {
-    if (m.kind === 'date') return formatDate(xv, dateUnit(xsAll), locale);
+    if (m.kind === 'date') return formatDate(xv, du, locale);
     if (m.kind === 'category') return m.cats[xv];
     if (m.kind === 'year') return String(xv);
-    return makeFormat(spec.xFormat, locale, xsAll)(xv);
+    return xNumFmt(xv);
   };
   let xItems;
-  if (m.kind === 'date') {
+  if (singleX) {
+    xItems = [{ pos: xS(xsAll[0]), label: xFmt(xsAll[0]) }];
+  } else if (m.kind === 'date') {
     xItems = timeTicks(x0, x1, Math.max(2, Math.floor(inner.w / 86)), locale).ticks.map((t) => ({ pos: xS(t.value), label: t.label }));
   } else if (m.kind === 'category') {
     xItems = m.cats.map((c, i) => ({ pos: xS(i), label: c })).filter((it, i) => xsAll.includes(i));
   } else if (xLog) {
-    xItems = xS.ticks().map((t) => ({ pos: xS(t), label: makeFormat(spec.xFormat, locale, xsAll).tick(t)(t) }));
+    const lf = makeFormat(spec.xFormat, locale, xsAll);
+    xItems = xS.ticks().map((t) => ({ pos: xS(t), label: lf.tick(t)(t) }));
   } else {
     let st = niceStep(x1 - x0, Math.max(2, Math.floor(inner.w / 78)));
     const ints = xsAll.every(Number.isInteger);
-    if (m.kind === 'year' || ints) st = Math.max(1, Math.round(st));
-    const tf = m.kind === 'year' ? (v) => String(v) : makeFormat(spec.xFormat ?? (ints ? 'integer' : undefined), locale, xsAll).tick(st);
+    // Pasos 1/2/5/10 (2,5 → 2, no 3: sin años impares 2001, 2004…).
+    if (m.kind === 'year' || ints) st = intStep(st);
+    const xMaxAbs = Math.max(Math.abs(xsAll[0]), Math.abs(xsAll[xsAll.length - 1]));
+    const tf = m.kind === 'year' ? (v) => String(v) : makeFormat(spec.xFormat ?? (ints && xMaxAbs < 1e4 ? 'integer' : undefined), locale, xsAll).tick(st);
     xItems = xS.ticks(st).map((t) => ({ pos: xS(t), label: tf(t) }));
   }
 
@@ -205,7 +266,14 @@ export function line(spec, theme, variant = 'line') {
   body.push(xLabels(xItems, inner, theme, { y: inner.y + inner.h + 18, size: theme.type?.axis }));
   if (spec.xLabel) body.push(text(inner.x + inner.w, inner.y + inner.h + 36, spec.xLabel, { fill: theme.lede, fontSize: theme.type?.axis ?? 12, fontWeight: 500, textAnchor: 'end' }));
 
-  // Anotaciones verticales (eventos)
+  // Anotaciones verticales (eventos). Los rótulos que chocarían bajan a la
+  // fila siguiente (14 px) y no tapan la etiqueta de la marca superior.
+  const placedAnn = [];
+  if (isInside(theme, inside) && yTicks.length) {
+    const tTop = yTicks.reduce((a, b) => (yS(b) < yS(a) ? b : a));
+    const ty = Math.round(yS(tTop)) + 0.5 - 5 * Math.max(1, ctx.textScale * 0.8);
+    placedAnn.push([inner.x, ty - (theme.type?.axis ?? 12) * ctx.textScale, inner.x + measure(tickF(tTop), theme.type?.axis ?? 12) + 2, ty + 2]);
+  }
   for (const a of spec.annotations || []) {
     const xv = m.kind === 'category' ? m.cats.indexOf(String(a.x)) : xValue(a.x, m.kind);
     if (!Number.isFinite(xv) || xv < x0 || xv > x1) continue;
@@ -216,7 +284,14 @@ export function line(spec, theme, variant = 'line') {
       const right = px + 5 + w > inner.x + inner.w;
       // A la izquierda de la línea si no cabe a la derecha, sin salirse del área.
       const ax = right ? Math.max(px - 5, area.x + w) : px + 5;
-      body.push(text(ax, inner.y + 4, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+      const bx0 = right ? ax - w : ax, bx1 = right ? ax : ax + w;
+      let ay = inner.y + 4;
+      for (let row = 0; row < 6; row++) {
+        ay = inner.y + 4 + row * 14;
+        const box = [bx0 - 2, ay - 10, bx1 + 2, ay + 3];
+        if (!placedAnn.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { placedAnn.push(box); break; }
+      }
+      body.push(text(ax, ay, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
     }
   }
 
@@ -238,22 +313,30 @@ export function line(spec, theme, variant = 'line') {
   const clipL = `${gidD}-l`, clipR = `${gidD}-r`;
 
   // Trazos
-  const ordered = [...m.lines].sort((a, b) => (focus(a.key) ? 1 : 0) - (focus(b.key) ? 1 : 0));
+  // Orden de dibujo: atenuadas, luego las grises de desborde (9.ª en adelante), luego las de color.
+  const rank = (l) => (!focus(l.key) ? 0 : multi && cmap.get(l.key) === theme.other && !spec.colors?.[l.key] ? 1 : 2);
+  const ordered = [...m.lines].sort((a, b) => rank(a) - rank(b));
   const showDots = spec.points ?? spec.markers ?? (m.lines.every((l) => l.points.length <= 12) && m.lines.length <= 3 && !isArea);
   const curve = spec.curve === 'smooth' ? monotonePath : spec.curve === 'step' ? stepPath : linearPath;
   const drawOrder = stack ? [...m.lines].reverse() : ordered;
   const lw = M.lineWidth ?? 2.25;
+  const maxPts = Math.max(64, Math.round(2 * inner.w));
   const gid = 'pa-grad-' + Math.abs(hash(String(spec.title) + m.y + inner.w)).toString(36);
   let defs = '';
   const washSingle = !multi && !isArea && spec.fill !== false && !m.errorbar && zero;
   for (const l of drawOrder) {
     const c = colorOf(l.key);
-    const segs = splitGaps(l.points, xS, yS);
+    // Más de 2 puntos por píxel: LTTB (mantiene la forma, picos incluidos).
+    const segs = splitGaps(l.points, xS, yS).map((sg) => (sg.length > maxPts ? lttb(sg, maxPts) : sg));
     if (!segs.length) continue;
+    // Un solo x en un área: una columna centrada (si no, el área no tendría ancho).
+    const aw = Math.min(inner.w * 0.2, 40);
+    const segsA = singleX ? segs.map((sg) => (sg.length === 1 ? [[sg[0][0] - aw, sg[0][1], sg[0][2]], [sg[0][0] + aw, sg[0][1], sg[0][2]]] : sg)) : segs;
     const parts = [];
     // Banda de confianza (seaborn): antes de la línea, mismo tono.
     if (m.errorbar && !stack) {
-      const bpts = l.points.filter((p) => Number.isFinite(p.lo) && Number.isFinite(p.hi));
+      let bpts = l.points.filter((p) => Number.isFinite(p.lo) && Number.isFinite(p.hi));
+      if (bpts.length > maxPts) bpts = lttb(bpts.map((p) => [xS(p.x), yS(p.y), p]), maxPts).map((q) => q[2]);
       if (bpts.length > 1) {
         const up = bpts.map((p) => [xS(p.x), yS(p.hi)]);
         const dn = bpts.map((p) => [xS(p.x), yS(p.lo)]).reverse();
@@ -264,7 +347,7 @@ export function line(spec, theme, variant = 'line') {
       if (washSingle) {
         defs += el('linearGradient', { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 }, [el('stop', { offset: '0%', stopColor: c, stopOpacity: 0.22 }), el('stop', { offset: '100%', stopColor: c, stopOpacity: 0 })]);
       }
-      for (const sgm of segs) {
+      for (const sgm of segsA) {
         const top = curve(sgm.map(([a, b]) => [a, b]));
         const base0 = yS(Math.max(nd.min, 0));
         const bottom = stack ? sgm.map(([a, , p]) => [a, yS(p.y0)]).reverse() : [[sgm[sgm.length - 1][0], base0], [sgm[0][0], base0]];
@@ -297,7 +380,11 @@ export function line(spec, theme, variant = 'line') {
     // Puntos proyectados huecos: se ven como "todavía no medidos".
     const hollow = (p) => dashedSeries(l.key) || (fromT && fromT(p.x));
     const dot = ([a, b, p], r) => el('circle', { cx: a, cy: b, r, ...(hollow(p) ? { fill: theme.surface, stroke: c, strokeWidth: 1.75 } : { fill: c, stroke: theme.surface, strokeWidth: M.ring ?? 2 }) });
-    if (showDots && focus(l.key) && !stack) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+    if (focus(l.key) && !stack) {
+      if (showDots) for (const q of pts) parts.push(dot(q, (M.pointRadius ?? 4) - 0.5));
+      // Punto aislado entre vacíos: sin marcador sería un trazo de largo cero (invisible).
+      else for (const sg of segs) if (sg.length === 1 && sg[0] !== pts[pts.length - 1]) parts.push(dot(sg[0], (M.pointRadius ?? 4) - 0.5));
+    }
     if (focus(l.key) && !stack) parts.push(dot(pts[pts.length - 1], (M.pointRadius ?? 4) + 0.5));
     body.push(g({ class: 'pa-m', 'data-series': l.key, ...(dashedSeries(l.key) ? { 'data-dashed': '1' } : {}) }, parts));
   }
@@ -307,19 +394,25 @@ export function line(spec, theme, variant = 'line') {
 
   // Etiquetas finales con separación vertical y líneas guía.
   if (labeled.length) {
-    const lh = labelSize * ctx.textScale + 3;
-    const labs = labeled.map((l) => {
+    let labs = labeled.map((l) => {
       const last = lastOf(l);
       const t = endText(l);
       const yy = stack ? yS((last.y + last.y0) / 2) : yS(last.y);
-      return { ...t, key: l.key, y: yy, y0: yy, px: xS(last.x), color: colorOf(l.key) };
+      // Un solo x en área: la guía parte del borde derecho de la columna, no la cruza.
+      const px = xS(last.x) + (singleX && isArea ? Math.min(inner.w * 0.2, 40) : 0);
+      return { ...t, key: l.key, y: yy, y0: yy, px, color: colorOf(l.key) };
     }).sort((a, b) => a.y0 - b.y0);
-    dodge(labs, lh, inner.y + lh / 2 - 4, inner.y + inner.h + 4);
-    const anyMoved = labs.some((lb) => Math.abs(lb.y - lb.y0) > 1.5);
+    const lbBottom = inner.y + inner.h + 4;
+    dodge(labs, lh, inner.y + lh / 2 - 4, lbBottom);
+    // Si aun así no caben, se omiten antes que salirse del SVG.
+    labs = labs.filter((lb) => lb.y <= lbBottom + 0.5);
+    // Guía también si la serie termina antes del borde derecho (si no, la etiqueta queda suelta).
+    const early = (lb) => lb.px < inner.x + inner.w - 2;
+    const anyMoved = labs.some((lb) => Math.abs(lb.y - lb.y0) > 1.5 || early(lb));
     const lx = inner.x + inner.w + (anyMoved || stack ? 16 : 9);
     for (const lb of labs) {
       const tparts = [];
-      if (Math.abs(lb.y - lb.y0) > 1.5 || stack) {
+      if (Math.abs(lb.y - lb.y0) > 1.5 || stack || early(lb)) {
         const sx = lb.px + (stack ? 2 : 7);
         tparts.push(el('path', { d: `M${sx.toFixed(1)},${lb.y0.toFixed(1)}L${(lx - 9).toFixed(1)},${lb.y0.toFixed(1)}L${(lx - 4).toFixed(1)},${lb.y.toFixed(1)}`, fill: 'none', stroke: stack ? theme.muted : lb.color, strokeWidth: 1, opacity: 0.7 }));
       }
@@ -334,11 +427,19 @@ export function line(spec, theme, variant = 'line') {
   }
 
   // Capa de interacción: crosshair con todos los valores en ese x.
-  const cross = xsAll.map((xv) => ({
+  // Con más x que píxeles, una entrada por columna de píxel (la última).
+  let crossXs = xsAll;
+  if (xsAll.length > inner.w) {
+    const byCol = new Map();
+    for (const xv of xsAll) byCol.set(Math.round(xS(xv)), xv);
+    crossXs = [...byCol.values()];
+  }
+  const focusLines = m.lines.filter((l) => focus(l.key)).map((l) => ({ l, at: new Map(l.points.map((q) => [q.x, q])) }));
+  const cross = crossXs.map((xv) => ({
     x: +xS(xv).toFixed(1),
     t: xFmt(xv) + (fromT && fromT(xv) ? ` · ${dashedLabel}` : ''),
-    v: m.lines.filter((l) => focus(l.key)).map((l) => {
-      const p = l.points.find((q) => q.x === xv);
+    v: focusLines.map(({ l, at }) => {
+      const p = at.get(xv);
       if (!p || !Number.isFinite(p.y)) return null;
       const extra = Number.isFinite(p.lo) ? ` (${fmt(p.lo)}–${fmt(p.hi)})` : '';
       return [multi ? l.key : m.seriesKeys[0], colorOf(l.key), +yS(p.y).toFixed(1), fmt(stack ? p.v : p.y) + extra];
@@ -361,6 +462,36 @@ function dodge(labs, h, top, bottom) {
   for (let i = 0; i < labs.length; i++) if (labs[i].y < top + i * h) labs[i].y = top + i * h;
 }
 
+/**
+ * Largest-Triangle-Three-Buckets: reduce [[px, py, p], ...] a `n` puntos
+ * conservando la forma visual (primero y último siempre incluidos).
+ */
+export function lttb(pts, n) {
+  const len = pts.length;
+  if (n >= len || n < 3) return pts;
+  const out = [pts[0]];
+  const every = (len - 2) / (n - 2);
+  let a = 0;
+  for (let i = 0; i < n - 2; i++) {
+    const s0 = Math.floor((i + 1) * every) + 1, s1 = Math.min(len, Math.floor((i + 2) * every) + 1);
+    let ax = 0, ay = 0;
+    for (let j = s0; j < s1; j++) { ax += pts[j][0]; ay += pts[j][1]; }
+    const cnt = Math.max(1, s1 - s0);
+    ax /= cnt; ay /= cnt;
+    const r0 = Math.floor(i * every) + 1, r1 = Math.floor((i + 1) * every) + 1;
+    const [px, py] = pts[a];
+    let best = -1, bi = r0;
+    for (let j = r0; j < r1; j++) {
+      const ar = Math.abs((px - ax) * (pts[j][1] - py) - (px - pts[j][0]) * (ay - py));
+      if (ar > best) { best = ar; bi = j; }
+    }
+    out.push(pts[bi]);
+    a = bi;
+  }
+  out.push(pts[len - 1]);
+  return out;
+}
+
 function splitGaps(points, xS, yS) {
   const segs = [];
   let cur = [];
@@ -372,7 +503,8 @@ function splitGaps(points, xS, yS) {
   return segs;
 }
 
-const f2 = (n) => n.toFixed(2);
+// Un decimal basta en trazados (0,05 px): SVG más liviano con muchos puntos.
+const f2 = (n) => n.toFixed(1);
 function linearPath(pts) {
   return pts.map(([x, y], i) => (i ? 'L' : 'M') + f2(x) + ',' + f2(y)).join('');
 }

@@ -70,7 +70,7 @@ export function heatmap(spec, theme) {
   let best = null;
   for (const a of xs) for (const b of ys) { const v = val(a, b); if (Number.isFinite(v) && (!best || v > best[2])) best = [a, b, v]; }
   const desc = en
-    ? `Heatmap of ${humanize(valueF)} by ${humanize(x)} and ${humanize(y)}. Highest: ${best?.[1]} · ${best?.[0]} (${fmt(best?.[2])}).`
-    : `Mapa de calor de ${humanize(valueF).toLowerCase()} por ${humanize(x).toLowerCase()} y ${humanize(y).toLowerCase()}. Máximo: ${best?.[1]} · ${best?.[0]} (${fmt(best?.[2])}).`;
+    ? `Heatmap of ${humanize(valueF)} by ${humanize(x)} and ${humanize(y)}.` + (best ? ` Highest: ${best[1]} · ${best[0]} (${fmt(best[2])}).` : ' No cell has a numeric value.')
+    : `Mapa de calor de ${humanize(valueF).toLowerCase()} por ${humanize(x).toLowerCase()} y ${humanize(y).toLowerCase()}.` + (best ? ` Máximo: ${best[1]} · ${best[0]} (${fmt(best[2])}).` : ' Ninguna celda tiene un valor numérico.');
   return frame.finish(body, { desc, type: 'heatmap' });
 }

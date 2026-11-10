@@ -3,7 +3,7 @@
 //   import { plot } from 'plotagents';
 //   const svg = plot({ data, x: 'region', y: 'ventas', title: 'Biobío lidera las ventas' });
 //
-import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, FONT_CSS } from './theme.js';
+import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, deepMerge, registerTheme, isColor, FONT_CSS } from './theme.js';
 import { withContext } from './context.js';
 import { validatePalette } from './palette.js';
 import { bar } from './charts/bar.js';
@@ -23,6 +23,7 @@ import { flowchart } from './charts/flowchart.js';
 import { gantt } from './charts/gantt.js';
 import { wordcloud, countWords } from './charts/wordcloud.js';
 import { choropleth, symbolMap } from './charts/choropleth.js';
+import { pointmap, embedTiles, TILE_PROVIDERS } from './charts/pointmap.js';
 import { registerGeo, getGeo, registeredGeo, toFeatureCollection } from './geo/registry.js';
 // Mapas incluidos (Chile por regiones, estados de EE. UU. y países del mundo): listos sin importar nada más.
 // El bundle del navegador los separa en dist/plotagents-geo.js.
@@ -43,6 +44,7 @@ import { render, _bind, loadGeo } from './runtime.js';
 import { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } from './dashboard.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
+import { resolveColorScale, colorScaleNames, interpolate as interpolateColor, COLORMAPS, QUALITATIVE } from './colorscales.js';
 
 const RENDERERS = {
   bar: (s, t) => bar(s, t),
@@ -79,6 +81,7 @@ const RENDERERS = {
   wordcloud: (s, t) => wordcloud(s, t),
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
+  pointmap: (s, t) => pointmap(s, t),
 };
 
 
@@ -87,6 +90,8 @@ const RENDERERS = {
 export function resolve(spec = {}) {
   if (!spec || typeof spec !== 'object') throw new PlotError('El spec debe ser un objeto.', 'plot({ data: [...], x: "campo", y: "campo" })');
   const s = withDefaults(spec);
+  // refLines / annotations: un objeto suelto vale como lista de uno.
+  for (const k of ['refLines', 'annotations']) if (s[k] != null && !Array.isArray(s[k]) && typeof s[k] === 'object') s[k] = [s[k]];
   if (s.color && !s.series && typeof s.color === 'string' && !s.color.startsWith('#')) s.series = s.color;
   let type = s.type && s.type !== 'auto' ? String(s.type).toLowerCase() : null;
   if (type) {
@@ -100,6 +105,16 @@ export function resolve(spec = {}) {
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   s.type = type;
+  // Colormap divergente (RdBu, coolwarm…): centrada en 0 si los datos lo cruzan; si no, en el medio.
+  const cs = resolveColorScale(s.colorScale ?? s.cmap ?? s.colormap);
+  if (cs && cs.kind === 'diverging' && s.midpoint === undefined && s.diverging === undefined) {
+    const vf = typeof s.colorScale === 'object' && s.colorScale.mid !== undefined ? null : s.value;
+    if (typeof s.colorScale === 'object' && s.colorScale?.mid !== undefined) s.midpoint = +s.colorScale.mid;
+    else if (vf && Array.isArray(s.data) && s.data.length && typeof s.data[0] === 'object') {
+      const vs = s.data.map((r) => num(r[vf])).filter(Number.isFinite);
+      if (vs.length) { let lo = Infinity, hi = -Infinity; for (const v of vs) { if (v < lo) lo = v; if (v > hi) hi = v; } s.midpoint = lo < 0 && hi > 0 ? 0 : (lo + hi) / 2; }
+    } else s.diverging = true;
+  }
   return s;
 }
 
@@ -110,6 +125,7 @@ export function resolve(spec = {}) {
 export function plot(spec) {
   let s = resolve(spec);
   s = applyTime(s);
+  s = applyExclude(s);
   const theme = themeFor(s);
   const textScale = Math.max(0.5, Math.min(4, +(s.textScale ?? s.fontScale ?? s.labelScale ?? 1) || 1));
   return withContext({ textScale }, () => {
@@ -136,7 +152,12 @@ export function configure(options) {
 
 function withDefaults(spec) {
   const s = { ...DEFAULTS, ...spec };
-  if (DEFAULTS.theme && typeof DEFAULTS.theme === 'object' && spec.theme && typeof spec.theme === 'object') s.theme = { ...DEFAULTS.theme, ...spec.theme };
+  // Colores fijados por entidad: solo colores CSS válidos (viajan a atributos y al tooltip).
+  if (s.colors && typeof s.colors === 'object') s.colors = Object.fromEntries(Object.entries(s.colors).filter(([, c]) => isColor(c)));
+  // Tema global + tema del spec: el del spec se fusiona en profundidad sobre el global.
+  if (DEFAULTS.theme && spec.theme && typeof spec.theme === 'object' && spec.theme.extends === undefined) {
+    s.theme = typeof DEFAULTS.theme === 'string' ? { ...spec.theme, extends: DEFAULTS.theme } : deepMerge(DEFAULTS.theme, spec.theme);
+  }
   // `font`: atajo de theme.font (familia + URL para cargarla).
   const f = fontSpec(s.font);
   if (f) {
@@ -178,6 +199,37 @@ function applyTime(s) {
   return { ...s, data, colors: stableColors(s, all), subtitle: s.subtitle ? `${s.subtitle} · ${label}` : label, _time: { field: s.time, value: cur, values: vals }, _prev };
 }
 
+/** Campo que define las entradas de la leyenda (series, primer nivel, grupo…). */
+function legendField(s) {
+  if (Array.isArray(s.path) && s.path.length) return s.path[0];
+  return s.series ?? s.hue ?? s.group ?? (['donut', 'pie'].includes(s.type) ? s.label ?? s.x : null) ?? (s.type === 'treemap' || s.type === 'sunburst' ? s.label ?? s.x : null);
+}
+
+/**
+ * `exclude: ["Maule"]` (o shift + clic en la leyenda): quita esas entradas y
+ * recalcula ejes, participaciones y layout con lo que queda. Los colores no
+ * se mueven y las entradas excluidas siguen en la leyenda, apagadas.
+ */
+function applyExclude(s) {
+  const ex = s.exclude == null || s.exclude === false ? [] : [].concat(s.exclude).map(String);
+  if (!ex.length) return s;
+  // Tabla ancha: y: ["ingresos", "costos"] → se excluyen columnas.
+  if (Array.isArray(s.y) && !s.series && !s.hue) {
+    const keep = s.y.filter((k) => !ex.includes(String(k)));
+    if (!keep.length || keep.length === s.y.length) return s;
+    const cmap = colorMap(s.y, themeFor(s), s.colors);
+    return { ...s, y: keep, colors: { ...Object.fromEntries(cmap), ...(s.colors || {}) }, _excluded: s.y.filter((k) => ex.includes(String(k))) };
+  }
+  const f = legendField(s);
+  if (!f || s.items) return s;
+  const all = ensureData(s);
+  if (!all.length || !(f in all[0])) return s;
+  const keep = all.filter((r) => !ex.includes(String(r[f])));
+  if (!keep.length || keep.length === all.length) return s;
+  const present = new Set(all.map((r) => String(r[f])));
+  return { ...s, data: keep, colors: { ...stableColors(s, all), ...(s.colors || {}) }, _excluded: ex.filter((v) => present.has(v)) };
+}
+
 /**
  * Colores fijos por entidad a lo largo de TODOS los periodos: al mover el
  * slider, "Minería" sigue siendo índigo aunque cambie su tamaño o su orden.
@@ -205,7 +257,8 @@ export function safePlot(spec) {
   const report = lint(spec || {});
   try {
     const svg = plot(spec);
-    return { ok: true, svg, type: report.type, description: describeSvg(svg), errors: [], warnings: report.warnings, suggestions: report.suggestions };
+    // Se dibujó (con valores de respaldo), pero los errores de lint igual se devuelven: ok = sin errores.
+    return { ok: report.errors.length === 0, svg, type: report.type, description: describeSvg(svg), errors: report.errors, warnings: report.warnings, suggestions: report.suggestions };
   } catch (e) {
     const errors = report.errors.length ? report.errors : [{ code: 'render', message: e.message.split('\n')[0], fix: e.hint }];
     return { ok: false, svg: null, type: report.type, description: '', errors, warnings: report.warnings, suggestions: report.suggestions };
@@ -229,9 +282,11 @@ function describeSvg(svg) {
  */
 export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } = {}) {
   const list = Array.isArray(specs) ? specs : [specs];
-  const dark = list.every((s) => themeFor(s).mode === 'dark');
-  const bg = dark ? '#0B0F2B' : '#FCFBF9';
-  const needsGeo = list.some((s) => { try { return ['choropleth', 'symbolmap'].includes(resolve(s).type); } catch { return false; } });
+  const themesOf = list.map((s) => themeFor(withDefaults(s)));
+  const dark = themesOf.every((t) => t.mode === 'dark');
+  // Fondo de la página = fondo del tema (también uno global de configure()).
+  const bg = themesOf.every((t) => t.surface === themesOf[0].surface) ? themesOf[0].surface : dark ? '#0B0F2B' : '#FCFBF9';
+  const needsGeo = list.some((s) => { try { return ['choropleth', 'symbolmap', 'pointmap'].includes(resolve(s).type); } catch { return false; } });
   const bundle = bundleSource() && (needsGeo ? bundleSource() + '\n' + (bundleSource('plotagents-geo.js') || '') : bundleSource());
   const safeJSON = (o) => JSON.stringify(o).replace(/</g, '\\u003c');
   const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(s)}</script>` : '')).join('\n');
@@ -268,12 +323,14 @@ export function bundleSource(file = 'plotagents.js') {
 }
 
 _bind(plot, resolve);
-_bindDashboard({ plot, resolve, lint, bundleSource });
+_bindDashboard({ plot, resolve, lint, bundleSource, resolveDefaults: withDefaults });
 _setProbe((s) => plot(s));
 export { render };
 
 export { countWords, dashboardSchema };
+export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALITATIVE };
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo };
+export { registerTheme, withDefaults as resolveDefaults, embedTiles, TILE_PROVIDERS };
 export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

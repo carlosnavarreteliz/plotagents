@@ -4,7 +4,7 @@ import { el, g, text, tip, esc, barPath, dotLayer } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
@@ -31,6 +31,12 @@ function readPoints(spec, data, { needY = true } = {}) {
   const pts = data
     .map((r) => ({ x: num(r[x]), y: num(r[y]), k: hue ? String(r[hue]) : '', name: labelF ? String(r[labelF] ?? '') : '' }))
     .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && (!xLog || p.x > 0) && (!yLog || p.y > 0));
+  if (!pts.length) {
+    const log = xLog || yLog;
+    throw EN(spec)
+      ? new PlotError(`No row has numeric values in both \`${x}\` and \`${y}\`${log ? ' (> 0 for a log scale)' : ''}.`, `Check that \`x\` and \`y\` are measures with numbers${log ? ', or drop the log scale' : ''}; to compare a measure across categories use \`type: "box"\`.`)
+      : new PlotError(`Ninguna fila tiene valores numéricos en \`${x}\` y \`${y}\`${log ? ' (> 0 para escala log)' : ''}.`, `Revisa que \`x\` e \`y\` sean medidas con números${log ? ', o quita la escala log' : ''}; para comparar una medida entre categorías usa \`type: "box"\`.`);
+  }
   const keys = hue ? uniq(pts.map((p) => p.k)) : [''];
   return { x, y, hue, labelF, pts, keys, xLog, yLog };
 }

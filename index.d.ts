@@ -5,7 +5,7 @@ export type ChartType =
   | 'regplot' | 'residplot' | 'jointplot' | 'hist' | 'kde' | 'ecdf'
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
-  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap'
+  | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
@@ -15,7 +15,7 @@ export type Row = Record<string, string | number | Date | null | undefined>;
 
 export type Format =
   | 'number' | 'compact' | 'percent' | 'currency' | 'integer'
-  | { type?: string; prefix?: string; suffix?: string; decimals?: number; currency?: string; scale?: number };
+  | { type?: 'number' | 'compact' | 'percent' | 'currency' | 'integer'; prefix?: string; suffix?: string; /** 0–20. */ decimals?: number; currency?: string; scale?: number };
 
 export interface KpiItem {
   label: string;
@@ -51,8 +51,31 @@ export interface Theme {
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends any[] ? T[K] | string : DeepPartial<T[K]>) : T[K] };
-/** JSON theme: deep-merged over `extends` (default "papel"). */
-export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (DeepPartial<Theme> & { extends?: 'papel' | 'noche' })
+/** Simple theme tokens, mapped onto the full theme. */
+export interface ThemeTokens {
+  /** Alias of surface. */
+  background?: string;
+  /** Alias of ink. */
+  text?: string;
+  /** First series color. */
+  accent?: string;
+  /** Grid color, or { color, dash, width }. */
+  grid?: string | { color?: string; dash?: string; width?: number };
+  axis?: string;
+  tooltip?: { bg?: string; ink?: string };
+  /** Corner radius of bars and tiles. */
+  radius?: number;
+  barRadius?: number;
+  font?: string | { family?: string; mono?: string; import?: string };
+}
+/** JSON theme: deep-merged over `extends` (default "papel"). Strings: built-in or registerTheme() names. */
+export type ThemeInput = 'papel' | 'noche' | 'light' | 'dark' | (string & {}) | (Omit<DeepPartial<Theme>, 'grid' | 'font'> & ThemeTokens & { extends?: 'papel' | 'noche' | (string & {}) })
+
+/** matplotlib colormap name (case-insensitive, `_r` reverses), a list of hex colors, or { name | colors, reverse, mid }. */
+export type ColorScale = string | string[] | { name?: string; colors?: string[]; reverse?: boolean; mid?: number };
+export type LegendPosition = 'top' | 'bottom' | 'left' | 'right';
+export type TileProvider = 'osm' | 'esri-gray' | 'esri-dark' | 'carto-light' | 'carto-dark' | 'mapbox-light' | 'mapbox-dark';
+export type NetworkLayout = 'force' | 'circular' | 'radial' | 'concentric' | 'clusters' | 'tree' | 'grid' | 'circle';
 
 export interface Spec {
   type?: ChartType;
@@ -77,7 +100,7 @@ export interface Spec {
   yFormat?: Format;
   stack?: boolean | 'percent';
   horizontal?: boolean;
-  sort?: 'desc' | 'asc' | 'none' | 'alpha';
+  sort?: 'desc' | 'asc' | 'none' | 'alpha' | 'start';
   top?: number;
   highlight?: string | string[];
   /** Dashed shapes (hatched fill + dashed outline): names, a data field, { field, equals } or true. */
@@ -88,10 +111,10 @@ export interface Spec {
   dashedLabel?: string | false;
   labels?: boolean | 'auto' | number | string[];
   labelsFor?: Record<string, string>;
-  refLines?: RefLine[];
+  refLines?: RefLine[] | RefLine;
   annotations?: Annotation[];
   index?: boolean;
-  curve?: 'linear' | 'smooth';
+  curve?: 'linear' | 'smooth' | 'step';
   zero?: boolean;
   points?: boolean;
   xScale?: 'linear' | 'log';
@@ -102,6 +125,7 @@ export interface Spec {
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
   colors?: Record<string, string>;
   theme?: ThemeInput;
+  /** Palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
   palette?: string | string[];
   ramp?: string | string[];
   hue?: string;
@@ -112,8 +136,6 @@ export interface Spec {
   panelHeight?: number;
   time?: string;
   timeValue?: string | number;
-  slider?: boolean;
-  play?: boolean;
   compare?: 'previous' | 'first' | string | number | false;
   compareData?: Row[];
   colorBy?: 'group' | 'change' | 'label';
@@ -145,12 +167,20 @@ export interface Spec {
   annotate?: boolean;
   kind?: 'scatter' | 'reg';
   marginal?: 'hist' | 'kde';
-  inner?: 'box' | 'quartiles' | 'points' | 'none';
+  inner?: 'box' | 'quartiles' | 'points' | 'stick' | 'none';
   split?: boolean;
   axis?: string;
   axes?: string[];
   normalize?: boolean;
-  legend?: boolean;
+  /** Legend on/off or position (default top; left/right fall back to bottom under 520px). */
+  legend?: boolean | LegendPosition | { position?: LegendPosition };
+  legendTitle?: string;
+  /** Drop legend entries (series, first level, group); colors stay fixed and the entries stay in the legend, faded. */
+  exclude?: string | string[];
+  /** Continuous color scale. Aliases: cmap, colormap. */
+  colorScale?: ColorScale;
+  cmap?: ColorScale;
+  colormap?: ColorScale;
   locale?: 'es' | 'en';
   width?: number;
   height?: number;
@@ -180,6 +210,69 @@ export interface Spec {
   borderColor?: string;
   borderWidth?: number;
   pointRadius?: number;
+  /** network: node rows (id, group, size). flowchart: steps (id, label, type, lane). */
+  nodes?: Row[];
+  /** flowchart: connections (from, to, label). Same as `data`. */
+  edges?: Row[];
+  layout?: NetworkLayout;
+  /** network: edge curvature, 0 straight (default 0.3). */
+  curveness?: number;
+  nodeId?: string;
+  nodeLabel?: string;
+  /** Largest node / circle radius in px. */
+  maxRadius?: number;
+  /** network: force-layout iterations. */
+  iterations?: number;
+  /** chord: square flow matrix with `names`. */
+  matrix?: number[][];
+  names?: string[];
+  directed?: boolean;
+  ribbonColor?: 'source' | 'smaller' | 'larger';
+  labelOrientation?: 'horizontal' | 'radial';
+  direction?: 'TB' | 'LR';
+  /** pyramid */
+  age?: string;
+  sex?: string;
+  percent?: boolean;
+  /** pointmap: tile basemap with lat/lon dots. */
+  lat?: string;
+  lon?: string;
+  tiles?: TileProvider | { url: string; attribution?: string; subdomains?: string; maxZoom?: number; retina?: boolean } | false;
+  /** Public token / API key for the tile provider (a secret Mapbox "sk." token is rejected). */
+  tilesKey?: string;
+  tileStyle?: 'muted' | 'original';
+  tileOpacity?: number;
+  zoom?: number;
+  /** [lon, lat] */
+  center?: [number, number];
+  /** choropleth */
+  missing?: 'hatch' | 'plain';
+  thresholds?: number[];
+  classes?: number;
+  scale?: 'quantile' | 'equal' | 'continuous' | 'categorical' | number[] | string;
+  values?: boolean;
+  tall?: boolean;
+  /** Seaborn-style options */
+  orient?: 'v' | 'h';
+  valueDomain?: [number, number];
+  bandwidth?: number;
+  bwAdjust?: number;
+  cut?: number;
+  jitter?: number | boolean;
+  dodge?: boolean;
+  hueOrder?: string[];
+  showMeans?: boolean;
+  cumulative?: boolean;
+  rug?: boolean;
+  complementary?: boolean;
+  radius?: number;
+  endLabels?: boolean;
+  /** treemap/sunburst */
+  showValues?: boolean;
+  hole?: number;
+  thickness?: number;
+  cellHeight?: number;
+  facetOrder?: string[];
   /** gantt */
   task?: string;
   start?: string;
@@ -191,6 +284,15 @@ export interface Spec {
   today?: string | number | boolean;
   groupHeaders?: boolean | 'compact';
   rowHeight?: number;
+  /** gantt: phases drawn collapsed into a summary row; true for all. Click toggles in the browser. */
+  collapsed?: boolean | string | string[];
+  collapsible?: boolean;
+  /** gantt: highlight the zero-slack chain along dependsOn. */
+  critical?: boolean;
+  criticalColor?: string;
+  /** gantt: shade weekends on day plans of up to 120 days (default true). */
+  weekends?: boolean;
+  todayColor?: string;
   /** Browser time controls, off by default: true (buttons or slider), "buttons" or "slider". */
   slider?: boolean | 'buttons' | 'slider';
   play?: boolean;
@@ -261,8 +363,18 @@ export declare function timeValues(spec: Spec): (string | number)[];
 export declare function validatePalette(colors: string[], opts?: { mode?: 'light' | 'dark'; surface?: string; pairs?: 'adjacent' | 'all' }): { ok: boolean; checks: { name: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] };
 export declare function bundleSource(): string | null;
 export declare function toolDefinition(opts?: { name?: string; flavor?: 'anthropic' | 'openai'; kind?: 'chart' | 'dashboard' }): Record<string, unknown>;
-export declare const themes: Record<'papel' | 'noche' | 'light' | 'dark', Theme>;
+export declare const themes: Record<'papel' | 'noche' | 'light' | 'dark', Theme> & Record<string, Theme>;
 export declare function getTheme(t?: Spec['theme']): Theme;
+/** Registers a named theme (merged over `extends`, default papel); use it as theme: "name" or configure({ theme: "name" }). */
+export declare function registerTheme(name: string, theme: ThemeInput): Theme;
+/** Resolves a color scale to its stops, or null when the name is unknown. */
+export declare function resolveColorScale(v: ColorScale): { name: string; stops: string[]; kind: 'sequential' | 'diverging' | 'cyclic' | 'qualitative' } | null;
+/** Available colormap and palette names by kind. */
+export declare function colorScaleNames(): { sequential: string[]; diverging: string[]; cyclic: string[]; qualitative: string[] };
+/** Color at t ∈ [0, 1] along `stops` (OKLab). */
+export declare function interpolateColor(stops: string[], t: number): string;
+export declare const COLORMAPS: Record<string, string>;
+export declare const QUALITATIVE: Record<string, string>;
 export declare const TYPES: ChartType[];
 export declare function squarify<T extends { value: number }>(items: T[], x: number, y: number, w: number, h: number): (T & { x: number; y: number; w: number; h: number })[];
 export declare function makeFormat(fmt?: Format, locale?: string, values?: number[]): ((v: number) => string) & { type: string };

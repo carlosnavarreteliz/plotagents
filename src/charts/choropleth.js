@@ -123,7 +123,7 @@ export function colorScale(values, spec, theme) {
     breaks = [...new Set(breaks)].filter((b) => b > min && b <= max);
   }
   const n = breaks.length + 1;
-  const t0 = theme.mode === 'dark' ? 0.26 : 0.16;
+  const t0 = theme.cmap ? 0 : theme.mode === 'dark' ? 0.26 : 0.16;
   const colors = Array.from({ length: n }, (_, i) => ramp(stops, n === 1 ? 0.6 : t0 + ((1 - t0) * i) / (n - 1)));
   return classed(breaks, colors, min, max);
 }
