@@ -307,6 +307,7 @@ A count drawn as squares: one square per row, or per unit of `value`, by `series
 |---|---|
 | `value` | Field to add up (otherwise one square per row). |
 | `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
+| `perSquare` | Each square is its own mark with its own row's tooltip (one check, one person), in data order within each series; pair it with `tooltip: { title, text, replace: true }`. Only while a square is one unit; past `maxSquares` it falls back to one tooltip per series. |
 | `columns` | Squares per row (default 10, 20 or 25 by total). |
 | `order` | Series order (default: largest first). |
 

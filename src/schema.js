@@ -204,6 +204,7 @@ export const schema = {
     dotRadius: number('spark: end dot radius in px.'),
     unit: number('waffle: what one square is worth (default 1, or a round number when the total passes `maxSquares`).'),
     maxSquares: { type: 'integer', description: 'waffle: most squares before each square is worth a round `unit` (default 400).' },
+    perSquare: bool('waffle: each square is its own mark with its own row\'s tooltip (one check, one person), in data order within each series. Only while one square is one unit.'),
     cards: { description: 'table: one card per row. "auto" (default) switches when the columns do not fit (phones); true always; false never (columns shrink and truncate).', anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['auto'] }] },
     density: { type: 'string', enum: ['compact', 'normal', 'comfortable'], description: 'table: row height.' },
     striped: { type: 'boolean', description: 'table: tint every other row (helps on very wide tables).' },

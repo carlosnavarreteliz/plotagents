@@ -172,6 +172,11 @@ function lintSpec(spec = {}) {
       if (vs.length !== 1) warn('refline-field', L(`La referencia lee \`${f}\`, pero sus filas no dicen un solo valor (${vs.length}): no se dibuja.`, `The reference reads \`${f}\`, but its rows do not hold one value (${vs.length}): it is not drawn.`), L('Pasa el número: refLines: [{ x: 18.4, label: "Chile" }].', 'Pass the number: refLines: [{ x: 18.4, label: "Chile" }].'));
     }
   }
+  if (type === 'waffle' && spec.perSquare && data.length) {
+    const vf = spec.value ?? (typeof spec.y === 'string' ? spec.y : null);
+    const total = vf && fields.includes(vf) ? data.reduce((t, r) => { const v = num(r[vf]); return t + (Number.isFinite(v) && v > 0 ? v : 0); }, 0) : data.length;
+    if ((spec.unit !== undefined && +spec.unit !== 1) || (spec.unit === undefined && total > (spec.maxSquares ?? 400))) warn('waffle-persquare-unit', L('`perSquare` necesita que cada cuadro sea una unidad: con este total un cuadro vale más de una y se vuelve a un tooltip por serie.', '`perSquare` needs each square to be one unit: with this total a square is worth more than one, so it falls back to one tooltip per series.'), L('Sube `maxSquares` sobre el total, o quita `perSquare`.', 'Raise `maxSquares` above the total, or drop `perSquare`.'));
+  }
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
 

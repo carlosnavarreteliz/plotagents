@@ -511,6 +511,8 @@ export interface Spec {
   unit?: number;
   /** waffle: most squares before a round `unit` kicks in (default 400). */
   maxSquares?: number;
+  /** waffle: each square its own mark with its own row's tooltip (only while a square is one unit). */
+  perSquare?: boolean;
   /** dendrogram (rows input): field with each row's id (default "id"). */
   id?: string;
   /** spark: line width in px. */

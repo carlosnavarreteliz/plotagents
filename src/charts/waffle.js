@@ -74,7 +74,29 @@ export function waffle(spec, theme) {
   // Un path por serie (una corrida de cuadros), con su tooltip.
   const body = [];
   let idx = 0;
-  keys.forEach((k, i) => {
+  // `perSquare`: cada cuadro es su propia marca, con el tooltip de su fila (una
+  // verificación, una persona). Sólo cuando un cuadro es una unidad: con
+  // `unit` > 1 un cuadro no es una fila y se vuelve a un path por serie.
+  if (spec.perSquare && unit === 1) {
+    const rowsOf = new Map(keys.map((k) => [k, []]));
+    for (const r of data) {
+      const k = String(r[series]);
+      const v = valueF ? num(r[valueF]) : 1;
+      if (!rowsOf.has(k) || !Number.isFinite(v) || v < 0) continue;
+      for (let j = 0; j < Math.round(v); j++) rowsOf.get(k).push(r);
+    }
+    keys.forEach((k, i) => {
+      const list = rowsOf.get(k);
+      for (let j = 0; j < squares[i]; j++, idx++) {
+        const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;
+        const d = rad > 0.5
+          ? `M${(cx + rad).toFixed(2)},${cy.toFixed(2)}h${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${rad}v${(s - 2 * rad).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${rad}h${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${-rad},${-rad}v${(2 * rad - s).toFixed(2)}a${rad},${rad} 0 0 1 ${rad},${-rad}Z`
+          : `M${cx.toFixed(2)},${cy.toFixed(2)}h${s.toFixed(2)}v${s.toFixed(2)}h${(-s).toFixed(2)}Z`;
+        const row = list[Math.min(j, list.length - 1)];
+        body.push(g({ class: 'pa-m', 'data-tip': TT(row ? [row] : { [series]: k }, k, `${fmt(tot.get(k))} (${share(tot.get(k))})`), 'data-color': colorOf(k) }, [el('path', { d, fill: colorOf(k) })]));
+      }
+    });
+  } else keys.forEach((k, i) => {
     const d = [];
     for (let j = 0; j < squares[i]; j++, idx++) {
       const cx = area.x + (idx % cols) * cell, cy = area.y + Math.floor(idx / cols) * cell;

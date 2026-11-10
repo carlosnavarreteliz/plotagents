@@ -307,6 +307,7 @@ Una cuenta hecha cuadros: un cuadro por fila, o por unidad de `value`, por `seri
 |---|---|
 | `value` | Campo a sumar (si no, un cuadro por fila). |
 | `unit`, `maxSquares` | Cuánto vale un cuadro; cuándo entra la unidad redonda. |
+| `perSquare` | Cada cuadro es su propia marca con el tooltip de su fila (una verificación, una persona), en el orden de los datos dentro de cada serie; va bien con `tooltip: { title, text, replace: true }`. Sólo mientras un cuadro es una unidad; sobre `maxSquares` vuelve a un tooltip por serie. |
 | `columns` | Cuadros por fila (10, 20 o 25 según el total). |
 | `order` | Orden de las series (por defecto, la mayor primero). |
 

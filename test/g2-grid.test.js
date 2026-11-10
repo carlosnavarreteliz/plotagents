@@ -182,3 +182,38 @@ test('table formatBy lint: the field must exist; only numeric column types; bars
   const ok = lint({ ...base, columns: ['name', rangeCol] });
   assert.equal(ok.errors.length, 0, JSON.stringify(ok.errors));
 });
+
+// ── waffle perSquare ───────────────────────────────────────────────────────
+const checks = [
+  ...Array.from({ length: 7 }, (_, i) => ({ status: 'Exact', label: `Population ${i}`, body: `Published: ${100 + i}\nRebuilt: ${100 + i}` })),
+  { status: 'Declared difference', label: 'Households', body: 'Published: 50\nRebuilt: 49\nDifference: 1' },
+  { status: 'Exact', label: 'Last exact', body: 'Published: 1\nRebuilt: 1' },
+];
+const wf = { type: 'waffle', data: checks, series: 'status', locale: 'en', width: 300, legend: false, tooltip: { title: 'label', text: 'body', replace: true } };
+
+test('waffle perSquare: one mark per square, each with its own row', () => {
+  const svg = plot({ ...wf, perSquare: true, order: ['Exact', 'Declared difference'] });
+  const t = tips(svg);
+  assert.equal(t.length, checks.length);
+  assert.ok(t.includes('Households\nPublished: 50\nRebuilt: 49\nDifference: 1'), t.join(' ## '));
+  assert.ok(t.includes('Last exact\nPublished: 1\nRebuilt: 1'));
+  // The order of the series holds: every Exact square before the difference.
+  assert.equal(t.findIndex((x) => x.startsWith('Households')), checks.length - 1);
+  // Without it, one mark per series, as before.
+  assert.equal(tips(plot(wf)).length, 2);
+});
+
+test('waffle perSquare: with a value field each row fills its count; unit > 1 falls back to one mark per series', () => {
+  const svg = plot({ type: 'waffle', data: [{ s: 'a', v: 2, who: 'Ana' }, { s: 'a', v: 1, who: 'Bea' }, { s: 'b', v: 3, who: 'Caro' }], series: 's', value: 'v', perSquare: true, tooltip: { title: 'who', replace: true } });
+  // a and b tie at 3, so a goes first; inside a series, rows in data order.
+  assert.deepEqual(tips(svg), ['Ana', 'Ana', 'Bea', 'Caro', 'Caro', 'Caro']);
+  const big = plot({ type: 'waffle', data: [{ s: 'a', v: 4000 }, { s: 'b', v: 1000 }], series: 's', value: 'v', perSquare: true });
+  assert.equal(tips(big).length, 2);
+  assert.ok(lint({ type: 'waffle', data: [{ s: 'a', v: 4000 }, { s: 'b', v: 1000 }], series: 's', value: 'v', perSquare: true }).warnings.some((w) => w.code === 'waffle-persquare-unit'));
+});
+
+test('waffle perSquare under skins', () => {
+  const svg = plot({ ...wf, perSquare: true, skins: [{ colors: { Exact: '#6e86c8', 'Declared difference': '#d9714f' } }, { when: 'html.classic', colors: { Exact: '#0b3f8c', 'Declared difference': '#d52b1e' } }] });
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{[^}]*#0b3f8c/);
+  assert.equal(tips(svg).length, checks.length);
+});
