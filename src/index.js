@@ -34,6 +34,11 @@ import { heatmap } from './charts/heatmap.js';
 import { corr, pairplot, correlations } from './charts/corr.js';
 import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';
+import { spark } from './charts/spark.js';
+import { bump } from './charts/bump.js';
+import { waffle } from './charts/waffle.js';
+import { dendrogram } from './charts/dendrogram.js';
+import { dotplot } from './charts/dotplot.js';
 import { table } from './charts/table.js';
 import { autoLocale, detectLocale } from './i18n.js';
 import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
@@ -89,6 +94,11 @@ const RENDERERS = {
   choropleth: (s, t) => choropleth(s, t),
   symbolmap: (s, t) => symbolMap(s, t),
   pointmap: (s, t) => pointmap(s, t),
+  spark: (s, t) => spark(s, t),
+  bump: (s, t) => bump(s, t),
+  waffle: (s, t) => waffle(s, t),
+  dendrogram: (s, t) => dendrogram(s, t),
+  dotplot: (s, t) => dotplot(s, t),
 };
 
 
@@ -107,7 +117,7 @@ export function resolve(spec = {}) {
     for (const [k, v] of Object.entries(extra)) if (s[k] === undefined) s[k] = v;
   }
   if (!type) {
-    const data = s.items || (!s.data && (typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
+    const data = s.items || (!s.data && (Array.isArray(s.linkage) || typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
     type = inferType(s, data);
   }
   if (!RENDERERS[type]) throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);

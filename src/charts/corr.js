@@ -10,6 +10,7 @@ import { makeFormat, formatNumber } from '../format.js';
 import { ramp, textOn, colorMap, readable } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
+import { leaves, elbows } from '../tree.js';
 import { ctx } from '../context.js';
 import { pearson, polyfit, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt } from './dist.js';
@@ -160,7 +161,6 @@ export function clusterTree(r, idx = r.map((_, i) => i)) {
   return nodes[0];
 }
 
-const leaves = (node) => (node.left ? [...leaves(node.left), ...leaves(node.right)] : [node.leaf]);
 
 // ── corr / clustermap ──────────────────────────────────────────────────────
 
@@ -276,16 +276,8 @@ export function corr(spec, theme) {
     const cx = new Map(cols.map((i, c) => [i, gx + c * cell + cell / 2]));
     const maxH = tree.h || 1;
     const yOf = (h) => gy - 6 - (h / maxH) * (dendroH - 12);
-    const segs = [];
-    const walk = (nd) => {
-      if (!nd.left) return [cx.get(nd.leaf), gy - 6];
-      const [xl, yl] = walk(nd.left), [xr, yr] = walk(nd.right);
-      const y = yOf(nd.h);
-      segs.push(`M${xl.toFixed(1)},${yl.toFixed(1)}V${y.toFixed(1)}H${xr.toFixed(1)}V${yr.toFixed(1)}`);
-      return [(xl + xr) / 2, y];
-    };
-    walk(tree);
-    body.push(el('path', { d: segs.join(''), fill: 'none', stroke: theme.muted, strokeWidth: 1.1, strokeLinejoin: 'round' }));
+    const [{ d }] = elbows(tree, (leaf) => cx.get(leaf), yOf);
+    body.push(el('path', { d, fill: 'none', stroke: theme.muted, strokeWidth: 1.1, strokeLinejoin: 'round' }));
   }
 
   rows.forEach((i, ri) => {

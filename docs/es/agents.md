@@ -26,6 +26,8 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Cambio en el tiempo | `line` | `x` fecha (`"2024-03"`) o año, `y`, `series?`; `ci: true` con varias observaciones por x |
 | Un plan de proyecto o un cronograma | `gantt` | `task`, `start`, `end` (o `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volumen en el tiempo | `area` | como `line`; se apila con `series` |
+| La forma de una serie en una celda de tabla | `spark` | `x`, `y`, `width`/`height` de cualquier tamaño (p. ej. 108×26), `fill?`, `series?` |
+| Quién pasó a quién en el tiempo | `bump` (`slope` para primero vs último) | `x` periodo, `y` valor (o `rank`), `series`, `top?`, `ends?: "first-last"` |
 | Medidas en escalas distintas | `line` + `index: true`, o `facet` | **no hay doble eje** |
 | Crecimiento exponencial | `line` + `yScale: "log"` | |
 | Relación entre dos medidas | `regplot` (ajuste + IC) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
@@ -34,10 +36,13 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Todos los pares de medidas a la vez | `pairplot` (`splom`) | `vars` (3–6), `hue?`, `corner?`, `kind?: "reg"` |
 | Distribución de una medida | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
 | Distribución por categoría | `box`, `violin`, `strip`, `swarm` | `x` categoría, `y` medida, `hue?` |
+| Una distribución en que cada cosa sigue siendo una | `dotplot` | `x`, `bin?`, `label?`, `series?`, `highlight?`, `ticks?: [[valor, rótulo]]` |
 | Perfil multidimensional | `radar` | `axis`, `value`, `series` (≤ 4 series) |
 | Parte de un todo jerárquico | `treemap` o `sunburst` | `path: [level1, level2, …]`, `value` |
 | Parte de un todo, ≤ 6 partes | `donut` / `pie` | `label`, `value`; `half: true` para un semicírculo |
 | Magnitud en una grilla | `heatmap` | `x`, `y`, `value` |
+| Una cuenta como número de cosas | `waffle` | `series`, `value?` (o un cuadro por fila), `columns?`, `unit?` |
+| Cómo se agrupan las cosas, y a qué altura | `dendrogram` | filas `id`, `parent`, `heightField?` o `linkage` + `labels`; `cut?`, `clusters?` |
 | Un valor por región, estado o país | `choropleth` (`symbolmap` para totales) | `geo: "chile" \| "usa" \| "world"` o cualquier objeto GeoJSON/TopoJSON, `key`, `value` (texto → un color por categoría) |
 | Puntos en lugares reales sobre un mapa de calles | `pointmap` | `lon`, `lat` (se detectan solos), `size?`, `hue?`, `value?`, `label?`; `tiles: "osm"` (por defecto) / `"esri-gray"` / `"esri-dark"`, o carto-* / mapbox-* con `tilesKey` |
 | Quién se conecta con quién | `network` | aristas `from`, `to`, `value?`; `nodes?` con `group`; `layout?` |

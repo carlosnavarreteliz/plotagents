@@ -72,6 +72,28 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `fill` | Línea única: `false` quita el degradado suave. |
 | `xRange` | Rango visible `[from, to]`; es lo que fija el deslizador de rango (`slider: true`). |
 
+### `spark` (`sparkline`)
+
+La forma de una serie, en su propia escala de mínimo a máximo (sin cero): responde «cómo se movió», y la cifra de al lado dice «cuánto». Sin ejes, grilla, rótulos, leyenda ni título dibujados (el título queda en `<title>` para lectores de pantalla) y sin tamaño mínimo, así que cabe en una celda: `width: 108, height: 26`. Un punto marca el último valor; un valor faltante es un hueco. Una franja invisible por x lleva el tooltip.
+
+| Opción | Significado |
+|---|---|
+| `series` | Unas pocas líneas en una misma escala. |
+| `fill` | Un lavado suave bajo la línea (`true` o una opacidad). |
+| `dot`, `dotRadius`, `lineWidth` | El punto final (`dot: false` lo oculta) y el trazo. |
+| `yDomain` | Fija la escala (p. ej. para comparar sparklines de una columna). |
+
+### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
+
+Quién pasó a quién: `x` periodo, `y` valor (ordenado en cada periodo, el mayor primero) o `rank` con puestos ya calculados, y `series`. El eje y es el puesto, el 1 arriba. Los nombres van en ambos extremos (puesto y nombre a la izquierda; en teléfono, sólo el puesto), y un ▲/▼ al final dice cuántos puestos se movió cada serie. Los empates se rompen por nombre: el dibujo es determinista.
+
+| Opción | Significado |
+|---|---|
+| `top` | Deja las series que estuvieron entre las N primeras en algún periodo (12 por defecto). Un puesto bajo N se dibuja hueco en una fila «bajo N»; el tooltip dice el puesto real. |
+| `ends` | `"first-last"`: sólo el primer y el último periodo (un slope chart; el alias `slope` lo fija). |
+| `rank` | Campo con puestos ya calculados (1 = primero), en vez de ordenar `y`. |
+| `highlight` | Una o más series en color; el resto en `dim`. |
+
 ## Proyectos
 
 ### `gantt` (`timeline`, `roadmap`, `schedule`, `cronograma`)
@@ -155,6 +177,18 @@ plot({ type: 'corr', data, vars: ['income', 'schooling', 'poverty', 'density'], 
 | `labelsFor` | Nombres para mostrar, p. ej. `{ areas_verdes: "Green space" }`. |
 | `x`, `y`, `value` | Dibuja una matriz que ya calculaste, en formato largo (una fila por par). |
 
+### `dendrogram` (`dendrograma`, `hclust`)
+
+Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calculado: filas `{ id, parent, height }` (los nombres de campo en `id`, `parent`, `heightField`; un nodo con tres o más hijos se dibuja como codos a la misma altura) o una matriz `linkage` de scipy con sus `labels`. La biblioteca no agrupa nada por su cuenta (`corr` con `cluster: true` sí, para correlaciones).
+
+| Opción | Significado |
+|---|---|
+| `cut` | Altura del corte: cada subárbol bajo ella es un grupo con su color categórico, nombrado a lo largo de sus hojas con su tamaño; sobre el corte, gris. Una línea punteada marca el corte. |
+| `clusters` | Nombres de los grupos, en el orden de las hojas. |
+| `orientation` | `"horizontal"` (raíz a la izquierda, por defecto) o `"vertical"` (raíz arriba). |
+| `labels` | Rótulos de hojas: `"auto"` (una de cada k si no caben), `true`, `false`; con `linkage`, la lista de nombres. |
+| `label` | Entrada por filas: campo con el nombre visible de cada hoja. |
+
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
 Matriz de diagramas de dispersión: cada par como dispersión bajo la diagonal, la distribución de cada variable en la diagonal (histograma, o densidad con `hue`) y la r de Pearson sobre ella, teñida según la intensidad y dividida por grupo de `hue` cuando hay espacio. Los ejes se comparten por columna y por fila; las marcas de los ejes solo van en los bordes exteriores.
@@ -202,6 +236,19 @@ Datos largos (`axis`, `value`, `series`) o anchos (`axes: [fields]`, una fila po
 | `estimator`, `errorbar` | Gráfico de puntos: `"mean"`/`"median"`/`"sum"` y `"ci"`/`"sd"`/`"se"`/`"pi"`. |
 | `order`, `hueOrder` | Orden de las categorías y de los grupos. |
 
+### `dotplot` (`dot-plot`, `wilkinson`)
+
+Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cosa sigue siendo una, para señalarla, nombrarla y destacarla. `x` numérico se agrupa en tramos; `x` categórico apila por categoría.
+
+| Opción | Significado |
+|---|---|
+| `bin`, `bins` | Ancho del tramo en unidades de `x`, o un número de tramos (30 por defecto). |
+| `label` | Campo con el nombre de cada punto (tooltip, y el rótulo del punto destacado). |
+| `series` | Colores de los puntos. |
+| `highlight` | Un nombre (o lista): ese punto lleva un anillo y su nombre; el resto se aclara. |
+| `ticks` | Marcas propias en el eje: `[[500000, "$500 mil"], [1000000, "$1 M"]]`. |
+| `dotSize` | Diámetro máximo de un punto en px (14 por defecto). |
+
 ## Partes de un todo
 
 ### `treemap` · `sunburst`
@@ -236,6 +283,17 @@ Grupos de edad (`age` o `y`), dos lados (`sex`, `series` o `hue`) y un valor. Ba
 | `thickness` | Grosor del anillo (el pie es `1`). |
 | `sort` | `"desc"` o `"none"`. |
 | `centerValue`, `centerLabel` | Centro de la dona. |
+
+### `waffle` (`squares`, `cuadros`)
+
+Una cuenta hecha cuadros: un cuadro por fila, o por unidad de `value`, por `series`, la mayor primero, llenando por filas. La parte se lee como un número de cosas y no sólo como una proporción. Si el total pasa de `maxSquares` (400), cada cuadro vale una cantidad redonda (`unit`) y la leyenda lo dice («1 cuadro = 5»); los cuadros por serie se reparten por restos mayores, así que siempre suman el total redondeado. La leyenda lleva cada cuenta; un tooltip por serie con cuenta y participación. `facet` da una pared por valor.
+
+| Opción | Significado |
+|---|---|
+| `value` | Campo a sumar (si no, un cuadro por fila). |
+| `unit`, `maxSquares` | Cuánto vale un cuadro; cuándo entra la unidad redonda. |
+| `columns` | Cuadros por fila (10, 20 o 25 según el total). |
+| `order` | Orden de las series (por defecto, la mayor primero). |
 
 ## Mapas
 

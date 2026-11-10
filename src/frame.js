@@ -16,27 +16,30 @@ export const SIZES = {
 };
 
 export function createFrame(spec, theme, defaults = {}) {
-  const width = Math.max(240, +spec.width || defaults.width || 720);
+  // `chrome: false` (sparklines): sin título, bajada ni fuente dibujados (el
+  // título sigue en <title> para lectores de pantalla) y sin tamaño mínimo.
+  const chrome = defaults.chrome !== false;
+  const width = Math.max(defaults.minWidth ?? 240, +spec.width || defaults.width || 720);
   // Con textos más grandes (textScale), el alto por defecto crece para no aplastar los datos.
   const XS = ctx.textScale;
   // En gráficos anchos el alto por defecto crece con el ancho (hasta ~2,8:1),
   // para que una lámina de 1500 px no quede como una franja vacía.
   const h0 = defaults.height || 420;
   const hW = defaults.fixedHeight ? h0 : Math.max(h0, Math.min(Math.round(h0 * 1.35), Math.round(width * 0.36)));
-  let height = Math.max(160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1))));
+  let height = Math.max(defaults.minHeight ?? 160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1))));
   // Responsivo: en pantallas angostas, menos margen y títulos algo menores
   // (nunca bajo 11 px en ejes). El ancho útil es lo que más importa en móvil.
   const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
-  const pad = spec.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
+  const pad = spec.padding ?? defaults.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
   const innerW = width - pad * 2;
   const parts = [];
   let y = pad;
 
   const tw = T.titleWeight ?? 600;
-  const titleLines = spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
-  const subLines = spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
+  const titleLines = chrome && spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
+  const subLines = chrome && spec.subtitle ? wrap(spec.subtitle, innerW, T.subtitle, 400, 5) : [];
   const header = [];
   const X = ctx.textScale; // alturas de línea crecen con la escala de texto
   const tlh = Math.round(T.title * X * 1.3), slh = Math.round(T.subtitle * X * 1.42);
@@ -50,7 +53,7 @@ export function createFrame(spec, theme, defaults = {}) {
   if (subLines.length) y += subLines.length * slh + 2;
   if (titleLines.length || subLines.length) y += 10;
 
-  const srcText = spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
+  const srcText = chrome && spec.source ? (/^(fuente|source|fonte|quelle)/i.test(spec.source) ? spec.source : words(spec.locale).source + spec.source) : '';
   // Una fuente larga salta a una segunda línea en vez de salirse por la izquierda.
   const srcLines = srcText ? wrap(srcText, innerW, T.source, 400, 2) : [];
   const srcLH = Math.round(T.source * X * 1.35);
@@ -214,6 +217,7 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
     else if (it.shape === 'line') out.push(el('line', { x1: x, x2: x + sw * 1.2, y1: cy, y2: cy, stroke: it.color, strokeWidth: 2.5, strokeLinecap: it.dashed ? 'butt' : 'round', strokeDasharray: it.dashed ? '4 2.5' : null }));
     else if (it.shape === 'square' && it.dashed) out.push(el('rect', { x: x + 0.6, y: cy - sw / 2 + 0.6, width: sw - 1.2, height: sw - 1.2, rx: 2, fill: it.fill || it.color, stroke: it.stroke || it.color, strokeWidth: 1.2, strokeDasharray: '3 2' }));
     else if (it.shape === 'square') out.push(el('rect', { x, y: cy - sw / 2, width: sw, height: sw, rx: 2.5, fill: it.color }));
+    else if (it.shape === 'none') { /* una nota en la leyenda (p. ej. «1 cuadro = 10»): sin marca */ }
     else out.push(el('circle', { cx: x + sw / 2, cy, r: sw / 2, fill: it.color }));
     out.push(text(x + sw + 6, y + 11 * X, label, { fill: theme.lede, fontSize: size, textDecoration: it.off ? 'line-through' : null }));
     out.push('</g>');
