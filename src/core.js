@@ -26,6 +26,11 @@ import './types/heatmap.js';
 import './types/corr.js';
 import './types/sankey.js';
 import './types/kpi.js';
+import './types/spark.js';
+import './types/bump.js';
+import './types/waffle.js';
+import './types/dendrogram.js';
+import './types/dotplot.js';
 
 export * from './base.js';
 export { default } from './base.js';

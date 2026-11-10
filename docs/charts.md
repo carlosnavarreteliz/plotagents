@@ -83,6 +83,28 @@ The value axis always ends on the first round value at or above the largest bar,
 
 **Given intervals and tooltips without a runtime.** `band: { lower: 'lo', upper: 'hi', label: '80% interval' }` draws an interval that comes already computed (a model's projection, a published range) as is, with no estimator, and names it in the legend; it combines with `dashedFrom`. `crosshair: false` (implied by `tooltip`) writes one column per x with its own `data-tip` instead of the browser crosshair, for pages that bring their own tooltip layer.
 
+### `spark` (`sparkline`)
+
+The shape of one series, on its own min–max scale (no zero): it answers "how did it move", and the number next to it says "how much". No axes, grid, labels, legend or title drawn (the title stays in `<title>` for screen readers), and no minimum size, so it fits a table cell: `width: 108, height: 26`. A dot marks the last value; a missing value is a gap. One invisible strip per x carries the tooltip.
+
+| Option | Meaning |
+|---|---|
+| `series` | A few lines on one shared scale. |
+| `fill` | Soft wash under the line (`true` or an opacity). |
+| `dot`, `dotRadius`, `lineWidth` | End dot (`dot: false` hides it) and stroke. |
+| `yDomain` | Fix the scale (e.g. to compare sparklines in a column). |
+
+### `bump` (`rank`, `ranking`) · `slope` (`slopegraph`)
+
+Who passed whom: `x` period, `y` value (ranked per period, largest first) or `rank` with ranks you already have, and `series`. The y axis is the rank, 1 on top. Names go on both ends (rank + name on the left; on phones, the rank alone), and a ▲/▼ at the right end says how many places each series moved. Ties break by name, so the drawing is deterministic.
+
+| Option | Meaning |
+|---|---|
+| `top` | Keep series that were in the top N at some period (default 12). A rank below N is drawn hollow on a "below N" row; the tooltip has the real rank. |
+| `ends` | `"first-last"`: only the first and last period (a slope chart; the `slope` alias sets it). |
+| `rank` | Field with ranks already computed (1 = first) instead of ranking `y`. |
+| `highlight` | One or more series in color; the rest in `dim`. |
+
 ## Projects
 
 ### `gantt` (`timeline`, `roadmap`, `schedule`, `cronograma`)
@@ -168,6 +190,18 @@ plot({ type: 'corr', data, vars: ['income', 'schooling', 'poverty', 'density'], 
 | `labelsFor` | Display names, e.g. `{ areas_verdes: "Green space" }`. |
 | `x`, `y`, `value` | Draw a matrix you already computed, in long form (one row per pair). |
 
+### `dendrogram` (`dendrograma`, `hclust`)
+
+How things group, and at what height they join. The tree comes in already computed, either as rows `{ id, parent, height }` (field names in `id`, `parent`, `heightField`; a node with three or more children is drawn as elbows at the same height) or as a scipy `linkage` matrix with its `labels`. The library does not cluster anything itself (`corr` with `cluster: true` does, for correlations).
+
+| Option | Meaning |
+|---|---|
+| `cut` | Height to cut at: each subtree below it is a group in its own categorical color, named along its leaves with its size; above the cut, grey. A dashed line marks the cut. |
+| `clusters` | Group names, in leaf order. |
+| `orientation` | `"horizontal"` (root left, default) or `"vertical"` (root on top). |
+| `labels` | Leaf labels: `"auto"` (every k-th when they do not fit), `true`, `false`; with `linkage`, the list of leaf names. |
+| `label` | Rows input: field with the display name of each leaf. |
+
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
 Scatter-plot matrix: each pair as a scatter below the diagonal, each variable's distribution on it (histogram, or density with `hue`), and Pearson r above, tinted by strength and split by `hue` group when there is room. Axes are shared by column and row; tick labels sit only on the outer edges.
@@ -216,6 +250,19 @@ Long data (`axis`, `value`, `series`) or wide data (`axes: [fields]`, one row pe
 | `order`, `hueOrder` | Category and group order. |
 | `xGroup` / `yGroup`, `xTicks` / `yTicks` | Grouped category axis and thinned category labels, as in `bar`. |
 
+### `dotplot` (`dot-plot`, `wilkinson`)
+
+One dot per row, stacked by bin (Wilkinson): a histogram where each thing is still one thing, to point at, name and highlight. `x` numeric is binned; `x` categorical stacks per category.
+
+| Option | Meaning |
+|---|---|
+| `bin`, `bins` | Bin width in units of `x`, or a number of bins (default 30). |
+| `label` | Field with each dot's name (tooltip, and the label of a highlighted dot). |
+| `series` | Dot colors. |
+| `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
+| `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
+| `dotSize` | Largest dot diameter in px (default 14). |
+
 ## Part-to-whole
 
 ### `treemap` · `sunburst`
@@ -250,6 +297,17 @@ Age groups (`age` or `y`), two sides (`sex`, `series` or `hue`) and a value. Bac
 | `thickness` | Ring thickness (pie is `1`). |
 | `sort` | `"desc"` or `"none"`. |
 | `centerValue`, `centerLabel` | Donut center. |
+
+### `waffle` (`squares`, `unit-chart`)
+
+A count drawn as squares: one square per row, or per unit of `value`, by `series`, largest first, filled row by row. The part reads as a number of things, not only a share. When the total passes `maxSquares` (400), each square is worth a round `unit` and the legend says so ("1 square = 5"); squares per series are split by largest remainder, so they always add up to the rounded total. The legend carries each count; one tooltip per series with count and share. `facet` gives one wall per value.
+
+| Option | Meaning |
+|---|---|
+| `value` | Field to add up (otherwise one square per row). |
+| `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
+| `columns` | Squares per row (default 10, 20 or 25 by total). |
+| `order` | Series order (default: largest first). |
 
 ## Maps
 

@@ -1,7 +1,7 @@
 // Elige el tipo de gráfico cuando el agente no lo indica (type: "auto").
 import { fieldsOf, fieldKind } from './data.js';
 
-export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot'];
+export const TYPES = ['bar', 'column', 'count', 'line', 'area', 'scatter', 'bubble', 'treemap', 'sunburst', 'donut', 'pie', 'heatmap', 'sankey', 'kpi', 'hist', 'kde', 'ecdf', 'regplot', 'residplot', 'jointplot', 'box', 'violin', 'strip', 'swarm', 'point', 'radar', 'network', 'chord', 'pyramid', 'flowchart', 'gantt', 'wordcloud', 'choropleth', 'symbolmap', 'pointmap', 'table', 'corr', 'pairplot', 'spark', 'bump', 'waffle', 'dendrogram', 'dotplot'];
 
 // Nombres de seaborn, d3plus y otros: el agente puede usar el que conozca.
 export const ALIASES = {
@@ -21,6 +21,11 @@ export const ALIASES = {
   correlacion: 'corr', 'correlación': 'corr', 'matriz-correlacion': 'corr', 'matriz-de-correlacion': 'corr', 'matriz-de-correlación': 'corr',
   clustermap: ['corr', { cluster: true }], 'cluster-map': ['corr', { cluster: true }],
   pairs: 'pairplot', pairgrid: 'pairplot', splom: 'pairplot', scattermatrix: 'pairplot', 'scatter-matrix': 'pairplot', 'scatterplot-matrix': 'pairplot', 'matriz-de-dispersion': 'pairplot', 'matriz-de-dispersión': 'pairplot',
+  sparkline: 'spark', sparklines: 'spark', microchart: 'spark',
+  bumpchart: 'bump', 'bump-chart': 'bump', rank: 'bump', ranking: 'bump', slope: ['bump', { ends: 'first-last' }], slopegraph: ['bump', { ends: 'first-last' }], 'slope-chart': ['bump', { ends: 'first-last' }],
+  'waffle-chart': 'waffle', squares: 'waffle', unitchart: 'waffle', 'unit-chart': 'waffle', cuadros: 'waffle',
+  dendrograma: 'dendrogram', linkage: 'dendrogram', hclust: 'dendrogram', 'cluster-tree': 'dendrogram',
+  'dot-plot': 'dotplot', wilkinson: 'dotplot', 'dot-histogram': 'dotplot', 'puntos-apilados': 'dotplot',
   tree: 'treemap', stat: 'kpi', stats: 'kpi', number: 'kpi', heat: 'heatmap', flow: 'sankey',
 };
 
@@ -34,6 +39,7 @@ export function normalizeType(t) {
 
 export function inferType(spec, data = []) {
   if (spec.items) return 'kpi';
+  if (Array.isArray(spec.linkage)) return 'dendrogram';
   if (Array.isArray(spec.columns) || spec.pageSize !== undefined) return 'table';
   if (spec.geo) return 'choropleth';
   if (spec.lat || spec.lon || spec.tiles !== undefined) return 'pointmap';

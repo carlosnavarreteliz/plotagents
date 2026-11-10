@@ -26,6 +26,8 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Change over time | `line` | `x` date (`"2024-03"`) or year, `y`, `series?`; `ci: true` with several observations per x |
 | A project plan or schedule | `gantt` | `task`, `start`, `end` (or `duration`), `group?`, `progress?`, `dependsOn?`, `today?`, `collapsed?` |
 | Volume over time | `area` | like `line`; stacks with `series` |
+| The shape of a series in a table cell | `spark` | `x`, `y`, `width`/`height` any size (e.g. 108×26), `fill?`, `series?` |
+| Who passed whom over time | `bump` (`slope` for first vs last) | `x` period, `y` value (or `rank`), `series`, `top?`, `ends?: "first-last"` |
 | Measures on different scales | `line` + `index: true`, or `facet` | **there is no dual axis** |
 | Exponential growth | `line` + `yScale: "log"` | |
 | Relationship between two measures | `regplot` (fit + CI) / `scatter` / `bubble` | `x`, `y`, `hue?`, `size?`, `label?` |
@@ -34,10 +36,13 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 | Every pair of measures at once | `pairplot` (`splom`) | `vars` (3–6), `hue?`, `corner?`, `kind?: "reg"` |
 | Distribution of one measure | `hist` (`kde: true`), `kde`, `ecdf` | `x`, `hue?` |
 | Distribution by category | `box`, `violin`, `strip`, `swarm` | `x` category, `y` measure, `hue?` |
+| Distribution where each thing stays one thing | `dotplot` | `x`, `bin?`, `label?`, `series?`, `highlight?`, `ticks?: [[value, label]]` |
 | Multi-dimensional profile | `radar` | `axis`, `value`, `series` (≤ 4 series) |
 | Hierarchical part-to-whole | `treemap` or `sunburst` | `path: [level1, level2, …]`, `value` |
 | Part-to-whole, ≤ 6 parts | `donut` / `pie` | `label`, `value`; `half: true` for a semicircle |
 | Magnitude on a grid | `heatmap` | `x`, `y`, `value` |
+| A count as a number of things | `waffle` | `series`, `value?` (or one square per row), `columns?`, `unit?` |
+| How things group, and at what height | `dendrogram` | rows `id`, `parent`, `heightField?` or `linkage` + `labels`; `cut?`, `clusters?` |
 | A value per region, state or country | `choropleth` (`symbolmap` for totals) | `geo: "chile" \| "usa" \| "world"` or any GeoJSON/TopoJSON object, `key`, `value` (text → one color per category) |
 | Dots at real places on a street map | `pointmap` | `lon`, `lat` (auto-detected), `size?`, `hue?`, `value?`, `label?`; `tiles: "osm"` (default) / `"esri-gray"` / `"esri-dark"`, or carto-* / mapbox-* with `tilesKey` |
 | Who is connected to whom | `network` | edges `from`, `to`, `value?`; `nodes?` with `group`; `layout?` |

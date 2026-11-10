@@ -6,11 +6,13 @@ export type ChartType =
   | 'box' | 'violin' | 'strip' | 'swarm' | 'point' | 'radar'
   | 'treemap' | 'sunburst' | 'donut' | 'pie' | 'heatmap' | 'sankey' | 'kpi'
   | 'network' | 'chord' | 'pyramid' | 'flowchart' | 'gantt' | 'wordcloud' | 'choropleth' | 'symbolmap' | 'pointmap' | 'table' | 'corr' | 'pairplot'
+  | 'spark' | 'bump' | 'waffle' | 'dendrogram' | 'dotplot'
   // Aliases (seaborn and others)
   | 'barplot' | 'countplot' | 'lineplot' | 'scatterplot' | 'histplot' | 'kdeplot' | 'ecdfplot'
   | 'lmplot' | 'boxplot' | 'violinplot' | 'stripplot' | 'swarmplot' | 'beeswarm' | 'pointplot' | 'spider'
   | 'timeline' | 'roadmap' | 'schedule' | 'cronograma' | 'map' | 'mapa' | 'tabla' | 'datatable'
-  | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix';
+  | 'correlation' | 'corrplot' | 'clustermap' | 'pairs' | 'splom' | 'scattermatrix'
+  | 'sparkline' | 'slope' | 'slopegraph' | 'dot-plot';
 
 export type Locale = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'auto';
 
@@ -384,6 +386,7 @@ export interface Spec {
   valueDomain?: [number, number];
   bandwidth?: number;
   bwAdjust?: number;
+  /** kde/violin: density past the data, in bandwidths. dendrogram: height to cut at (colored groups). */
   cut?: number;
   jitter?: number | boolean;
   dodge?: boolean;
@@ -454,8 +457,38 @@ export interface Spec {
   /** table: totals row. */
   total?: boolean | 'sum' | 'mean' | 'min' | 'max' | Record<string, string | boolean>;
   totalLabel?: string;
-  /** table: "#" column with the position. */
-  rank?: boolean;
+  /** table: "#" column with the position. bump: a field that already holds the rank. */
+  rank?: boolean | string;
+  /** bump: "first-last" draws only the first and last period (slope chart). */
+  ends?: 'all' | 'first-last';
+  /** dendrogram: scipy-style linkage matrix (n − 1 rows [a, b, height, count]); pair with `labels`. */
+  linkage?: number[][];
+  /** dendrogram: names of the groups made by `cut`, in leaf order. */
+  clusters?: string[];
+  /** dendrogram (rows input): field with each row's parent id. */
+  parent?: string;
+  /** dendrogram (rows input): field with the joining height (default "height"). */
+  heightField?: string;
+  /** dendrogram: root left ("horizontal", default) or on top ("vertical"). */
+  orientation?: 'horizontal' | 'vertical';
+  /** dotplot: bin width in units of x. */
+  bin?: number;
+  /** dotplot: your own axis ticks, [value, label] pairs. */
+  ticks?: Array<number | [number, string]>;
+  /** dotplot: largest dot diameter in px. */
+  dotSize?: number;
+  /** spark: false hides the end dot. */
+  dot?: boolean;
+  /** spark: end dot radius. */
+  dotRadius?: number;
+  /** waffle: what one square is worth. */
+  unit?: number;
+  /** waffle: most squares before a round `unit` kicks in (default 400). */
+  maxSquares?: number;
+  /** dendrogram (rows input): field with each row's id (default "id"). */
+  id?: string;
+  /** spark: line width in px. */
+  lineWidth?: number;
   /** table: one card per row. "auto" (default) when the columns do not fit. */
   cards?: boolean | 'auto';
   density?: 'compact' | 'normal' | 'comfortable';

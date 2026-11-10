@@ -32,7 +32,7 @@ export function resolve(spec = {}) {
     for (const [k, v] of Object.entries(extra)) if (s[k] === undefined) s[k] = v;
   }
   if (!type) {
-    const data = s.items || (!s.data && (typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
+    const data = s.items || (!s.data && (Array.isArray(s.linkage) || typeof s.text === 'string' || Array.isArray(s.text))) ? [] : ensureData(s);
     type = inferType(s, data);
   }
   if (!RENDERERS[type]) {
