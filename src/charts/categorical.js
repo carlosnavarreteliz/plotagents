@@ -76,7 +76,7 @@ function prepare(spec) {
  * Ejes, escalas, colores y leyenda compartidos por los cinco gráficos.
  * `extent` = [min, max] de los valores a mostrar (incluye bigotes, IC, etc.).
  */
-function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowStep } = {}) {
+function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowStep, tight = false } = {}) {
   const locale = spec.locale || 'es';
   const vertical = !(spec.horizontal ?? (spec.orient === 'h' ? true : spec.orient === 'v' ? false : undefined) ?? autoHorizontal(spec, m));
   const valueScale = (vertical ? spec.yScale : spec.xScale) ?? spec.valueScale ?? spec.scale;
@@ -106,7 +106,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const yTitle = vertical ? spec.yLabel ?? humanize(m.val) : spec.yLabel;
   const xTitle = vertical ? spec.xLabel : spec.xLabel ?? humanize(m.val);
   const body = { pre: [], marks: [], post: [] };
-  let valS, nd, ticks, tickFmt, inner, catS;
+  let valS, nd, ticks, tickFmt, inner, catS, step, placeLabels = null;
   // Grupos del eje de categorías (xGroup / yGroup, cualquiera de los dos).
   const groupF = m.cat ? spec.xGroup ?? spec.yGroup : null;
   if (groupF) requireField(m.data, groupF, spec.xGroup ? 'xGroup' : 'yGroup');
@@ -119,7 +119,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     const h0 = area.h - top - bottom;
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(h0 / 56)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
-    if (clamp) tickFmt = clampTicks(tickFmt, nd, m.all);
+    if (clamp) tickFmt = clampTicks(tickFmt, nd, m.all, spec.clamp === 'always');
     const leftM = yAxisMargin(ticks, tickFmt, theme);
     inner = { x: area.x + leftM, y: area.y + top, w: area.w - leftM, h: h0 };
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.y + inner.h, inner.y);
@@ -139,27 +139,49 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
     // `yLabelPosition: 'above'`: el nombre de cada fila va sobre ella (el eje
     // se queda con todo el ancho, para un teléfono).
     const above = spec.yLabelPosition === 'above' && !!m.cat;
+    // strip/swarm (`tight`): cada fila es una franja de `rowHeight` con el
+    // nombre arriba y los puntos debajo; el nombre se pega a sus puntos.
+    const tightAbove = above && tight;
     const labelW = m.cat && !above ? Math.min(Math.max(...m.cats.map((c) => measure(c, axisSize + 0.5))), area.w * (area.w < 500 ? 0.42 : 0.32)) + 12 : 0;
-    const step = rowStep ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
+    step = rowStep ?? rowHeightOf(spec) ?? (multiHue && dodge ? Math.max(30, 22 * m.hues.length + 12) : 46);
+    // Con `rowHeight` (o el paso que pide un enjambre de radio fijo), el paso
+    // entre filas es exactamente ese: el alto suma el relleno de la banda.
+    const exact = rowStep !== undefined || rowHeightOf(spec) !== undefined;
+    const span = !exact ? m.cats.length * step : tightAbove ? m.cats.length * step : (m.cats.length - (above ? 0.42 : 0.28) + 0.16) * step + (above ? 14 : 0);
     if (spec.height === undefined) {
-      frame.setHeight(area.y + m.cats.length * step + 30 + (xTitle ? 20 : 0) + frame.chrome);
+      frame.setHeight(area.y + span + 30 + (xTitle ? 20 : 0) + frame.chrome);
       area = { ...area, h: frame.bottom - area.y };
     }
     const gW = runs ? groupBandWidth(runs, area.w * 0.22) : 0;
     inner = { x: area.x + gW + labelW, y: area.y + 4, w: area.w - gW - labelW - 10, h: area.h - 30 - (xTitle ? 20 : 0) };
-    if (above) { inner.y += 14; inner.h -= 14; }
+    if (above && !tightAbove) { inner.y += 14; inner.h -= 14; }
     if (isLog) { nd = dom ? { min: dom[0], max: dom[1] } : logDomain(lo, hi); ticks = log(nd.min, nd.max, 0, 1).ticks(); tickFmt = fmt; }
     else { const cnt = Math.max(4, Math.round(inner.w / 100)); nd = dom ? { min: dom[0], max: dom[1], step: niceStep(dom[1] - dom[0], cnt) } : niceDomain(lo, hi, cnt); ticks = linear(nd.min, nd.max, 0, 1).ticks(nd.step).filter((t) => t >= nd.min - 1e-9 && t <= nd.max + 1e-9); tickFmt = fmt.tick(nd.step); }
     valS = (isLog ? log : linear)(nd.min, nd.max, inner.x, inner.x + inner.w);
-    if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all); }
-    catS = band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
+    if (clamp) { valS = clampScale(valS, nd); tickFmt = clampTicks(tickFmt, nd, m.all, spec.clamp === 'always'); }
+    const lineH = (axisSize + 0.5) * ctx.textScale + 4;
+    catS = tightAbove ? rowBands(m.cats, inner.y, inner.h, lineH) : band(m.cats, inner.y, inner.y + inner.h, { inner: above ? 0.42 : 0.28, outer: 0.08 });
     body.pre.push(gridX(ticks, valS, inner, theme, tickFmt, { baseline: zero ? 0 : NaN }));
-    if (runs) body.pre.push(groupBandY(runs, (i) => [catS.center(m.cats[i]) - catS.step / 2 + 1, catS.center(m.cats[i]) + catS.step / 2 - 1], area.x, gW, theme, inner.x + inner.w));
-    if (m.cat) for (const [ci, c] of m.cats.entries()) {
+    const rowSpan = (c) => (tightAbove ? [catS.top(c) + 1, catS.top(c) + catS.step - 1] : [catS.center(c) - catS.step / 2 + 1, catS.center(c) + catS.step / 2 - 1]);
+    if (runs) body.pre.push(groupBandY(runs, (i) => rowSpan(m.cats[i]), area.x, gW, theme, inner.x + inner.w));
+    const label = (c, y, attrs) => text(attrs ? inner.x - 10 : inner.x, y, truncate(c, attrs ? labelW - 12 : inner.w, axisSize + 0.5), { fill: !hl || hl.has(c) ? theme.ink : theme.muted, fontSize: axisSize + 0.5, ...attrs });
+    if (m.cat && tightAbove) {
+      // El nombre va justo sobre el punto más alto de su fila (lo ubica cada
+      // gráfico con `placeLabels`), sin subir más allá de la franja.
+      const at = body.post.length;
+      placeLabels = (topOf) => {
+        const out = [];
+        for (const [ci, c] of m.cats.entries()) {
+          if (ci % tickEvery) continue;
+          const dotTop = topOf.get(c) ?? catS.center(c) - 4;
+          out.push(label(c, Math.max(catS.top(c) + (axisSize + 0.5) * ctx.textScale, dotTop - 4)));
+        }
+        body.post.splice(at, 0, ...out);
+      };
+    } else if (m.cat) for (const [ci, c] of m.cats.entries()) {
       if (ci % tickEvery) continue;
-      const strong = !hl || hl.has(c);
-      if (above) body.post.push(text(inner.x, catS(c) - 4, truncate(c, inner.w, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5 }));
-      else body.post.push(text(inner.x - 10, catS.center(c) + 4.5, truncate(c, labelW - 12, axisSize + 0.5), { fill: strong ? theme.ink : theme.muted, fontSize: axisSize + 0.5, textAnchor: 'end' }));
+      if (above) body.post.push(label(c, catS(c) - 4));
+      else body.post.push(label(c, catS.center(c) + 4.5, { textAnchor: 'end' }));
     }
     if (xTitle) body.post.push(text(inner.x + inner.w, inner.y + inner.h + 22 + 18 * ctx.textScale, xTitle, { fill: theme.lede, fontSize: axisSize, fontWeight: 500, textAnchor: 'end' }));
   }
@@ -169,12 +191,27 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const refs = [].concat(spec.refLines ?? []).filter((r) => r && typeof r === 'object').map((r) => ({ ...r, y: r.value ?? r.y ?? r.x }));
   if (refs.length) body.post.push(vertical ? refLinesY(refs, valS, inner, theme, fmt) : refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), valS, inner, theme, fmt));
 
+  // `rowLine`: una guía por categoría, de punta a punta del eje de valores,
+  // detrás de las marcas (true: continua; "dashed": 2 3).
+  if (spec.rowLine && m.cat) {
+    const dash = spec.rowLine === 'dashed' ? '2 3' : null;
+    const lines = m.cats.map((c) => {
+      const p = Math.round(catS.center(c)) + 0.5;
+      return vertical
+        ? el('line', { x1: p, x2: p, y1: inner.y, y2: inner.y + inner.h, stroke: theme.grid, strokeWidth: 1, strokeDasharray: dash })
+        : el('line', { x1: inner.x, x2: inner.x + inner.w, y1: p, y2: p, stroke: theme.grid, strokeWidth: 1, strokeDasharray: dash });
+    });
+    body.pre.push(g({ class: 'pa-rowlines' }, lines));
+  }
+
   // Posición en el eje de categorías: centro de cada grupo (con "dodge" por hue).
   const k = multiHue && dodge ? m.hues.length : 1;
   const slot = catS.bandwidth / k;
   const center = (c, hi2) => catS(c) + (k > 1 ? slot * (hi2 + 0.5) : catS.bandwidth / 2);
   const P = (cpos, v) => (vertical ? [cpos, valS(v)] : [valS(v), cpos]);
-  return { frame, vertical, valS, catS, slot, center, P, fmt, colorOf, body, inner, locale, hl, multiHue };
+  // Sin `placeLabels` pedido por el gráfico, los nombres van a la altura por defecto.
+  const s = { frame, vertical, valS, catS, slot, center, P, fmt, colorOf, body, inner, locale, hl, multiHue, step, placeLabels };
+  return s;
 }
 
 /**
@@ -185,10 +222,38 @@ function clampScale(sc, nd) {
   const s = (v) => sc(Math.min(nd.max, Math.max(nd.min, v)));
   return Object.assign(s, sc);
 }
-function clampTicks(tf, nd, all) {
-  const below = all.some((v) => v < nd.min), over = all.some((v) => v > nd.max);
+function clampTicks(tf, nd, all, always = false) {
+  // `clamp: "always"`: los bordes llevan ≤ / ≥ aunque ningún valor los pase.
+  const below = always || all.some((v) => v < nd.min), over = always || all.some((v) => v > nd.max);
   const at = (t, b) => Math.abs(t - b) <= Math.abs(b) * 1e-9 + 1e-12;
   return (t) => (below && at(t, nd.min) ? `≤ ${tf(t)}` : over && at(t, nd.max) ? `≥ ${tf(t)}` : tf(t));
+}
+
+/** `rowHeight`: px por fila en horizontal (un número positivo), o undefined. */
+function rowHeightOf(spec) {
+  const h = +spec.rowHeight;
+  return spec.rowHeight != null && Number.isFinite(h) && h > 0 ? h : undefined;
+}
+
+/**
+ * Filas de alto fijo para `yLabelPosition: "above"` en strip/swarm: la franja
+ * de cada fila lleva una línea de texto arriba y la banda de puntos debajo.
+ * Misma forma que `band()` (s(c) = inicio de la banda, center, bandwidth,
+ * step) más `top(c)`, el borde superior de la fila.
+ */
+function rowBands(cats, y0, h, lineH) {
+  const n = Math.max(1, cats.length);
+  const step = h / n;
+  const bw = Math.max(1, step - lineH - 2);
+  const idx = new Map(cats.map((d, i) => [d, i]));
+  const top = (c) => y0 + (idx.get(c) ?? 0) * step;
+  const s = (c) => top(c) + lineH;
+  s.bandwidth = bw;
+  s.step = step;
+  s.domain = cats;
+  s.center = (c) => s(c) + bw / 2;
+  s.top = top;
+  return s;
 }
 
 function autoHorizontal(spec, m) {
@@ -345,7 +410,8 @@ export function violin(spec, theme) {
 
 export function strip(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true });
+  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true, tight: true });
+  const tops = new Map();
   const n = m.all.length;
   const r = spec.radius ?? (n > 600 ? 2 : n > 200 ? 2.75 : (theme.marks?.pointRadius ?? 4) - 0.5);
   const jitter = spec.jitter ?? 0.6;
@@ -359,6 +425,7 @@ export function strip(spec, theme) {
     const w = s.slot * (jitter === true ? 0.6 : jitter || 0);
     const parts = vs.map((v, i) => {
       const [x, y] = s.P(cpos + (rand(ci * 7919 + hi2 * 104729 + i) - 0.5) * w, v);
+      if (s.placeLabels) tops.set(c, Math.min(tops.get(c) ?? Infinity, y - r));
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: n > 300 ? 0.75 : 1.25, 'data-tip': TT([rows[i]], fmtTipLabel(c, h), s.fmt(v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
@@ -368,6 +435,7 @@ export function strip(spec, theme) {
     }
     s.body.marks.push(g({}, parts));
   }));
+  if (s.placeLabels) s.placeLabels(tops);
   return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip');
 }
 
@@ -402,9 +470,14 @@ export function beeswarm(positions, r) {
 
 export function swarm(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
-  const groupsOf = (c) => (s.multiHue && (spec.dodge ?? false) ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
+  const dodge = spec.dodge ?? false;
+  let s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge, tight: true });
+  const groupsOf = (c) => (s.multiHue && dodge ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
   // Radio automático: se achica hasta que el enjambre más ancho quepa.
+  // `fixedRadius`: el radio no cambia; en horizontal, sin `rowHeight` ni
+  // `height`, la fila crece hasta que quepa; si no puede, los puntos se
+  // apretan contra el borde de su banda (y se tocan).
+  const fixed = !!spec.fixedRadius;
   let r = spec.radius ?? (theme.marks?.pointRadius ?? 4);
   const TT = tipper(spec, m.data, s.locale);
   const layouts = () => m.cats.map((c) => groupsOf(c).map(([hs, hi2]) => {
@@ -412,20 +485,39 @@ export function swarm(spec, theme) {
     const offs = beeswarm(items.map((it) => s.valS(it.v)), r);
     return { c, hi2, items, offs, width: Math.max(0, ...offs.map(Math.abs)) * 2 + 2 * r };
   }));
+  const roomOf = () => (spec.dodge ? s.slot : s.catS.bandwidth) * 0.98;
   let L = layouts();
-  const room = (spec.dodge ? s.slot : s.catS.bandwidth) * 0.98;
-  for (let it = 0; it < 12 && Math.max(...L.flat().map((x) => x.width)) > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
+  let room = roomOf();
+  const widest = () => Math.max(...L.flat().map((x) => x.width));
+  if (!fixed) {
+    for (let it = 0; it < 12 && widest() > room && r > 1.4; it++) { r *= 0.85; L = layouts(); }
+  } else if (!s.vertical && spec.height === undefined && spec.rowHeight == null) {
+    // La banda es afín al paso de fila: dos pasadas bastan (la segunda corrige el redondeo).
+    for (let it = 0; it < 3 && widest() > room + 1e-6; it++) {
+      const k = dodge && s.multiHue ? m.hues.length : 1;
+      const need = (widest() * k) / 0.98;
+      const band = s.catS.bandwidth;
+      const step = s.step + (need - band) * (s.step / Math.max(1e-9, s.placeLabels ? s.step : band)) + 0.5;
+      s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge, tight: true, rowStep: Math.ceil(step) });
+      L = layouts();
+      room = roomOf();
+    }
+  }
+  const tops = new Map();
   for (const grp of L.flat()) {
     const cpos = spec.dodge ? s.center(grp.c, grp.hi2) : s.catS.center(grp.c);
+    const lim = Math.max(0, room / 2 - r);
     const parts = grp.items.map((it, i) => {
-      const o = Math.max(-room / 2 + r, Math.min(room / 2 - r, grp.offs[i]));
+      const o = Math.max(-lim, Math.min(lim, grp.offs[i]));
       const [x, y] = s.vertical ? [cpos + o, s.valS(it.v)] : [s.valS(it.v), cpos + o];
+      if (s.placeLabels) tops.set(grp.c, Math.min(tops.get(grp.c) ?? Infinity, y - r));
       const color = s.colorOf(grp.c, it.h);
       return { class: 'pa-m', cx: x, cy: y, r, fill: color, fillOpacity: theme.marks?.dotOpacity ?? 0.85, stroke: theme.surface, strokeWidth: r > 2.5 ? 1 : 0.5, 'data-tip': TT([it.row], fmtTipLabel(grp.c, it.h), s.fmt(it.v)) };
     });
     parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
+  if (s.placeLabels) s.placeLabels(tops);
   return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
 }
 

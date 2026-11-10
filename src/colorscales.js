@@ -200,6 +200,28 @@ export function resolveColorScale(v) {
  * breaks[i]); los cortes repetidos se funden. Devuelve { breaks, colors, cls, color } o
  * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
  */
+/**
+ * `midClass` con los colores divergentes sin el del medio: si
+ * `colorScale.colors` trae tantos colores como cortes (uno menos de lo que
+ * piden las clases), y el 0 cae dentro de una clase (no es un corte y hay
+ * cortes a ambos lados), `midColor` se inserta en la clase que contiene el 0:
+ * en la posición k = número de cortes negativos (contando desde abajo; con
+ * `reverse`, desde arriba, porque la lista se invierte después). Así una
+ * paleta divergente de 6 pasa tal cual con 6 cortes y un neutro en medio.
+ * Cualquier otro caso devuelve el spec sin tocar.
+ */
+export function withMidClass(spec, midColor) {
+  const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
+  if (!spec.midClass || !midColor || !cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks) || !Array.isArray(cs.colors)) return spec;
+  const breaks = cs.breaks.map(Number);
+  if (cs.colors.length !== breaks.length || breaks.some((b) => !Number.isFinite(b)) || breaks.includes(0) || !(breaks[0] < 0 && breaks[breaks.length - 1] > 0)) return spec;
+  const k = breaks.filter((b) => b < 0).length;
+  const at = cs.reverse ? breaks.length - k : k;
+  const colors = [...cs.colors.slice(0, at), midColor, ...cs.colors.slice(at)];
+  const key = spec.colorScale !== undefined ? 'colorScale' : spec.cmap !== undefined ? 'cmap' : 'colormap';
+  return { ...spec, [key]: { ...cs, colors } };
+}
+
 export function binnedScale(spec) {
   const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
   if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;

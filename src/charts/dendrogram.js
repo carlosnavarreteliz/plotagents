@@ -62,6 +62,10 @@ export function dendrogram(spec, theme) {
   const maxH = tree.h || 1;
   const horizontal = (spec.orientation ?? 'horizontal') !== 'vertical';
   const fmt = makeFormat(spec.format, locale, [0, maxH]);
+  // `tickFormat` (o `xFormat` en horizontal / `yFormat` en vertical): las
+  // marcas del eje de alturas, aparte de `format` (tooltips y descripción).
+  const tickSpec = spec.tickFormat ?? (horizontal ? spec.xFormat : spec.yFormat);
+  const tickFmt = tickSpec !== undefined ? makeFormat(tickSpec, locale, [0, maxH]) : fmt;
   const T = tipper(spec, rows, locale);
   const rowsOfLeaf = (l) => (rowOf.has(String(l)) ? [rowOf.get(String(l))] : []);
 
@@ -78,6 +82,8 @@ export function dendrogram(spec, theme) {
   const catOf = (l) => (seriesF && field(l, seriesF) !== null ? String(field(l, seriesF)) : null);
   const weightOf = (l) => { const v = sizeF ? num(field(l, sizeF)) : NaN; return Number.isFinite(v) ? v : null; };
   const subOf = (l) => (subF && field(l, subF) !== null ? String(field(l, subF)) : null);
+  // `sub` con "\n": varias líneas bajo el nombre (la fila crece).
+  const subLines = (l) => (subOf(l) === null ? [] : subOf(l).split(/\r?\n/));
 
   // Grupos bajo el corte.
   const cut = Number.isFinite(+spec.cut) && spec.cut !== null && spec.cut !== undefined ? +spec.cut : null;
@@ -103,8 +109,10 @@ export function dendrogram(spec, theme) {
   const lblMode = spec.labels === undefined || Array.isArray(spec.labels) ? 'auto' : spec.labels;
   // Con segunda línea cada hoja pide el doble de alto.
   const twoLines = horizontal && subF && order.some((l) => subOf(l) !== null);
-  const rowH = twoLines ? 34 : 16;
-  const frame = createFrame(spec, theme, { height: horizontal ? Math.min(twoLines ? 1400 : 900, 80 + n * rowH) : 420 });
+  const subN = twoLines ? Math.max(1, ...order.map((l) => subLines(l).length)) : 0;
+  const SUB_LH = 13;
+  const rowH = twoLines ? 34 + (subN - 1) * SUB_LH : 16;
+  const frame = createFrame(spec, theme, { height: horizontal ? Math.min(twoLines ? Math.round((1400 * rowH) / 34) : 900, 80 + n * rowH) : 420 });
   const legend = cats.length && spec.legend !== false ? cats.map((c) => ({ label: c, color: smap.get(c) })) : [];
   const area = frame.layout(legend);
   const leafSpan0 = horizontal ? area.h - 30 : area.w;
@@ -124,7 +132,7 @@ export function dendrogram(spec, theme) {
   const posNum = (v) => (Number.isFinite(+v) && v !== null && +v > 0 ? +v : null);
   const treeW = horizontal ? posNum(spec.treeWidth) : null;
   const labCap = treeW !== null ? Math.max(40, area.w - treeW - groupW - weightW - 8 - swW - 14) : posNum(spec.labelWidth) ?? (horizontal ? area.w * 0.3 : 120);
-  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? measure(subOf(l), fsSub) : 0)))) + 14) + swW;
+  const labW = (lblMode === false ? 0 : Math.min(labCap, Math.max(...order.map((l) => Math.max(measure(name(l), fs), twoLines && subOf(l) !== null ? Math.max(...subLines(l).map((t) => measure(t, fsSub))) : 0)))) + 14) + swW;
   const hTitle = horizontal ? spec.xLabel ?? spec.yLabel : spec.yLabel ?? spec.xLabel;
   const axisH = 26 + (hTitle && horizontal ? 16 : 0);
   const inner = horizontal
@@ -144,14 +152,28 @@ export function dendrogram(spec, theme) {
   }
 
   // Eje de alturas.
-  const nd = niceDomain(0, maxH, 4);
-  const ticks = [];
-  for (let t = nd.min; t <= maxH + 1e-9; t += nd.step) ticks.push(t);
+  // Hasta 4 marcas; menos si sus rótulos se pisarían en el largo del eje
+  // (un árbol angosto con `treeWidth`, o un teléfono).
+  const ticksFor = (cnt) => {
+    const d = niceDomain(0, maxH, cnt);
+    const ts = [];
+    for (let t = d.min; t <= maxH + 1e-9; t += d.step) ts.push(t);
+    return ts;
+  };
+  const fits = (ts) => ts.every((t, i) => {
+    if (!i) return true;
+    const dist = Math.abs(hs(t) - hs(ts[i - 1]));
+    return horizontal ? dist >= (measure(tickFmt(t), 11) + measure(tickFmt(ts[i - 1]), 11)) / 2 + 6 : dist >= 15;
+  });
+  let ticks = ticksFor(4);
+  for (let cnt = 3; cnt >= 1 && !fits(ticks); cnt--) ticks = ticksFor(cnt);
+  if (!fits(ticks)) ticks = [0, ticks[ticks.length - 1]].filter((t, i, a) => a.indexOf(t) === i);
+  if (!fits(ticks)) ticks = [0];
   for (const t of ticks) {
     const p = hs(t);
     body.push(horizontal
-      ? text(p, inner.y + inner.h + 18, fmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'middle' })
-      : text(inner.x - 6, p + 4, fmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'end' }));
+      ? text(p, inner.y + inner.h + 18, tickFmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'middle' })
+      : text(inner.x - 6, p + 4, tickFmt(t), { fill: theme.muted, fontSize: 11, textAnchor: 'end' }));
   }
 
   // Título del eje de alturas.
@@ -194,7 +216,7 @@ export function dendrogram(spec, theme) {
   }
 
   // Rótulos de hojas: todas si caben; si no, una de cada k.
-  const need = twoLines ? fs + fsSub + 6 : fs + 2;
+  const need = twoLines ? fs + subN * (fsSub + 2) + 4 : fs + 2;
   const every = lblMode === true ? 1 : lblMode === false ? 0 : Math.max(1, Math.ceil(need / gap));
   order.forEach((l, i) => {
     const pos = leafPos.get(l);
@@ -202,6 +224,9 @@ export function dendrogram(spec, theme) {
     const lc = leafColor(l);
     const c = gi !== undefined ? cmap.get(gNames[gi]) : lc ?? theme.muted;
     const w = weightOf(l), sub = twoLines ? subOf(l) : null;
+    const sl = sub !== null ? subLines(l) : [];
+    // El bloque nombre + líneas va centrado en la hoja.
+    const nameY = sub !== null ? pos - 2 - ((sl.length - 1) * SUB_LH) / 2 : pos + 4;
     const lines = [name(l), gi !== undefined ? gNames[gi] : ''];
     if (seriesF && catOf(l) !== null) lines.push(catOf(l));
     if (w !== null) lines.push(`${sizeName}: ${fmtW(w)}`);
@@ -219,9 +244,9 @@ export function dendrogram(spec, theme) {
     if (every && i % every === 0) {
       const s = truncate(name(l), labW - 6 - swW, fs);
       parts.push(horizontal
-        ? text(inner.x + inner.w + 6 + swW, sub !== null ? pos - 2 : pos + 4, s, { fill: sub !== null ? theme.ink : theme.lede, fontSize: fs })
+        ? text(inner.x + inner.w + 6 + swW, nameY, s, { fill: sub !== null ? theme.ink : theme.lede, fontSize: fs })
         : text(pos + 4, inner.y + inner.h + 6 + swW, s, { fill: theme.lede, fontSize: fs, transform: `rotate(90 ${(pos + 4).toFixed(2)} ${(inner.y + inner.h + 6 + swW).toFixed(2)})` }));
-      if (sub !== null) parts.push(text(inner.x + inner.w + 6 + swW, pos + 12, truncate(sub, labW - 6 - swW, fsSub), { fill: theme.lede, fontSize: fsSub }));
+      sl.forEach((line, j) => parts.push(text(inner.x + inner.w + 6 + swW, nameY + 14 + j * SUB_LH, truncate(line, labW - 6 - swW, fsSub), { fill: theme.lede, fontSize: fsSub })));
     }
     if (barMax && w !== null) {
       const x0 = inner.x + inner.w + labW + 4, bw = Math.max(w > 0 ? 1 : 0, (barMax * w) / maxWt), bh = Math.min(8, gap * 0.45);

@@ -8,7 +8,7 @@ import { themeFor, themes, palettes, ramps, isColor } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
-import { binnedScale } from './colorscales.js';
+import { binnedScale, withMidClass } from './colorscales.js';
 import { autoLocale } from './i18n.js';
 import { COLUMN_TYPES, columnType } from './charts/table.js';
 
@@ -157,6 +157,7 @@ function lintSpec(spec = {}) {
     const small = [...counts].filter(([, n]) => n < 5).map(([k]) => k);
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
+  if (spec.fixedRadius && ['strip', 'box', 'violin', 'point'].includes(type)) sug('fixedradius-swarm', L('`fixedRadius` es del enjambre (swarm): en strip el radio ya es fijo.', '`fixedRadius` belongs to swarm: in strip the radius is already fixed.'), L('Quita `fixedRadius`, o usa `type: "swarm"`.', 'Drop `fixedRadius`, or use `type: "swarm"`.'));
   if (type === 'heatmap' && data.length) {
     for (const k of ['rowHref', 'colHref', 'rowTip', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
     if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
@@ -173,6 +174,7 @@ function lintSpec(spec = {}) {
         if (stray.length) sug('groupcolors-unknown', L(`\`groupColors\` nombra grupos que no están en los datos: ${stray.slice(0, 4).join(', ')}.`, `\`groupColors\` names groups that are not in the data: ${stray.slice(0, 4).join(', ')}.`), L('Usa los valores del campo de grupo, tal cual.', 'Use the values of the group field, exactly.'));
       }
     }
+    if (spec.groupStripe !== undefined && !(spec.groupColors && typeof spec.groupColors === 'object')) sug('groupstripe-no-colors', L('`groupStripe` ubica la franja de `groupColors`, y no hay `groupColors`: no hace nada.', '`groupStripe` places the stripe of `groupColors`, and there is no `groupColors`: it does nothing.'), 'groupColors: { "Minería": "#b5651d" }');
     if (spec.midClass && typeof spec.midClass === 'object' && !isColor(spec.midClass.color)) warn('midclass-color', L('`midClass.color` no es un color: la clase del medio va en el tinte del tema.', '`midClass.color` is not a color: the middle class takes the theme tint.'), 'midClass: { color: "#f3ece0" }');
     if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
   }
@@ -439,7 +441,8 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
 
   // 2. Valores fuera de catálogo.
   // Escala por clases: cortes en orden y un color más que cortes.
-  try { binnedScale(spec); } catch (e) {
+  // Con `midClass`, los colores pueden venir sin el del medio (se inserta).
+  try { binnedScale(withMidClass(spec, '#000')); } catch (e) {
     err('colorscale-breaks', e.message.split('\n')[0], e.hint || 'colorScale: { colors: [a, b, c], breaks: [0, 10] }');
   }
   if (spec.clamp && !(Array.isArray(spec.xDomain) || Array.isArray(spec.yDomain) || Array.isArray(spec.valueDomain))) {
@@ -461,6 +464,9 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   for (const k of ['xScale', 'yScale']) if (spec[k] !== undefined) enumCheck(k, spec[k], SCALES, '"linear", "log"');
   if (spec.curve !== undefined) enumCheck('curve', spec.curve, CURVES);
+  if (spec.groupStripe !== undefined) enumCheck('groupStripe', spec.groupStripe, ['grid', 'labels'], '"grid", "labels"');
+  if (typeof spec.rowLine === 'string') enumCheck('rowLine', spec.rowLine, ['dashed'], 'true, false, "dashed"');
+  if (typeof spec.clamp === 'string') enumCheck('clamp', spec.clamp, ['always'], 'true, false, "always"');
   if (spec.tileLabels !== undefined) enumCheck('tileLabels', spec.tileLabels, ['auto', 'wrap'], '"auto", "wrap"');
   if (spec.shareOf !== undefined) enumCheck('shareOf', spec.shareOf, ['group', 'total', 'both'], '"group", "total", "both"');
   if (spec.lineWidths !== undefined && (typeof spec.lineWidths !== 'object' || Array.isArray(spec.lineWidths) || Object.values(spec.lineWidths).some((v) => !(+v > 0)))) {

@@ -8,7 +8,7 @@ import { ramp, textOn, isColor, hexToRgb, rgbToHex } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize } from '../data.js';
 import { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame, hash, SIZES } from '../frame.js';
-import { binnedScale } from '../colorscales.js';
+import { binnedScale, withMidClass } from '../colorscales.js';
 
 const CS = 11.5; // cuerpo del título de la esquina
 
@@ -50,12 +50,13 @@ export function heatmap(spec, theme) {
   const fmt = makeFormat(spec.format, locale, finite);
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const stops = mid !== undefined ? theme.diverging : theme.sequential;
-  const bins0 = binnedScale(spec);
   // `midClass: 'neutral'`: con cortes divergentes, la clase que contiene el 0
   // (sin que el 0 sea un corte) va en el tinte neutro: lo que casi no se aparta
   // no se pinta. `midClass: { color }` da ese color (un parche de piel puede
-  // cambiarlo sin tocar el tema).
+  // cambiarlo sin tocar el tema). Los colores pueden venir sin el del medio
+  // (tantos como cortes): ese color se inserta en la clase del 0 (withMidClass).
   const midC = spec.midClass === 'neutral' ? theme.tint : spec.midClass && typeof spec.midClass === 'object' ? (isColor(spec.midClass.color) ? spec.midClass.color : theme.tint) : null;
+  const bins0 = binnedScale(withMidClass(spec, midC));
   const bins = bins0 && midC && !bins0.breaks.includes(0) && bins0.breaks[0] < 0 && bins0.breaks[bins0.breaks.length - 1] > 0
     ? (() => { const k = bins0.cls(0); const colors = bins0.colors.map((c, i) => (i === k ? midC : c)); return { ...bins0, colors, color: (v) => colors[bins0.cls(v)] }; })()
     : bins0;
@@ -195,9 +196,29 @@ export function heatmap(spec, theme) {
     body.push(g({ class: 'pa-xlabels' }, out));
   }
   // `groupColors`: un color por grupo, como una franja en su banda (junto a la grilla).
+  // `groupStripe: 'labels'`: la franja va en cambio en el borde de la grilla
+  // del lado de los rótulos (entre los rótulos y las celdas: arriba con
+  // `xLabelPosition: 'top'`), y la banda de grupos queda sólo con los nombres.
   const gc = spec.groupColors && typeof spec.groupColors === 'object' ? spec.groupColors : undefined;
-  if (xRuns) body.push(groupBandX(xRuns, (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1], inner.y + inner.h + below, theme, inner.y, undefined, gc));
-  if (yRuns) body.push(groupBandY(yRuns, (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1], area.x, gW, theme, inner.x + inner.w, undefined, gc));
+  const atLabels = !!gc && spec.groupStripe === 'labels';
+  const xPos = (i) => [inner.x + i * cw + 1, inner.x + (i + 1) * cw - 1];
+  const yPos = (j) => [inner.y + j * ch + 1, inner.y + (j + 1) * ch - 1];
+  if (xRuns) body.push(groupBandX(xRuns, xPos, inner.y + inner.h + below, theme, inner.y, undefined, gc, !atLabels));
+  if (yRuns) body.push(groupBandY(yRuns, yPos, area.x, gW, theme, inner.x + inner.w, undefined, gc, !atLabels));
+  if (atLabels) {
+    const stripes = [];
+    for (const r of xRuns || []) {
+      if (!isColor(gc[r.group])) continue;
+      const a = xPos(r.from)[0], b = xPos(r.to)[1];
+      stripes.push(el('rect', { x: a, y: top ? inner.y - 5 : inner.y + inner.h + 2, width: Math.max(0, b - a), height: 3, fill: gc[r.group] }));
+    }
+    for (const r of yRuns || []) {
+      if (!isColor(gc[r.group])) continue;
+      const a = yPos(r.from)[0], b = yPos(r.to)[1];
+      stripes.push(el('rect', { x: inner.x - 5, y: a, width: 3, height: Math.max(0, b - a), fill: gc[r.group] }));
+    }
+    body.push(g({ class: 'pa-group-stripes' }, stripes));
+  }
   if (corner) {
     // En la esquina: alineado a la derecha sobre los rótulos de fila, pegado a
     // la franja de rótulos de columna. Lo que no cabe va entero en el tooltip.

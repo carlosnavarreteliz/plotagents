@@ -640,6 +640,13 @@ export function network(spec, theme) {
   // `edgeTip: false` (o `tooltip: false`): aristas sin tooltip; en una red de
   // cientos de aristas el texto repetido pesa más que el dibujo.
   const edgeTips = spec.edgeTip !== false && spec.tooltip !== false;
+  // El nombre de un nodo en la tarjeta de una arista: el mismo título que su
+  // propia tarjeta (`tooltip.title`, el nombre entero) y si no, su rótulo.
+  const titleF = spec.tooltip && typeof spec.tooltip === 'object' && !Array.isArray(spec.tooltip) && typeof spec.tooltip.title === 'string' ? spec.tooltip.title : null;
+  const fullName = (n) => {
+    const v = titleF && n.row ? n.row[titleF] : undefined;
+    return v === undefined || v === null || v === '' ? n.label : String(v);
+  };
   for (const e of [...edges].sort((a, b) => (!!pinE(a) - !!pinE(b)) || a.v - b.v)) {
     const a = byId.get(e.src), b = byId.get(e.dst);
     const w = Number.isFinite(eW) ? eW : pair(eW) ? eW[0] + (eW[1] - eW[0]) * Math.sqrt(e.v / maxE) : valueField ? 0.6 + 2.4 * Math.sqrt(e.v / maxE) : 1;
@@ -668,7 +675,7 @@ export function network(spec, theme) {
       class: 'pa-m', d, stroke: hl && !active ? theme.muted : pinE(e) || edgeInk || colorOf(a),
       strokeOpacity: op === baseOp ? undefined : op, strokeWidth: sw === 1 ? undefined : sw,
       'data-s': e.src, 'data-t': e.dst,
-      'data-tip': edgeTips ? tip(`${a.label} — ${b.label}`, fmtE(e.v)) : undefined,
+      'data-tip': edgeTips ? tip(`${fullName(a)} — ${fullName(b)}`, fmtE(e.v)) : undefined,
     }));
   }
   const links = g({ class: 'pa-links', fill: 'none', strokeLinecap: 'round', strokeOpacity: baseOp, strokeWidth: 1 }, linkG);
