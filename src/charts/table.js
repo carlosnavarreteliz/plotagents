@@ -211,6 +211,32 @@ function prepareColumns(spec, data, theme, locale) {
       c.unit = ts.length ? dateUnit(ts) : 'day';
       c.withYear = c.yearless !== true;
     }
+    // `formatBy`: cada fila con su formato (una tabla de indicadores en unidades
+    // distintas). Un campo cuyo valor es un formato ("percent", { suffix: " años" }…)
+    // —los decimales se infieren entre las filas que comparten formato— o, desde
+    // JS, una función (valor, fila) → texto. Sin total: no se suman unidades distintas.
+    if (c.formatBy !== undefined && c.formatBy !== null && ['number', 'bar', 'heat', 'delta', 'range'].includes(type)) {
+      if (typeof c.formatBy === 'function') {
+        const fn = c.formatBy;
+        c.rowFmt = (r) => { const f = (v) => (v === null || v === undefined || Number.isNaN(v) ? '' : String(fn(v, r))); f.type = 'custom'; return f; };
+      } else if (typeof c.formatBy === 'string') {
+        const by = c.formatBy;
+        const keyOf = (r) => { const v = r[by]; return isNil(v) ? null : typeof v === 'object' ? JSON.stringify(v) : String(v); };
+        const cache = new Map();
+        const valsOf = (r) => (type === 'range' ? [num(r[c.field]), ...Object.values(c.rg).map((f) => f(r))] : type === 'delta' ? [Math.abs(num(r[c.field]))] : [num(r[c.field])]);
+        c.rowFmt = (r) => {
+          const k = keyOf(r);
+          if (k === null) return c.fmt;
+          if (!cache.has(k)) {
+            const vals = data.filter((d) => keyOf(d) === k).flatMap(valsOf).filter(Number.isFinite);
+            const f = r[by];
+            cache.set(k, columnFormat(typeof f === 'string' || (f && typeof f === 'object') ? f : undefined, vals, locale, null));
+          }
+          return cache.get(k);
+        };
+      }
+      if (c.rowFmt && type === 'range' && c.scale === undefined) c.scale = 'row';
+    }
     c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
     if (type === 'bar' || type === 'heat') {
       c.lo = Math.min(0, ...finite);
@@ -246,14 +272,17 @@ function prepareColumns(spec, data, theme, locale) {
   return { cols, labelF, W };
 }
 
+/** El formato de una celda: el de su fila (`formatBy`) o el de la columna. */
+const fmtOf = (c, r) => (c.rowFmt && r ? c.rowFmt(r) : c.fmt);
+
 /** Texto visible de una celda (y su valor para ordenar). */
 function cellText(c, r, locale, W) {
   const v = r[c.field];
   if (c.type === 'rank') return String(r.__rank ?? '');
   if (isNil(v)) return '';
   switch (c.type) {
-    case 'number': case 'bar': case 'heat': case 'range': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
-    case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = c.fmt(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
+    case 'number': case 'bar': case 'heat': case 'range': { const n = num(v); return Number.isFinite(n) ? fmtOf(c, r)(n) : String(v); }
+    case 'delta': { const n = num(v); if (!Number.isFinite(n)) return String(v); const s = fmtOf(c, r)(Math.abs(n)); return n > 0 ? '+' + s : n < 0 ? '−' + s : s; }
     case 'progress': { const n = num(v); return Number.isFinite(n) ? c.fmt(n) : String(v); }
     case 'date': { const t = parseDate(v); return Number.isFinite(t) ? formatDate(t, c.unit, locale, c.withYear) : String(v); }
     case 'check': return v === true || YES.test(String(v).trim()) ? W.yes : W.no;
@@ -368,7 +397,7 @@ export function table(spec, theme) {
   // 4. Fila de totales: `total: true` (suma, o promedio en porcentajes y avances).
   const totalOf = (c) => {
     const pick = c.total ?? (spec.total === true || typeof spec.total === 'string' ? (typeof spec.total === 'string' && spec.total !== 'true' ? spec.total : 'auto') : spec.total && typeof spec.total === 'object' ? spec.total[c.field] ?? 'auto' : undefined);
-    if (pick === undefined || pick === false || c.isLabel || c.type === 'rank') return null;
+    if (pick === undefined || pick === false || c.isLabel || c.type === 'rank' || c.rowFmt) return null;
     if (!['number', 'bar', 'heat', 'progress', 'delta'].includes(c.type) || c.kind === 'year') return null;
     const how = pick === true || pick === 'auto' ? (c.type === 'delta' ? null : (c.type === 'progress' && !c.hasTarget) || c.fmt?.type === 'percent' ? 'mean' : 'sum') : pick; // con meta (gasto vs presupuesto) se suma
     if (!how) return null;
@@ -609,11 +638,12 @@ export function table(spec, theme) {
         if (F(vals.ref)) out.push(el('line', { x1: X(vals.ref), x2: X(vals.ref), y1: my - 8, y2: my + 8, stroke: theme.ink, strokeWidth: 2, strokeLinecap: 'round' }));
         out.push(el('circle', { cx: X(n), cy: my, r: 4.5, fill: muted ? dimC : accent, stroke: theme.surface, strokeWidth: 1.5 }));
         const en = String(locale).startsWith('en');
+        const fr = fmtOf(c, r);
         const parts = [`${c.label}: ${s}`];
-        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${c.fmt(vals.min)}–${c.fmt(vals.max)}`);
-        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${c.fmt(vals.lo)}–${c.fmt(vals.hi)}`);
-        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${c.fmt(vals.median)}`);
-        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${c.fmt(vals.ref)}`);
+        if (F(vals.min) && F(vals.max)) parts.push(`${en ? 'Range' : 'Rango'}: ${fr(vals.min)}–${fr(vals.max)}`);
+        if (F(vals.lo) && F(vals.hi)) parts.push(`${c.bandLabel ?? (en ? 'Middle half' : 'Mitad central')}: ${fr(vals.lo)}–${fr(vals.hi)}`);
+        if (F(vals.median)) parts.push(`${en ? 'Median' : 'Mediana'}: ${fr(vals.median)}`);
+        if (F(vals.ref)) parts.push(`${c.refLabel ?? (en ? 'Reference' : 'Referencia')}: ${fr(vals.ref)}`);
         return { out, tip: parts.join('\n') };
       }
       case 'sparkline': {
@@ -913,7 +943,8 @@ function describeTable({ lang, cols, rows, nRows, page, pages, st, label, query 
   if (query) s += ` ${T.q} "${query}".`;
   if (pages > 1) s += ` ${T.p} ${page} ${T.of} ${pages}.`;
   if (st) s += ` ${T.s} ${st.col.label}, ${st.dir === 'desc' ? T.desc : T.asc}.`;
-  const m = cols.find((c) => c.type === 'bar') || cols.find((c) => ['number', 'heat'].includes(c.type) && !c.isLabel && c.kind === 'number');
+  // Una columna en unidades distintas por fila (`formatBy`) no tiene un «mayor».
+  const m = cols.find((c) => c.type === 'bar' && !c.rowFmt) || cols.find((c) => ['number', 'heat'].includes(c.type) && !c.isLabel && c.kind === 'number' && !c.rowFmt);
   if (m && label && rows.length > 1) {
     let best = null, worst = null;
     for (const r of rows) { const v = num(r[m.field]); if (!Number.isFinite(v)) continue; if (!best || v > best[1]) best = [r, v]; if (!worst || v < worst[1]) worst = [r, v]; }

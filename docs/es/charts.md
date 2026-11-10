@@ -263,6 +263,7 @@ Un punto por fila, apilados por tramo (Wilkinson): un histograma en que cada cos
 | `highlight` | Un nombre (o lista): ese punto lleva un anillo y su nombre; el resto se aclara. |
 | `ticks` | Marcas propias en el eje: `[[500000, "$500 mil"], [1000000, "$1 M"]]`. |
 | `dotSize` | Diámetro máximo de un punto en px (14 por defecto). |
+| `refLines` | Valores de referencia que no son un punto más (la cifra de Chile): `[{ x: 18.4, label: "Chile" }]`, una línea vertical detrás de los puntos con su rótulo arriba (`rótulo · valor`; `showValue: false` escribe sólo el rótulo) y su propio tooltip. `x` puede ser un campo cuyas filas digan todas lo mismo (con `facet`, el de cada panel). El eje se abre para incluirla. |
 
 ## Partes de un todo
 
@@ -309,6 +310,7 @@ Una cuenta hecha cuadros: un cuadro por fila, o por unidad de `value`, por `seri
 |---|---|
 | `value` | Campo a sumar (si no, un cuadro por fila). |
 | `unit`, `maxSquares` | Cuánto vale un cuadro; cuándo entra la unidad redonda. |
+| `perSquare` | Cada cuadro es su propia marca con el tooltip de su fila (una verificación, una persona), en el orden de los datos dentro de cada serie; va bien con `tooltip: { title, text, replace: true }`. Sólo mientras un cuadro es una unidad; sobre `maxSquares` vuelve a un tooltip por serie. |
 | `columns` | Cuadros por fila (10, 20 o 25 según el total). |
 | `order` | Orden de las series (por defecto, la mayor primero). |
 
@@ -445,6 +447,18 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
 | `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
+| `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
+| `xLabelAngle`, `xLabelPosition` | Rótulos de columna girados (`-90` de pie, `-45` inclinados) cuando no caben de lado, bajo la grilla (por defecto) o sobre ella (`"top"`). La franja crece lo necesario; un rótulo cortado lleva su nombre entero en el tooltip. |
+| `cellGap` | Aire entre celdas en px (`2` por defecto); `0` las junta con esquinas rectas; `[x, y]` por eje. |
+| `diagonal` | Las celdas con `x` igual a `y` (se quedó en la misma región) van aparte: su propio color, fuera de la escala (una diagonal enorme no aplana el resto), una entrada en la leyenda y una línea en el tooltip. `true`, un rótulo o `{ label, color, opacity }`. Un valor que falta sigue siendo «sin dato». |
+| `cellColor` | Un campo que nombra la clase de cada celda («Revisada»); esas celdas toman `colors[clase]`, fuera de la escala, con su entrada en la leyenda y su línea en el tooltip. Un valor escrito como color se usa tal cual. |
+| `labelFormat` | Formato sólo del numeral dentro de las celdas (tooltip y leyenda siguen con `format`). Una función que devuelve `""` deja la celda sin cifra. |
+
+```js
+plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
+  diagonal: { label: 'Nació y vive aquí', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 
@@ -515,6 +529,7 @@ plot({
 | Opción | Significado |
 |---|---|
 | `columns` | Orden y tipo: nombres de campo o `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omítelo para usar todos los campos. `x`/`label` elige la columna con el nombre de la fila e `y` una lista de columnas de valores. |
+| `formatBy` (columna) | Un formato por fila, para una tabla de indicadores en unidades distintas (porcentaje, conteo, dinero): un campo cuyo valor es un formato (`"percent"`, `{ suffix: " años", decimals: 1 }`; los decimales se infieren entre las filas que lo comparten) o, desde JS, una función `(valor, fila) => texto`. Sirve en `number`, `bar`, `heat`, `delta` y `range` (celda, tooltip y tarjeta); una columna `range` pasa a `scale: "row"` y la columna no lleva total. |
 | `sortBy`, `sort` | Columna y dirección (`"desc"` para números, `"asc"` para texto por defecto). `sort: "-sales"` también funciona. Las celdas vacías siempre van al final. |
 | `pageSize`, `page` | Hasta 15 filas se muestran completas; sobre eso, páginas de 10. `pageSize: false` muestra todo. El paginador son solo números y flechas (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Conserva las filas que contienen esas palabras, sin importar tildes ni mayúsculas. |

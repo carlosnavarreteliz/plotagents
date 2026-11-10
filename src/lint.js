@@ -155,6 +155,28 @@ function lintSpec(spec = {}) {
     const small = [...counts].filter(([, n]) => n < 5).map(([k]) => k);
     if (small.length) sug('few-per-group', `Grupos con menos de 5 datos: ${small.slice(0, 4).join(', ')}.`, '`type: "strip"` o `points: true` muestran cada observación.');
   }
+  if (type === 'heatmap' && data.length) {
+    for (const k of ['rowHref', 'colHref', 'cellColor']) if (typeof spec[k] === 'string') check(spec[k], k);
+    if (typeof spec.cellColor === 'string' && fields.includes(spec.cellColor)) {
+      const named = uniq(data.map((r) => r[spec.cellColor]).filter((v) => v !== null && v !== undefined && v !== '' && v !== false).map(String)).filter((v) => !/^(#|rgba?\(|hsla?\(|var\()/i.test(v));
+      const bare = named.filter((v) => !(spec.colors && spec.colors[v]));
+      if (bare.length) sug('cellcolor-no-color', L(`Las clases de \`cellColor\` sin color en \`colors\` van en gris: ${bare.slice(0, 4).join(', ')}.`, `\`cellColor\` classes without a color in \`colors\` are drawn gray: ${bare.slice(0, 4).join(', ')}.`), `colors: { ${JSON.stringify(bare[0])}: "#7A3E9D" }`);
+    }
+    if (spec.diagonal && !(typeof spec.diagonal === 'string' || (typeof spec.diagonal === 'object' && spec.diagonal.label))) sug('diagonal-label', L('La diagonal va aparte pero sin nombre: la leyenda no dice qué significa.', 'The diagonal is drawn apart but unnamed: the legend does not say what it means.'), L('diagonal: { label: "Vive donde nació" }', 'diagonal: { label: "Lives where born" }'));
+  }
+  if (type === 'dotplot' && data.length && !spec.facet && !spec.col) {
+    for (const r of [].concat(spec.refLines ?? [])) {
+      const f = r && typeof r === 'object' ? r.x ?? r.value : undefined;
+      if (typeof f !== 'string' || !fields.includes(f)) continue;
+      const vs = uniq(data.map((d) => num(d[f])).filter(Number.isFinite));
+      if (vs.length !== 1) warn('refline-field', L(`La referencia lee \`${f}\`, pero sus filas no dicen un solo valor (${vs.length}): no se dibuja.`, `The reference reads \`${f}\`, but its rows do not hold one value (${vs.length}): it is not drawn.`), L('Pasa el número: refLines: [{ x: 18.4, label: "Chile" }].', 'Pass the number: refLines: [{ x: 18.4, label: "Chile" }].'));
+    }
+  }
+  if (type === 'waffle' && spec.perSquare && data.length) {
+    const vf = spec.value ?? (typeof spec.y === 'string' ? spec.y : null);
+    const total = vf && fields.includes(vf) ? data.reduce((t, r) => { const v = num(r[vf]); return t + (Number.isFinite(v) && v > 0 ? v : 0); }, 0) : data.length;
+    if ((spec.unit !== undefined && +spec.unit !== 1) || (spec.unit === undefined && total > (spec.maxSquares ?? 400))) warn('waffle-persquare-unit', L('`perSquare` necesita que cada cuadro sea una unidad: con este total un cuadro vale más de una y se vuelve a un tooltip por serie.', '`perSquare` needs each square to be one unit: with this total a square is worth more than one, so it falls back to one tooltip per series.'), L('Sube `maxSquares` sobre el total, o quita `perSquare`.', 'Raise `maxSquares` above the total, or drop `perSquare`.'));
+  }
   if (type === 'radar' && nSeries > 4) warn('radar-many', `${nSeries} series en un radar se tapan entre sí.`, 'Usa `highlight`, `facet` o barras agrupadas.');
   if ((type === 'line' || type === 'area') && spec.yScale === 'log' && data.some((r) => num(r[Array.isArray(spec.y) ? spec.y[0] : spec.y]) <= 0)) warn('log-nonpositive', 'Hay valores ≤ 0: la escala log no los puede mostrar.', 'Quita la escala log o filtra esos valores.');
 
@@ -213,6 +235,9 @@ function lintSpec(spec = {}) {
       if (f === undefined && !(c && typeof c === 'object' && columnType(c.type) === 'rank')) err('table-column', L('Una columna no dice qué campo muestra.', 'A column does not say which field it shows.'), L('Usa `columns: ["region", { field: "ventas", type: "bar" }]`.', 'Use `columns: ["region", { field: "sales", type: "bar" }]`.'));
       else if (f !== undefined) check(f, 'columns');
       if (c && typeof c === 'object' && typeof c.target === 'string') check(c.target, 'columns.target');
+      if (c && typeof c === 'object' && typeof c.formatBy === 'string') check(c.formatBy, 'columns.formatBy');
+      if (c && typeof c === 'object' && c.formatBy !== undefined && c.type !== undefined && !['number', 'bar', 'heat', 'delta', 'range'].includes(columnType(c.type))) warn('table-formatby-type', L(`\`formatBy\` sólo aplica a columnas number, bar, heat, delta y range (columna "${f}").`, `\`formatBy\` only applies to number, bar, heat, delta and range columns (column "${f}").`), L('Quita `formatBy` o cambia el tipo de la columna.', 'Remove `formatBy` or change the column type.'));
+      if (c && typeof c === 'object' && c.formatBy !== undefined && columnType(c.type) === 'bar') sug('table-formatby-bar', L(`Barras en unidades distintas por fila (columna "${f}") se comparan entre sí aunque no midan lo mismo.`, `Bars in different units per row (column "${f}") are compared with each other although they do not measure the same thing.`), L('Usa `type: "range"` (un riel por fila) o `type: "number"`.', 'Use `type: "range"` (one rail per row) or `type: "number"`.'));
     }
     const by = spec.sortBy ?? spec.orderBy;
     if (by !== undefined && !fields.includes(by) && !cols.some((c) => c && typeof c === 'object' && String(c.label) === String(by)) && !['#', 'rank'].includes(String(by))) {

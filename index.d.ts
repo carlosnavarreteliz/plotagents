@@ -35,6 +35,8 @@ export interface TableColumn {
   refLabel?: string;
   /** range: one scale for the column (default) or one per row. */
   scale?: 'shared' | 'row';
+  /** number/bar/heat/delta/range: one format per row — a field holding each row's format, or (value, row) => text. Range rails go per row; no total. */
+  formatBy?: string | ((value: number, row: Record<string, unknown>) => string);
   align?: 'left' | 'right' | 'center';
   width?: number;
   /** delta/progress: whether up is good (default) or down (costs). */
@@ -77,7 +79,16 @@ export interface KpiItem {
   note?: string;
 }
 
-export interface RefLine { y?: number; x?: number; value?: number; label?: string; color?: string }
+export interface RefLine {
+  y?: number;
+  /** dotplot: also a field whose rows all hold the same value. */
+  x?: number | string;
+  value?: number;
+  label?: string;
+  color?: string;
+  /** dotplot: false writes the label without the value. */
+  showValue?: boolean;
+}
 export interface Annotation { x: string | number | Date; label?: string }
 
 export interface Theme {
@@ -417,6 +428,21 @@ export interface Spec {
   midClass?: 'neutral';
   /** heatmap: text written across a row that has no values. */
   emptyRow?: string;
+  /** heatmap: row / column labels link to the URL in this field (paths and http(s) only), or a function of the label. */
+  rowHref?: string | ((label: string) => string | undefined);
+  colHref?: string | ((label: string) => string | undefined);
+  /** heatmap: rotate the column labels (-90 upright, -45 slanted); the label strip grows to fit. */
+  xLabelAngle?: number;
+  /** heatmap: column labels under the grid (default) or over it. */
+  xLabelPosition?: 'top' | 'bottom';
+  /** heatmap: px between cells (default 2); 0 joins them; [x, y] per axis. */
+  cellGap?: number | [number, number];
+  /** heatmap: cells where x = y drawn apart (own color, outside the scale, legend entry, tooltip line). */
+  diagonal?: boolean | string | { label?: string; color?: string; opacity?: number };
+  /** heatmap: field naming each cell's class; those cells take `colors[class]`, outside the scale, with a legend entry. */
+  cellColor?: string;
+  /** heatmap: format of the numeral inside each cell (a function may return '' to leave it blank). */
+  labelFormat?: Format;
   /** Group consecutive categories along the axis (bar: either names the category groups). Nothing is reordered. */
   xGroup?: string;
   yGroup?: string;
@@ -493,6 +519,8 @@ export interface Spec {
   unit?: number;
   /** waffle: most squares before a round `unit` kicks in (default 400). */
   maxSquares?: number;
+  /** waffle: each square its own mark with its own row's tooltip (only while a square is one unit). */
+  perSquare?: boolean;
   /** dendrogram (rows input): field with each row's id (default "id"). */
   id?: string;
   /** spark: line width in px. */

@@ -263,6 +263,7 @@ One dot per row, stacked by bin (Wilkinson): a histogram where each thing is sti
 | `highlight` | A name (or list): that dot gets a ring and its name; the rest go lighter. |
 | `ticks` | Your own axis ticks: `[[500000, "$500k"], [1000000, "$1M"]]`. |
 | `dotSize` | Largest dot diameter in px (default 14). |
+| `refLines` | Reference values that are not one more dot (the national figure): `[{ x: 18.4, label: "Chile" }]`, drawn as a vertical line behind the dots with its label on top (`label · value`; `showValue: false` writes the label alone) and its own tooltip. `x` may be a field whose rows all hold the same value (with `facet`, each panel's own). The axis widens to include it. |
 
 ## Part-to-whole
 
@@ -309,6 +310,7 @@ A count drawn as squares: one square per row, or per unit of `value`, by `series
 |---|---|
 | `value` | Field to add up (otherwise one square per row). |
 | `unit`, `maxSquares` | What a square is worth; when the round unit kicks in. |
+| `perSquare` | Each square is its own mark with its own row's tooltip (one check, one person), in data order within each series; pair it with `tooltip: { title, text, replace: true }`. Only while a square is one unit; past `maxSquares` it falls back to one tooltip per series. |
 | `columns` | Squares per row (default 10, 20 or 25 by total). |
 | `order` | Series order (default: largest first). |
 
@@ -445,6 +447,18 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
 | `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+| `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
+| `xLabelAngle`, `xLabelPosition` | Column labels turned (`-90` upright, `-45` slanted) when they do not fit side by side, under the grid (default) or over it (`"top"`). The strip grows to fit; a label cut short keeps its full name in the tooltip. |
+| `cellGap` | Space between cells in px (default `2`); `0` joins them with square corners; `[x, y]` per axis. |
+| `diagonal` | Cells where `x` equals `y` (stayed in the same region) drawn apart: their own color, outside the color scale (so a huge diagonal does not flatten the rest), a legend entry and a tooltip line. `true`, a label, or `{ label, color, opacity }`. A missing value stays "no data". |
+| `cellColor` | A field naming each cell's class ("Revised"); those cells take `colors[class]`, outside the scale, with a legend entry and a tooltip line. A value written as a color is used as is. |
+| `labelFormat` | Format of the numeral inside the cells only (tooltip and legend keep `format`). A function returning `""` leaves a cell without a numeral. |
+
+```js
+plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
+  diagonal: { label: 'Born and lives here', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 
@@ -515,6 +529,7 @@ plot({
 | Option | Meaning |
 |---|---|
 | `columns` | Order and type: field names or `{ field, label, type, format, align, width, good, target, colorScale, total, lines }`. Omit to use every field. `x`/`label` picks the row-name column and `y` a list of value columns. |
+| `formatBy` (column) | One format per row, for a table of indicators in different units (percent, count, money): a field whose value is a format (`"percent"`, `{ suffix: " yrs", decimals: 1 }`; decimals inferred among the rows that share it) or, from JS, a function `(value, row) => text`. Works on `number`, `bar`, `heat`, `delta` and `range` (cell, tooltip and card); a `range` column gets `scale: "row"`, and the column has no total. |
 | `sortBy`, `sort` | Column and direction (`"desc"` for numbers, `"asc"` for text by default). `sort: "-sales"` works too. Empty cells always go last. |
 | `pageSize`, `page` | Up to 15 rows are shown whole; beyond that, pages of 10. `pageSize: false` shows everything. The pager is numbers and arrows only (`11–20 / 248`, `‹ 1 2 3 … 25 ›`). |
 | `query` | Keep rows that contain these words, ignoring accents and case. |
