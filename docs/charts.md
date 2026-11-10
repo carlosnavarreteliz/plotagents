@@ -20,7 +20,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `xScale`, `yScale` | `"log"` where it makes sense. |
 | `xDomain`, `yDomain` | Fixed `[min, max]`. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (or `x`, or `value` for bars). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Small multiples, one panel per value. `sharey: "span"` gives every panel the same span with its own floor, so a slope means the same change in each; `panelNote: 'field'` writes a line under each panel name; an annotation with `panel` goes only to that panel. |
 | `time`, `timeValue` | One period at a time: the latest by default, or `timeValue`. The period is appended to the subtitle. |
 | `slider`, `play` | Browser time controls, **off by default**. `slider: true` adds period buttons when there are few periods (≤ 8) and a minimal slider when there are many; line and area charts get a two-handle range. `"buttons"` or `"slider"` force one; `play: false` hides the play button. |
 | `compare` | With `time`: compare against `"previous"` (default), `"first"`, a given period, or `false`. |
@@ -30,6 +30,9 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
 | `legend` | Position: `"top"` (default), `"bottom"`, `"left"`, `"right"`, or `false` to hide it. Side legends move to the bottom below 520 px. Setting a position also forces a legend where the chart would otherwise label lines directly. |
 | `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
+| `tooltip` | What each mark says on hover beyond its value: a list of fields (`"Field: value"` lines from the mark's rows), or `{ title, fields: [field \| { field, label, format }], text, replace }` where `text` is a field with pre-written lines, or `false`. From JavaScript, also `(d) => text \| { title, lines }` with `d.rows`, `d.lines`. A mark made of several rows (a treemap group, a year with several series) shows a field only when its rows agree. |
+| `href` | Treemap tiles, horizontal bar names and scatter dots link to the URL in this field (paths and http(s) only). |
+| `xBands` | Shaded ranges of the x axis behind columns, lines and areas: `[{ from, to, label, color }]`. |
 
 ### In the browser
 
@@ -53,6 +56,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `labels` | `true`, `false` or `"auto"`. |
 | `barWidth` | Max bar thickness in px. |
 
+**Missing values.** A missing value is never a zero: the bar is not drawn, the tooltip says `missingLabel` ("sin dato" / "no data") and `missingMark: "n/a"` writes it at the base. With `stack: "percent"`, a `format` function receives the share as a fraction (0–1).
+
 ## Time
 
 ### `line` · `area`
@@ -71,6 +76,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `stack` | Areas: `true` (default with series), `"percent"`, or `false` to overlap. |
 | `fill` | Single line: `false` removes the soft gradient. |
 | `xRange` | Visible range `[from, to]`; this is what the range slider sets (`slider: true`). |
+
+**Given intervals and tooltips without a runtime.** `band: { lower: 'lo', upper: 'hi', label: '80% interval' }` draws an interval that comes already computed (a model's projection, a published range) as is, with no estimator, and names it in the legend; it combines with `dashedFrom`. `crosshair: false` (implied by `tooltip`) writes one column per x with its own `data-tip` instead of the browser crosshair, for pages that bring their own tooltip layer.
 
 ## Projects
 
@@ -118,6 +125,8 @@ plot({
 ### `scatter` · `bubble`
 
 `x`, `y` numeric; `size` for bubbles (area-proportional); `label` field with `labels` (number of points or list of names) for selective labels; `trend: true` adds a least-squares line with R².
+
+`hollow: 'field'` (or `filled`) draws some dots hollow: a second encoding without a second color.
 
 ### `regplot` (`lmplot`) · `residplot` · `jointplot`
 
@@ -358,6 +367,8 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 ### `sankey`
 
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
+
+`nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 

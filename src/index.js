@@ -134,17 +134,19 @@ export function resolve(spec = {}) {
  * Lanza PlotError con una pista de corrección si el spec no se puede dibujar.
  */
 export function plot(spec) {
-  const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
-  if (Array.isArray(skins) && skins.length) {
-    const [specs, whens] = expandSkins({ ...spec, skins });
-    return mergeSkins(specs.map(plot), whens);
-  }
   // Colores `var(--x, respaldo)`: los decide la página; se calcula con el respaldo.
+  // Van antes que las pieles: cada pasada dibuja todas las pieles con colores
+  // literales, y una elección de contraste distinta entre pieles es sólo un color.
   if (spec && typeof spec === 'object') {
     // Antes de withDefaults: ahí `colors` sólo deja pasar colores literales.
     const full = { ...DEFAULTS, ...spec };
     const vars = cssVars(full);
     if (vars.size) return plotWithVars(full, vars, plot);
+  }
+  const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
+  if (Array.isArray(skins) && skins.length) {
+    const [specs, whens] = expandSkins({ ...spec, skins });
+    return mergeSkins(specs.map(plot), whens);
   }
   let s = resolve(spec);
   s = applyTime(s);

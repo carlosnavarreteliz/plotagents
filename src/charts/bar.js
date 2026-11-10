@@ -1,7 +1,8 @@
 // Barras y columnas: simples, agrupadas, apiladas y apiladas al 100%.
 // Orientación automática: columnas para pocas categorías cortas o tiempo,
 // barras horizontales cuando las etiquetas son largas o hay muchas.
-import { el, g, text, barPath, tip } from '../svg.js';
+import { el, g, text, barPath, tip, linkWrap } from '../svg.js';
+import { tipper } from '../tooltip.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
@@ -53,6 +54,13 @@ export function prepareBar(spec) {
     return v ? aggregate(v, how === 'count' ? 'sum' : how) : 0;
   };
   const values = new Map(cats.map((c) => [c, seriesKeys.map((s) => val(c, s) || 0)]));
+  // Un dato que falta no es un cero: la barra no se dibuja y el tooltip lo dice.
+  const missingSet = new Set();
+  if (how !== 'count') for (const c of cats) seriesKeys.forEach((s, i) => {
+    const v = buckets.get(key(c, s));
+    if (!v || !v.some(Number.isFinite)) missingSet.add(c + '\u0000' + i);
+  });
+  const isMissing = (c, i) => missingSet.has(c + '\u0000' + i);
   const errs = new Map();
   if (errorbar && errorbar !== 'none') for (const c of cats) errs.set(c, seriesKeys.map((s) => {
     const v = (buckets.get(key(c, s)) || []).filter(Number.isFinite);
@@ -82,7 +90,7 @@ export function prepareBar(spec) {
     values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
     cats = [...keep, otherName];
   }
-  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total, errs, errorbar };
+  return { data, x, y, series, seriesKeys, cats, values, kind, nominal, folded, total, errs, errorbar, isMissing };
 }
 
 export function bar(spec, theme) {
@@ -114,7 +122,10 @@ export function bar(spec, theme) {
   if (pct) { vmin = Math.min(0, vmin); vmax = Math.max(vmax, 1); }
   // Conteos y enteros: marcas enteras (nunca 0,5 personas).
   const allInt = !pct && all.length > 0 && all.every((v) => Number.isInteger(v));
-  const fmt = pct ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
+  // Una función de formato manda también al 100 % (recibe la fracción, 0–1).
+  const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
+  const missingLabel = spec.missingLabel ?? (String(locale).startsWith('en') ? 'no data' : 'sin dato');
+  const vf = (c, i, v) => (m.isMissing(c, i) ? missingLabel : fmt(v));
 
   // Orientación
   const frame = createFrame(spec, theme, { height: 420 });
@@ -145,6 +156,11 @@ export function bar(spec, theme) {
   // Barras punteadas (estimaciones, cifras provisorias): relleno rayado + borde discontinuo.
   const H = hatcher(theme, 'pa-b' + Math.abs(hash(String(spec.title) + theme.mode + frame.width)).toString(36));
   const dm = dashedMatcher(spec, m.data, m.x, m.series);
+  // Tooltip: las filas de la marca (su categoría y, si hay, su serie).
+  const T = tipper(spec, m.data, locale);
+  // `href: "campo"` (barras horizontales): el nombre de cada categoría enlaza.
+  const hrefOf = (c) => (spec.href ? (m.data.find((r) => String(r[m.x]) === c) || {})[spec.href] : undefined);
+  const key = (c, i) => ({ [m.x]: c, ...(m.series && i !== undefined ? { [m.series]: seriesKeys[i] } : {}) });
   const xNum = (c) => (m.kind === 'date' ? parseDate(c) : num(c));
   const from = m.nominal ? null : fromTest(spec, xNum);
   const isDashed = (c, si) => !!((dm && dm(c, multi ? seriesKeys[si] : m.series ? seriesKeys[0] : undefined)) || (from && from(xNum(c))));
@@ -157,7 +173,7 @@ export function bar(spec, theme) {
   // Etiquetas de valor
   const labelMode = spec.labels ?? 'auto';
   const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
-  const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : fmt(values.get(c)[0]));
+  const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : vf(c, 0, values.get(c)[0]));
   const valueLabelW = showLabels ? Math.max(...cats.map((c) => measure(labelOf(c), SIZES.label, 600))) : 0;
   const hideAxis = spec.axis === false || (showLabels && !multi && !(spec.refLines || []).length && spec.axis !== true);
   const maxBar = spec.barWidth || (horizontal ? theme.marks?.barMaxH ?? 22 : theme.marks?.barMax ?? 36);
@@ -183,6 +199,19 @@ export function bar(spec, theme) {
     const xb = band(cats, inner.x, inner.x + inner.w, { inner: multi && !stack ? 0.2 : 0.3, outer: 0.1 });
     if (!hideAxis) body.push(gridY(yS.ticks(nd.step), yS, inner, theme, fmt.tick(nd.step, yS.ticks(nd.step))));
     const y0 = yS(0);
+    // `xBands: [{ from, to, label }]`: tramos de categorías sombreados detrás.
+    const xbands = [];
+    for (const q of [].concat(spec.xBands || [])) {
+      let i0 = cats.indexOf(String(q.from)), i1 = cats.indexOf(String(q.to ?? q.from));
+      if (i0 < 0 || i1 < 0) continue;
+      if (i1 < i0) [i0, i1] = [i1, i0];
+      const pad = (xb.step - xb.bandwidth) / 2;
+      const px0 = xb(cats[i0]) - pad, px1 = xb(cats[i1]) + xb.bandwidth + pad;
+      const parts = [el('rect', { x: +px0.toFixed(2), y: inner.y, width: +(px1 - px0).toFixed(2), height: inner.h, fill: q.color || theme.tint, opacity: q.color ? 0.18 : 0.7 })];
+      if (q.label) parts.push(text(px0 + 4, inner.y + 12, truncate(String(q.label), Math.max(40, px1 - px0 - 8), 11), { fill: theme.muted, fontSize: 11 }));
+      xbands.push(g({ class: 'pa-xband' }, parts));
+    }
+    body.unshift(...xbands);
     // Ancho de barra relativo a la banda (≈ 60 % del paso, como Chart.js y
     // ECharts): con pocas categorías las barras no quedan como palitos entre
     // grandes huecos. `barWidth` lo fija; theme.marks.barMax es el piso.
@@ -208,14 +237,14 @@ export function bar(spec, theme) {
           if (s.vv > 0) h -= gap; else { top += gap; h -= gap; }
           const outer = s.vv > 0 ? i === lastPos : i === lastNeg;
           const d = barPath(x0, top, w, Math.max(0, h), s.vv > 0 ? 'up' : 'down', outer ? RAD : 0);
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [el('path', { d, ...paint(c, i) })]));
+          parts.push(g({ class: 'pa-m', 'data-tip': T(key(c, i), c, `${seriesKeys[i]}: ${vf(c, i, pct ? s.vv : s.v)}`, dl(c, i)) }, [el('path', { d, ...paint(c, i) })]));
         });
         if (showLabels && !pct) {
           const t = m.total(c);
           const ty = t >= 0 ? yS(Math.max(0, ...sg.map((s) => s.to))) - 7 : yS(Math.min(0, ...sg.map((s) => s.to))) + 15;
           parts.push(text(bx + bw / 2, ty, fmt(t), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600, textAnchor: 'middle' }));
         }
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
+        body.push(g({ 'data-tip': T(key(c), c, ...sg.map((s, i) => `${seriesKeys[i]}: ${vf(c, i, pct ? s.vv : s.v)}` + (isDashed(c, i) && dm ? ` (${dashedLabel})` : '')), pct ? '' : `Total: ${fmt(m.total(c))}`, from && from(xNum(c)) ? dashedLabel : '') }, [hit, ...parts]));
       } else {
         const w = Math.min(capW, (bw - 2 * (k - 1)) / k);
         const groupW = w * k + 2 * (k - 1);
@@ -226,15 +255,17 @@ export function bar(spec, theme) {
           const top = Math.min(yv, y0), h = Math.abs(yv - y0);
           const d = barPath(bxI, top, w, h, v >= 0 ? 'up' : 'down', RAD);
           const er0 = m.errs.get(c)?.[i];
-          const label = (multi ? `${seriesKeys[i]}: ${fmt(v)}` : fmt(v)) + (er0 ? ` (IC ${fmt(er0[0])}–${fmt(er0[1])})` : '');
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, label, dl(c, i)) }, [
+          const label = (multi ? `${seriesKeys[i]}: ${vf(c, i, v)}` : vf(c, i, v)) + (er0 ? ` (IC ${fmt(er0[0])}–${fmt(er0[1])})` : '');
+          parts.push(g({ class: 'pa-m', 'data-tip': T(key(c, i), c, label, dl(c, i)) }, [
             el('rect', { x: bxI - 1, y: inner.y, width: w + 2, height: inner.h, fill: 'transparent' }),
             el('path', { d, ...paint(c, i) }),
             errBar(m.errs.get(c)?.[i], (e) => [bxI + w / 2, yS(e)], true, theme),
           ]));
+          // `missingMark: "s/d"`: lo que falta se escribe en la base, no se dibuja.
+          if (spec.missingMark && m.isMissing(c, i) && (multi || !showLabels)) parts.push(text(bxI + w / 2, y0 - 5, String(spec.missingMark), { fill: theme.muted, fontSize: 10.5, textAnchor: 'middle' }));
           if (showLabels && !multi) {
             const strong = !hl || hl.has(c);
-            parts.push(text(bxI + w / 2, v >= 0 ? yv - 7 : yv + 15, fmt(v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: 'middle' }));
+            parts.push(text(bxI + w / 2, v >= 0 ? yv - 7 : yv + 15, vf(c, i, v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: 'middle' }));
           }
         });
         body.push(g({}, [hit, ...parts]));
@@ -274,7 +305,7 @@ export function bar(spec, theme) {
       const parts = [];
       const strong = !hl || hl.has(c);
       parts.push(el('rect', { x: area.x, y: by - yb.step * 0.16, width: area.w, height: yb.step, fill: 'transparent' }));
-      parts.push(text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, Math.min(maxCatW, area.w * 0.38) + 0.5, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' }));
+      parts.push(linkWrap(hrefOf(c), text(inner.x - 10 - (hasNeg && showLabels ? valueLabelW + 10 : 0), by + bh / 2 + 4.5, truncate(c, Math.min(maxCatW, area.w * 0.38) + 0.5, labelSize), { fill: strong ? theme.ink : theme.muted, fontSize: labelSize, fontWeight: hl && strong ? 600 : 400, textAnchor: 'end' })));
       if (stack) {
         const h = Math.min(maxBar, bh);
         const y0b = by + (bh - h) / 2;
@@ -291,13 +322,13 @@ export function bar(spec, theme) {
           const lab = pct ? fmt(s.vv) : '';
           const fits = lab && measure(lab, 11, 600) + 10 < w;
           const hatched = isDashed(c, i);
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}`, dl(c, i)) }, [
+          parts.push(g({ class: 'pa-m', 'data-tip': T(key(c, i), c, `${seriesKeys[i]}: ${vf(c, i, pct ? s.vv : s.v)}`, dl(c, i)) }, [
             el('path', { d, ...paint(c, i) }),
             fits ? text(left + 6, y0b + h / 2 + 4, lab, { fill: hatched ? theme.ink : textColor(fill, theme), fontSize: 11, fontWeight: 600, ...(hatched ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke' } : {}) }) : '',
           ]));
         });
         if (showLabels && !pct) parts.push(text(xS(Math.max(0, ...sg.map((s) => s.to))) + 7, by + bh / 2 + 4.5, fmt(m.total(c)), { fill: theme.ink, fontSize: SIZES.label, fontWeight: 600 }));
-        body.push(g({ 'data-tip': tip(c, ...sg.map((s, i) => `${seriesKeys[i]}: ${fmt(pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
+        body.push(g({ 'data-tip': T(key(c), c, ...sg.map((s, i) => `${seriesKeys[i]}: ${vf(c, i, pct ? s.vv : s.v)}` + (isDashed(c, i) ? ` (${dashedLabel})` : ''))) }, parts));
       } else {
         const h = Math.min(multi ? 16 : maxBar, (bh - 2 * (k - 1)) / k);
         const groupH = h * k + 2 * (k - 1);
@@ -308,9 +339,10 @@ export function bar(spec, theme) {
           const d = barPath(Math.min(xv, x0), yy, Math.abs(xv - x0), h, v >= 0 ? 'right' : 'left', RAD);
           const er = m.errs.get(c)?.[i];
           const erTxt = er ? ` (IC ${fmt(er[0])}–${fmt(er[1])})` : '';
-          parts.push(g({ class: 'pa-m', 'data-tip': tip(c, (multi ? `${seriesKeys[i]}: ` : '') + fmt(v) + erTxt, dl(c, i)) }, [el('path', { d, ...paint(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
+          if (spec.missingMark && m.isMissing(c, i) && (multi || !showLabels)) parts.push(text(x0 + 5, yy + h / 2 + 4, String(spec.missingMark), { fill: theme.muted, fontSize: 10.5 }));
+          parts.push(g({ class: 'pa-m', 'data-tip': T(key(c, i), c, (multi ? `${seriesKeys[i]}: ` : '') + vf(c, i, v) + erTxt, dl(c, i)) }, [el('path', { d, ...paint(c, i) }), errBar(er, (e) => [xS(e), yy + h / 2], false, theme)]));
           if (showLabels && !multi) {
-            parts.push(text(v >= 0 ? xv + 7 : xv - 7, yy + h / 2 + 4.5, fmt(v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: v >= 0 ? 'start' : 'end' }));
+            parts.push(text(v >= 0 ? xv + 7 : xv - 7, yy + h / 2 + 4.5, vf(c, i, v), { fill: strong ? theme.ink : theme.muted, fontSize: SIZES.label, fontWeight: strong ? 600 : 400, textAnchor: v >= 0 ? 'start' : 'end' }));
           }
         });
         body.push(g({}, parts));

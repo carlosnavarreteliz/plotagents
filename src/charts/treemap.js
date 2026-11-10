@@ -2,12 +2,13 @@
 // Color por grupo de primer nivel, variación sutil de luminosidad en niveles
 // más profundos, encabezados de grupo cuando hay espacio y etiquetas que solo
 // aparecen si caben. Drill-down: data-drill + spec.focus.
-import { el, g, text, tip, esc } from '../svg.js';
+import { tipper } from '../tooltip.js';
+import { el, g, text, tip, esc, linkWrap } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
-import { humanize } from '../data.js';
+import { humanize, ensureData } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
@@ -116,10 +117,11 @@ export function treemap(spec, theme) {
   const grand = root.value;
   const R = theme.marks?.barRadius ?? 4;
 
+  const TT = tipper(spec, ensureData(spec), locale);
   const tipFor = (n) => {
     const parentShare = n.parent && n.parent.value ? share(n.value, n.parent.value) : '';
     const ch = showChange ? changeOf(n) : null;
-    return tip(
+    return TT(Object.fromEntries(n.path.map((v, i) => [fields[i], v])),
       n.path.join(SEP),
       `${fmt(n.value)} · ${share(n.value, grand)} ${en ? 'of total' : 'del total'}`,
       n.parent && n.parent.depth > 0 ? `${parentShare} ${en ? 'of' : 'de'} ${n.parent.name}` : '',
@@ -127,6 +129,13 @@ export function treemap(spec, theme) {
     );
   };
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
+  // `href: "campo"`: cada hoja enlaza a la URL de su fila.
+  const rowsAll = spec.href ? ensureData(spec) : null;
+  const hrefOf = (n) => {
+    if (!spec.href) return undefined;
+    const r = rowsAll.find((row) => n.path.every((v, i) => String(row[fields[i]]) === String(v)));
+    return r ? r[spec.href] : undefined;
+  };
 
   function drawLeaf(n, x, y, w, h, relDepth) {
     if (w < 0.6 || h < 0.6) return '';
@@ -137,7 +146,7 @@ export function treemap(spec, theme) {
     const extra = [spec.showValues ? fmt(n.value) : null, ch !== null ? pctTxt(ch) : null].filter(Boolean).join(' · ');
     parts.push(...tileLabel(n.name, share(n.value, total), x, y, w, h, textOn(fill, theme), extra || null, relDepth));
     const drill = relDepth === 1 && n.children.length ? JSON.stringify(n.path) : undefined;
-    return g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts);
+    return linkWrap(hrefOf(n), g({ class: 'pa-m', 'data-tip': tipFor(n), 'data-drill': drill, style: drill ? 'cursor:pointer' : undefined }, parts));
   }
 
   function drawNode(n, x, y, w, h, relDepth) {

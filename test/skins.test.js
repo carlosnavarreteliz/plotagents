@@ -112,7 +112,22 @@ test('css vars: a var() without a usable fallback is an error with a fix', () =>
 
 test('css vars: nest under skins', () => {
   const svg = plot({ ...base, colors: { Minería: 'var(--accent, #0b3f8c)' }, skins: [{}, { when: 'html.classic', colors: { Minería: 'var(--accent, #6e86c8)' } }] });
-  assert.match(svg, /fill:var\(--accent, var\(--pa-s\d+, #0b3f8c\)\)/);
+  // Cada piel define su variable con el var() de la página adentro.
+  assert.match(svg, /\.pa-skin-[a-z0-9]+\{--pa-s0:var\(--accent, #0b3f8c\)/);
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{--pa-s0:var\(--accent, #6e86c8\)/);
+  assert.match(svg, /fill="#0b3f8c" style="fill:var\(--pa-s0\)"/);
+});
+
+test('skins: a contrast choice that differs between skins is just another color', () => {
+  const svg = plot({
+    type: 'bar', horizontal: true, stack: 'percent', width: 500,
+    data: [{ c: 'X', s: 'a', v: 3 }, { c: 'X', s: 'b', v: 7 }], x: 'c', y: 'v', series: 's',
+    skins: [
+      { palette: ['#f0e6c8', '#e8d8b0'], theme: { ink: 'var(--ink, #2f2a24)' } },
+      { when: 'html.classic', palette: ['#0b3f8c', '#10202f'], theme: { ink: 'var(--ink, #10202f)' } },
+    ],
+  });
+  assert.match(svg, /html\.classic \.pa-skin-[a-z0-9]+\{[^}]*#FFFFFF/i);
 });
 
 test('format: a function writes labels, tooltips and ticks', () => {

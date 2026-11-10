@@ -119,6 +119,19 @@ export interface Skin {
   colors?: Record<string, string>;
 }
 
+export interface TooltipSpec {
+  /** Field for the header. */
+  title?: string;
+  /** "Field: value" lines from the mark's rows. */
+  fields?: Array<string | { field: string; label?: string; format?: Format }>;
+  /** Field with pre-written text (may hold line breaks), appended as is. */
+  text?: string;
+  /** Drop the default lines. */
+  replace?: boolean;
+}
+export interface TooltipContext { title: string; lines: string[]; rows: Row[]; row?: Row; match?: Record<string, unknown> }
+export interface XBand { from: string | number; to?: string | number; label?: string; color?: string }
+
 export interface Spec {
   type?: ChartType;
   data?: Row[] | Record<string, number>;
@@ -163,6 +176,30 @@ export interface Spec {
   yScale?: 'linear' | 'log';
   trend?: boolean;
   xLabel?: string;
+  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. */
+  tooltip?: false | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
+  /** line/area: false writes a tooltip column per x instead of the browser crosshair. */
+  crosshair?: boolean;
+  /** line/area: an interval already computed, drawn as is. */
+  band?: { lower: string; upper: string; label?: string };
+  /** bar: tooltip text for a missing value (never drawn as 0). */
+  missingLabel?: string;
+  /** bar: text written at the base of a missing bar. */
+  missingMark?: string;
+  /** bar (columns), line, area: shaded ranges of the x axis. */
+  xBands?: XBand | XBand[];
+  /** treemap tiles, horizontal bar names, scatter dots: field with the URL to link to. */
+  href?: string;
+  /** scatter/bubble: rows where this field is truthy are hollow dots. */
+  hollow?: string;
+  /** scatter/bubble: rows where this field is falsy are hollow dots. */
+  filled?: string;
+  /** sankey: a heading over each column. */
+  stages?: string[];
+  /** sankey: flows take the source's or the target's color, or one per stage. */
+  linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
+  /** facet: a field written under each panel name. */
+  panelNote?: string | ((key: string, rows: Row[]) => string);
   yLabel?: string;
   aggregate?: 'sum' | 'mean' | 'max' | 'min' | 'count' | 'last' | 'first';
   /** Entity → color. Any color may be "var(--name, #fallback)": the page decides it, the fallback is used to compute. */
@@ -176,7 +213,8 @@ export interface Spec {
   hue?: string;
   facet?: string;
   col?: string;
-  sharey?: boolean;
+  /** facet: shared y scale; "span" = same span, own floor. */
+  sharey?: boolean | 'span';
   sharex?: boolean;
   panelHeight?: number;
   time?: string;

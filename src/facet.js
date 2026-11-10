@@ -54,11 +54,18 @@ export function facet(spec, theme, renderOne) {
   // Escalas compartidas: primera pasada para conocer el dominio de cada panel.
   const shareY = spec.sharey ?? spec.shareY ?? true;
   const shareX = spec.sharex ?? spec.shareX ?? true;
-  let yDomain = spec.yDomain, xDomain = spec.xDomain;
+  let yDomain = spec.yDomain, xDomain = spec.xDomain, spanDomains = null;
   if ((shareY && !yDomain) || (shareX && !xDomain)) {
     const ds = subsets.map((d, i) => { const _domains = {}; try { renderOne({ ...base, data: d, title: keys[i], _domains }); } catch { /* panel vacío */ } return _domains; });
     const ys = ds.filter((d) => d.y).map((d) => d.y), xs = ds.filter((d) => d.x).map((d) => d.x);
-    if (shareY && !yDomain && ys.length) {
+    if (shareY === 'span' && !yDomain && ys.length === ds.length) {
+      // Mismo largo en todos, cada uno con su piso: una pendiente dice el mismo
+      // cambio en cada panel aunque los niveles no se parezcan.
+      const step = niceDomain(0, Math.max(...ys.map((d) => d[1] - d[0])) || 1, 4).step;
+      const lo = ys.map((d) => Math.floor(d[0] / step) * step);
+      const span = Math.max(...ys.map((d, j) => Math.ceil(d[1] / step) * step - lo[j]));
+      spanDomains = lo.map((l) => [l, l + span]);
+    } else if (shareY && !yDomain && ys.length) {
       const lo = Math.min(...ys.map((d) => d[0])), hi = Math.max(...ys.map((d) => d[1]));
       yDomain = spec.yScale === 'log' ? [lo, hi] : (({ min, max }) => [min, max])(niceDomain(lo, hi, 4));
     }
@@ -71,7 +78,11 @@ export function facet(spec, theme, renderOne) {
     const px = area.x + c * (pw + gap), py = area.y + r * (ph + gap);
     let svg;
     try {
-      svg = renderOne({ ...base, data: subsets[i], title: k, yDomain, xDomain });
+      // `panelNote`: una línea bajo el nombre del panel (un campo o una función).
+      const note = typeof spec.panelNote === 'function' ? spec.panelNote(k, subsets[i]) : spec.panelNote ? subsets[i].map((r) => r[spec.panelNote]).find((v) => v !== undefined && v !== null && v !== '') : undefined;
+      // Anotaciones con `panel` van sólo a ese panel; sin `panel`, a todos.
+      const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
+      svg = renderOne({ ...base, data: subsets[i], title: k, subtitle: note !== undefined && note !== null ? String(note) : undefined, annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain });
     } catch (e) {
       svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
     }

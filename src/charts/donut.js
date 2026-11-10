@@ -1,6 +1,7 @@
 // Dona y torta: parte-todo de un vistazo, con 6 segmentos como máximo (el
 // resto se agrupa en "Otros"). Etiquetas dentro cuando caben, afuera con
 // líneas guía sin choques, o como tabla-leyenda al lado. Media dona opcional.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
@@ -63,7 +64,8 @@ export function donut(spec, theme) {
   const dashedLabel = spec.dashedLabel ?? dashedDefaultLabel(locale);
   const H = hatcher(theme, 'pa-d' + Math.abs(hash(String(spec.title) + theme.mode + labelF)).toString(36));
   const paint = (s) => (isDashed(s) ? { fill: H.fill(colorOf(s)), 'data-dashed': '1', 'data-color': colorOf(s) } : { fill: colorOf(s) });
-  const tipOf = (s) => tip(s.k, `${fmt(s.v)} · ${pct(s.v)}`, isDashed(s) ? dashedLabel : '');
+  const TT = tipper(spec, data, locale);
+  const tipOf = (s) => TT({ [labelF]: s.k }, s.k, `${fmt(s.v)} · ${pct(s.v)}`, isDashed(s) ? dashedLabel : '');
 
   // Modo de etiquetas
   let mode = spec.labels === false ? 'none' : spec.labels ?? 'auto';

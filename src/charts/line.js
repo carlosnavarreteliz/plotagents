@@ -2,6 +2,7 @@
 // (seaborn lineplot), escala log y áreas apiladas.
 // Etiquetas SIEMPRE al final de cada línea: si chocan se separan y una línea
 // guía fina las une con su punto. El eje y va por dentro para ganar ancho.
+import { tipper } from '../tooltip.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
@@ -42,6 +43,12 @@ export function prepareLine(spec) {
   const [r0, r1] = range ? [rv(range[0]), rv(range[1])] : [null, null];
 
   const map = new Map(seriesKeys.map((s) => [s, new Map()]));
+  // `band: { lower, upper }`: un intervalo que ya viene calculado (una proyección,
+  // un modelo publicado). Se dibuja tal cual, sin estimador.
+  const band = spec.band && typeof spec.band === 'object' && spec.band.lower && spec.band.upper ? spec.band : null;
+  if (band) { requireField(data, band.lower, 'band.lower'); requireField(data, band.upper, 'band.upper'); }
+  const bands = new Map();
+  const rowsAt = new Map(); // x → filas (para `tooltip`)
   for (const r of data) {
     const s = series ? String(r[series]) : seriesKeys[0];
     const xv = kind === 'category' ? cats.indexOf(String(r[x])) : xValue(r[x], kind);
@@ -51,9 +58,17 @@ export function prepareLine(spec) {
     const m = map.get(s);
     if (!m.has(xv)) m.set(xv, []);
     m.get(xv).push(num(r[y]));
+    if (!rowsAt.has(xv)) rowsAt.set(xv, []);
+    rowsAt.get(xv).push(r);
+    if (band) {
+      const k = s + '\u0000' + xv;
+      if (!bands.has(k)) bands.set(k, { lo: [], hi: [] });
+      bands.get(k).lo.push(num(r[band.lower]));
+      bands.get(k).hi.push(num(r[band.upper]));
+    }
   }
   // Estimador: suma por defecto; con `ci`/`errorbar` → media ± intervalo (seaborn).
-  const errorbar = spec.errorbar ?? (spec.ci === true || typeof spec.ci === 'number' ? 'ci' : null);
+  const errorbar = spec.errorbar ?? (spec.ci === true || typeof spec.ci === 'number' ? 'ci' : band ? 'band' : null);
   const how = spec.aggregate ?? spec.estimator ?? (errorbar ? 'mean' : 'sum');
   const level = typeof spec.ci === 'number' ? (spec.ci > 1 ? spec.ci / 100 : spec.ci) : 0.95;
   let lines = seriesKeys.map((s) => ({
@@ -62,7 +77,12 @@ export function prepareLine(spec) {
       .map(([xv, ys]) => {
         const v = ys.filter(Number.isFinite);
         const p = { x: xv, y: aggregate(v, how), n: v.length };
-        if (errorbar && v.length > 1) {
+        if (errorbar === 'band') {
+          const b = bands.get(s + '\u0000' + xv);
+          const lo = b ? b.lo.filter(Number.isFinite) : [];
+          const hi = b ? b.hi.filter(Number.isFinite) : [];
+          if (lo.length && hi.length) { p.lo = aggregate(lo, how); p.hi = aggregate(hi, how); }
+        } else if (errorbar && v.length > 1) {
           if (errorbar === 'sd') { const m = mean(v), d = sd(v); p.lo = m - d; p.hi = m + d; }
           else if (errorbar === 'se') { const m = mean(v), d = sd(v) / Math.sqrt(v.length); p.lo = m - d; p.hi = m + d; }
           else [p.lo, p.hi] = meanCI(v, level);
@@ -78,7 +98,7 @@ export function prepareLine(spec) {
       return { ...l, points: l.points.map((p) => ({ ...p, raw: p.y, y: p.y * k, lo: p.lo * k, hi: p.hi * k })) };
     });
   }
-  return { data, x, y, series, seriesKeys, lines, kind, cats, errorbar };
+  return { data, x, y, series, seriesKeys, lines, kind, cats, errorbar, rowsAt };
 }
 
 export function line(spec, theme, variant = 'line') {
@@ -181,6 +201,8 @@ export function line(spec, theme, variant = 'line') {
   const allLabeled = labeled.length === labelable.length;
   const needLegend = multi && (!want || !allLabeled || spec.legend === true || (spec.legend && typeof spec.legend !== 'boolean')) && spec.legend !== false;
   const legend = needLegend ? m.seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: isArea ? 'square' : 'line', dashed: dashedSeries(s) })) : [];
+  // Lo que significa la banda explícita, en la leyenda: un intervalo dibujado se rotula.
+  if (m.errorbar === 'band' && spec.band.label && spec.legend !== false) legend.push({ label: String(spec.band.label), key: 'band', color: colorOf(m.seriesKeys[0]), shape: 'square', opacity: 0.3 });
   const area = frame.layout(legend);
   const inside = stack ? false : spec.axisInside;
   // Alto vertical fijo alrededor del área de trazado (marca superior, eje x, títulos).
@@ -281,6 +303,20 @@ export function line(spec, theme, variant = 'line') {
     const tTop = yTicks.reduce((a, b) => (yS(b) < yS(a) ? b : a));
     const ty = Math.round(yS(tTop)) + 0.5 - 5 * Math.max(1, ctx.textScale * 0.8);
     placedAnn.push([inner.x, ty - (theme.type?.axis ?? 12) * ctx.textScale, inner.x + measure(tickF(tTop), theme.type?.axis ?? 12) + 2, ty + 2]);
+  }
+  // `xBands: [{ from, to, label }]`: tramos del eje sombreados detrás de todo
+  // (los meses sobre los que se lee una cifra, un período de gobierno).
+  for (const xb of [].concat(spec.xBands || []).reverse()) {
+    const v = (q) => (m.kind === 'category' ? m.cats.indexOf(String(q)) : xValue(q, m.kind));
+    let a0 = v(xb.from), a1 = v(xb.to ?? xb.from);
+    if (!Number.isFinite(a0) || !Number.isFinite(a1)) continue;
+    if (a1 < a0) [a0, a1] = [a1, a0];
+    a0 = Math.max(a0, x0); a1 = Math.min(a1, x1);
+    if (a1 < a0) continue;
+    const px0 = xS(a0), px1 = Math.max(xS(a1), px0 + 2);
+    const parts = [el('rect', { x: +px0.toFixed(2), y: inner.y, width: +(px1 - px0).toFixed(2), height: inner.h, fill: xb.color || theme.tint, opacity: xb.color ? 0.18 : 0.7 })];
+    if (xb.label) parts.push(text(px0 + 4, inner.y + 12, truncate(String(xb.label), Math.max(40, px1 - px0 - 8), 11), { fill: theme.muted, fontSize: 11 }));
+    body.unshift(g({ class: 'pa-xband' }, parts));
   }
   for (const a of spec.annotations || []) {
     const xv = m.kind === 'category' ? m.cats.indexOf(String(a.x)) : xValue(a.x, m.kind);
@@ -456,7 +492,20 @@ export function line(spec, theme, variant = 'line') {
       return [multi ? l.key : m.seriesKeys[0], colorOf(l.key), +yS(p.y).toFixed(1), fmt(stack ? p.v : p.y) + extra];
     }).filter(Boolean),
   }));
-  body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
+  if (spec.crosshair === false || spec.tooltip !== undefined) {
+    // Sin runtime (una página con su propia capa de tooltips): una columna por x,
+    // cada una con su `data-tip` — el x de encabezado y el valor de cada serie.
+    const T = tipper(spec, m.data, locale);
+    cross.forEach((c, j) => {
+      const xa = j ? (cross[j - 1].x + c.x) / 2 : inner.x - 4;
+      const xb = j < cross.length - 1 ? (c.x + cross[j + 1].x) / 2 : inner.x + inner.w + 4;
+      const lines = c.v.map(([k, , , val]) => (multi || m.series ? `${k}: ${val}` : val));
+      const t = T(m.rowsAt.get(crossXs[j]) || [], c.t, ...lines);
+      if (t) body.push(el('rect', { class: 'pa-col', x: +xa.toFixed(2), y: inner.y, width: +Math.max(0, xb - xa).toFixed(2), height: inner.h, fill: 'transparent', 'data-tip': t }));
+    });
+  } else {
+    body.push(el('rect', { class: 'pa-cross', x: inner.x - 4, y: inner.y, width: inner.w + 8, height: inner.h, fill: 'transparent', 'data-cross': JSON.stringify(cross), 'data-y0': inner.y, 'data-y1': inner.y + inner.h }));
+  }
 
   const desc = describeLine(m, fmt, xFmt, locale);
   if (clipD) defs += el('clipPath', { id: clipD }, el('rect', { x: inner.x - 6, y: inner.y - 6, width: inner.w + 12, height: inner.h + 12 }));

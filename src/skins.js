@@ -237,7 +237,9 @@ export function mergeSkins(svgs, whens) {
 
   let svg = rewrite(svgs[0], parts[0], at.map(([j, name]) => [j, (c) => `var(${name}, ${c})`, `var(${name})`]));
 
-  const cls = 'pa-skin-' + hash(svgs.join('\u0000'));
+  // El nombre sale de la geometría, no de los colores: dos pasadas que sólo
+  // difieren en color (las de `var()`) dan la misma clase.
+  const cls = 'pa-skin-' + hash(parts[0].filter((_, j) => j % 2 === 0).join('\u0000') + '\u0000' + whens.join('|'));
   const decl = (i) => [...vars.values()].map((v) => `${v.name}:${v.combo[i]}`).join(';');
   const rules = [`.${cls}{${decl(0)}}`];
   for (let i = 0; i < svgs.length; i++) {

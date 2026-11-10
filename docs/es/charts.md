@@ -20,7 +20,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `xScale`, `yScale` | `"log"` donde tenga sentido. |
 | `xDomain`, `yDomain` | `[min, max]` fijo. |
 | `refLines` | `[{ y: 600, label: "Target" }]` (o `x`, o `value` para barras). |
-| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. |
+| `facet` (`col`), `columns`, `sharey`, `sharex` | Múltiplos pequeños, un panel por valor. `sharey: "span"` da a cada panel el mismo largo de eje con su propio piso, así una pendiente dice el mismo cambio en todos; `panelNote: 'campo'` escribe una línea bajo el nombre de cada panel; una anotación con `panel` va sólo a ese panel. |
 | `time`, `timeValue` | Un período a la vez: el más reciente por defecto, o `timeValue`. El período se agrega al subtítulo. |
 | `slider`, `play` | Controles de tiempo en el navegador, **desactivados por defecto**. `slider: true` agrega botones de período cuando hay pocos períodos (≤ 8) y un deslizador mínimo cuando hay muchos; los gráficos de líneas y de áreas reciben un rango con dos tiradores. `"buttons"` o `"slider"` fuerzan uno; `play: false` oculta el botón de reproducir. |
 | `compare` | Con `time`: compara contra `"previous"` (por defecto), `"first"`, un período dado o `false`. |
@@ -30,6 +30,9 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `width`, `height`, `padding` | Píxeles. La altura es automática en barras horizontales, mapas de calor, tarjetas KPI y en treemaps, sunbursts y radares angostos. |
 | `legend` | Posición: `"top"` (por defecto), `"bottom"`, `"left"`, `"right"` o `false` para ocultarla. Las leyendas laterales pasan abajo por debajo de 520 px. Fijar una posición también fuerza una leyenda donde el gráfico, de otro modo, rotularía las líneas directamente. |
 | `exclude` | Un nombre o una lista: quita esas entradas de la leyenda (series, grupos del primer nivel) y recalcula ejes, proporciones y diseño. Los colores se mantienen y las entradas excluidas siguen en la leyenda, atenuadas y tachadas. |
+| `tooltip` | Lo que dice cada marca al pasar el cursor, además de su valor: una lista de campos (líneas «Campo: valor» de las filas de la marca), o `{ title, fields: [campo \| { field, label, format }], text, replace }`, donde `text` es un campo con líneas ya escritas, o `false`. Desde JavaScript, también `(d) => texto \| { title, lines }` con `d.rows`, `d.lines`. Una marca hecha de varias filas (un grupo del treemap, un año con varias series) muestra un campo sólo si sus filas coinciden. |
+| `href` | Las teselas del treemap, los nombres de las barras horizontales y los puntos de dispersión enlazan a la URL de este campo (sólo rutas y http(s)). |
+| `xBands` | Tramos del eje x sombreados detrás de columnas, líneas y áreas: `[{ from, to, label, color }]`. |
 
 ### En el navegador
 
@@ -53,6 +56,8 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `labels` | `true`, `false` o `"auto"`. |
 | `barWidth` | Grosor máximo de la barra en px. |
 
+**Datos que faltan.** Un dato que falta nunca es un cero: la barra no se dibuja, el tooltip dice `missingLabel` («sin dato» / «no data») y `missingMark: "s/d"` lo escribe en la base. Con `stack: "percent"`, una función `format` recibe la participación como fracción (0–1).
+
 ## Tiempo
 
 ### `line` · `area`
@@ -71,6 +76,8 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `stack` | Áreas: `true` (por defecto con series), `"percent"` o `false` para superponerlas. |
 | `fill` | Línea única: `false` quita el degradado suave. |
 | `xRange` | Rango visible `[from, to]`; es lo que fija el deslizador de rango (`slider: true`). |
+
+**Intervalos dados y tooltips sin runtime.** `band: { lower: 'lo', upper: 'hi', label: 'Intervalo 80 %' }` dibuja tal cual un intervalo que ya viene calculado (la proyección de un modelo, un rango publicado), sin estimador, y lo nombra en la leyenda; se combina con `dashedFrom`. `crosshair: false` (implícito con `tooltip`) escribe una columna por x con su propio `data-tip` en vez del crosshair del navegador, para páginas que traen su propia capa de tooltips.
 
 ## Proyectos
 
@@ -118,6 +125,8 @@ plot({
 ### `scatter` · `bubble`
 
 `x`, `y` numéricos; `size` para burbujas (proporcional al área); campo `label` con `labels` (número de puntos o lista de nombres) para etiquetas selectivas; `trend: true` agrega una recta de mínimos cuadrados con R².
+
+`hollow: 'campo'` (o `filled`) dibuja algunos puntos huecos: una segunda codificación sin un segundo color.
 
 ### `regplot` (`lmplot`) · `residplot` · `jointplot`
 
@@ -358,6 +367,8 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 ### `sankey`
 
 `from`, `to`, `value` (también detecta `source`/`target`). El color parte en la primera etapa con más de un nodo y fluye aguas abajo.
+
+`nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 

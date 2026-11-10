@@ -69,11 +69,12 @@ export const tip = (...lines) => lines.filter((l) => l !== undefined && l !== nu
  * mouse. Es tan rápido como Canvas y conserva lo vectorial (ver docs).
  */
 export function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
-  if (circles.length <= threshold) return circles.map((c) => el('circle', c)).join('');
+  if (circles.length <= threshold) return circles.map(({ 'data-href': href, ...c }) => linkWrap(href, el('circle', c))).join('');
   const groups = new Map();
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const near = [];
   for (const c of circles) {
+    delete c['data-href']; // en capas densas no hay enlaces por punto
     const k = [c.fill, c.fillOpacity, c.r, c.stroke, c.strokeWidth].join('|');
     if (!groups.has(k)) groups.set(k, { attrs: c, d: [] });
     const r = +c.r, cx = +c.cx, cy = +c.cy;
@@ -85,4 +86,15 @@ export function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
     el('path', { d: d.join(''), fill: attrs.fill, fillOpacity: attrs.fillOpacity, stroke: attrs.stroke && attrs.stroke !== 'none' ? attrs.stroke : null, strokeWidth: attrs.stroke && attrs.stroke !== 'none' ? Math.min(+attrs.strokeWidth || 1, 0.75) : null }));
   const hover = el('rect', { class: 'pa-near', x: x0, y: y0, width: Math.max(1, x1 - x0), height: Math.max(1, y1 - y0), fill: 'transparent', 'data-near': JSON.stringify(near) });
   return g({ class: 'pa-dense' }, [...paths, hover]);
+}
+
+/**
+ * Envuelve una marca en un enlace (`href`, SVG 2). Sólo rutas y http(s): un
+ * `javascript:` en los datos no llega al documento.
+ */
+export function linkWrap(href, inner) {
+  if (href === undefined || href === null || href === '') return inner;
+  const h = String(href).trim();
+  if (!/^(https?:\/\/|\/|\.{0,2}\/|#|\?)/i.test(h)) return inner;
+  return `<a href="${esc(h)}" class="pa-link">${inner}</a>`;
 }
