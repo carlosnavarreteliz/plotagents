@@ -20,6 +20,8 @@ Dibuja un gráfico y devuelve una cadena SVG. Funciona en Node, Deno, Bun y el n
 const svg = plot({ type: 'bar', data, x: 'region', y: 'sales', title: 'Biobío leads with 30%' });
 ```
 
+La raíz `<svg>` lleva `style="max-width:100%;height:auto;…"` para achicarse con su contenedor. `inlineSize: false` deja fuera esas dos (width, height y viewBox quedan), y el CSS de la página fija el tamaño sin `!important`.
+
 ### `safePlot(spec)`
 
 La versión que debes exponer como herramienta de un agente: nunca lanza excepciones.

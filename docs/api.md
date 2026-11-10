@@ -20,6 +20,8 @@ Draws a chart and returns an SVG string. Works in Node, Deno, Bun and the browse
 const svg = plot({ type: 'bar', data, x: 'region', y: 'sales', title: 'Biobío leads with 30%' });
 ```
 
+The root `<svg>` carries `style="max-width:100%;height:auto;…"` so it shrinks with its container. `inlineSize: false` leaves those two out (width, height and viewBox stay), so a page's CSS sets the size without `!important`.
+
 ### `safePlot(spec)`
 
 The version to expose as an agent tool: it never throws.
