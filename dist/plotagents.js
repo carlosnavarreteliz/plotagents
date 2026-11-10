@@ -404,6 +404,8 @@ const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 const { resolveColorScale, interpolate, sample } = __req("src/colorscales.js");
+const { parseRgb } = __req("src/rgb.js");
+
 
 const STRUCT = {
   font: { family: FONT, mono: MONO, import: FONT_CSS },
@@ -595,10 +597,7 @@ function themeFor(spec = {}) {
 
 
 function hexToRgb(hex) {
-  let h = String(hex).replace('#', '');
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-  const n = parseInt(h.slice(0, 6), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return parseRgb(hex);
 }
 
 function rgbToHex([r, g, b]) {
@@ -685,9 +684,10 @@ function fontSpec(font) {
   return { family: `'${f}', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`, import: url };
 }
 
-return { "deepMerge": deepMerge, "registerTheme": registerTheme, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "fontSpec": fontSpec, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps, "isColor": isColor };
+return { "deepMerge": deepMerge, "registerTheme": registerTheme, "getTheme": getTheme, "themeFor": themeFor, "hexToRgb": hexToRgb, "rgbToHex": rgbToHex, "luminance": luminance, "contrast": contrast, "textOn": textOn, "ramp": ramp, "colorMap": colorMap, "readable": readable, "fontSpec": fontSpec, "FONT": FONT, "MONO": MONO, "FONT_CSS": FONT_CSS, "themes": themes, "palettes": palettes, "ramps": ramps, "isColor": isColor, "parseRgb": parseRgb };
 });
 __def("src/colorscales.js", function () {
+const { parseRgb } = __req("src/rgb.js");
 const { PlotError } = __req("src/data.js");
 
 const COLORMAPS = {
@@ -783,9 +783,7 @@ const lin = (c) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) **
 const gam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - 0.055);
 const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
 function toLab(hex) {
-  let h = String(hex).replace('#', '');
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-  const n = parseInt(h.slice(0, 6), 16), [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(lin);
+  const [r, g, b] = parseRgb(hex).map(lin);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
   return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
 }
@@ -889,6 +887,25 @@ function binnedScale(spec) {
 }
 
 return { "interpolate": interpolate, "sample": sample, "colorScaleNames": colorScaleNames, "resolveColorScale": resolveColorScale, "binnedScale": binnedScale, "COLORMAPS": COLORMAPS, "QUALITATIVE": QUALITATIVE, "DIVERGING": DIVERGING, "CYCLIC": CYCLIC, "RAINBOW": RAINBOW };
+});
+__def("src/rgb.js", function () {
+
+/**
+ * [r, g, b] de un color hex (#abc, #aabbcc, #aabbccdd) o rgb()/rgba(). Todo
+ * cálculo de color pasa por aquí: un `rgb(…)` que llega como hex roto da negro,
+ * y un texto negro sobre una barra oscura es un rótulo que no se lee.
+ */
+function parseRgb(color) {
+  const c = String(color ?? '').trim();
+  const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(c);
+  if (m) return [+m[1], +m[2], +m[3]].map((v) => Math.max(0, Math.min(255, Math.round(v))));
+  let h = c.replace('#', '');
+  if (h.length === 3 || h.length === 4) h = h.slice(0, 3).split('').map((x) => x + x).join('');
+  const n = parseInt(h.slice(0, 6), 16);
+  return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : [0, 0, 0];
+}
+
+return { "parseRgb": parseRgb };
 });
 __def("src/data.js", function () {
 const { isDateLike, parseDate } = __req("src/format.js");
@@ -2230,7 +2247,9 @@ function same(parts, msg, fix) {
   const n = parts[0].length;
   for (let i = 1; i < parts.length; i++) {
     const p = parts[i];
-    if (!(p.length === n && p.every((t, j) => j % 2 === 1 || t === parts[0][j]))) throw new PlotError(msg(i), fix);
+    if (!(p.length === n && p.every((t, j) => j % 2 === 1 || t === parts[0][j]))) {
+      throw new PlotError(msg(i), fix);
+    }
   }
 }
 
@@ -2289,14 +2308,11 @@ function cssVars(spec) {
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (!(key === undefined && NOT_STYLE.has(k))) walk(x, k);
   };
   walk(spec);
-  const taken = new Set([...found.values()].map((v) => hex6(rgbOf(v.fallback))));
   let k = 0;
   for (const v of found.values()) {
     const [r, g, b] = rgbOf(v.fallback);
-    let probe;
-    do { k++; probe = hex6([r, g ^ (k >> 8 & 1), b ^ (k & 255)]); } while (taken.has(probe));
-    taken.add(probe);
-    v.probe = probe;
+    k++;
+    v.probe = `rgba(${r}, ${g}, ${b}, 0.${String(99990 + k).padStart(5, '0')})`;
   }
   return found;
 }
@@ -2319,11 +2335,12 @@ function plotWithVars(spec, map, draw) {
   const pa = tokens(a);
   const pb = tokens(b);
   same([pa, pb], () => 'Un color `var()` cambió algo más que colores al dibujarse.', 'Usa un respaldo cercano al color que la página va a dar.');
-  const byProbe = new Map([...map.values()].map((v) => [v.probe, v]));
+  const norm = (c) => c.toLowerCase().replace(/\s+/g, '');
+  const byProbe = new Map([...map.values()].map((v) => [norm(v.probe), v]));
   const at = [];
   for (let j = 1; j < pa.length; j += 2) {
     if (pa[j].toLowerCase() === pb[j].toLowerCase()) continue;
-    const v = byProbe.get(pb[j].toLowerCase());
+    const v = byProbe.get(norm(pb[j]));
     if (!v) continue; // un derivado: queda calculado con el respaldo
     at.push([j, (c) => `var(${v.name}, ${c})`, `var(${v.name}, ${pa[j]})`]);
   }
@@ -2404,6 +2421,7 @@ function expandSkins(spec) {
 return { "cssVars": cssVars, "plotWithVars": plotWithVars, "skinSpec": skinSpec, "mergeSkins": mergeSkins, "expandSkins": expandSkins };
 });
 __def("src/charts/bar.js", function () {
+const { parseRgb } = __req("src/rgb.js");
 const { el, g, text, barPath, tip, linkWrap } = __req("src/svg.js");
 const { tipper } = __req("src/tooltip.js");
 const { measure, truncate } = __req("src/text.js");
@@ -2758,7 +2776,7 @@ function errBar(e, P, vertical, theme) {
 }
 
 function textColor(fill, theme) {
-  const [r, gg, b] = fill.replace('#', '').match(/../g).map((h) => parseInt(h, 16));
+  const [r, gg, b] = parseRgb(fill);
   const l = 0.299 * r + 0.587 * gg + 0.114 * b;
   return l > 150 ? (theme.mode === 'dark' ? '#0B0F2B' : theme.ink) : '#FFFFFF';
 }
@@ -10329,6 +10347,7 @@ function dotplot(spec, theme) {
 return { "dotplot": dotplot };
 });
 __def("src/palette.js", function () {
+const { parseRgb } = __req("src/rgb.js");
 
 const BAND = { light: [0.43, 0.77], dark: [0.48, 0.67] };
 const CHROMA_FLOOR = 0.1;
@@ -10339,7 +10358,7 @@ const MACHADO = {
 };
 
 const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-const rgbLin = (hex) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(lin); };
+const rgbLin = (c) => parseRgb(c).map(lin);
 function oklab([r, g, b]) {
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);

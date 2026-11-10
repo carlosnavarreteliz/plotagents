@@ -136,3 +136,13 @@ test('format: a function writes labels, tooltips and ticks', () => {
   assert.match(svg, /data-tip="[^"]*40 u\./);
   assert.equal(safePlot({ ...base, format: (v) => String(v) }).ok, true);
 });
+
+test('css vars: a fallback right at the contrast threshold does not flip the label ink', () => {
+  // Pale-to-mid ramps: the text on each segment is chosen by contrast; the probe
+  // must not move any segment across the white/ink threshold.
+  for (const base of ['#7f7f7f', '#8a8a8a', '#959595', '#6e86c8', '#d69a2e', '#19a17d']) {
+    const data = [1, 2, 3, 4].map((v, i) => ({ c: 'X', s: `p${i}`, v }));
+    const palette = [base, '#b0b0b0', '#5a5a5a', '#cfcfcf'].map((c, i) => `var(--c${i}, ${c})`);
+    assert.doesNotThrow(() => plot({ type: 'bar', horizontal: true, stack: 'percent', data, x: 'c', y: 'v', series: 's', palette, width: 600 }));
+  }
+});

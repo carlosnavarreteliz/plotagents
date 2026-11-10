@@ -1,3 +1,4 @@
+import { parseRgb } from '../rgb.js';
 // Barras y columnas: simples, agrupadas, apiladas y apiladas al 100%.
 // Orientación automática: columnas para pocas categorías cortas o tiempo,
 // barras horizontales cuando las etiquetas son largas o hay muchas.
@@ -384,7 +385,7 @@ function errBar(e, P, vertical, theme) {
 
 function textColor(fill, theme) {
   // Blanco sobre colores oscuros; tinta sobre ámbar/cielo/oliva.
-  const [r, gg, b] = fill.replace('#', '').match(/../g).map((h) => parseInt(h, 16));
+  const [r, gg, b] = parseRgb(fill);
   const l = 0.299 * r + 0.587 * gg + 0.114 * b;
   return l > 150 ? (theme.mode === 'dark' ? '#0B0F2B' : theme.ink) : '#FFFFFF';
 }
