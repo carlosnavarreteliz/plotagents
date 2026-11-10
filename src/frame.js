@@ -111,7 +111,10 @@ export function createFrame(spec, theme, defaults = {}) {
       }
       srcLines.forEach((l, i) => parts.push(text(width - pad, height - pad - 2 - (srcLines.length - 1 - i) * srcLH, l, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' })));
       // Id estable pero distinto entre gráficos sin título del mismo tipo (aria-labelledby).
-      const id = 'pa' + Math.abs(hash((spec.title || '') + type + width + desc)).toString(36);
+      // `idPrefix`: una base propia (dos gráficos iguales en una página no se pisan).
+      const label = spec.ariaLabel === undefined || spec.ariaLabel === null || spec.ariaLabel === '' ? null : String(spec.ariaLabel);
+      const id = spec.idPrefix !== undefined && spec.idPrefix !== null && spec.idPrefix !== '' ? domId(spec.idPrefix)
+        : 'pa' + Math.abs(hash((spec.title || '') + type + width + desc + (label ? '|' + label : ''))).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
       const style = `${fontImport}.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid ${theme.categorical[0]};outline-offset:2px}`
         + (type === 'network' ? '.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}' : '')
@@ -138,7 +141,8 @@ export function createFrame(spec, theme, defaults = {}) {
           ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
-          el('title', { id: `${id}-t` }, esc(spec.title || type)),
+          // `ariaLabel`: el nombre que lee un lector de pantalla, sin dibujar un título.
+          el('title', { id: `${id}-t` }, esc(label ?? (spec.title || type))),
           el('desc', { id: `${id}-d` }, esc(desc)),
           el('style', {}, style),
           defs ? el('defs', {}, defs) : '',
@@ -256,6 +260,9 @@ function drawLegend(items, x0, y0, maxW, theme, opts) {
   }
   return { svg: g({ class: 'pa-legend' }, out), h: rows * rowH - 6 * X };
 }
+
+/** Un id de SVG/CSS a partir de lo que dé quien llama (letras, dígitos, - y _). */
+export const domId = (v) => { const s = String(v).replace(/[^A-Za-z0-9_-]+/g, '-'); return /^[A-Za-z_]/.test(s) ? s : 'pa-' + s; };
 
 export function hash(s) {
   let h = 0;

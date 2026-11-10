@@ -122,7 +122,9 @@ export function facet(spec, theme, renderOne) {
     try {
       // Anotaciones con `panel` van sólo a ese panel; sin `panel`, a todos.
       const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
-      return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
+      // `idPrefix`, uno por panel (si no, los paneles repetirían ids); `ariaLabel` nombra el conjunto, no cada panel.
+      const own = base.idPrefix !== undefined && base.idPrefix !== null && base.idPrefix !== '' ? { idPrefix: `${base.idPrefix}-${i}` } : {};
+      return renderOne({ ...base, ariaLabel: undefined, ...own, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
     } catch (e) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;
     }

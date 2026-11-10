@@ -197,14 +197,15 @@ export function resolveColorScale(v) {
  * Escala por clases: `colorScale: { colors: [...], breaks: [...] }` (o un
  * `name` muestreado en tantas clases como cortes + 1). Un valor cae en la clase
  * i si breaks[i − 1] ≤ v < breaks[i] (con `closed: 'right'`, breaks[i − 1] < v ≤
- * breaks[i]); los cortes repetidos se funden. Devuelve { breaks, colors, cls, color } o
+ * breaks[i]); los cortes repetidos se funden; sin cortes, una sola clase. Devuelve { breaks, colors, cls, color } o
  * null si la escala no trae cortes. Lanza si los cortes y los colores no calzan.
  */
 export function binnedScale(spec) {
   const cs = spec.colorScale ?? spec.cmap ?? spec.colormap;
   if (!cs || typeof cs !== 'object' || Array.isArray(cs) || !Array.isArray(cs.breaks)) return null;
   let breaks = cs.breaks.map(Number);
-  if (!breaks.length || breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
+  // `breaks: []` es una sola clase (pocos datos para cortar): todo de un color.
+  if (breaks.some((b) => !Number.isFinite(b))) throw new PlotError('`colorScale.breaks` debe ser una lista de números.', 'breaks: [-1, 0, 1]');
   for (let i = 1; i < breaks.length; i++) if (breaks[i] < breaks[i - 1]) throw new PlotError('`colorScale.breaks` debe ir en orden creciente.', `breaks: [${[...new Set(breaks)].sort((a, b) => a - b).join(', ')}]`);
   if (cs.closed !== undefined && cs.closed !== 'left' && cs.closed !== 'right') throw new PlotError('`colorScale.closed` es "left" (un valor igual a un corte va a la clase de arriba) o "right" (a la de abajo).', 'closed: "right"');
   let colors;

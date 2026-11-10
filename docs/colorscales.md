@@ -27,7 +27,7 @@ plot({ ...spec, colorScale: { name: 'Blues', breaks: [10, 20, 40] } });   // 4 c
 
 `colors` needs one more entry than `breaks` (or give `name` and it is sampled). Works in heatmaps, choropleths and treemaps colored by change (breaks as fractions: `0.1` is 10%). The legend becomes a stepped key, one swatch per class, with the breaks written under it through `format`. A mismatch between breaks and colors is a `lint` error with the fix.
 
-A value equal to a break goes to the class above it. `closed: "right"` puts it in the class below (`breaks[i-1] < v ≤ breaks[i]`), as in a key that reads "up to 10". Repeated breaks (quantiles of data with ties) are merged: the class between them would be empty, so it and its color drop out (`lint` says so).
+A value equal to a break goes to the class above it. `closed: "right"` puts it in the class below (`breaks[i-1] < v ≤ breaks[i]`), as in a key that reads "up to 10". Repeated breaks (quantiles of data with ties) are merged: the class between them would be empty, so it and its color drop out (`lint` says so). `breaks: []` with one color is a single class (too few values to cut), and all of this holds per view in a choropleth with `views`: quantiles computed by the page ("up to the value at the 20th percentile") go in as they are, with `closed: "right"`, ties and all.
 
 ## Categorical palettes
 

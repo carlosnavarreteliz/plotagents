@@ -115,7 +115,7 @@ test('views: one geometry, the first view in the attributes, the others as class
   assert.equal([...svg.matchAll(/<g class="pv\d"><g class="pa-legend pa-map-legend">/g)].length, 3);
   assert.match(svg, /Alpha<\/text>/);
   // El resaltado de una vista va en su grupo.
-  assert.match(svg, /<g class="pa-outlines pv2"><path/);
+  assert.match(svg, /<g class="pa-outlines pv2"[^>]*><path/);
   assert.match(svg, /3 views: Alpha, Beta, c\./);
 });
 
