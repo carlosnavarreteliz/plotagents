@@ -172,7 +172,10 @@ export interface Spec {
   label?: string;
   group?: string;
   path?: string[];
+  /** Bubble size field. network: node weight (field of `nodes`). dendrogram: each leaf's weight (bar + figure; joins add up). */
   size?: string;
+  /** dendrogram (rows input): a second line under each leaf name. */
+  sub?: string;
   from?: string;
   to?: string;
   items?: KpiItem[];
@@ -210,8 +213,8 @@ export interface Spec {
   yScale?: 'linear' | 'log';
   trend?: boolean;
   xLabel?: string;
-  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. */
-  tooltip?: false | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
+  /** What each mark says on hover beyond its value: fields of its rows, pre-written text, or (JS) a function. true keeps the defaults (dendrogram: also a card on every join). */
+  tooltip?: boolean | string | Array<string | { field: string; label?: string; format?: Format }> | TooltipSpec | ((d: TooltipContext) => string | string[] | { title?: string; lines?: string[] } | null | false);
   /** line/area: false writes a tooltip column per x instead of the browser crosshair. */
   crosshair?: boolean;
   /** line/area: an interval already computed, drawn as is. */
@@ -222,14 +225,16 @@ export interface Spec {
   missingMark?: string;
   /** bar (columns), line, area: shaded ranges of the x axis. */
   xBands?: XBand | XBand[];
-  /** treemap tiles, horizontal bar names, scatter dots: field with the URL to link to. */
+  /** treemap tiles, horizontal bar names, scatter dots, network nodes (field of `nodes`): field with the URL to link to. */
   href?: string;
-  /** scatter/bubble: rows where this field is truthy are hollow dots. */
-  hollow?: string;
-  /** scatter/bubble: rows where this field is falsy are hollow dots. */
-  filled?: string;
+  /** scatter/bubble: rows where this field is truthy are hollow dots. network: a field of `nodes` or a list of node ids drawn hollow. */
+  hollow?: string | string[];
+  /** scatter/bubble: rows where this field is falsy are hollow dots. network: a field of `nodes` or a list of ids that stay filled; the rest are hollow. */
+  filled?: string | string[];
   /** sankey: a heading over each column. */
   stages?: string[];
+  /** sankey: separate crowded node labels (true = 31 px between centers, or a number of px), with leader lines to moved ones; grows the height when it is not set. */
+  relax?: boolean | number;
   /** sankey: flows take the source's or the target's color, or one per stage. */
   linkColor?: 'source' | 'target' | Array<'source' | 'target'>;
   /** facet: a field written under each panel name; every panel reserves room for it. */
@@ -368,6 +373,16 @@ export interface Spec {
   flipY?: boolean;
   /** Largest node / circle radius in px. */
   maxRadius?: number;
+  /** network: smallest node radius in px (default 2.5). */
+  minRadius?: number;
+  /** network layout "preset": scale x and y separately to fill the area (positions normalized per axis). */
+  stretch?: boolean;
+  /** network: "source" (default), "neutral" (muted ink) or one color for every edge. */
+  edgeColor?: 'source' | 'neutral' | (string & {});
+  /** network: one opacity for every edge, or [min, max] by value. */
+  edgeOpacity?: number | [number, number];
+  /** network: one width in px for every edge, or [min, max] by √value. */
+  edgeWidth?: number | [number, number];
   /** network: force-layout iterations. */
   iterations?: number;
   /** chord: square flow matrix with `names`. */

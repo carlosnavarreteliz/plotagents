@@ -202,6 +202,11 @@ How things group, and at what height they join. The tree comes in already comput
 | `orientation` | `"horizontal"` (root left, default) or `"vertical"` (root on top). |
 | `labels` | Leaf labels: `"auto"` (every k-th when they do not fit), `true`, `false`; with `linkage`, the list of leaf names. |
 | `label` | Rows input: field with the display name of each leaf. |
+| `series` | Rows input: a field that colors each leaf (a swatch at its end and the weight bar), with a legend unless `legend: false`. No `cut` needed; `colors` fixes a category's color. |
+| `size` | Rows input: each leaf's weight (how many things hang off it), a bar with its figure beside the name (`sizeFormat` formats it). Each join adds up its leaves. Vertical trees show it in the tooltip only. |
+| `sub` | Rows input: a second line under each leaf name (horizontal); each leaf gets twice the height. |
+| `xLabel` | Title of the height axis ("Ward merge height": a merge height is not a distance, say what it is). |
+| `tooltip` | Through the usual `tooltip` (fields of the leaf's row, `text`, `replace`…). Set it (`true` keeps the default lines) and every join gets a card too: its height, how many leaves, their total weight, and the fields of its own row. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -424,6 +429,17 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 
 `labels` (number, list or `true`), `highlight` (a node and its neighbors), `focus` (a node id: it goes to the center, or the root in `radial`/`tree`, and is highlighted with its neighbors, all labeled; in the browser a click does it with a smooth transition, and a second click or Esc returns), `iterations`, `maxRadius`, `curveness`.
 
+A map you already computed (the product space, a knowledge network) usually wants the nodes to carry the meaning and the edges to recede:
+
+| Option | Meaning |
+|---|---|
+| `filled` / `hollow` | A field of `nodes` (or a list of ids): those nodes stay filled (or go hollow), the rest are rings of the same color with the background inside. A second encoding without a second color, e.g. the groups one institution specializes in, lit on the same map. Filled nodes are named first; hollow ones in a muted ink. |
+| `edgeColor` | `"source"` (default), `"neutral"` (the theme's muted ink) or any color, `var(--line, #e0d6c4)` included. `colors["a→b"]` still pins one edge, drawn on top. |
+| `edgeOpacity` / `edgeWidth` | One number for every edge, or `[min, max]` scaled by value (opacity linearly, width by the square root). |
+| `stretch` | `layout: "preset"` only: x and y are scaled apart to fill the area, for positions already normalized per axis (0–1 MDS). |
+| `minRadius` | Smallest node radius in px (default 2.5). |
+| `href` | A field of `nodes` with a URL: each node is a link. |
+
 ### `chord`
 
 `from`, `to`, `value` rows, or `matrix` + `names`. `directed` (default false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
@@ -465,6 +481,8 @@ plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
 `from`, `to`, `value` (also detects `source`/`target`). Color starts at the first stage with more than one node and flows downstream.
 
 `nodes: [{ id, label, sub, color, column, tip }]` keeps an id apart from its label, so the same place can sit in two stages without merging or making a cycle; `sub` is the second line under the name, `column` fixes the stage. `order: "given"` keeps the order of `nodes`, `stages: ["Region", "Office", "Country"]` heads the columns, `linkColor: "source" | "target"` (or one per stage) colors the flows, and `colors["from→to"]` pins one.
+
+Many small nodes stack within a few pixels of each other and their names overprint. `relax: true` separates the labels of each column: every node gets its name and second line, each label moves as little as possible to keep 31 px from its neighbors (a number sets another distance; below 28 px labels are one line), and a label that ended up away from its node gets a thin leader line back to it. Without `height`, the chart grows until the labels fit; with `height`, labels that do not fit drop to one line, then squeeze.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 

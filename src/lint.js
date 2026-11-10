@@ -52,9 +52,9 @@ function lintSpec(spec = {}) {
     for (const ff of [].concat(f ?? [])) if (ff && !fields.includes(ff)) err('field', `El campo "${ff}" (${role}) no existe.`, `Campos disponibles: ${fields.join(', ')}`);
   };
   if (data.length) {
-    check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); check(spec.size, 'size');
+    check(spec.x, 'x'); check(spec.y, 'y'); check(spec.series ?? spec.color, 'series'); if (type !== 'network') check(spec.size, 'size');
     check(spec.value, 'value'); check(spec.label, 'label'); if (!['network', 'flowchart'].includes(type)) check(spec.group, 'group'); check(spec.path, 'path');
-    check(spec.from, 'from'); check(spec.to, 'to');
+    check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
   } else if (type !== 'kpi' && !rawWords && !linkageOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
   if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
@@ -195,6 +195,12 @@ function lintSpec(spec = {}) {
     if (sf && fields.includes(sf)) { const n = uniq(data.map((r) => String(r[sf]))).length; if (n !== 2) err('pyramid-sides', `La pirámide necesita exactamente 2 grupos en "${sf}" (hay ${n}).`, 'Usa `type: "bar"` con `series` para más grupos.'); }
   }
   if (type === 'chord' && data.length && uniq(data.flatMap((r) => [r[spec.from ?? 'from'], r[spec.to ?? 'to']])).length > 16) warn('chord-many', 'Más de 16 grupos en un diagrama de cuerdas: los arcos se vuelven ilegibles.', 'Agrupa los menores en "Otros" o usa `type: "sankey"`.');
+  // Red: `size`, `href`, `hollow` y `filled` son campos de la tabla `nodes`.
+  if (type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length) {
+    const nf = fieldsOf(spec.nodes);
+    for (const k of ['size', 'href', 'hollow', 'filled']) if (typeof spec[k] === 'string' && !nf.includes(spec[k])) err('node-field', L(`El campo "${spec[k]}" (${k}) no existe en \`nodes\`.`, `The field "${spec[k]}" (${k}) is not in \`nodes\`.`), L(`Campos de nodes: ${nf.join(', ')}`, `Fields of nodes: ${nf.join(', ')}`));
+  }
+  if (type === 'network' && spec.stretch === true && !/^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? ''))) warn('network-stretch', L('`stretch` sólo aplica a `layout: "preset"`.', '`stretch` only applies to `layout: "preset"`.'), L('Quita `stretch` o usa posiciones dadas.', 'Drop `stretch` or use given positions.'));
   if (type === 'network' && data.length > 2000) sug('network-big', `${data.length} conexiones: la red puede verse como una mancha.`, 'Filtra las conexiones débiles o usa `layout: "circular"` o `layout: "clusters"`.');
 
   if (type === 'wordcloud') {
@@ -435,6 +441,8 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     const pos = typeof spec.legend === 'string' ? spec.legend : spec.legend && typeof spec.legend === 'object' ? spec.legend.position : undefined;
     if (pos !== undefined) enumCheck('legend', String(pos).toLowerCase(), LEGEND_POS, 'true, false, "top", "bottom", "left", "right" o { position }');
   }
+  if (type === 'dendrogram' && typeof spec.size === 'string' && spec.orientation === 'vertical') sug('dendrogram-size-vertical', L('En un dendrograma vertical el peso (`size`) va sólo en el tooltip.', 'In a vertical dendrogram the weight (`size`) only goes to the tooltip.'), L('Usa `orientation: "horizontal"` para ver las barras de peso.', 'Use `orientation: "horizontal"` to see the weight bars.'));
+  if (type === 'sankey' && spec.relax !== undefined && spec.relax !== null && typeof spec.relax !== 'boolean' && !(typeof spec.relax === 'number' && spec.relax > 0)) err('enum-relax', L('`relax` es true o la distancia en px entre rótulos.', '`relax` is true or the distance in px between labels.'), 'relax: true | 31');
   if (type === 'network' && spec.layout !== undefined) enumCheck('layout', String(spec.layout).toLowerCase(), NETWORK_LAYOUTS, '"force", "circular", "radial", "concentric", "clusters", "tree", "grid", "preset"');
   if (type === 'corr' && spec.method !== undefined) enumCheck('method', String(spec.method).toLowerCase(), ['pearson', 'spearman']);
   if (type === 'corr' && typeof spec.triangle === 'string') enumCheck('triangle', spec.triangle, ['lower', 'full']);

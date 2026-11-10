@@ -202,6 +202,11 @@ Cómo se agrupan las cosas, y a qué altura se juntan. El árbol entra ya calcul
 | `orientation` | `"horizontal"` (raíz a la izquierda, por defecto) o `"vertical"` (raíz arriba). |
 | `labels` | Rótulos de hojas: `"auto"` (una de cada k si no caben), `true`, `false`; con `linkage`, la lista de nombres. |
 | `label` | Entrada por filas: campo con el nombre visible de cada hoja. |
+| `series` | Entrada por filas: un campo que colorea cada hoja (una muestra al pie y la barra de peso), con leyenda salvo `legend: false`. No necesita `cut`; `colors` fija el color de una categoría. |
+| `size` | Entrada por filas: el peso de cada hoja (cuántas cosas cuelgan de ella), una barra con su cifra junto al nombre (`sizeFormat` le da formato). Cada unión suma sus hojas. En vertical va sólo en el tooltip. |
+| `sub` | Entrada por filas: una segunda línea bajo el nombre de cada hoja (horizontal); cada hoja pide el doble de alto. |
+| `xLabel` | Título del eje de alturas («altura de fusión (Ward)»: una altura de fusión no es una distancia, dilo). |
+| `tooltip` | El `tooltip` de siempre (campos de la fila de la hoja, `text`, `replace`…). Si se pone (`true` deja las líneas por omisión), cada unión lleva también su tarjeta: su altura, cuántas hojas, su peso total y los campos de su propia fila. |
 
 ### `pairplot` (`pairs`, `splom`, `scattermatrix`)
 
@@ -424,6 +429,17 @@ Aristas en `data` (`from`, `to`, `value` opcional), `nodes` opcionales con `id`,
 
 `labels` (número, lista o `true`), `highlight` (un nodo y sus vecinos), `focus` (el id de un nodo: va al centro, o a la raíz en `radial`/`tree`, y se destaca con sus vecinos, todos rotulados; en el navegador lo hace un clic con una transición suave, y un segundo clic o Esc vuelve), `iterations`, `maxRadius`, `curveness`.
 
+Un mapa ya calculado (el espacio de productos, una red de conocimiento) suele pedir que el significado lo lleven los nodos y que las aristas se retiren:
+
+| Opción | Significado |
+|---|---|
+| `filled` / `hollow` | Un campo de `nodes` (o una lista de ids): esos nodos quedan rellenos (o huecos) y el resto son anillos del mismo color con el fondo adentro. Una segunda codificación sin un segundo color, p. ej. los grupos en que una institución se especializa, encendidos sobre el mismo mapa. Los rellenos se rotulan primero; los huecos, en tinta tenue. |
+| `edgeColor` | `"source"` (por omisión), `"neutral"` (la tinta tenue del tema) o cualquier color, incluido `var(--line, #e0d6c4)`. `colors["a→b"]` sigue fijando una arista, que va encima. |
+| `edgeOpacity` / `edgeWidth` | Un número para todas las aristas, o `[mín, máx]` según el valor (la opacidad lineal, el ancho por la raíz). |
+| `stretch` | Sólo con `layout: "preset"`: x e y se escalan por separado para llenar el área, para posiciones ya normalizadas por eje (MDS en 0–1). |
+| `minRadius` | Radio mínimo de un nodo en px (2,5 por omisión). |
+| `href` | Un campo de `nodes` con una URL: cada nodo es un enlace. |
+
 ### `chord`
 
 Filas `from`, `to`, `value`, o `matrix` + `names`. `directed` (por defecto false), `sort`, `ribbonColor: "smaller" | "larger" | "source"`, `labelOrientation: "radial"`.
@@ -465,6 +481,8 @@ plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
 `from`, `to`, `value` (también detecta `source`/`target`). El color parte en la primera etapa con más de un nodo y fluye aguas abajo.
 
 `nodes: [{ id, label, sub, color, column, tip }]` separa el id del rótulo: el mismo lugar puede estar en dos etapas sin fundirse ni formar un ciclo; `sub` es la segunda línea bajo el nombre y `column` fija la etapa. `order: "given"` respeta el orden de `nodes`, `stages: ["Región", "Aduana", "País"]` rotula las columnas, `linkColor: "source" | "target"` (o uno por etapa) colorea los flujos, y `colors["origen→destino"]` fija uno.
+
+Muchos nodos chicos quedan a pocos píxeles unos de otros y sus nombres se enciman. `relax: true` separa los rótulos de cada columna: todo nodo lleva su nombre y su segunda línea, cada rótulo se corre lo mínimo para quedar a 31 px de sus vecinos (un número fija otra distancia; bajo 28 px el rótulo es de una línea) y el que quedó lejos de su nodo lleva una guía fina hasta él. Sin `height`, el gráfico crece hasta que caben; con `height`, los que no caben pasan a una línea y luego se aprietan.
 
 ### `wordcloud` (`words`, `tagcloud`, `nube`)
 
