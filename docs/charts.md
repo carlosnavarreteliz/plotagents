@@ -442,6 +442,18 @@ Edges in `data` (`from`, `to`, optional `value`), optional `nodes` with `id`, `g
 | `emptyRow` | Text written across a row that has no values at all (`"no data"`), instead of a row of empty cells. |
 | `xGroup` / `yGroup` | Group consecutive columns / rows: a tinted band with the group name along the axis. |
 | `xTicks` / `yTicks` | `{ every: N }`: label every Nth column / row (years every 10, say). |
+| `rowHref` / `colHref` | Row / column labels link to the URL in this field (paths and http(s) only). From JS, also a function of the label. |
+| `xLabelAngle`, `xLabelPosition` | Column labels turned (`-90` upright, `-45` slanted) when they do not fit side by side, under the grid (default) or over it (`"top"`). The strip grows to fit; a label cut short keeps its full name in the tooltip. |
+| `cellGap` | Space between cells in px (default `2`); `0` joins them with square corners; `[x, y]` per axis. |
+| `diagonal` | Cells where `x` equals `y` (stayed in the same region) drawn apart: their own color, outside the color scale (so a huge diagonal does not flatten the rest), a legend entry and a tooltip line. `true`, a label, or `{ label, color, opacity }`. A missing value stays "no data". |
+| `cellColor` | A field naming each cell's class ("Revised"); those cells take `colors[class]`, outside the scale, with a legend entry and a tooltip line. A value written as a color is used as is. |
+| `labelFormat` | Format of the numeral inside the cells only (tooltip and legend keep `format`). A function returning `""` leaves a cell without a numeral. |
+
+```js
+plot({ type: 'heatmap', data, x: 'livesIn', y: 'bornIn', value: 'people',
+  diagonal: { label: 'Born and lives here', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 

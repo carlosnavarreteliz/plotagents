@@ -442,6 +442,18 @@ Categorías `x`, `y` y `value`. Rampa secuencial por defecto; `midpoint` (o `div
 | `emptyRow` | Texto escrito de lado a lado en una fila sin ningún valor (`"sin dato"`), en vez de una fila de celdas vacías. |
 | `xGroup` / `yGroup` | Agrupa columnas / filas consecutivas: una banda teñida con el nombre del grupo junto al eje. |
 | `xTicks` / `yTicks` | `{ every: N }`: rotula una de cada N columnas / filas (los años de diez en diez, por ejemplo). |
+| `rowHref` / `colHref` | Los rótulos de fila / columna enlazan a la URL de este campo (sólo rutas y http(s)). Desde JS, también una función del rótulo. |
+| `xLabelAngle`, `xLabelPosition` | Rótulos de columna girados (`-90` de pie, `-45` inclinados) cuando no caben de lado, bajo la grilla (por defecto) o sobre ella (`"top"`). La franja crece lo necesario; un rótulo cortado lleva su nombre entero en el tooltip. |
+| `cellGap` | Aire entre celdas en px (`2` por defecto); `0` las junta con esquinas rectas; `[x, y]` por eje. |
+| `diagonal` | Las celdas con `x` igual a `y` (se quedó en la misma región) van aparte: su propio color, fuera de la escala (una diagonal enorme no aplana el resto), una entrada en la leyenda y una línea en el tooltip. `true`, un rótulo o `{ label, color, opacity }`. Un valor que falta sigue siendo «sin dato». |
+| `cellColor` | Un campo que nombra la clase de cada celda («Revisada»); esas celdas toman `colors[clase]`, fuera de la escala, con su entrada en la leyenda y su línea en el tooltip. Un valor escrito como color se usa tal cual. |
+| `labelFormat` | Formato sólo del numeral dentro de las celdas (tooltip y leyenda siguen con `format`). Una función que devuelve `""` deja la celda sin cifra. |
+
+```js
+plot({ type: 'heatmap', data, x: 'vive', y: 'nacio', value: 'personas',
+  diagonal: { label: 'Nació y vive aquí', color: '#7A3E9D' },
+  xLabelAngle: -90, xLabelPosition: 'top', rowHref: 'url', cellGap: 0 });
+```
 
 ### `sankey`
 

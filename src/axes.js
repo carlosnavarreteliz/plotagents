@@ -1,5 +1,5 @@
 // Ejes recesivos: líneas finas (1px), sólidas, un tono fuera del fondo.
-import { el, g, text } from './svg.js';
+import { el, g, text, linkWrap } from './svg.js';
 import { measure, truncate } from './text.js';
 import { SIZES } from './frame.js';
 import { ctx } from './context.js';
@@ -63,7 +63,8 @@ export function xLabels(items, area, theme, { y, size = SIZES.axis, color, keepL
     const ov = Math.min(20, Math.max(0, area.x));
     if (px - half < area.x - ov) { anchor = 'start'; px = Math.max(px - 4, area.x - ov); }
     if (px + half > area.x + area.w + ov) { anchor = 'end'; px = Math.min(px + 4, area.x + area.w + ov); }
-    out.push(text(px, ly, it.label, { fill: color || theme.muted, fontSize: size, textAnchor: anchor }));
+    // `href`: el rótulo enlaza (sólo rutas y http(s); sin href queda igual).
+    out.push(linkWrap(it.href, text(px, ly, it.label, { fill: color || theme.muted, fontSize: size, textAnchor: anchor })));
   });
   return g({}, out);
 }
