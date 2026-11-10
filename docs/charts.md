@@ -32,6 +32,7 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
 | `tooltip` | What each mark says on hover beyond its value: a list of fields (`"Field: value"` lines from the mark's rows), or `{ title, fields: [field \| { field, label, format }], text, replace }` where `text` is a field with pre-written lines, or `false`. From JavaScript, also `(d) => text \| { title, lines }` with `d.rows`, `d.lines`. A mark made of several rows (a treemap group, a year with several series) shows a field only when its rows agree. |
 | `href` | Treemap tiles, horizontal bar names and scatter dots link to the URL in this field (paths and http(s) only). |
+| `sprite` | Path of an outlines file written once with `mapSprite(spec)`: regions become `<use>`, the page carries no geometry. |
 | `xBands` | Shaded ranges of the x axis behind columns, lines and areas: `[{ from, to, label, color }]`. |
 
 ### In the browser
@@ -329,15 +330,19 @@ Chilean regions (`geo: "chile"`, default), US states (`geo: "usa"`) and world co
 
 | Option | Meaning |
 |---|---|
-| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, or (browser) a URL. |
+| `geo` | `"chile"`, `"usa"`, `"world"`, a name registered with `registerGeo()`, a GeoJSON or TopoJSON object, paths already projected (`{ paths, points?, names? }`), or (browser) a URL. |
 | `featureKey`, `nameKey` | Feature property to match, and the one with the display name (both detected when omitted). |
-| `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box or `"markers"`. |
+| `fitTo` | Zoom to regions, a `[lonMin, latMin, lonMax, latMax]` box, `"markers"`, or `"mainland"` (far islands and claims out of the frame). |
+| `views` | Several readings (indicators, years) of one geometry in one SVG; the page flips `data-view`. See below. |
+| `pathPrecision`, `simplify` | Compact paths: relative, rounded to `pathPrecision` decimals, simplified on screen with a tolerance in pixels. |
+| `microstates` | World: Singapore, Malta, Bahrain and 71 more drawn as dots (`true`: those with data; `"all"`). |
+| `href` | Data field with a URL: each region links to it (paths and http(s) only). |
 | `links` | Lines between places, above the regions: `[{ from, to, value }]` or `{ data, from, to, value, color, curveness, width: [min, max], opacity, label }`. Ends are region keys or `[lon, lat]`. |
 | `orientation`, `rotate` | `"landscape"` lays a tall territory on its side, north on the left; `"portrait"` stands a wide one up; `rotate: 90 \| -90 \| 180` turns the projected map clockwise. Labels stay upright. |
 | `markers`, `layers` | Points by lon/lat on top; extra GeoJSON lines, polygons or points over or under the map. |
 | `scale`, `classes` | `"quantile"` (default), `"equal"`, `"continuous"` or a list of breaks; 5 classes by default. |
 | `midpoint` / `diverging` | Diverging classes around a value (e.g. 0 for changes). |
-| `missing` | `"plain"` drops the hatch and the "No data" legend entry. |
+| `missing` | `"plain"` drops the hatch and the "No data" legend entry; `"context"` also drops the tooltip (regions drawn only as surroundings). |
 | `labels`, `bars` | Chile gets a north-to-south column with name, bar and value; `bars: false` hides the bars. World maps label the top N. |
 | `projection` | `"mercator"`, `"equalEarth"`, `"albersUsa"`, `"equirectangular"`, `"conic"`, `"identity"`, `"planar"` or `{ type, parallels, rotate }` (picked automatically). |
 | `borderColor`, `borderWidth` | Region borders. |
@@ -362,9 +367,9 @@ plot({
 });
 ```
 
-- **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
+- **Matching without configuration.** Rows are matched against the usual keys (code, id, ISO-2, ISO-3, name, aliases); if some rows don't match, plotagents finds the feature property whose values do (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` forces one. Display names come from `nameKey`, or the first of `name`, `NOMBRE`, `NAME_1`, `ADMIN` and similar.
 - **Projections.** Picked from the geometry: Mercator for a country or region, Equal Earth for the world, and a plain cartesian plane when coordinates are not longitudes and latitudes (UTM metres, for instance). Set `projection` to `"equirectangular"`, `"conic"` (or `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordinates used as they are, y down, for pre-projected or hand-drawn maps; `flipY: true` for y up) or `"planar"` (y up).
-- **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `tall: false` turns off the side column for elongated shapes.
+- **Framing.** `fitTo` zooms to some regions, a box `[lonMin, latMin, lonMax, latMax]` or `"markers"`; the rest of the map stays as clipped context. `fitTo: "mainland"` leaves out far islands and claims (Rapa Nui, Juan Fernández, Antarctica), found by the sea gap that separates them rather than by a list. `tall: false` turns off the side column for elongated shapes.
 - **Markers.** `markers: [{ lon, lat, label, value }]` or `{ data, lon, lat, label, size, color, legend, maxRadius }`: dots on top, area-proportional when there is a `size`, labels placed where they don't collide.
 - **Lines between places.** `links: { data: trade, from: 'origin', to: 'partner', value: 'usd' }` draws one curved line per row from region to region (or `[lon, lat]`), width proportional to the value, one color, no arrowheads: a line is a relation, not a route. Each line is a mark with its own tooltip and `data-key="from→to"`; ends that match no region are listed in the description instead of being drawn. With `labels: false` the map carries no text at all.
 - **Lying down.** `orientation: "landscape"` turns a long, thin territory (Chile, Norway, Vietnam, a river basin) a quarter turn after projecting, north on the left so north-to-south reads left to right; framing, hit areas, markers and links follow, and labels stay upright. `rotate: 90 | -90 | 180` sets the turn by hand.
@@ -372,6 +377,39 @@ plot({
 - **Layers.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` overlays rivers, roads, routes, faults or district lines (or draws them under the regions with `below: true`). A `label` adds a legend key.
 - **Style.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (a named or custom sequential ramp), `palette` and `colors` (categories).
 - **Register once, use by name.** `registerGeo('biobio', comunas, ['comunas-biobio'])` and then `geo: 'biobio'` in every spec, which keeps tool calls short for an agent.
+
+#### Maps for a static site: projected paths, views and no library in the browser
+
+A site that builds its pages ahead of time can draw every map on the server and ship finished SVG, with nothing of plotagents in the browser.
+
+**Paths projected at build time.** `geo: { paths: { id: "M…Z" }, points?: { id: [x, y] }, names?: { id: name } }` takes SVG path strings already projected and simplified (a `map.json` with one outline per comuna), in pixels with y down. No TopoJSON and no projection run: each path is read to points (`M L H V Z C S Q T A`, absolute or relative) and framed, turned (`orientation: "landscape"`), keyed and colored like any map. A value may be `{ d, at: [x, y] }`, where `at` anchors lines; `points` are places too small for an outline, drawn as dots of `pointRadius`.
+
+**Compact paths.** A detailed map weighs what its coordinates weigh. `pathPrecision: 1` (decimals, in pixels) writes relative commands rounded to that grid, and `simplify: 0.5` drops points within half a pixel of the line (Douglas–Peucker on screen). On the 345 comunas of Chile at 1,180 px, the paths go from 516 KB to 176 KB (39 KB gzipped) with no visible change. Without these options paths are written as always.
+
+**Outlines in a file of their own.** A site that shows the same map on hundreds of pages need not repeat its outlines on each. `mapSprite(spec)` writes an SVG with one `<path id>` per region, projected but not framed (its longer side measures 1000); publish it once (`/maps/chile.svg`) and the browser caches it. With `sprite: "/maps/chile.svg"`, each region is a `<use href="/maps/chile.svg#id">` inside a group whose transform frames and turns the file, so one file serves the wide map, the phone map and every framing (`fitTo` a region). Colors, view classes, tooltips and links stay on the `<use>`; dots are still drawn inline. Chile's 345 comunas: the file is 90 KB (26 KB gzipped); each map on a page is 98 KB (12 KB gzipped) with one view, 31 KB gzipped with six. A file loaded from another origin needs CORS, and an SVG opened on its own (in an `<img>`) does not load it.
+
+**Views.** `views: [{ id, label, value, … }, …]` draws several readings of one geometry in one SVG. Each view is a patch of the spec (`value`, `data`, `format`, `colorScale`, `scale`, `classes`, `thresholds`, `colors`, `legendTitle`, `tooltip`, plus `highlight` and `links` for that view only). The first view is drawn as usual. Every other view travels as data: one class per region and view (`pv2-3`: view 2, color class 3), its tooltip in `data-vtip-<id>`, and a `<style>` inside the SVG that paints the view named by `data-view` on the root and hides the other views' legends, labels and lines. Skins and `var(--x, fallback)` colors work as in any chart. Views cannot change the shapes or the frame (`geo`, `key`, `fitTo`, `orientation`, `width`, `title`…).
+
+```js
+plot({
+  type: 'choropleth', geo: { paths: map.paths, names: map.label }, data: comunas, key: 'id',
+  orientation: 'landscape', fitTo: 'mainland', pathPrecision: 1, simplify: 0.5, href: 'url',
+  views: [
+    { id: 'inmigrantes', label: 'Foreign-born', value: 'pct_inmigrantes', format: { suffix: '%' } },
+    { id: 'mayores', label: 'Aged 65+', value: 'pct_65_mas', highlight: 'c05101' },
+  ],
+});
+```
+
+Switching is one attribute. `plotagents/views` (1.2 KB minified, 0.6 KB gzipped, no dependencies) does it and moves each view's tooltip to `data-tip`, which is what any hover layer reads:
+
+```js
+import { setView, bindViews } from 'plotagents/views';
+setView(document.querySelector('#map'), 'mayores');
+bindViews(document);   // <button data-set-view="mayores"> switches the maps on the page
+```
+
+**The world.** Countries match by ISO-2 (`"CL"`), ISO-3 or name. `microstates: true` draws as a dot the states too small for an outline at this scale (Singapore, Malta, Bahrain, Hong Kong…; `"all"` draws every one); lines reach them like any country. **Links** stay what they were: a line is a relation, not a route.
 
 In the browser (`render()` or `toHTML()`), maps are interactive: hovering outlines the shape; clicking a region zooms to fit it (click again, double-click, Esc or the reset button to go back); Ctrl/⌘ + scroll zooms around the pointer (plain scroll keeps scrolling the page, as `chartjs-plugin-zoom` recommends with its `modifierKey`); pinch zooms on touch screens; drag pans when zoomed; +/− buttons work from the keyboard. Each color class in the legend is a key: hover it to light up its regions, click to pin. With `time`, every region's color transitions into the next period's instead of jumping, and the zoom is kept while the slider plays.
 

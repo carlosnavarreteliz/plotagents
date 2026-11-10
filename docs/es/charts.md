@@ -32,6 +32,7 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `exclude` | Un nombre o una lista: quita esas entradas de la leyenda (series, grupos del primer nivel) y recalcula ejes, proporciones y diseño. Los colores se mantienen y las entradas excluidas siguen en la leyenda, atenuadas y tachadas. |
 | `tooltip` | Lo que dice cada marca al pasar el cursor, además de su valor: una lista de campos (líneas «Campo: valor» de las filas de la marca), o `{ title, fields: [campo \| { field, label, format }], text, replace }`, donde `text` es un campo con líneas ya escritas, o `false`. Desde JavaScript, también `(d) => texto \| { title, lines }` con `d.rows`, `d.lines`. Una marca hecha de varias filas (un grupo del treemap, un año con varias series) muestra un campo sólo si sus filas coinciden. |
 | `href` | Las teselas del treemap, los nombres de las barras horizontales y los puntos de dispersión enlazan a la URL de este campo (sólo rutas y http(s)). |
+| `sprite` | Ruta de un archivo de contornos escrito una vez con `mapSprite(spec)`: las regiones son `<use>` y la página no lleva geometría. |
 | `xBands` | Tramos del eje x sombreados detrás de columnas, líneas y áreas: `[{ from, to, label, color }]`. |
 
 ### En el navegador
@@ -329,15 +330,19 @@ Las regiones de Chile (`geo: "chile"`, por defecto), los estados de EE. UU. (`ge
 
 | Opción | Significado |
 |---|---|
-| `geo` | `"chile"`, `"usa"`, `"world"`, un nombre registrado con `registerGeo()`, un objeto GeoJSON o TopoJSON, o (en el navegador) una URL. |
+| `geo` | `"chile"`, `"usa"`, `"world"`, un nombre registrado con `registerGeo()`, un objeto GeoJSON o TopoJSON, trazos ya proyectados (`{ paths, points?, names? }`), o (en el navegador) una URL. |
 | `featureKey`, `nameKey` | Propiedad de la geometría que se empareja, y la que tiene el nombre para mostrar (ambas se detectan si las omites). |
-| `fitTo` | Amplía a regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`. |
+| `fitTo` | Amplía a regiones, a una caja `[lonMin, latMin, lonMax, latMax]`, a `"markers"` o a `"mainland"` (islas lejanas y reclamos fuera del encuadre). |
+| `views` | Varias lecturas (indicadores, años) de una sola geometría en un SVG; la página cambia `data-view`. Ver más abajo. |
+| `pathPrecision`, `simplify` | Trazos compactos: relativos, redondeados a `pathPrecision` decimales y simplificados en la pantalla con una tolerancia en píxeles. |
+| `microstates` | Mundo: Singapur, Malta, Baréin y 71 más como puntos (`true`: los que tienen datos; `"all"`). |
+| `href` | Campo de los datos con una URL: cada región enlaza a ella (sólo rutas y http(s)). |
 | `links` | Líneas entre lugares, sobre las regiones: `[{ from, to, value }]` o `{ data, from, to, value, color, curveness, width: [mín, máx], opacity, label }`. Los extremos son claves de región o `[lon, lat]`. |
 | `orientation`, `rotate` | `"landscape"` acuesta un territorio más alto que ancho, con el norte a la izquierda; `"portrait"` para uno ancho; `rotate: 90 \| -90 \| 180` gira el mapa proyectado en sentido horario. Las etiquetas quedan derechas. |
 | `markers`, `layers` | Puntos por lon/lat encima; líneas, polígonos o puntos GeoJSON adicionales sobre o bajo el mapa. |
 | `scale`, `classes` | `"quantile"` (por defecto), `"equal"`, `"continuous"` o una lista de cortes; 5 clases por defecto. |
 | `midpoint` / `diverging` | Clases divergentes en torno a un valor (p. ej. 0 para cambios). |
-| `missing` | `"plain"` quita el achurado y la entrada "Sin datos" de la leyenda. |
+| `missing` | `"plain"` quita el achurado y la entrada "Sin datos" de la leyenda; `"context"` quita además el tooltip (regiones que sólo son entorno). |
 | `labels`, `bars` | Chile recibe una columna de norte a sur con nombre, barra y valor; `bars: false` oculta las barras. Los mapas del mundo rotulan los N primeros. |
 | `projection` | `"mercator"`, `"equalEarth"`, `"albersUsa"`, `"equirectangular"`, `"conic"`, `"identity"`, `"planar"` o `{ type, parallels, rotate }` (se elige de forma automática). |
 | `borderColor`, `borderWidth` | Bordes de las regiones. |
@@ -362,9 +367,9 @@ plot({
 });
 ```
 
-- **Emparejamiento sin configuración.** Las filas se emparejan con las claves habituales (código, id, ISO-3, nombre, alias); si algunas filas no calzan, plotagents encuentra la propiedad de la geometría cuyos valores sí calzan (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` fuerza una. Los nombres para mostrar salen de `nameKey`, o de la primera de `name`, `NOMBRE`, `NAME_1`, `ADMIN` y similares.
+- **Emparejamiento sin configuración.** Las filas se emparejan con las claves habituales (código, id, ISO-2, ISO-3, nombre, alias); si algunas filas no calzan, plotagents encuentra la propiedad de la geometría cuyos valores sí calzan (`NOM_COM`, `CUT_REG`, `GEOID`, `ADMIN`…). `featureKey` fuerza una. Los nombres para mostrar salen de `nameKey`, o de la primera de `name`, `NOMBRE`, `NAME_1`, `ADMIN` y similares.
 - **Proyecciones.** Se eligen según la geometría: Mercator para un país o una región, Equal Earth para el mundo y un plano cartesiano simple cuando las coordenadas no son longitudes y latitudes (metros UTM, por ejemplo). Fija `projection` en `"equirectangular"`, `"conic"` (o `{ type: "conic", parallels: [-30, -45], rotate: 72 }`), `"identity"` (coordenadas tal como vienen, y hacia abajo, para mapas ya proyectados o dibujados a mano; `flipY: true` si y crece hacia arriba) o `"planar"` (y hacia arriba).
-- **Encuadre.** `fitTo` amplía a algunas regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`; el resto del mapa queda recortado como contexto. `tall: false` desactiva la columna lateral para formas alargadas.
+- **Encuadre.** `fitTo` amplía a algunas regiones, a una caja `[lonMin, latMin, lonMax, latMax]` o a `"markers"`; el resto del mapa queda recortado como contexto. `fitTo: "mainland"` deja fuera las islas lejanas y los reclamos (Rapa Nui, Juan Fernández, la Antártica), que se hallan por el mar que los separa y no por una lista. `tall: false` desactiva la columna lateral para formas alargadas.
 - **Marcadores.** `markers: [{ lon, lat, label, value }]` o `{ data, lon, lat, label, size, color, legend, maxRadius }`: puntos encima, proporcionales al área cuando hay un `size`, con etiquetas ubicadas donde no chocan.
 - **Líneas entre lugares.** `links: { data: comercio, from: 'origen', to: 'socio', value: 'usd' }` dibuja una línea curva por fila, de región a región (o `[lon, lat]`), con ancho proporcional al valor, un solo color y sin puntas de flecha: una línea es una relación, no una ruta. Cada línea es una marca con su tooltip y `data-key="origen→destino"`; los extremos que no calzan con ninguna región se nombran en la descripción en vez de dibujarse. Con `labels: false` el mapa no lleva texto.
 - **Acostado.** `orientation: "landscape"` gira un cuarto de vuelta un territorio largo y angosto (Chile, Noruega, Vietnam, una cuenca) después de proyectarlo, con el norte a la izquierda para que norte→sur se lea de izquierda a derecha; encuadre, zonas de clic, marcadores y líneas lo siguen, y las etiquetas quedan derechas. `rotate: 90 | -90 | 180` fija el giro a mano.
@@ -372,6 +377,39 @@ plot({
 - **Capas.** `layers: [{ geo, label, stroke, width, fill, dash, opacity, below }]` superpone ríos, caminos, rutas, fallas o límites de distritos (o los dibuja bajo las regiones con `below: true`). Un `label` agrega una clave a la leyenda.
 - **Estilo.** `borderColor`, `borderWidth`, `pointRadius`, `lineWidth`, `ramp` (una rampa secuencial con nombre o propia), `palette` y `colors` (categorías).
 - **Regístrala una vez y úsala por nombre.** `registerGeo('biobio', comunas, ['comunas-biobio'])` y luego `geo: 'biobio'` en cada especificación, lo que mantiene cortas las llamadas a herramientas de un agente.
+
+#### Mapas para un sitio estático: trazos proyectados, vistas y nada de la biblioteca en el navegador
+
+Un sitio que arma sus páginas de antemano puede dibujar cada mapa en el servidor y entregar el SVG terminado, sin nada de plotagents en el navegador.
+
+**Trazos proyectados al construir.** `geo: { paths: { id: "M…Z" }, points?: { id: [x, y] }, names?: { id: nombre } }` recibe trazos SVG ya proyectados y simplificados (un `map.json` con un contorno por comuna), en píxeles y con y hacia abajo. No corre TopoJSON ni proyección: cada trazo se lee a puntos (`M L H V Z C S Q T A`, absolutos o relativos) y se encuadra, se gira (`orientation: "landscape"`), se empareja y se colorea como cualquier mapa. Un valor puede ser `{ d, at: [x, y] }`, donde `at` ancla las líneas; `points` son lugares demasiado chicos para un contorno, dibujados como puntos de `pointRadius`.
+
+**Trazos compactos.** Un mapa detallado pesa lo que pesan sus coordenadas. `pathPrecision: 1` (decimales, en píxeles) escribe comandos relativos redondeados a esa grilla, y `simplify: 0.5` quita los puntos a menos de medio píxel de la línea (Douglas–Peucker en la pantalla). En las 345 comunas de Chile a 1.180 px, los trazos bajan de 516 KB a 176 KB (39 KB con gzip) sin cambio visible. Sin estas opciones los trazos se escriben como siempre.
+
+**Los contornos en un archivo aparte.** Un sitio que muestra el mismo mapa en cientos de páginas no tiene por qué repetir sus contornos en cada una. `mapSprite(spec)` escribe un SVG con un `<path id>` por región, proyectado pero sin encuadre (su lado mayor mide 1000); se publica una vez (`/maps/chile.svg`) y el navegador lo guarda. Con `sprite: "/maps/chile.svg"`, cada región es un `<use href="/maps/chile.svg#id">` dentro de un grupo cuya transformación encuadra y gira el archivo, así que un solo archivo sirve al mapa ancho, al de teléfono y a cada encuadre (`fitTo` una región). Colores, clases de las vistas, tooltips y enlaces quedan en el `<use>`; los puntos se siguen dibujando en la página. Las 345 comunas de Chile: el archivo pesa 90 KB (26 KB con gzip); cada mapa de una página, 98 KB (12 KB con gzip) con una vista y 31 KB con gzip con seis. Un archivo de otro origen necesita CORS, y un SVG abierto solo (en un `<img>`) no lo carga.
+
+**Vistas.** `views: [{ id, label, value, … }, …]` dibuja varias lecturas de una sola geometría en un SVG. Cada vista es un parche del spec (`value`, `data`, `format`, `colorScale`, `scale`, `classes`, `thresholds`, `colors`, `legendTitle`, `tooltip`, y `highlight` y `links` sólo para esa vista). La primera vista se dibuja como siempre. Las demás viajan como datos: una clase por región y vista (`pv2-3`: vista 2, clase de color 3), su tooltip en `data-vtip-<id>`, y un `<style>` dentro del SVG que pinta la vista que nombra `data-view` en la raíz y esconde las leyendas, rótulos y líneas de las otras. Las pieles y los colores `var(--x, respaldo)` funcionan como en cualquier gráfico. Una vista no puede cambiar las formas ni el marco (`geo`, `key`, `fitTo`, `orientation`, `width`, `title`…).
+
+```js
+plot({
+  type: 'choropleth', geo: { paths: map.paths, names: map.label }, data: comunas, key: 'id',
+  orientation: 'landscape', fitTo: 'mainland', pathPrecision: 1, simplify: 0.5, href: 'url',
+  views: [
+    { id: 'inmigrantes', label: 'Nacidos en el extranjero', value: 'pct_inmigrantes', format: { suffix: '%' } },
+    { id: 'mayores', label: '65 años o más', value: 'pct_65_mas', highlight: 'c05101' },
+  ],
+});
+```
+
+Cambiar de vista es cambiar un atributo. `plotagents/views` (1,2 KB minificado, 0,6 KB con gzip, sin dependencias) lo hace y pasa el tooltip de la vista a `data-tip`, que es lo que lee cualquier capa de hover:
+
+```js
+import { setView, bindViews } from 'plotagents/views';
+setView(document.querySelector('#mapa'), 'mayores');
+bindViews(document);   // <button data-set-view="mayores"> cambia los mapas de la página
+```
+
+**El mundo.** Los países calzan por ISO-2 (`"CL"`), ISO-3 o nombre. `microstates: true` dibuja como punto los estados demasiado chicos para tener contorno a esta escala (Singapur, Malta, Baréin, Hong Kong…; `"all"` los dibuja todos); las líneas llegan a ellos como a cualquier país. Las **líneas** siguen siendo lo que eran: una relación, no una ruta.
 
 En el navegador (`render()` o `toHTML()`), los mapas son interactivos: al pasar el puntero se remarca la forma; un clic en una región la amplía hasta encuadrarla (vuelve con otro clic, doble clic, Esc o el botón de reinicio); Ctrl/⌘ + rueda amplía en torno al puntero (la rueda sola sigue desplazando la página, como recomienda `chartjs-plugin-zoom` con su `modifierKey`); el gesto de pellizcar amplía en pantallas táctiles; arrastrar desplaza el mapa ampliado; los botones +/− funcionan desde el teclado. Cada clase de color de la leyenda es una clave: pasa el puntero para iluminar sus regiones y haz clic para fijarlas. Con `time`, el color de cada región transita hacia el del período siguiente en vez de saltar, y la ampliación se mantiene mientras se reproduce el deslizador.
 

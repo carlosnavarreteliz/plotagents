@@ -104,7 +104,7 @@ export function createFrame(spec, theme, defaults = {}) {
     },
     /** Permite a gráficos de alto automático (kpi) fijar el alto final. */
     setHeight(h) { height = h; },
-    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '' } = {}) {
+    finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '', root = null } = {}) {
       if (legendBottom) {
         const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
@@ -128,13 +128,14 @@ export function createFrame(spec, theme, defaults = {}) {
           'aria-labelledby': role === 'img' ? `${id}-t ${id}-d` : `${id}-t`,
           'aria-describedby': role === 'img' ? null : `${id}-d`,
           fontFamily: spec.fontFamily || theme.font?.family || FONT,
-          class: 'pa-chart',
+          class: 'pa-chart' + (root?.class ? ' ' + root.class : ''),
           'data-pa-type': type,
           'data-pa-mode': theme.mode,
           'data-pa-lang': String(spec.locale || 'es').slice(0, 2),
           'data-pa-top': r2(frame.top),
           'data-pa-tip': theme.tooltip && (theme.tooltip.bg || theme.tooltip.ink) ? `${theme.tooltip.bg || ''},${theme.tooltip.ink || ''}` : null,
           style: 'max-width:100%;height:auto;font-variant-numeric:lining-nums',
+          ...(root ? Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'class')) : {}),
         },
         [
           el('title', { id: `${id}-t` }, esc(spec.title || type)),

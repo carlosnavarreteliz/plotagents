@@ -55,8 +55,8 @@ export function resolve(spec = {}) {
     if (typeof s.colorScale === 'object' && s.colorScale?.mid !== undefined) s.midpoint = +s.colorScale.mid;
     else if (vf && Array.isArray(s.data) && s.data.length && typeof s.data[0] === 'object') {
       const vs = s.data.map((r) => num(r[vf])).filter(Number.isFinite);
-      if (vs.length) { let lo = Infinity, hi = -Infinity; for (const v of vs) { if (v < lo) lo = v; if (v > hi) hi = v; } s.midpoint = lo < 0 && hi > 0 ? 0 : (lo + hi) / 2; }
-    } else s.diverging = true;
+      if (vs.length) { let lo = Infinity, hi = -Infinity; for (const v of vs) { if (v < lo) lo = v; if (v > hi) hi = v; } s.midpoint = lo < 0 && hi > 0 ? 0 : (lo + hi) / 2; s._autoMid = true; }
+    } else { s.diverging = true; s._autoMid = true; }
   }
   return s;
 }
