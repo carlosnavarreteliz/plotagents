@@ -413,7 +413,7 @@ export function table(spec, theme) {
   const missingLabel = spec.missingLabel === undefined || spec.missingLabel === null || spec.missingLabel === '' ? null : String(spec.missingLabel);
 
   // 5. Anchos: se miden sobre TODAS las filas, así no saltan al cambiar de página.
-  const edge = Math.min(BASE.pad, Math.max(4, frame.pad - 6));
+  const edge = Math.min(BASE.pad, Math.max(0, Math.min(frame.padding.left, frame.padding.right) - 6));
   const tableX = area.x - edge, tableW = area.w + edge * 2;
   const sample = all.length > 1500 ? all.filter((_, i) => i % Math.ceil(all.length / 1500) === 0) : all;
   const P = BASE.pad;

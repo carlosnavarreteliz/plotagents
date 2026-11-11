@@ -1,6 +1,6 @@
 {
   "name": "plotagents",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "The chart protocol for AI agents: one JSON spec in, a finished accessible SVG out. Bars, lines, Gantt charts, treemaps, sankeys, maps from any GeoJSON/TopoJSON, networks and seaborn-style plots. Zero dependencies.",
   "type": "module",
   "main": "./src/index.js",
@@ -108,5 +108,8 @@
     "./src/types/*.js",
     "./src/geo/*.js",
     "./dist/*.js"
-  ]
+  ],
+  "devDependencies": {
+    "terser": "^5.51.2"
+  }
 }

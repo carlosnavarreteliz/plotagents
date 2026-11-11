@@ -258,6 +258,8 @@ export function mergeSkins(svgs, whens) {
   return svg;
 }
 
+const SELECTOR = /^[\w\s.#:>+~*,()[\]="'|^$-]{1,200}$/;
+
 /** Valida `skins` y devuelve [specs, whens]. */
 export function expandSkins(spec) {
   const list = spec.skins;
@@ -265,6 +267,8 @@ export function expandSkins(spec) {
   list.forEach((p, i) => {
     if (!p || typeof p !== 'object') throw new PlotError(`skins[${i}] debe ser un objeto.`, 'skins: [{ palette: [...] }, { when: "html.dark", palette: [...] }]');
     if (i > 0 && (typeof p.when !== 'string' || !p.when.trim())) throw new PlotError(`skins[${i}] necesita \`when\`: el selector CSS bajo el que rige.`, 'when: "html.dark"');
+    // `when` va tal cual a un <style>: solo un selector (sin llaves, <, ;, @, \, /, ni saltos).
+    if (i > 0 && !SELECTOR.test(p.when.trim())) throw new PlotError(`skins[${i}].when no es un selector CSS válido.`, 'Usa un selector simple, p. ej. "html.dark", "[data-theme=dark]" o ".modo-oscuro".');
     for (const k of ['data', 'type', 'x', 'y', 'series', 'path', 'value', 'width', 'height']) {
       if (k in p) throw new PlotError(`skins[${i}] no puede cambiar \`${k}\`: una piel sólo cambia colores.`, 'Mueve ese campo al spec.');
     }

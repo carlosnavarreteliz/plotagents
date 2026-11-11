@@ -9,12 +9,11 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 
 ## Rules for a good chart
 
-1. **`title` is the finding**, a full sentence with the key number: "Biobío accounts for 30% of sales", not "Sales by region".
-2. **`subtitle` says how to read it**: measure, unit and period.
-3. **Always set `source`.** If the data is made up, use `source: "illustrative data"`.
-4. `data` is a list of rows (`[{ region: "Biobío", sales: 1240 }]`). For a wide table, pass `y: ["revenue", "costs"]`.
-5. Call `safePlot(spec)` as your tool: it never throws and returns `errors`, `warnings` and `suggestions`, each with a `fix`. If `ok` is `false`, fix the spec and call again.
-6. Set `locale: "en"` for English number formats (default is Spanish: `1.234,5`); also `"pt"`, `"fr"`, `"de"`, or `"auto"` to recognize it from the text. Tables recognize it on their own.
+1. **`title`, `subtitle` and `source` are optional.** Leave them out when the page around the chart already says it. When you set a `title`, make it the finding, a full sentence with the key number: "Biobío accounts for 30% of sales", not "Sales by region". `subtitle` says how to read it (measure, unit, period); `source` says where the data comes from.
+2. **Choose a `data` shape that fits the table.** Rows (`[{ region: "Biobío", sales: 1240 }]`) are fine for a few rows. For many rows, write the field names once: header + rows `[["region", "sales"], ["Biobío", 1240], ["Ñuble", 830]]`, columns `{ region: ["Biobío", "Ñuble"], sales: [1240, 830] }`, or CSV text `"region,sales\nBiobío,1240"`. For a wide table, pass `y: ["revenue", "costs"]`. In a dashboard, pass `data` once at the top.
+3. `padding` is 8 px top and bottom and 0 at the sides by default; set a number, `[vertical, horizontal]` or `{ top, right, bottom, left }` to change it.
+4. Call `safePlot(spec)` as your tool: it never throws and returns `errors`, `warnings` and `suggestions`, each with a `fix`. If `ok` is `false`, fix the spec and call again.
+5. Set `locale: "en"` for English number formats (default is Spanish: `1.234,5`); also `"pt"`, `"fr"`, `"de"`, or `"auto"` to recognize it from the text. Tables recognize it on their own.
 
 ## Which type
 
@@ -94,7 +93,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 
 When someone asks for a dashboard, call `safeDashboard({ title, subtitle, source, data, kpis, charts, filters })` (tool: `toolDefinition({ kind: 'dashboard' })`). Layout, widths, shared colors and filters are decided for you:
 
-- `title` is the **question** the dashboard answers; every chart still gets its finding as title.
+- `title` is the **question** the dashboard answers; a chart title, when you set one, states its finding.
 - At most **5 KPIs**, computed from `data` when possible: `{ label, field, agg: "sum", compare: { field: "year", current: 2025, previous: 2024 }, trendBy: "month" }`.
 - **4–6 charts**. The first time series (or the one with `primary: true`) goes full width; the rest fill balanced rows.
 - `filters: ["region", "channel"]` become buttons that filter every chart and KPI.

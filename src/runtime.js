@@ -8,6 +8,8 @@ import { parseDate, formatDate } from './format.js';
 import { dateUnit } from './scale.js';
 import { isGeoUrl } from './geo/registry.js';
 import { words } from './i18n.js';
+import { paddingSides } from './frame.js';
+import { timeValues } from './base.js';
 
 let plotFn = null;
 let resolveFn = null;
@@ -323,7 +325,7 @@ export function render(target, spec, opts = {}) {
 
   const theme = themeFor(state);
   ctl.className = 'pa-ctl';
-  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};--pa-line:${theme.axis};background:${theme.surface};padding-left:${state.padding ?? 24}px;padding-right:${state.padding ?? 24}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
+  ctl.style.cssText = `--pa-accent:${theme.categorical[0]};--pa-surface:${theme.surface};--pa-ink:${theme.ink};--pa-muted:${theme.muted};--pa-tint:${theme.tint};--pa-line:${theme.axis};background:${theme.surface};padding-left:${paddingSides(state.padding ?? theme.layout?.padding).left}px;padding-right:${paddingSides(state.padding ?? theme.layout?.padding).right}px;padding-bottom:6px;font-family:${(theme.font?.family || 'system-ui').replace(/"/g, "'")}`;
   ctl.hidden = true;
 
   // Controles de tiempo: SOLO si se piden (`slider: true`, "buttons" o "slider").
@@ -336,7 +338,7 @@ export function render(target, spec, opts = {}) {
 
   // ── Periodo único: botones o slider, con un play sobrio ─────────────────
   function buildPeriod(mode) {
-    const vals = timeValuesOf(state);
+    const vals = timeValues(state);
     if (vals.length < 2) return;
     let i = vals.findIndex((v) => String(v) === String(state.timeValue ?? vals[vals.length - 1]));
     if (i < 0) i = vals.length - 1;
@@ -471,12 +473,6 @@ export function controlMode(s, opts = {}) {
   return null;
 }
 
-function timeValuesOf(s) {
-  const data = ensureData(s);
-  const k = fieldKind(data, s.time);
-  return uniq(data.map((r) => r[s.time]).filter((v) => v !== null && v !== undefined && v !== ''))
-    .sort((a, b) => (k === 'date' ? parseDate(a) - parseDate(b) : k === 'year' || k === 'number' ? num(a) - num(b) : 0));
-}
 
 function svgEl(tag, attrs) {
   const n = document.createElementNS('http://www.w3.org/2000/svg', tag);

@@ -12,7 +12,7 @@ import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap, readable } from '../theme.js';
 import { niceDomain, linear } from '../scale.js';
-import { extent } from '../stats.js';
+import { extent, MAX_BINS } from '../stats.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { xLabels } from '../axes.js';
@@ -51,7 +51,8 @@ export function dotplot(spec, theme) {
     // Con un bucle: `Math.min(...vals)` desborda la pila con ~150 mil valores.
     let hi;
     [lo, hi] = extent(vals);
-    w = +(spec.bin ?? spec.binWidth) || (hi - lo) / Math.max(1, Math.round(spec.bins ?? 30)) || 1;
+    w = +(spec.bin ?? spec.binWidth) || (hi - lo) / Math.min(MAX_BINS, Math.max(1, Math.round(spec.bins ?? 30))) || 1;
+    if ((hi - lo) / w > MAX_BINS) w = (hi - lo) / MAX_BINS; // tope de columnas
     // Origen redondo: los tramos caen en múltiplos del ancho.
     lo = Math.floor(lo / w) * w;
     const nb = Math.max(1, Math.floor((hi - lo) / w) + 1);

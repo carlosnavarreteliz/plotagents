@@ -36,7 +36,7 @@ import { sankey } from './charts/sankey.js';
 import { kpi } from './charts/kpi.js';
 import { table } from './charts/table.js';
 import { autoLocale, detectLocale } from './i18n.js';
-import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
+import { ensureData, PlotError, fieldKind, uniq, num, toRows, packTable } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, ALIASES, normalizeType } from './infer.js';
@@ -44,9 +44,11 @@ import { lint, _setProbe } from './lint.js';
 import { schema, toolDefinition, dashboardSchema } from './schema.js';
 import { attach, attachSource } from './interact.js';
 import { render, _bind, loadGeo } from './runtime.js';
-import { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } from './dashboard.js';
+import { renderDashboard, planDashboard, mountDashboard, packRows, balancedRows, _bindDashboard } from './dashboard.js';
+import { dashboard, lintDashboard, safeDashboard } from './dashboard-node.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
+import { pageBundle } from './page-bundle.js';
 import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
 import { resolveColorScale, colorScaleNames, interpolate as interpolateColor, COLORMAPS, QUALITATIVE } from './colorscales.js';
 
@@ -97,12 +99,22 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
   const dark = themesOf.every((t) => t.mode === 'dark');
   // Fondo de la página = fondo del tema (también uno global de configure()).
   const bg = themesOf.every((t) => t.surface === themesOf[0].surface) ? themesOf[0].surface : dark ? '#0B0F2B' : '#FCFBF9';
-  const needsGeo = list.some((s) => { try { return ['choropleth', 'symbolmap', 'pointmap'].includes(resolve(s).type); } catch { return false; } });
-  const bundle = bundleSource() && (needsGeo ? bundleSource() + '\n' + (bundleSource('plotagents-geo.js') || '') : bundleSource());
+  const bundle = pageScript(list);
   const safeJSON = (o) => JSON.stringify(o).replace(/</g, '\\u003c');
-  const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(s)}</script>` : '')).join('\n');
+  // Datos incrustados una sola vez por tabla (varios gráficos de la misma tabla
+  // la comparten) y como encabezado + filas: los nombres de campo no se repiten.
+  const tables = [], tableIdx = new Map();
+  const embed = (s) => {
+    if (!s || typeof s !== 'object' || s.data === undefined || typeof s.data === 'string') return s;
+    const rows = toRows(s.data);
+    if (!Array.isArray(rows)) return s;
+    if (!tableIdx.has(rows)) { tableIdx.set(rows, tables.length); tables.push(packTable(rows)); }
+    const { data: _d, ...rest } = s;
+    return { ...rest, _paData: tableIdx.get(rows) };
+  };
+  const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(embed(s))}</script>` : '')).join('\n');
   const boot = bundle
-    ? `<script>${bundle.replace(/<\/(script)/gi, '<\\/$1')}</script>\n<script>document.querySelectorAll('figure.pa').forEach(function(f,i){var s=JSON.parse(document.getElementById('pa-spec-'+i).textContent);plotagents.render(f,s);});</script>`
+    ? `<script>${bundle.replace(/<\/(script)/gi, '<\\/$1')}</script>\n<script type="application/json" id="pa-data">${safeJSON(tables)}</script>\n<script>(function(){var D=JSON.parse(document.getElementById('pa-data').textContent);document.querySelectorAll('figure.pa').forEach(function(f,i){var s=JSON.parse(document.getElementById('pa-spec-'+i).textContent);if(s._paData!=null){s.data=D[s._paData];delete s._paData;}plotagents.render(f,s);});})();</script>`
     : `<script>document.querySelectorAll('figure.pa').forEach(function(f){(${attachSource})(f)});</script>`;
   return `<!doctype html>
 <html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -125,6 +137,23 @@ ${boot}
 /** Texto dentro de <style>: las entidades HTML no se decodifican ahí (esc() rompería las comillas), así que se quitan los caracteres que cierran la regla o la etiqueta. */
 const cssText = (v) => String(v ?? '').replace(/[<>{};\\&]/g, '');
 
+/**
+ * Script para incrustar en una página: solo los módulos de sus tipos de gráfico
+ * y geometrías (una página con una línea pesa una fracción de la biblioteca).
+ * Si algo no se puede resolver, la biblioteca entera, como antes.
+ */
+function pageScript(specs, { dashboard = false } = {}) {
+  const lib = bundleSource();
+  if (!lib) return null;
+  try {
+    const resolved = specs.map((s) => resolve(s));
+    const light = pageBundle(resolved, (f) => (f === 'plotagents.js' ? lib : bundleSource(f)), { dashboard });
+    if (light) return light;
+  } catch { /* abajo: la biblioteca entera */ }
+  const needsGeo = specs.some((s) => { try { return ['choropleth', 'symbolmap', 'pointmap'].includes(resolve(s).type); } catch { return false; } });
+  return needsGeo ? lib + '\n' + (bundleSource('plotagents-geo.js') || '') : lib;
+}
+
 /** Código de la biblioteca en un archivo (para incrustar en HTML). */
 export function bundleSource(file = 'plotagents.js') {
   try {
@@ -137,11 +166,11 @@ export function bundleSource(file = 'plotagents.js') {
 }
 
 _bind(plot, resolve);
-_bindDashboard({ plot, resolve, lint, bundleSource, resolveDefaults: withDefaults });
+_bindDashboard({ plot, resolve, lint, bundleSource, pageScript, resolveDefaults: withDefaults });
 _setProbe((s) => plot(s));
 export { render };
 
-export { countWords, dashboardSchema, detectLocale, correlations };
+export { countWords, dashboardSchema, detectLocale, correlations, toRows, packTable };
 export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALITATIVE };
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo, mapSprite };

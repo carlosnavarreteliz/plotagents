@@ -1,10 +1,10 @@
 // Regresión al estilo seaborn: regplot / lmplot (puntos + ajuste + banda de
 // confianza), residplot (residuos) y jointplot (dispersión con marginales).
-import { el, g, text, tip, esc, barPath, dotLayer } from '../svg.js';
+import { el, g, text, tip, esc, barPath, dotLayer, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable, halo } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
@@ -76,7 +76,7 @@ export function regplot(spec, theme) {
   const locale = spec.locale || 'es';
   const K = keys.length;
   const cmap = colorMap(keys, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focusKey = (k) => !hl || hl.has(k);
   const colorOf = (k) => (!focusKey(k) ? theme.dim : K === 1 ? (spec.colors && spec.colors[k]) || theme.categorical[0] : cmap.get(k));
   const legend = K > 1 && spec.legend !== false ? keys.map((k) => ({ label: k, color: colorOf(k) })) : [];
@@ -198,7 +198,7 @@ function pointLabels(pts, spec, xS, yS, r, inner, theme, P) {
     const ly = yS(p.y) + 4;
     if (lx + w > inner.x + inner.w) { lx = xS(p.x) - r - 4; anchor = 'end'; }
     const box = anchor === 'start' ? [lx, ly - 11, lx + w, ly + 3] : [lx - w, ly - 11, lx, ly + 3];
-    if (placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
+    if (hitsAny(box, placed)) continue;
     placed.push(box);
     out.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo(theme) }, esc(p.name)));
   }

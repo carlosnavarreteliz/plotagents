@@ -1,7 +1,7 @@
 // Revisión de un spec ANTES de dibujar: errores que impiden el gráfico y
 // sugerencias de diseño (de los cursos de visualización para la gestión).
 // Pensado para que un agente corrija su propio spec en un segundo intento.
-import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError } from './data.js';
+import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError, toRows } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
 import { themeFor, themes, palettes, ramps, isColor } from './theme.js';
@@ -27,6 +27,9 @@ export function lint(spec = {}) {
 
 function lintSpec(spec = {}) {
   if (!spec || typeof spec !== 'object') spec = {};
+  if (spec.data !== undefined) { const rows = toRows(spec.data); if (rows !== spec.data) spec = { ...spec, data: rows }; }
+  // flowchart: `edges` vale como `data` (las conexiones); sin ninguno, basta con `nodes`.
+  if (spec.data === undefined && typeof spec.type === 'string' && normalizeType(spec.type.trim().toLowerCase())[0] === 'flowchart' && (Array.isArray(spec.edges) || Array.isArray(spec.nodes))) spec = { ...spec, data: spec.edges ?? [] };
   // Idioma de los mensajes: el del gráfico (con `locale: "auto"`, y en tablas sin locale, el reconocido del texto).
   const autoLang = spec.locale === 'auto' || (spec.locale === undefined && /^(table|tabla|tables|datatable|data-table|grid)$/i.test(String(spec.type || '')));
   const en = (autoLang ? autoLocale(spec, Array.isArray(spec.data) ? spec.data : []) : String(spec.locale || '')).toLowerCase().startsWith('en');
@@ -59,9 +62,9 @@ function lintSpec(spec = {}) {
     check(spec.from, 'from'); check(spec.to, 'to'); if (type === 'dendrogram') check(spec.sub, 'sub');
   } else if (type !== 'kpi' && !rawWords && !linkageOnly && !railOnly && !errors.length && !(type === 'network' && Array.isArray(spec.nodes) && spec.nodes.length && /^(preset|fixed|fija|posiciones)$/i.test(String(spec.layout ?? '')))) err('empty', 'No hay filas en `data`.', 'Entrega al menos una fila.');
 
-  if (!spec.title) sug('title', 'Falta el título.', 'Escribe el hallazgo como una frase completa: "Biobío concentra el 32% de las ventas", no "Ventas por región".');
-  else if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
-  if (!spec.source) sug('source', 'Falta la fuente de los datos.', 'Agrega `source: "INE, 2025"` (o "datos ilustrativos").');
+  // Título, bajada y fuente son opcionales (el gráfico puede ir dentro de una
+  // página que ya los tiene). Si hay título, mejor que diga el hallazgo.
+  if (typeof spec.title === 'string' && !/\d/.test(spec.title) && /^(evoluci[oó]n|distribuci[oó]n|comparaci[oó]n|ranking|gr[aá]fico|ventas|total|resumen)\b|\b(por|seg[uú]n|vs\.?)\s+\w+$/i.test(spec.title.trim())) sug('title-fact', 'El título describe el gráfico pero no dice qué muestra.', 'Un buen título es un hecho, idealmente con la cifra clave.');
 
   const series = spec.series ?? spec.color;
   const nSeries = series && fields.includes(series) ? uniq(data.map((r) => String(r[series]))).length : Array.isArray(spec.y) ? spec.y.length : 1;
@@ -301,9 +304,7 @@ const EN = {
   type: (m) => [`Chart type "${qs(m.message)[0]}" is not supported.`, `Use one of: ${after(m.fix)}`],
   field: (m) => { const [f] = qs(m.message); const role = (/\(([^)]+)\)/.exec(m.message) || [])[1]; return [`The field "${f}" (${role}) does not exist.`, `Available fields: ${after(m.fix)}`]; },
   empty: () => ['`data` has no rows.', 'Pass at least one row.'],
-  title: () => ['The title is missing.', 'Write the finding as a full sentence: "Biobío accounts for 32% of sales", not "Sales by region".'],
   'title-fact': () => ['The title describes the chart but does not say what it shows.', 'A good title is a fact, ideally with the key number.'],
-  source: () => ['The data source is missing.', 'Add `source: "Census Bureau, 2025"` (or "illustrative data").'],
   'series-max': (m) => [`${n0(m.message)} series: there are only 8 distinguishable colors; from the 9th on they turn gray.`, 'Fold the tail into "Other", use `highlight` or split into several charts.'],
   'one-bar': () => ['A single bar compares nothing.', 'Use `type: "kpi"` to show the number.'],
   'too-many-bars': (m) => [`${n0(m.message)} categories: the 25 largest will be shown and the rest folded into "Other".`, 'Set `top: N` to control the cut.'],

@@ -568,7 +568,7 @@ export function network(spec, theme) {
   let circ = null;
   if (layout === 'force') {
     const spacing = Math.max(26, Math.sqrt((area.w * area.h) / nodes.length) * 0.75);
-    forceLayout(nodes, edges, byId, { spacing, pin: focusNode, wide, iterations: spec.iterations ?? (nodes.length > 1000 ? 140 : nodes.length > 200 ? 200 : 320) });
+    forceLayout(nodes, edges, byId, { spacing, pin: focusNode, wide, iterations: +spec.iterations > 0 ? Math.min(2000, Math.round(+spec.iterations)) : nodes.length > 5000 ? 80 : nodes.length > 1000 ? 140 : nodes.length > 200 ? 200 : 320 });
     withR = true; geometric = false;
   } else if (layout === 'circular') {
     circularLayout(nodes, { pin: focusNode });

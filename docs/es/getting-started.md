@@ -44,11 +44,11 @@ const svg = plot({
 | Campo | Qué es |
 |---|---|
 | `type` | El tipo de gráfico, como `bar`, `line` o `treemap`. Omítelo para que se infiera de los datos. |
-| `data` | Una lista de filas: `[{ region: "Biobío", sales: 1240 }]`. |
+| `data` | La tabla: filas `[{ region: "Biobío", sales: 1240 }]` o, con muchas filas, encabezado + filas `[["region", "sales"], ["Biobío", 1240]]`, columnas `{ region: [...], sales: [...] }` o texto CSV. |
 | `x`, `y`, `series` | Qué campo va en cada lugar. Cada tipo de gráfico documenta sus propios roles en la [referencia de gráficos](charts.md). |
-| `title` | El hallazgo, como una oración completa con la cifra clave. |
-| `subtitle` | Cómo leer el gráfico: medida, unidad y período. |
-| `source` | De dónde vienen los datos. Usa `"illustrative data"` cuando sean inventados. |
+| `title` | Opcional. El hallazgo, como una oración completa con la cifra clave. |
+| `subtitle` | Opcional. Cómo leer el gráfico: medida, unidad y período. |
+| `source` | Opcional. De dónde vienen los datos. |
 | `locale` | `"es"` (el valor por defecto, `1.234,5`) o `"en"` (`1,234.5`). |
 
 ### Tablas anchas

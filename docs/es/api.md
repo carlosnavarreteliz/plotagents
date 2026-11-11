@@ -74,7 +74,7 @@ Agrega tooltips a un contenedor que ya tiene un SVG de plotagents, por ejemplo u
 
 ### `toHTML(specs, opts?)`
 
-Una página HTML autocontenida con uno o más gráficos interactivos y la biblioteca incluida.
+Una página HTML autocontenida con uno o más gráficos interactivos. Incluye solo los módulos de la biblioteca que la página necesita (sus tipos de gráfico y geometrías), y los datos compartidos van una sola vez.
 
 | Opción | Por defecto | Significado |
 |---|---|---|

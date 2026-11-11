@@ -53,7 +53,8 @@ test('lint sugiere y advierte', () => {
   const many = Array.from({ length: 6 }, (_, i) => [{ t: 2020, s: 'S' + i, v: i }, { t: 2021, s: 'S' + i, v: i + 1 }]).flat();
   const r = lint({ type: 'line', data: many, x: 't', y: 'v', series: 's' });
   assert.ok(r.warnings.some((w) => w.code === 'line-many'));
-  assert.ok(r.suggestions.some((w) => w.code === 'title'));
+  // Título y fuente son opcionales: no se piden.
+  assert.ok(!r.suggestions.some((w) => w.code === 'title' || w.code === 'source'));
   const d = lint({ type: 'donut', data: Array.from({ length: 9 }, (_, i) => ({ k: 'k' + i, v: i + 1 })) });
   assert.ok(d.warnings.some((w) => w.code === 'donut-slices'));
 });

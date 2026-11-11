@@ -44,4 +44,4 @@ Scatter, bubble, regplot, residplot, jointplot, strip and swarm use it automatic
 
 - **Text measurement without a DOM.** Width tables calibrated for humanist sans faces let labels be fitted, wrapped and truncated identically in Node and in the browser.
 - **Numbers rounded to two decimals** in all coordinates keeps files small.
-- **One file for the browser.** `dist/plotagents.js` (no dependencies) is inlined by `toHTML()` so interactive pages work offline, from a file, or inside an artifact.
+- **One file for the browser.** `toHTML()` and `dashboard()` inline the library (no dependencies) so interactive pages work offline, from a file, or inside an artifact. They inline only the modules the page uses: its chart types and, for maps, only the geometry it draws. A page with a line chart carries about 170 kB instead of the whole library (670 kB, minified at build time; the published package still has no dependencies). Data used by several charts is embedded once, with field names written once.

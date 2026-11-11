@@ -219,7 +219,7 @@ export function attach(root) {
         // Mapas: sin atenuar el resto; un contorno marcado sobre la región (o su círculo).
         mapOverlay.innerHTML = '';
         if (on && on.tagName === 'path') mapOverlay.innerHTML = `<path d="${esc(on.getAttribute('d'))}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-        else if (on && on.tagName === 'circle') mapOverlay.innerHTML = `<circle cx="${on.getAttribute('cx')}" cy="${on.getAttribute('cy')}" r="${on.getAttribute('r')}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+        else if (on && on.tagName === 'circle') mapOverlay.innerHTML = `<circle cx="${+on.getAttribute('cx') || 0}" cy="${+on.getAttribute('cy') || 0}" r="${+on.getAttribute('r') || 0}" fill="none" stroke="${dark ? '#F2F3FA' : '#141A3F'}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
       } else if (on) { on.classList.add('pa-on'); svg.classList.add('pa-focus'); adjacency(on); } else svg.classList.remove('pa-focus');
     }
     show(linesHtml(tg.getAttribute('data-tip'), markColor(mark || tg)), ev, mark || tg);

@@ -20,7 +20,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, parseDate, formatDate, formatNumber } from '../format.js';
 import { timeTicks, niceStep, linear } from '../scale.js';
 import { colorMap, ramp, textOn, readable } from '../theme.js';
-import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
 import { xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
@@ -250,7 +250,7 @@ export function gantt(spec, theme) {
     const w = ts.filter((t) => t.progress !== null && !t.milestone);
     return w.length ? w.reduce((a, t) => a + t.progress * lenOf(t), 0) / (w.reduce((a, t) => a + lenOf(t), 0) || 1) : null;
   };
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const dim = (t) => hl && !hl.has(t.name) && !hl.has(String(t.group));
   const pos = new Map(); // tarea (o fase contraída) → geometría, para las dependencias
   // Vínculos a dibujar. Una tarea de una fase contraída se dibuja en la

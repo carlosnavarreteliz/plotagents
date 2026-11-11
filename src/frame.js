@@ -15,27 +15,34 @@ export const SIZES = {
   source: 11,
 };
 
+const MAX_SIDE = 10000;
+
 export function createFrame(spec, theme, defaults = {}) {
   // `chrome: false` (sparklines): sin título, bajada ni fuente dibujados (el
   // título sigue en aria-label para lectores de pantalla) y sin tamaño mínimo.
   const chrome = defaults.chrome !== false;
-  const width = Math.max(defaults.minWidth ?? 240, +spec.width || defaults.width || 720);
+  // Topes de tamaño: un `width` o `height` de 1e9 no debe generar un SVG de cientos de MB.
+  const width = Math.min(MAX_SIDE, Math.max(defaults.minWidth ?? 240, +spec.width || defaults.width || 720));
   // Con textos más grandes (textScale), el alto por defecto crece para no aplastar los datos.
   const XS = ctx.textScale;
   // En gráficos anchos el alto por defecto crece con el ancho (hasta ~2,8:1),
   // para que una lámina de 1500 px no quede como una franja vacía.
   const h0 = defaults.height || 420;
   const hW = defaults.fixedHeight ? h0 : Math.max(h0, Math.min(Math.round(h0 * 1.35), Math.round(width * 0.36)));
-  let height = Math.max(defaults.minHeight ?? 160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1))));
+  let height = Math.min(MAX_SIDE * 2, Math.max(defaults.minHeight ?? 160, +spec.height || Math.round(hW * (1 + 0.55 * (XS - 1)))));
   // Responsivo: en pantallas angostas, menos margen y títulos algo menores
   // (nunca bajo 11 px en ejes). El ancho útil es lo que más importa en móvil.
   const k = width < 420 ? 0.86 : width < 560 ? 0.93 : 1;
   const T0 = { ...SIZES, ...(theme.type || {}) };
   const T = { ...T0, title: Math.round(T0.title * k * 2) / 2, subtitle: Math.max(12, Math.round(T0.subtitle * (k < 1 ? 0.95 : 1) * 2) / 2) };
-  const pad = spec.padding ?? defaults.padding ?? (width < 420 ? theme.layout?.paddingSmall ?? 12 : width < 640 ? 16 : theme.layout?.padding ?? 24);
-  const innerW = width - pad * 2;
+  // Margen: sin margen a los lados (el gráfico llega al borde de su contenedor)
+  // y uno chico arriba y abajo. `padding` acepta un número, [vertical, horizontal],
+  // [arriba, derecha, abajo, izquierda] o { top, right, bottom, left }.
+  const P = paddingSides(spec.padding ?? defaults.padding ?? theme.layout?.padding);
+  const pad = P.left, padR = P.right, padT = P.top, padB = P.bottom;
+  const innerW = width - pad - padR;
   const parts = [];
-  let y = pad;
+  let y = padT;
 
   const tw = T.titleWeight ?? 600;
   const titleLines = chrome && spec.title ? wrap(spec.title, innerW, T.title, tw, 5) : [];
@@ -67,13 +74,14 @@ export function createFrame(spec, theme, defaults = {}) {
   const frame = {
     width,
     pad,
+    padding: P,
     theme,
     legendPosition: legendPos,
     get height() { return height; },
     top: y,
-    get bottom() { return height - pad - sourceH - (legendBottom ? legendBottom.h + 12 : 0); },
+    get bottom() { return height - padB - sourceH - (legendBottom ? legendBottom.h + 12 : 0); },
     /** Alto extra fuera del área de trazado (pie + margen + leyenda inferior). */
-    get chrome() { return pad + sourceH + (legendBottom ? legendBottom.h + 12 : 0); },
+    get chrome() { return padB + sourceH + (legendBottom ? legendBottom.h + 12 : 0); },
     /**
      * Dibuja la leyenda y devuelve el área de trazado restante. La leyenda va
      * arriba por defecto; `legend: "bottom" | "left" | "right"` la mueve.
@@ -84,7 +92,7 @@ export function createFrame(spec, theme, defaults = {}) {
       const extraBottom = Math.max(0, (XS - 1) * 22);
       if (items.length && (legendPos === 'left' || legendPos === 'right')) {
         const colW = Math.min(innerW * 0.32, Math.max(90, legendWidth(items, T.legend)));
-        const { svg } = drawLegend(items, legendPos === 'left' ? pad : width - pad - colW, ly + 2, colW, theme, { ...opts, size: T.legend, vertical: true });
+        const { svg } = drawLegend(items, legendPos === 'left' ? pad : width - padR - colW, ly + 2, colW, theme, { ...opts, size: T.legend, vertical: true });
         header.push(svg);
         const gap = 16;
         return { x: legendPos === 'left' ? pad + colW + gap : pad, y: ly, w: innerW - colW - gap, h: Math.max(40, frame.bottom - ly - extraBottom) };
@@ -106,10 +114,10 @@ export function createFrame(spec, theme, defaults = {}) {
     setHeight(h) { height = h; },
     finish(body, { desc = '', type = 'chart', defs = '', role = 'img', css = '', root = null } = {}) {
       if (legendBottom) {
-        const { svg } = drawLegend(legendBottom.items, pad, height - pad - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
+        const { svg } = drawLegend(legendBottom.items, pad, height - padB - sourceH - legendBottom.h - 2, innerW, theme, { ...legendBottom.opts, size: T.legend });
         header.push(svg);
       }
-      srcLines.forEach((l, i) => parts.push(text(width - pad, height - pad - 2 - (srcLines.length - 1 - i) * srcLH, l, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' })));
+      srcLines.forEach((l, i) => parts.push(text(width - padR, height - padB - 2 - (srcLines.length - 1 - i) * srcLH, l, { fill: theme.muted, fontSize: T.source, textAnchor: 'end' })));
       // Id estable pero distinto entre gráficos sin título del mismo tipo (aria-labelledby).
       const id = 'pa' + Math.abs(hash((spec.title || '') + type + width + desc)).toString(36);
       const fontImport = spec.fontImport ? `@import url('${theme.font?.import || FONT_CSS}');` : '';
@@ -140,7 +148,7 @@ export function createFrame(spec, theme, defaults = {}) {
         },
         [
           el('desc', { id: `${id}-d` }, esc(desc)),
-          el('style', {}, style),
+          el('style', {}, style.replace(/<\/(style)/gi, '<\\/$1')),
           defs ? el('defs', {}, defs) : '',
           spec.background === false ? '' : el('rect', { width, height: r2(height), fill: theme.surface }),
           g({ class: 'pa-header' }, header),
@@ -151,6 +159,24 @@ export function createFrame(spec, theme, defaults = {}) {
     },
   };
   return frame;
+}
+
+/** Margen por lado. Por defecto: 8 px arriba y abajo, nada a los lados. */
+export const DEFAULT_PADDING = { top: 8, right: 0, bottom: 8, left: 0 };
+export function paddingSides(v) {
+  const n = (x, d) => (Number.isFinite(+x) && x !== null && x !== '' ? Math.max(0, +x) : d);
+  if (v === undefined || v === null || v === '') return { ...DEFAULT_PADDING };
+  if (Array.isArray(v)) {
+    const [t, r = t, b = t, l = r] = v;
+    return { top: n(t, 8), right: n(r, 0), bottom: n(b, 8), left: n(l, 0) };
+  }
+  if (typeof v === 'object') {
+    const D = DEFAULT_PADDING;
+    const vy = v.y ?? v.vertical, vx = v.x ?? v.horizontal;
+    return { top: n(v.top ?? vy, D.top), right: n(v.right ?? vx, D.right), bottom: n(v.bottom ?? vy, D.bottom), left: n(v.left ?? vx, D.left) };
+  }
+  const k = n(v, 0);
+  return { top: k, right: k, bottom: k, left: k };
 }
 
 /** Posición de la leyenda: `legend: "top" | "bottom" | "left" | "right"` (o { position }). */

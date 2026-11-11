@@ -1,12 +1,12 @@
 // Distribuciones al estilo seaborn: histograma (histplot), densidad (kdeplot)
 // y distribución acumulada (ecdfplot). Ejes recesivos, marcas finas y color
 // por grupo (`hue`) en orden fijo.
-import { el, g, text, tip, barPath } from '../svg.js';
+import { el, g, text, tip, barPath, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
 import { ctx } from '../context.js';
@@ -364,7 +364,7 @@ export function kde(spec, theme) {
   }
   const yMax = extent(curves.flatMap((c) => c.map((p) => p[1])))[1];
   const cmap = colorMap(groups.map((gr) => gr.key), theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? (spec.colors && spec.colors[groups[0].key]) || theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: spec.fill === false ? 'line' : 'square' })) : [];
 
@@ -426,7 +426,7 @@ export function kde(spec, theme) {
       const w = measure(groups[k].key, 12, 600);
       const box = [px - w / 2, py - 12, px + w / 2, py + 2];
       if (box[0] < inner.x || box[2] > inner.x + inner.w || box[1] < area.y + 14) continue;
-      if (boxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
+      if (hitsAny(box, boxes)) continue;
       boxes.push(box);
       labs.push(text(px, py, groups[k].key, { fill: theme.ink, fontSize: 12, fontWeight: 600, textAnchor: 'middle', ...halo(theme) }));
     }
@@ -462,7 +462,7 @@ export function ecdf(spec, theme) {
   const all = groups.flatMap((gr) => gr.values);
   const K = groups.length;
   const cmap = colorMap(groups.map((gr) => gr.key), theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const colorOf = (k) => (hl && !hl.has(groups[k].key) ? theme.dim : K === 1 ? theme.categorical[0] : cmap.get(groups[k].key));
   const legend = K > 1 && spec.legend !== false ? groups.map((gr, k) => ({ label: gr.key, color: colorOf(k), shape: 'line' })) : [];
   const frame = createFrame(spec, theme, { height: 380 });

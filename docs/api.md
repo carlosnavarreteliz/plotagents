@@ -74,7 +74,7 @@ Adds tooltips to a container that already holds a plotagents SVG, for example on
 
 ### `toHTML(specs, opts?)`
 
-A self-contained HTML page with one or more interactive charts and the library inlined.
+A self-contained HTML page with one or more interactive charts. Only the library modules the page needs are inlined (its chart types and map geometries), and shared data goes in once.
 
 | Option | Default | Meaning |
 |---|---|---|

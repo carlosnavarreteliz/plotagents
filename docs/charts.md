@@ -7,10 +7,10 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | Option | Meaning |
 |---|---|
 | `type` | Chart type or alias. Omit (or `"auto"`) to infer it from the data. |
-| `data` | Array of row objects. `{ A: 1, B: 2 }` and arrays of numbers are accepted too. |
-| `title` | The finding, as a sentence. Wraps; never truncated. |
-| `subtitle` | How to read the chart: measure, unit, period. |
-| `source` | Data source, shown small at the bottom right. |
+| `data` | Array of row objects. Also header + rows `[["region", "sales"], ["Biobío", 1240]]` (or `{ columns, rows }`), columns `{ region: [...], sales: [...] }`, CSV/TSV text, `{ A: 1, B: 2 }` and arrays of numbers. |
+| `title` | Optional. The finding, as a sentence. Wraps; never truncated. |
+| `subtitle` | Optional. How to read the chart: measure, unit, period. |
+| `source` | Optional. Data source, shown small at the bottom right. |
 | `series` / `hue` | Field that splits the data into colored groups. |
 | `highlight` | One name or a list: emphasize these, mute the rest. |
 | `colors` | `{ "name": "#hex" }` to pin an entity's color. |
@@ -27,7 +27,8 @@ Every chart takes a spec with `data` (rows) plus field names for each role. The 
 | `theme`, `palette`, `ramp` | See [themes](themes.md). |
 | `colorScale` (`cmap`) | Any matplotlib colormap (`"viridis"`, `"RdBu_r"`…) or your own list of colors. See [color scales](colorscales.md). |
 | `font`, `textScale` | Typeface (Google Fonts name, CSS stack or `{ family, import }`) and a text-size multiplier (aliases `fontScale`, `labelScale`). Set them for every chart with `configure()`. |
-| `width`, `height`, `padding` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
+| `width`, `height` | Pixels. Height is automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars. |
+| `padding` | Margin in px. Default 8 top and bottom, 0 at the sides. A number, `[vertical, horizontal]`, `[top, right, bottom, left]` or `{ top, right, bottom, left }`. |
 | `legend` | Position: `"top"` (default), `"bottom"`, `"left"`, `"right"`, or `false` to hide it. Side legends move to the bottom below 520 px. Setting a position also forces a legend where the chart would otherwise label lines directly. |
 | `exclude` | One name or a list: drop these legend entries (series, first-level groups) and recompute axes, shares and layout. Colors stay fixed and the excluded entries stay in the legend, faded and struck through. |
 | `tooltip` | What each mark says on hover beyond its value: a list of fields (`"Field: value"` lines from the mark's rows), or `{ title, fields: [field \| { field, label, format }], text, replace }` where `text` is a field with pre-written lines, or `false`. From JavaScript, also `(d) => text \| { title, lines }` with `d.rows`, `d.lines`. A mark made of several rows (a treemap group, a year with several series) shows a field only when its rows agree. |
@@ -460,7 +461,7 @@ plot({ type: 'pointmap', data: cities, lon: 'lon', lat: 'lat', size: 'population
 | `tileOpacity`, `zoom`, `center` | Tile opacity, fixed zoom level and `[lon, lat]` center. |
 | `labels`, `labelValues` | How many dots to name (8 largest by default), or a list; `labelValues: false` hides values. |
 
-The attribution is always drawn. Tiles are external images: they show in inline SVG, `render()` and `toHTML()`, **not** when the SVG is used as `<img>`, opened from a PDF converter, or offline; then the vector world outline underneath still gives context. `await embedTiles(svg)` inlines them as data: URIs (not for OSM, whose tile policy forbids bulk downloads; use `esri-gray` or your own server). For heavy traffic, use a provider with a key or your own tiles: OSM's servers are donated.
+The attribution is always drawn. Tiles are external images: they show in inline SVG, `render()` and `toHTML()`, **not** when the SVG is used as `<img>`, opened from a PDF converter, or offline; then the vector world outline underneath still gives context. `await embedTiles(svg)` inlines them as data: URIs (not for OSM, whose tile policy forbids bulk downloads; use `esri-gray` or your own server). It only fetches https images from public hosts (no localhost or private IPs, no redirects, at most 2 MB per tile); pass `{ hosts: ['tiles.example.com'] }` to allow only your own servers. For heavy traffic, use a provider with a key or your own tiles: OSM's servers are donated.
 
 ## Dashed shapes: estimates, projections, provisional figures
 

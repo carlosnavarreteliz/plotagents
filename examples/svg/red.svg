@@ -1,210 +1,210 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" width="720" height="520" role="img" aria-label="U. del Pacífico Sur colabora con 12 organizaciones, más que ninguna otra" aria-describedby="pahhu76k-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="network" data-pa-mode="light" data-pa-lang="es" data-pa-top="117" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><desc id="pahhu76k-d">Red de 44 nodos y 77 conexiones. Más conectados: U. del Pacífico Sur (12), U. Minera del Norte (11), U. Austral Andina (11).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid #3A47B8;outline-offset:2px}.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}</style><rect width="720" height="520" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">U. del Pacífico Sur colabora con 12 organizaciones, más que</text><text x="24" y="72.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">ninguna otra</text><text x="24" y="98.5" fill="#4A5070" font-size="14.5">Proyectos conjuntos de I+D entre 44 organizaciones (246 proyectos)</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" data-value="Universidades" style="cursor:pointer"><rect x="21" y="114" width="109.48" height="19" rx="4" fill="transparent"/><circle cx="29" cy="123.5" r="5" fill="#3A47B8"/><text x="40" y="128" fill="#4A5070" font-size="12.5">Universidades</text></g><g class="pa-key" data-color="#D42A5E" data-value="Centros de investigación" style="cursor:pointer"><rect x="140.48" y="114" width="171.82" height="19" rx="4" fill="transparent"/><circle cx="148.48" cy="123.5" r="5" fill="#D42A5E"/><text x="159.48" y="128" fill="#4A5070" font-size="12.5">Centros de investigación</text></g><g class="pa-key" data-color="#E8A33D" data-value="Empresas" style="cursor:pointer"><rect x="322.29" y="114" width="85.32" height="19" rx="4" fill="transparent"/><circle cx="330.29" cy="123.5" r="5" fill="#E8A33D"/><text x="341.29" y="128" fill="#4A5070" font-size="12.5">Empresas</text></g><g class="pa-key" data-color="#1E9C89" data-value="Startups" style="cursor:pointer"><rect x="417.62" y="114" width="76.93" height="19" rx="4" fill="transparent"/><circle cx="425.62" cy="123.5" r="5" fill="#1E9C89"/><text x="436.62" y="128" fill="#4A5070" font-size="12.5">Startups</text></g><g class="pa-key" data-color="#7B5CD6" data-value="Servicios públicos" style="cursor:pointer"><rect x="504.54" y="114" width="133.76" height="19" rx="4" fill="transparent"/><circle cx="512.54" cy="123.5" r="5" fill="#7B5CD6"/><text x="523.54" y="128" fill="#4A5070" font-size="12.5">Servicios públicos</text></g></g></g><g class="pa-body"><g class="pa-net" data-layout="force"><g class="pa-links" fill="none" stroke-linecap="round" stroke-opacity="0.5" stroke-width="1"><path class="pa-m" d="M410.8,366.4Q352.1,283.3 251.1,296" stroke="#E8A33D" stroke-width="1.45" data-s="Viña Cordillera" data-t="U. Austral Andina" data-tip="Viña Cordillera — U. Austral Andina
-1"/><path class="pa-m" d="M574.3,405.8Q567.2,372.8 534.7,363.4" stroke="#E8A33D" stroke-width="1.45" data-s="Pesquera Bahía" data-t="Instituto de Datos Abiertos" data-tip="Pesquera Bahía — Instituto de Datos Abiertos
-1"/><path class="pa-m" d="M574.3,405.8Q558.8,329.2 484,306.8" stroke="#E8A33D" stroke-width="1.45" data-s="Pesquera Bahía" data-t="U. Minera del Norte" data-tip="Pesquera Bahía — U. Minera del Norte
-1"/><path class="pa-m" d="M176.9,270.3Q238.1,339.4 327.9,317.9" stroke="#E8A33D" stroke-width="1.45" data-s="Solar Atacama" data-t="U. del Pacífico Sur" data-tip="Solar Atacama — U. del Pacífico Sur
-1"/><path class="pa-m" d="M629.3,324.9Q562.1,272.3 484,306.8" stroke="#E8A33D" stroke-width="1.45" data-s="Lácteos del Sur" data-t="U. Minera del Norte" data-tip="Lácteos del Sur — U. Minera del Norte
-1"/><path class="pa-m" d="M298.4,396.4Q336.7,366 327.9,317.9" stroke="#7B5CD6" stroke-width="1.45" data-s="Servicio de Salud Regional" data-t="U. del Pacífico Sur" data-tip="Servicio de Salud Regional — U. del Pacífico Sur
-1"/><path class="pa-m" d="M236.9,345.9Q251.7,407.3 312.8,423.2" stroke="#1E9C89" stroke-width="1.45" data-s="SolarTrack" data-t="Centro de Bosque Nativo" data-tip="SolarTrack — Centro de Bosque Nativo
-1"/><path class="pa-m" d="M236.9,345.9Q372.2,400.5 484,306.8" stroke="#1E9C89" stroke-width="1.45" data-s="SolarTrack" data-t="U. Minera del Norte" data-tip="SolarTrack — U. Minera del Norte
-1"/><path class="pa-m" d="M370.1,392.9Q411.8,378.1 418.3,334.4" stroke="#1E9C89" stroke-width="1.45" data-s="AquaIA" data-t="U. Técnica del Litoral" data-tip="AquaIA — U. Técnica del Litoral
-1"/><path class="pa-m" d="M323.2,375.9Q272.2,343.9 220,373.8" stroke="#3A47B8" stroke-width="1.45" data-s="U. de los Lagos Altos" data-t="Instituto del Litio" data-tip="U. de los Lagos Altos — Instituto del Litio
-1"/><path class="pa-m" d="M462.4,429.2Q389.4,381.3 312.8,423.2" stroke="#D42A5E" stroke-width="1.45" data-s="Centro de Acuicultura" data-t="Centro de Bosque Nativo" data-tip="Centro de Acuicultura — Centro de Bosque Nativo
-1"/><path class="pa-m" d="M530.7,282.1Q458.8,274.5 418.3,334.4" stroke="#E8A33D" stroke-width="1.8" data-s="Salmones Fiordo" data-t="U. Técnica del Litoral" data-tip="Salmones Fiordo — U. Técnica del Litoral
-2"/><path class="pa-m" d="M163.8,351.2Q224,349.8 251.1,296" stroke="#E8A33D" stroke-width="1.8" data-s="Minera Altiplano" data-t="U. Austral Andina" data-tip="Minera Altiplano — U. Austral Andina
-2"/><path class="pa-m" d="M163.8,351.2Q255.8,383.8 327.9,317.9" stroke="#E8A33D" stroke-width="1.8" data-s="Minera Altiplano" data-t="U. del Pacífico Sur" data-tip="Minera Altiplano — U. del Pacífico Sur
-2"/><path class="pa-m" d="M176.9,270.3Q110.9,274.3 83.3,334.4" stroke="#E8A33D" stroke-width="1.8" data-s="Solar Atacama" data-t="U. del Valle Central" data-tip="Solar Atacama — U. del Valle Central
-2"/><path class="pa-m" d="M139.9,315.4Q201.3,339.1 251.1,296" stroke="#E8A33D" stroke-width="1.8" data-s="Química Pacífico" data-t="U. Austral Andina" data-tip="Química Pacífico — U. Austral Andina
-2"/><path class="pa-m" d="M650.8,380.6Q597.9,337.2 534.7,363.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Gobierno Regional" data-t="Instituto de Datos Abiertos" data-tip="Gobierno Regional — Instituto de Datos Abiertos
-2"/><path class="pa-m" d="M339.2,284.1Q363.7,333 418.3,334.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Agencia de Fomento" data-t="U. Técnica del Litoral" data-tip="Agencia de Fomento — U. Técnica del Litoral
-2"/><path class="pa-m" d="M487.7,266.8Q442.6,213 373.8,227.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Agencia Ambiental" data-t="Lab. de Robótica Agrícola" data-tip="Agencia Ambiental — Lab. de Robótica Agrícola
-2"/><path class="pa-m" d="M506.4,381.6Q476.5,331.6 418.3,334.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Municipalidad Costera" data-t="U. Técnica del Litoral" data-tip="Municipalidad Costera — U. Técnica del Litoral
-2"/><path class="pa-m" d="M409.5,256.8Q318.5,228.9 251.1,296" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="U. Austral Andina" data-tip="Riego360 — U. Austral Andina
-2"/><path class="pa-m" d="M409.5,256.8Q390.7,298.3 418.3,334.4" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="U. Técnica del Litoral" data-tip="Riego360 — U. Técnica del Litoral
-2"/><path class="pa-m" d="M242.4,250.2Q264.9,309.7 327.9,317.9" stroke="#1E9C89" stroke-width="1.8" data-s="ForestEye" data-t="U. del Pacífico Sur" data-tip="ForestEye — U. del Pacífico Sur
-2"/><path class="pa-m" d="M242.4,250.2Q315,278.2 373.8,227.4" stroke="#1E9C89" stroke-width="1.8" data-s="ForestEye" data-t="Lab. de Robótica Agrícola" data-tip="ForestEye — Lab. de Robótica Agrícola
-2"/><path class="pa-m" d="M349.2,348.5Q315.9,292.8 251.1,296" stroke="#1E9C89" stroke-width="1.8" data-s="RoboFruit" data-t="U. Austral Andina" data-tip="RoboFruit — U. Austral Andina
-2"/><path class="pa-m" d="M251.1,296Q155.7,264.8 83.3,334.4" stroke="#3A47B8" stroke-width="1.8" data-s="U. Austral Andina" data-t="U. del Valle Central" data-tip="U. Austral Andina — U. del Valle Central
-2"/><path class="pa-m" d="M418.3,334.4Q411.9,395 462.4,429.2" stroke="#3A47B8" stroke-width="1.8" data-s="U. Técnica del Litoral" data-t="Centro de Acuicultura" data-tip="U. Técnica del Litoral — Centro de Acuicultura
-2"/><path class="pa-m" d="M83.3,334.4Q190.8,427.1 323.2,375.9" stroke="#3A47B8" stroke-width="1.8" data-s="U. del Valle Central" data-t="U. de los Lagos Altos" data-tip="U. del Valle Central — U. de los Lagos Altos
-2"/><path class="pa-m" d="M534.7,363.4Q478.8,374.6 462.4,429.2" stroke="#D42A5E" stroke-width="1.8" data-s="Instituto de Datos Abiertos" data-t="Centro de Acuicultura" data-tip="Instituto de Datos Abiertos — Centro de Acuicultura
-2"/><path class="pa-m" d="M409.5,256.8Q462.6,305.8 530.7,282.1" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="Salmones Fiordo" data-tip="Riego360 — Salmones Fiordo
-2"/><path class="pa-m" d="M574.3,405.8Q511.3,384 462.4,429.2" stroke="#E8A33D" stroke-width="2.07" data-s="Pesquera Bahía" data-t="Centro de Acuicultura" data-tip="Pesquera Bahía — Centro de Acuicultura
-3"/><path class="pa-m" d="M422.5,280.3Q332.1,236.7 251.1,296" stroke="#E8A33D" stroke-width="2.07" data-s="Frutícola Maule" data-t="U. Austral Andina" data-tip="Frutícola Maule — U. Austral Andina
-3"/><path class="pa-m" d="M422.5,280.3Q508,315.3 579.1,256.3" stroke="#E8A33D" stroke-width="2.07" data-s="Frutícola Maule" data-t="Centro de Genómica Vegetal" data-tip="Frutícola Maule — Centro de Genómica Vegetal
-3"/><path class="pa-m" d="M189.1,397.8Q253.4,402.9 288.1,348.7" stroke="#E8A33D" stroke-width="2.07" data-s="Metalúrgica Bío" data-t="Centro de Energía Marina" data-tip="Metalúrgica Bío — Centro de Energía Marina
-3"/><path class="pa-m" d="M316.9,173.9Q329.3,217.8 373.8,227.4" stroke="#7B5CD6" stroke-width="2.07" data-s="Oficina de Riego" data-t="Lab. de Robótica Agrícola" data-tip="Oficina de Riego — Lab. de Robótica Agrícola
-3"/><path class="pa-m" d="M129.1,286.8Q148.4,357.6 220,373.8" stroke="#7B5CD6" stroke-width="2.07" data-s="Servicio de Pesca" data-t="Instituto del Litio" data-tip="Servicio de Pesca — Instituto del Litio
-3"/><path class="pa-m" d="M387.7,417.3Q387.6,349.7 327.9,317.9" stroke="#1E9C89" stroke-width="2.07" data-s="AgroSense" data-t="U. del Pacífico Sur" data-tip="AgroSense — U. del Pacífico Sur
-3"/><path class="pa-m" d="M432.4,389.9Q442,357.9 418.3,334.4" stroke="#1E9C89" stroke-width="2.07" data-s="DataMar" data-t="U. Técnica del Litoral" data-tip="DataMar — U. Técnica del Litoral
-3"/><path class="pa-m" d="M292,238.6Q286.2,289 327.9,317.9" stroke="#1E9C89" stroke-width="2.07" data-s="BioLitio" data-t="U. del Pacífico Sur" data-tip="BioLitio — U. del Pacífico Sur
-3"/><path class="pa-m" d="M362.4,254.4Q326.1,275.8 327.9,317.9" stroke="#1E9C89" stroke-width="2.07" data-s="VinoLab" data-t="U. del Pacífico Sur" data-tip="VinoLab — U. del Pacífico Sur
-3"/><path class="pa-m" d="M327.9,317.9Q378,286.4 373.8,227.4" stroke="#3A47B8" stroke-width="2.07" data-s="U. del Pacífico Sur" data-t="Lab. de Robótica Agrícola" data-tip="U. del Pacífico Sur — Lab. de Robótica Agrícola
-3"/><path class="pa-m" d="M418.3,334.4Q348.9,302.4 288.1,348.7" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Centro de Energía Marina" data-tip="U. Técnica del Litoral — Centro de Energía Marina
-3"/><path class="pa-m" d="M418.3,334.4Q307.3,294.6 220,373.8" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Instituto del Litio" data-tip="U. Técnica del Litoral — Instituto del Litio
-3"/><path class="pa-m" d="M418.3,334.4Q338.9,347.1 312.8,423.2" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Centro de Bosque Nativo" data-tip="U. Técnica del Litoral — Centro de Bosque Nativo
-3"/><path class="pa-m" d="M484,306.8Q373.5,268.9 288.1,348.7" stroke="#3A47B8" stroke-width="2.07" data-s="U. Minera del Norte" data-t="Centro de Energía Marina" data-tip="U. Minera del Norte — Centro de Energía Marina
-3"/><path class="pa-m" d="M323.2,375.9Q432.7,433.1 534.7,363.4" stroke="#3A47B8" stroke-width="2.07" data-s="U. de los Lagos Altos" data-t="Instituto de Datos Abiertos" data-tip="U. de los Lagos Altos — Instituto de Datos Abiertos
-3"/><path class="pa-m" d="M579.1,256.3Q542,285.7 550.4,332.2" stroke="#D42A5E" stroke-width="2.07" data-s="Centro de Genómica Vegetal" data-t="Lab. de Materiales" data-tip="Centro de Genómica Vegetal — Lab. de Materiales
-3"/><path class="pa-m" d="M288.1,348.7Q278.1,393.3 312.8,423.2" stroke="#D42A5E" stroke-width="2.07" data-s="Centro de Energía Marina" data-t="Centro de Bosque Nativo" data-tip="Centro de Energía Marina — Centro de Bosque Nativo
-3"/><path class="pa-m" d="M236.9,345.9Q197.6,301.6 139.9,315.4" stroke="#1E9C89" stroke-width="2.07" data-s="SolarTrack" data-t="Química Pacífico" data-tip="SolarTrack — Química Pacífico
-3"/><path class="pa-m" d="M349.2,348.5Q395.4,346.2 415.1,304.4" stroke="#1E9C89" stroke-width="2.07" data-s="RoboFruit" data-t="Agrícola Itata" data-tip="RoboFruit — Agrícola Itata
-3"/><path class="pa-m" d="M410.8,366.4Q465.3,358.6 484,306.8" stroke="#E8A33D" stroke-width="2.3" data-s="Viña Cordillera" data-t="U. Minera del Norte" data-tip="Viña Cordillera — U. Minera del Norte
-4"/><path class="pa-m" d="M415.1,304.4Q474.4,358.9 550.4,332.2" stroke="#E8A33D" stroke-width="2.3" data-s="Agrícola Itata" data-t="Lab. de Materiales" data-tip="Agrícola Itata — Lab. de Materiales
-4"/><path class="pa-m" d="M339.2,284.1Q404.8,338.9 484,306.8" stroke="#7B5CD6" stroke-width="2.3" data-s="Agencia de Fomento" data-t="U. Minera del Norte" data-tip="Agencia de Fomento — U. Minera del Norte
-4"/><path class="pa-m" d="M129.1,286.8Q187.3,328 251.1,296" stroke="#7B5CD6" stroke-width="2.3" data-s="Servicio de Pesca" data-t="U. Austral Andina" data-tip="Servicio de Pesca — U. Austral Andina
-4"/><path class="pa-m" d="M387.7,417.3Q367.9,377.3 323.2,375.9" stroke="#1E9C89" stroke-width="2.3" data-s="AgroSense" data-t="U. de los Lagos Altos" data-tip="AgroSense — U. de los Lagos Altos
-4"/><path class="pa-m" d="M251.1,296Q263.2,357.6 323.2,375.9" stroke="#3A47B8" stroke-width="2.3" data-s="U. Austral Andina" data-t="U. de los Lagos Altos" data-tip="U. Austral Andina — U. de los Lagos Altos
-4"/><path class="pa-m" d="M251.1,296Q212.2,325.6 220,373.8" stroke="#3A47B8" stroke-width="2.3" data-s="U. Austral Andina" data-t="Instituto del Litio" data-tip="U. Austral Andina — Instituto del Litio
-4"/><path class="pa-m" d="M418.3,334.4Q428.2,267.6 373.8,227.4" stroke="#3A47B8" stroke-width="2.3" data-s="U. Técnica del Litoral" data-t="Lab. de Robótica Agrícola" data-tip="U. Técnica del Litoral — Lab. de Robótica Agrícola
-4"/><path class="pa-m" d="M484,306.8Q546.7,310.1 579.1,256.3" stroke="#3A47B8" stroke-width="2.3" data-s="U. Minera del Norte" data-t="Centro de Genómica Vegetal" data-tip="U. Minera del Norte — Centro de Genómica Vegetal
-4"/><path class="pa-m" d="M323.2,375.9Q376.8,444.3 462.4,429.2" stroke="#3A47B8" stroke-width="2.3" data-s="U. de los Lagos Altos" data-t="Centro de Acuicultura" data-tip="U. de los Lagos Altos — Centro de Acuicultura
-4"/><path class="pa-m" d="M502.3,235.2Q471.7,265.5 484,306.8" stroke="#E8A33D" stroke-width="2.5" data-s="Forestal Ríos" data-t="U. Minera del Norte" data-tip="Forestal Ríos — U. Minera del Norte
-5"/><path class="pa-m" d="M250.3,438.6Q254.6,397.1 220,373.8" stroke="#E8A33D" stroke-width="2.5" data-s="Celulosa Laja" data-t="Instituto del Litio" data-tip="Celulosa Laja — Instituto del Litio
-5"/><path class="pa-m" d="M196.9,320.2Q135.8,293.2 83.3,334.4" stroke="#E8A33D" stroke-width="2.5" data-s="Logística Puerto" data-t="U. del Valle Central" data-tip="Logística Puerto — U. del Valle Central
-5"/><path class="pa-m" d="M650.8,380.6Q615.1,326.3 550.4,332.2" stroke="#7B5CD6" stroke-width="2.5" data-s="Gobierno Regional" data-t="Lab. de Materiales" data-tip="Gobierno Regional — Lab. de Materiales
-5"/><path class="pa-m" d="M432.4,389.9Q401.7,322.6 327.9,317.9" stroke="#1E9C89" stroke-width="2.5" data-s="DataMar" data-t="U. del Pacífico Sur" data-tip="DataMar — U. del Pacífico Sur
-5"/><path class="pa-m" d="M236.9,345.9Q163.6,294.1 83.3,334.4" stroke="#1E9C89" stroke-width="2.5" data-s="SolarTrack" data-t="U. del Valle Central" data-tip="SolarTrack — U. del Valle Central
-5"/><path class="pa-m" d="M370.1,392.9Q371.5,342.7 327.9,317.9" stroke="#1E9C89" stroke-width="2.5" data-s="AquaIA" data-t="U. del Pacífico Sur" data-tip="AquaIA — U. del Pacífico Sur
-5"/><path class="pa-m" d="M362.4,254.4Q407.5,317 484,306.8" stroke="#1E9C89" stroke-width="2.5" data-s="VinoLab" data-t="U. Minera del Norte" data-tip="VinoLab — U. Minera del Norte
-5"/><path class="pa-m" d="M410.8,366.4Q490.9,391.2 550.4,332.2" stroke="#E8A33D" stroke-width="2.68" data-s="Viña Cordillera" data-t="Lab. de Materiales" data-tip="Viña Cordillera — Lab. de Materiales
-6"/><path class="pa-m" d="M139.9,315.4Q233.2,373 327.9,317.9" stroke="#E8A33D" stroke-width="2.68" data-s="Química Pacífico" data-t="U. del Pacífico Sur" data-tip="Química Pacífico — U. del Pacífico Sur
-6"/><path class="pa-m" d="M196.9,320.2Q263.1,358.3 327.9,317.9" stroke="#E8A33D" stroke-width="2.68" data-s="Logística Puerto" data-t="U. del Pacífico Sur" data-tip="Logística Puerto — U. del Pacífico Sur
-6"/><path class="pa-m" d="M615.1,289.4Q544.3,258.8 484,306.8" stroke="#E8A33D" stroke-width="2.68" data-s="Cervecera Calle-Calle" data-t="U. Minera del Norte" data-tip="Cervecera Calle-Calle — U. Minera del Norte
-6"/><path class="pa-m" d="M129.1,286.8Q91.9,296.9 83.3,334.4" stroke="#7B5CD6" stroke-width="2.68" data-s="Servicio de Pesca" data-t="U. del Valle Central" data-tip="Servicio de Pesca — U. del Valle Central
-6"/><path class="pa-m" d="M487.7,266.8Q499.4,318.3 550.4,332.2" stroke="#7B5CD6" stroke-width="2.68" data-s="Agencia Ambiental" data-t="Lab. de Materiales" data-tip="Agencia Ambiental — Lab. de Materiales
-6"/><path class="pa-m" d="M292,238.6Q254.3,255 251.1,296" stroke="#1E9C89" stroke-width="2.68" data-s="BioLitio" data-t="U. Austral Andina" data-tip="BioLitio — U. Austral Andina
-6"/><path class="pa-m" d="M506.4,381.6Q517.6,337.5 484,306.8" stroke="#7B5CD6" stroke-width="2.84" data-s="Municipalidad Costera" data-t="U. Minera del Norte" data-tip="Municipalidad Costera — U. Minera del Norte
-7"/><path class="pa-m" d="M250.3,438.6Q305.6,429.1 323.2,375.9" stroke="#E8A33D" stroke-width="3" data-s="Celulosa Laja" data-t="U. de los Lagos Altos" data-tip="Celulosa Laja — U. de los Lagos Altos
-8"/></g><g class="pa-nodes"><circle class="pa-m" cx="483.98" cy="306.77" r="22.96" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Minera del Norte
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" width="720" height="520" role="img" aria-label="U. del Pacífico Sur colabora con 12 organizaciones, más que ninguna otra" aria-describedby="pahhu76k-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="network" data-pa-mode="light" data-pa-lang="es" data-pa-top="101" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><desc id="pahhu76k-d">Red de 44 nodos y 77 conexiones. Más conectados: U. del Pacífico Sur (12), U. Minera del Norte (11), U. Austral Andina (11).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid #3A47B8;outline-offset:2px}.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}</style><rect width="720" height="520" fill="#FCFBF9"/><g class="pa-header"><text x="0" y="27.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">U. del Pacífico Sur colabora con 12 organizaciones, más que</text><text x="0" y="56.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">ninguna otra</text><text x="0" y="82.5" fill="#4A5070" font-size="14.5">Proyectos conjuntos de I+D entre 44 organizaciones (246 proyectos)</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" data-value="Universidades" style="cursor:pointer"><rect x="-3" y="98" width="109.48" height="19" rx="4" fill="transparent"/><circle cx="5" cy="107.5" r="5" fill="#3A47B8"/><text x="16" y="112" fill="#4A5070" font-size="12.5">Universidades</text></g><g class="pa-key" data-color="#D42A5E" data-value="Centros de investigación" style="cursor:pointer"><rect x="116.48" y="98" width="171.82" height="19" rx="4" fill="transparent"/><circle cx="124.48" cy="107.5" r="5" fill="#D42A5E"/><text x="135.48" y="112" fill="#4A5070" font-size="12.5">Centros de investigación</text></g><g class="pa-key" data-color="#E8A33D" data-value="Empresas" style="cursor:pointer"><rect x="298.29" y="98" width="85.32" height="19" rx="4" fill="transparent"/><circle cx="306.29" cy="107.5" r="5" fill="#E8A33D"/><text x="317.29" y="112" fill="#4A5070" font-size="12.5">Empresas</text></g><g class="pa-key" data-color="#1E9C89" data-value="Startups" style="cursor:pointer"><rect x="393.62" y="98" width="76.93" height="19" rx="4" fill="transparent"/><circle cx="401.62" cy="107.5" r="5" fill="#1E9C89"/><text x="412.62" y="112" fill="#4A5070" font-size="12.5">Startups</text></g><g class="pa-key" data-color="#7B5CD6" data-value="Servicios públicos" style="cursor:pointer"><rect x="480.54" y="98" width="133.76" height="19" rx="4" fill="transparent"/><circle cx="488.54" cy="107.5" r="5" fill="#7B5CD6"/><text x="499.54" y="112" fill="#4A5070" font-size="12.5">Servicios públicos</text></g></g></g><g class="pa-body"><g class="pa-net" data-layout="force"><g class="pa-links" fill="none" stroke-linecap="round" stroke-opacity="0.5" stroke-width="1"><path class="pa-m" d="M295.8,283.6Q371,338.5 454.8,298" stroke="#E8A33D" stroke-width="1.45" data-s="Viña Cordillera" data-t="U. Austral Andina" data-tip="Viña Cordillera — U. Austral Andina
+1"/><path class="pa-m" d="M190.4,236Q250.1,224.1 267.7,165.9" stroke="#E8A33D" stroke-width="1.45" data-s="Pesquera Bahía" data-t="Instituto de Datos Abiertos" data-tip="Pesquera Bahía — Instituto de Datos Abiertos
+1"/><path class="pa-m" d="M190.4,236Q156.2,280 179,331" stroke="#E8A33D" stroke-width="1.45" data-s="Pesquera Bahía" data-t="U. Minera del Norte" data-tip="Pesquera Bahía — U. Minera del Norte
+1"/><path class="pa-m" d="M635.2,359.8Q544.2,300.4 448.9,352.8" stroke="#E8A33D" stroke-width="1.45" data-s="Solar Atacama" data-t="U. del Pacífico Sur" data-tip="Solar Atacama — U. del Pacífico Sur
+1"/><path class="pa-m" d="M38.6,303.5Q100.5,359.3 179,331" stroke="#E8A33D" stroke-width="1.45" data-s="Lácteos del Sur" data-t="U. Minera del Norte" data-tip="Lácteos del Sur — U. Minera del Norte
+1"/><path class="pa-m" d="M493.8,279.2Q449.3,302.5 448.9,352.8" stroke="#7B5CD6" stroke-width="1.45" data-s="Servicio de Salud Regional" data-t="U. del Pacífico Sur" data-tip="Servicio de Salud Regional — U. del Pacífico Sur
+1"/><path class="pa-m" d="M498.8,325Q463.1,242.3 373.3,234.8" stroke="#1E9C89" stroke-width="1.45" data-s="SolarTrack" data-t="Centro de Bosque Nativo" data-tip="SolarTrack — Centro de Bosque Nativo
+1"/><path class="pa-m" d="M498.8,325Q337.1,232 179,331" stroke="#1E9C89" stroke-width="1.45" data-s="SolarTrack" data-t="U. Minera del Norte" data-tip="SolarTrack — U. Minera del Norte
+1"/><path class="pa-m" d="M396.5,283Q310,238.7 230.2,294.2" stroke="#1E9C89" stroke-width="1.45" data-s="AquaIA" data-t="U. Técnica del Litoral" data-tip="AquaIA — U. Técnica del Litoral
+1"/><path class="pa-m" d="M485.8,190.2Q452.9,197.4 443.8,229.8" stroke="#3A47B8" stroke-width="1.45" data-s="U. de los Lagos Altos" data-t="Instituto del Litio" data-tip="U. de los Lagos Altos — Instituto del Litio
+1"/><path class="pa-m" d="M299.7,207.1Q328.2,243 373.3,234.8" stroke="#D42A5E" stroke-width="1.45" data-s="Centro de Acuicultura" data-t="Centro de Bosque Nativo" data-tip="Centro de Acuicultura — Centro de Bosque Nativo
+1"/><path class="pa-m" d="M222.7,375.1Q250.7,336.9 230.2,294.2" stroke="#E8A33D" stroke-width="1.8" data-s="Salmones Fiordo" data-t="U. Técnica del Litoral" data-tip="Salmones Fiordo — U. Técnica del Litoral
+2"/><path class="pa-m" d="M607.8,301.8Q532.4,254 454.8,298" stroke="#E8A33D" stroke-width="1.8" data-s="Minera Altiplano" data-t="U. Austral Andina" data-tip="Minera Altiplano — U. Austral Andina
+2"/><path class="pa-m" d="M607.8,301.8Q513.1,279.7 448.9,352.8" stroke="#E8A33D" stroke-width="1.8" data-s="Minera Altiplano" data-t="U. del Pacífico Sur" data-tip="Minera Altiplano — U. del Pacífico Sur
+2"/><path class="pa-m" d="M635.2,359.8Q671.7,322.8 656.1,273.2" stroke="#E8A33D" stroke-width="1.8" data-s="Solar Atacama" data-t="U. del Valle Central" data-tip="Solar Atacama — U. del Valle Central
+2"/><path class="pa-m" d="M614.5,337.1Q546.3,269.7 454.8,298" stroke="#E8A33D" stroke-width="1.8" data-s="Química Pacífico" data-t="U. Austral Andina" data-tip="Química Pacífico — U. Austral Andina
+2"/><path class="pa-m" d="M136.3,215.2Q216.8,230 267.7,165.9" stroke="#7B5CD6" stroke-width="1.8" data-s="Gobierno Regional" data-t="Instituto de Datos Abiertos" data-tip="Gobierno Regional — Instituto de Datos Abiertos
+2"/><path class="pa-m" d="M341.8,321.9Q294.3,274.6 230.2,294.2" stroke="#7B5CD6" stroke-width="1.8" data-s="Agencia de Fomento" data-t="U. Técnica del Litoral" data-tip="Agencia de Fomento — U. Técnica del Litoral
+2"/><path class="pa-m" d="M239.7,351.7Q262,403.6 318.3,408.2" stroke="#7B5CD6" stroke-width="1.8" data-s="Agencia Ambiental" data-t="Lab. de Robótica Agrícola" data-tip="Agencia Ambiental — Lab. de Robótica Agrícola
+2"/><path class="pa-m" d="M100,266.8Q156.9,319.6 230.2,294.2" stroke="#7B5CD6" stroke-width="1.8" data-s="Municipalidad Costera" data-t="U. Técnica del Litoral" data-tip="Municipalidad Costera — U. Técnica del Litoral
+2"/><path class="pa-m" d="M368.6,364.1Q431.5,356.9 454.8,298" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="U. Austral Andina" data-tip="Riego360 — U. Austral Andina
+2"/><path class="pa-m" d="M368.6,364.1Q320.4,287.6 230.2,294.2" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="U. Técnica del Litoral" data-tip="Riego360 — U. Técnica del Litoral
+2"/><path class="pa-m" d="M460,422.1Q475.2,384.1 448.9,352.8" stroke="#1E9C89" stroke-width="1.8" data-s="ForestEye" data-t="U. del Pacífico Sur" data-tip="ForestEye — U. del Pacífico Sur
+2"/><path class="pa-m" d="M460,422.1Q393.3,372.6 318.3,408.2" stroke="#1E9C89" stroke-width="1.8" data-s="ForestEye" data-t="Lab. de Robótica Agrícola" data-tip="ForestEye — Lab. de Robótica Agrícola
+2"/><path class="pa-m" d="M328.1,341.7Q404.5,357.9 454.8,298" stroke="#1E9C89" stroke-width="1.8" data-s="RoboFruit" data-t="U. Austral Andina" data-tip="RoboFruit — U. Austral Andina
+2"/><path class="pa-m" d="M454.8,298Q562.9,346 656.1,273.2" stroke="#3A47B8" stroke-width="1.8" data-s="U. Austral Andina" data-t="U. del Valle Central" data-tip="U. Austral Andina — U. del Valle Central
+2"/><path class="pa-m" d="M230.2,294.2Q291.1,271.5 299.7,207.1" stroke="#3A47B8" stroke-width="1.8" data-s="U. Técnica del Litoral" data-t="Centro de Acuicultura" data-tip="U. Técnica del Litoral — Centro de Acuicultura
+2"/><path class="pa-m" d="M656.1,273.2Q595.9,180.6 485.8,190.2" stroke="#3A47B8" stroke-width="1.8" data-s="U. del Valle Central" data-t="U. de los Lagos Altos" data-tip="U. del Valle Central — U. de los Lagos Altos
+2"/><path class="pa-m" d="M267.7,165.9Q271.3,196 299.7,207.1" stroke="#D42A5E" stroke-width="1.8" data-s="Instituto de Datos Abiertos" data-t="Centro de Acuicultura" data-tip="Instituto de Datos Abiertos — Centro de Acuicultura
+2"/><path class="pa-m" d="M368.6,364.1Q292.4,325.8 222.7,375.1" stroke="#1E9C89" stroke-width="1.8" data-s="Riego360" data-t="Salmones Fiordo" data-tip="Riego360 — Salmones Fiordo
+2"/><path class="pa-m" d="M190.4,236Q253.7,254.3 299.7,207.1" stroke="#E8A33D" stroke-width="2.07" data-s="Pesquera Bahía" data-t="Centro de Acuicultura" data-tip="Pesquera Bahía — Centro de Acuicultura
+3"/><path class="pa-m" d="M273.3,328Q373,367.5 454.8,298" stroke="#E8A33D" stroke-width="2.07" data-s="Frutícola Maule" data-t="U. Austral Andina" data-tip="Frutícola Maule — U. Austral Andina
+3"/><path class="pa-m" d="M273.3,328Q182.4,306.7 120.8,376.9" stroke="#E8A33D" stroke-width="2.07" data-s="Frutícola Maule" data-t="Centro de Genómica Vegetal" data-tip="Frutícola Maule — Centro de Genómica Vegetal
+3"/><path class="pa-m" d="M497.9,253.7Q423.8,245 381.2,306.3" stroke="#E8A33D" stroke-width="2.07" data-s="Metalúrgica Bío" data-t="Centro de Energía Marina" data-tip="Metalúrgica Bío — Centro de Energía Marina
+3"/><path class="pa-m" d="M393.3,459Q371,411.1 318.3,408.2" stroke="#7B5CD6" stroke-width="2.07" data-s="Oficina de Riego" data-t="Lab. de Robótica Agrícola" data-tip="Oficina de Riego — Lab. de Robótica Agrícola
+3"/><path class="pa-m" d="M566,316.3Q530.9,236.4 443.8,229.8" stroke="#7B5CD6" stroke-width="2.07" data-s="Servicio de Pesca" data-t="Instituto del Litio" data-tip="Servicio de Pesca — Instituto del Litio
+3"/><path class="pa-m" d="M437.5,259.7Q415.2,309.7 448.9,352.8" stroke="#1E9C89" stroke-width="2.07" data-s="AgroSense" data-t="U. del Pacífico Sur" data-tip="AgroSense — U. del Pacífico Sur
+3"/><path class="pa-m" d="M356.8,272.7Q287,245.5 230.2,294.2" stroke="#1E9C89" stroke-width="2.07" data-s="DataMar" data-t="U. Técnica del Litoral" data-tip="DataMar — U. Técnica del Litoral
+3"/><path class="pa-m" d="M553.8,370Q506.5,330 448.9,352.8" stroke="#1E9C89" stroke-width="2.07" data-s="BioLitio" data-t="U. del Pacífico Sur" data-tip="BioLitio — U. del Pacífico Sur
+3"/><path class="pa-m" d="M303.2,381.4Q384.6,410.8 448.9,352.8" stroke="#1E9C89" stroke-width="2.07" data-s="VinoLab" data-t="U. del Pacífico Sur" data-tip="VinoLab — U. del Pacífico Sur
+3"/><path class="pa-m" d="M448.9,352.8Q367,341.3 318.3,408.2" stroke="#3A47B8" stroke-width="2.07" data-s="U. del Pacífico Sur" data-t="Lab. de Robótica Agrícola" data-tip="U. del Pacífico Sur — Lab. de Robótica Agrícola
+3"/><path class="pa-m" d="M230.2,294.2Q302.1,345.6 381.2,306.3" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Centro de Energía Marina" data-tip="U. Técnica del Litoral — Centro de Energía Marina
+3"/><path class="pa-m" d="M230.2,294.2Q356.4,326.1 443.8,229.8" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Instituto del Litio" data-tip="U. Técnica del Litoral — Instituto del Litio
+3"/><path class="pa-m" d="M230.2,294.2Q319.6,307.4 373.3,234.8" stroke="#3A47B8" stroke-width="2.07" data-s="U. Técnica del Litoral" data-t="Centro de Bosque Nativo" data-tip="U. Técnica del Litoral — Centro de Bosque Nativo
+3"/><path class="pa-m" d="M179,331Q287.5,379.3 381.2,306.3" stroke="#3A47B8" stroke-width="2.07" data-s="U. Minera del Norte" data-t="Centro de Energía Marina" data-tip="U. Minera del Norte — Centro de Energía Marina
+3"/><path class="pa-m" d="M485.8,190.2Q384.1,112.6 267.7,165.9" stroke="#3A47B8" stroke-width="2.07" data-s="U. de los Lagos Altos" data-t="Instituto de Datos Abiertos" data-tip="U. de los Lagos Altos — Instituto de Datos Abiertos
+3"/><path class="pa-m" d="M120.8,376.9Q155.2,340 138.8,292.4" stroke="#D42A5E" stroke-width="2.07" data-s="Centro de Genómica Vegetal" data-t="Lab. de Materiales" data-tip="Centro de Genómica Vegetal — Lab. de Materiales
+3"/><path class="pa-m" d="M381.2,306.3Q398.7,268.2 373.3,234.8" stroke="#D42A5E" stroke-width="2.07" data-s="Centro de Energía Marina" data-t="Centro de Bosque Nativo" data-tip="Centro de Energía Marina — Centro de Bosque Nativo
+3"/><path class="pa-m" d="M498.8,325Q553,365.8 614.5,337.1" stroke="#1E9C89" stroke-width="2.07" data-s="SolarTrack" data-t="Química Pacífico" data-tip="SolarTrack — Química Pacífico
+3"/><path class="pa-m" d="M328.1,341.7Q316.7,281.2 258,262.7" stroke="#1E9C89" stroke-width="2.07" data-s="RoboFruit" data-t="Agrícola Itata" data-tip="RoboFruit — Agrícola Itata
+3"/><path class="pa-m" d="M295.8,283.6Q223.2,272.2 179,331" stroke="#E8A33D" stroke-width="2.3" data-s="Viña Cordillera" data-t="U. Minera del Norte" data-tip="Viña Cordillera — U. Minera del Norte
+4"/><path class="pa-m" d="M258,262.7Q189.5,241.8 138.8,292.4" stroke="#E8A33D" stroke-width="2.3" data-s="Agrícola Itata" data-t="Lab. de Materiales" data-tip="Agrícola Itata — Lab. de Materiales
+4"/><path class="pa-m" d="M341.8,321.9Q257.7,277.6 179,331" stroke="#7B5CD6" stroke-width="2.3" data-s="Agencia de Fomento" data-t="U. Minera del Norte" data-tip="Agencia de Fomento — U. Minera del Norte
+4"/><path class="pa-m" d="M566,316.3Q515.9,273.8 454.8,298" stroke="#7B5CD6" stroke-width="2.3" data-s="Servicio de Pesca" data-t="U. Austral Andina" data-tip="Servicio de Pesca — U. Austral Andina
+4"/><path class="pa-m" d="M437.5,259.7Q482.5,239.4 485.8,190.2" stroke="#1E9C89" stroke-width="2.3" data-s="AgroSense" data-t="U. de los Lagos Altos" data-tip="AgroSense — U. de los Lagos Altos
+4"/><path class="pa-m" d="M454.8,298Q502.7,253.4 485.8,190.2" stroke="#3A47B8" stroke-width="2.3" data-s="U. Austral Andina" data-t="U. de los Lagos Altos" data-tip="U. Austral Andina — U. de los Lagos Altos
+4"/><path class="pa-m" d="M454.8,298Q469.8,260.6 443.8,229.8" stroke="#3A47B8" stroke-width="2.3" data-s="U. Austral Andina" data-t="Instituto del Litio" data-tip="U. Austral Andina — Instituto del Litio
+4"/><path class="pa-m" d="M230.2,294.2Q240,377.7 318.3,408.2" stroke="#3A47B8" stroke-width="2.3" data-s="U. Técnica del Litoral" data-t="Lab. de Robótica Agrícola" data-tip="U. Técnica del Litoral — Lab. de Robótica Agrícola
+4"/><path class="pa-m" d="M179,331Q136.1,336.5 120.8,376.9" stroke="#3A47B8" stroke-width="2.3" data-s="U. Minera del Norte" data-t="Centro de Genómica Vegetal" data-tip="U. Minera del Norte — Centro de Genómica Vegetal
+4"/><path class="pa-m" d="M485.8,190.2Q387.7,142.8 299.7,207.1" stroke="#3A47B8" stroke-width="2.3" data-s="U. de los Lagos Altos" data-t="Centro de Acuicultura" data-tip="U. de los Lagos Altos — Centro de Acuicultura
+4"/><path class="pa-m" d="M185.2,403.4Q203.8,365.3 179,331" stroke="#E8A33D" stroke-width="2.5" data-s="Forestal Ríos" data-t="U. Minera del Norte" data-tip="Forestal Ríos — U. Minera del Norte
+5"/><path class="pa-m" d="M375.8,166.7Q390.9,218.7 443.8,229.8" stroke="#E8A33D" stroke-width="2.5" data-s="Celulosa Laja" data-t="Instituto del Litio" data-tip="Celulosa Laja — Instituto del Litio
+5"/><path class="pa-m" d="M543.2,288.1Q604.1,314.5 656.1,273.2" stroke="#E8A33D" stroke-width="2.5" data-s="Logística Puerto" data-t="U. del Valle Central" data-tip="Logística Puerto — U. del Valle Central
+5"/><path class="pa-m" d="M136.3,215.2Q114.4,254.5 138.8,292.4" stroke="#7B5CD6" stroke-width="2.5" data-s="Gobierno Regional" data-t="Lab. de Materiales" data-tip="Gobierno Regional — Lab. de Materiales
+5"/><path class="pa-m" d="M356.8,272.7Q378.8,340.4 448.9,352.8" stroke="#1E9C89" stroke-width="2.5" data-s="DataMar" data-t="U. del Pacífico Sur" data-tip="DataMar — U. del Pacífico Sur
+5"/><path class="pa-m" d="M498.8,325Q593,346.3 656.1,273.2" stroke="#1E9C89" stroke-width="2.5" data-s="SolarTrack" data-t="U. del Valle Central" data-tip="SolarTrack — U. del Valle Central
+5"/><path class="pa-m" d="M396.5,283Q401.7,333.6 448.9,352.8" stroke="#1E9C89" stroke-width="2.5" data-s="AquaIA" data-t="U. del Pacífico Sur" data-tip="AquaIA — U. del Pacífico Sur
+5"/><path class="pa-m" d="M303.2,381.4Q256.2,318.9 179,331" stroke="#1E9C89" stroke-width="2.5" data-s="VinoLab" data-t="U. Minera del Norte" data-tip="VinoLab — U. Minera del Norte
+5"/><path class="pa-m" d="M295.8,283.6Q214.7,240.9 138.8,292.4" stroke="#E8A33D" stroke-width="2.68" data-s="Viña Cordillera" data-t="Lab. de Materiales" data-tip="Viña Cordillera — Lab. de Materiales
+6"/><path class="pa-m" d="M614.5,337.1Q527,295.3 448.9,352.8" stroke="#E8A33D" stroke-width="2.68" data-s="Química Pacífico" data-t="U. del Pacífico Sur" data-tip="Química Pacífico — U. del Pacífico Sur
+6"/><path class="pa-m" d="M543.2,288.1Q476.6,292.2 448.9,352.8" stroke="#E8A33D" stroke-width="2.68" data-s="Logística Puerto" data-t="U. del Pacífico Sur" data-tip="Logística Puerto — U. del Pacífico Sur
+6"/><path class="pa-m" d="M47.1,351.5Q119.2,380.8 179,331" stroke="#E8A33D" stroke-width="2.68" data-s="Cervecera Calle-Calle" data-t="U. Minera del Norte" data-tip="Cervecera Calle-Calle — U. Minera del Norte
+6"/><path class="pa-m" d="M566,316.3Q624,321.8 656.1,273.2" stroke="#7B5CD6" stroke-width="2.68" data-s="Servicio de Pesca" data-t="U. del Valle Central" data-tip="Servicio de Pesca — U. del Valle Central
+6"/><path class="pa-m" d="M239.7,351.7Q207.1,291.8 138.8,292.4" stroke="#7B5CD6" stroke-width="2.68" data-s="Agencia Ambiental" data-t="Lab. de Materiales" data-tip="Agencia Ambiental — Lab. de Materiales
+6"/><path class="pa-m" d="M553.8,370Q525.9,304.3 454.8,298" stroke="#1E9C89" stroke-width="2.68" data-s="BioLitio" data-t="U. Austral Andina" data-tip="BioLitio — U. Austral Andina
+6"/><path class="pa-m" d="M100,266.8Q120.2,322.5 179,331" stroke="#7B5CD6" stroke-width="2.84" data-s="Municipalidad Costera" data-t="U. Minera del Norte" data-tip="Municipalidad Costera — U. Minera del Norte
+7"/><path class="pa-m" d="M375.8,166.7Q423.8,211.4 485.8,190.2" stroke="#E8A33D" stroke-width="3" data-s="Celulosa Laja" data-t="U. de los Lagos Altos" data-tip="Celulosa Laja — U. de los Lagos Altos
+8"/></g><g class="pa-nodes"><circle class="pa-m" cx="178.95" cy="330.95" r="24.87" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Minera del Norte
 Universidades
 Conexiones: 11
-Grado ponderado: 41" data-node="U. Minera del Norte" style="cursor:pointer"/><circle class="pa-m" cx="327.9" cy="317.87" r="22.68" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. del Pacífico Sur
+Grado ponderado: 41" data-node="U. Minera del Norte" style="cursor:pointer"/><circle class="pa-m" cx="448.91" cy="352.82" r="24.56" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. del Pacífico Sur
 Universidades
 Conexiones: 12
-Grado ponderado: 40" data-node="U. del Pacífico Sur" style="cursor:pointer"/><circle class="pa-m" cx="251.09" cy="296.01" r="20.28" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Austral Andina
+Grado ponderado: 40" data-node="U. del Pacífico Sur" style="cursor:pointer"/><circle class="pa-m" cx="454.78" cy="298.04" r="21.97" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Austral Andina
 Universidades
 Conexiones: 11
-Grado ponderado: 32" data-node="U. Austral Andina" style="cursor:pointer"/><circle class="pa-m" cx="418.33" cy="334.37" r="18.63" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Técnica del Litoral
+Grado ponderado: 32" data-node="U. Austral Andina" style="cursor:pointer"/><circle class="pa-m" cx="230.19" cy="294.22" r="20.18" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. Técnica del Litoral
 Universidades
 Conexiones: 11
-Grado ponderado: 27" data-node="U. Técnica del Litoral" style="cursor:pointer"/><circle class="pa-m" cx="323.22" cy="375.94" r="18.28" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. de los Lagos Altos
+Grado ponderado: 27" data-node="U. Técnica del Litoral" style="cursor:pointer"/><circle class="pa-m" cx="485.8" cy="190.15" r="19.8" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. de los Lagos Altos
 Universidades
 Conexiones: 7
-Grado ponderado: 26" data-node="U. de los Lagos Altos" style="cursor:pointer"/><circle class="pa-m" cx="550.43" cy="332.24" r="17.56" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lab. de Materiales
+Grado ponderado: 26" data-node="U. de los Lagos Altos" style="cursor:pointer"/><circle class="pa-m" cx="138.83" cy="292.36" r="19.02" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lab. de Materiales
 Centros de investigación
 Conexiones: 5
-Grado ponderado: 24" data-node="Lab. de Materiales" style="cursor:pointer"/><circle class="pa-m" cx="83.28" cy="334.38" r="16.82" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. del Valle Central
+Grado ponderado: 24" data-node="Lab. de Materiales" style="cursor:pointer"/><circle class="pa-m" cx="656.13" cy="273.16" r="18.21" fill="#3A47B8" stroke="#FCFBF9" stroke-width="0.75" data-tip="U. del Valle Central
 Universidades
 Conexiones: 6
-Grado ponderado: 22" data-node="U. del Valle Central" style="cursor:pointer"/><circle class="pa-m" cx="220.01" cy="373.82" r="14.34" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Instituto del Litio
+Grado ponderado: 22" data-node="U. del Valle Central" style="cursor:pointer"/><circle class="pa-m" cx="443.84" cy="229.76" r="15.53" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Instituto del Litio
 Centros de investigación
 Conexiones: 5
-Grado ponderado: 16" data-node="Instituto del Litio" style="cursor:pointer"/><circle class="pa-m" cx="373.83" cy="227.44" r="13.42" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lab. de Robótica Agrícola
+Grado ponderado: 16" data-node="Instituto del Litio" style="cursor:pointer"/><circle class="pa-m" cx="318.3" cy="408.23" r="14.53" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lab. de Robótica Agrícola
 Centros de investigación
 Conexiones: 5
-Grado ponderado: 14" data-node="Lab. de Robótica Agrícola" style="cursor:pointer"/><circle class="pa-m" cx="250.3" cy="438.59" r="12.93" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Celulosa Laja
+Grado ponderado: 14" data-node="Lab. de Robótica Agrícola" style="cursor:pointer"/><circle class="pa-m" cx="375.79" cy="166.73" r="14" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Celulosa Laja
 Empresas
 Conexiones: 2
-Grado ponderado: 13" data-node="Celulosa Laja" style="cursor:pointer"/><circle class="pa-m" cx="129.08" cy="286.81" r="12.93" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Servicio de Pesca
+Grado ponderado: 13" data-node="Celulosa Laja" style="cursor:pointer"/><circle class="pa-m" cx="565.96" cy="316.34" r="14" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Servicio de Pesca
 Servicios públicos
 Conexiones: 3
-Grado ponderado: 13" data-node="Servicio de Pesca" style="cursor:pointer"/><circle class="pa-m" cx="462.36" cy="429.23" r="12.42" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Acuicultura
+Grado ponderado: 13" data-node="Servicio de Pesca" style="cursor:pointer"/><circle class="pa-m" cx="299.65" cy="207.07" r="13.45" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Acuicultura
 Centros de investigación
 Conexiones: 5
-Grado ponderado: 12" data-node="Centro de Acuicultura" style="cursor:pointer"/><circle class="pa-m" cx="288.07" cy="348.67" r="12.42" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Energía Marina
+Grado ponderado: 12" data-node="Centro de Acuicultura" style="cursor:pointer"/><circle class="pa-m" cx="381.17" cy="306.31" r="13.45" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Energía Marina
 Centros de investigación
 Conexiones: 4
-Grado ponderado: 12" data-node="Centro de Energía Marina" style="cursor:pointer"/><circle class="pa-m" cx="196.9" cy="320.17" r="11.89" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Logística Puerto
+Grado ponderado: 12" data-node="Centro de Energía Marina" style="cursor:pointer"/><circle class="pa-m" cx="543.16" cy="288.07" r="12.88" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Logística Puerto
 Empresas
 Conexiones: 2
-Grado ponderado: 11" data-node="Logística Puerto" style="cursor:pointer"/><circle class="pa-m" cx="139.9" cy="315.39" r="11.89" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Química Pacífico
+Grado ponderado: 11" data-node="Logística Puerto" style="cursor:pointer"/><circle class="pa-m" cx="614.47" cy="337.09" r="12.88" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Química Pacífico
 Empresas
 Conexiones: 3
-Grado ponderado: 11" data-node="Química Pacífico" style="cursor:pointer"/><circle class="pa-m" cx="410.79" cy="366.45" r="11.89" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Viña Cordillera
+Grado ponderado: 11" data-node="Química Pacífico" style="cursor:pointer"/><circle class="pa-m" cx="295.83" cy="283.59" r="12.88" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Viña Cordillera
 Empresas
 Conexiones: 3
-Grado ponderado: 11" data-node="Viña Cordillera" style="cursor:pointer"/><circle class="pa-m" cx="579.07" cy="256.29" r="11.34" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Genómica Vegetal
+Grado ponderado: 11" data-node="Viña Cordillera" style="cursor:pointer"/><circle class="pa-m" cx="120.85" cy="376.87" r="12.28" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Genómica Vegetal
 Centros de investigación
 Conexiones: 3
-Grado ponderado: 10" data-node="Centro de Genómica Vegetal" style="cursor:pointer"/><circle class="pa-m" cx="236.93" cy="345.94" r="11.34" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="SolarTrack
+Grado ponderado: 10" data-node="Centro de Genómica Vegetal" style="cursor:pointer"/><circle class="pa-m" cx="498.79" cy="325.04" r="12.28" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="SolarTrack
 Startups
 Conexiones: 4
-Grado ponderado: 10" data-node="SolarTrack" style="cursor:pointer"/><circle class="pa-m" cx="292.02" cy="238.62" r="10.76" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="BioLitio
+Grado ponderado: 10" data-node="SolarTrack" style="cursor:pointer"/><circle class="pa-m" cx="553.79" cy="370.01" r="11.65" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="BioLitio
 Startups
 Conexiones: 2
-Grado ponderado: 9" data-node="BioLitio" style="cursor:pointer"/><circle class="pa-m" cx="506.4" cy="381.59" r="10.76" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Municipalidad Costera
+Grado ponderado: 9" data-node="BioLitio" style="cursor:pointer"/><circle class="pa-m" cx="100.01" cy="266.77" r="11.65" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Municipalidad Costera
 Servicios públicos
 Conexiones: 2
-Grado ponderado: 9" data-node="Municipalidad Costera" style="cursor:pointer"/><circle class="pa-m" cx="487.68" cy="266.78" r="10.14" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agencia Ambiental
+Grado ponderado: 9" data-node="Municipalidad Costera" style="cursor:pointer"/><circle class="pa-m" cx="239.68" cy="351.73" r="10.98" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agencia Ambiental
 Servicios públicos
 Conexiones: 2
-Grado ponderado: 8" data-node="Agencia Ambiental" style="cursor:pointer"/><circle class="pa-m" cx="312.81" cy="423.16" r="10.14" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Bosque Nativo
+Grado ponderado: 8" data-node="Agencia Ambiental" style="cursor:pointer"/><circle class="pa-m" cx="373.3" cy="234.8" r="10.98" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Centro de Bosque Nativo
 Centros de investigación
 Conexiones: 4
-Grado ponderado: 8" data-node="Centro de Bosque Nativo" style="cursor:pointer"/><circle class="pa-m" cx="432.37" cy="389.92" r="10.14" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="DataMar
+Grado ponderado: 8" data-node="Centro de Bosque Nativo" style="cursor:pointer"/><circle class="pa-m" cx="356.76" cy="272.71" r="10.98" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="DataMar
 Startups
 Conexiones: 2
-Grado ponderado: 8" data-node="DataMar" style="cursor:pointer"/><circle class="pa-m" cx="534.66" cy="363.44" r="10.14" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Instituto de Datos Abiertos
+Grado ponderado: 8" data-node="DataMar" style="cursor:pointer"/><circle class="pa-m" cx="267.74" cy="165.87" r="10.98" fill="#D42A5E" stroke="#FCFBF9" stroke-width="0.75" data-tip="Instituto de Datos Abiertos
 Centros de investigación
 Conexiones: 4
-Grado ponderado: 8" data-node="Instituto de Datos Abiertos" style="cursor:pointer"/><circle class="pa-m" cx="362.42" cy="254.36" r="10.14" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="VinoLab
+Grado ponderado: 8" data-node="Instituto de Datos Abiertos" style="cursor:pointer"/><circle class="pa-m" cx="303.23" cy="381.4" r="10.98" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="VinoLab
 Startups
 Conexiones: 2
-Grado ponderado: 8" data-node="VinoLab" style="cursor:pointer"/><circle class="pa-m" cx="387.71" cy="417.33" r="9.49" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="AgroSense
+Grado ponderado: 8" data-node="VinoLab" style="cursor:pointer"/><circle class="pa-m" cx="437.45" cy="259.69" r="10.27" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="AgroSense
 Startups
 Conexiones: 2
-Grado ponderado: 7" data-node="AgroSense" style="cursor:pointer"/><circle class="pa-m" cx="415.07" cy="304.44" r="9.49" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agrícola Itata
+Grado ponderado: 7" data-node="AgroSense" style="cursor:pointer"/><circle class="pa-m" cx="258.03" cy="262.74" r="10.27" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agrícola Itata
 Empresas
 Conexiones: 2
-Grado ponderado: 7" data-node="Agrícola Itata" style="cursor:pointer"/><circle class="pa-m" cx="650.81" cy="380.63" r="9.49" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Gobierno Regional
+Grado ponderado: 7" data-node="Agrícola Itata" style="cursor:pointer"/><circle class="pa-m" cx="136.29" cy="215.2" r="10.27" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Gobierno Regional
 Servicios públicos
 Conexiones: 2
-Grado ponderado: 7" data-node="Gobierno Regional" style="cursor:pointer"/><circle class="pa-m" cx="339.21" cy="284.08" r="8.78" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agencia de Fomento
+Grado ponderado: 7" data-node="Gobierno Regional" style="cursor:pointer"/><circle class="pa-m" cx="341.84" cy="321.88" r="9.51" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Agencia de Fomento
 Servicios públicos
 Conexiones: 2
-Grado ponderado: 6" data-node="Agencia de Fomento" style="cursor:pointer"/><circle class="pa-m" cx="370.1" cy="392.88" r="8.78" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="AquaIA
+Grado ponderado: 6" data-node="Agencia de Fomento" style="cursor:pointer"/><circle class="pa-m" cx="396.48" cy="282.98" r="9.51" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="AquaIA
 Startups
 Conexiones: 2
-Grado ponderado: 6" data-node="AquaIA" style="cursor:pointer"/><circle class="pa-m" cx="615.05" cy="289.41" r="8.78" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Cervecera Calle-Calle
+Grado ponderado: 6" data-node="AquaIA" style="cursor:pointer"/><circle class="pa-m" cx="47.15" cy="351.51" r="9.51" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Cervecera Calle-Calle
 Empresas
 Conexiones: 1
-Grado ponderado: 6" data-node="Cervecera Calle-Calle" style="cursor:pointer"/><circle class="pa-m" cx="422.5" cy="280.31" r="8.78" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Frutícola Maule
+Grado ponderado: 6" data-node="Cervecera Calle-Calle" style="cursor:pointer"/><circle class="pa-m" cx="273.31" cy="328.04" r="9.51" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Frutícola Maule
 Empresas
 Conexiones: 2
-Grado ponderado: 6" data-node="Frutícola Maule" style="cursor:pointer"/><circle class="pa-m" cx="409.51" cy="256.83" r="8.78" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="Riego360
+Grado ponderado: 6" data-node="Frutícola Maule" style="cursor:pointer"/><circle class="pa-m" cx="368.59" cy="364.1" r="9.51" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="Riego360
 Startups
 Conexiones: 3
-Grado ponderado: 6" data-node="Riego360" style="cursor:pointer"/><circle class="pa-m" cx="502.33" cy="235.22" r="8.02" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Forestal Ríos
+Grado ponderado: 6" data-node="Riego360" style="cursor:pointer"/><circle class="pa-m" cx="185.23" cy="403.35" r="8.68" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Forestal Ríos
 Empresas
 Conexiones: 1
-Grado ponderado: 5" data-node="Forestal Ríos" style="cursor:pointer"/><circle class="pa-m" cx="574.26" cy="405.84" r="8.02" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Pesquera Bahía
+Grado ponderado: 5" data-node="Forestal Ríos" style="cursor:pointer"/><circle class="pa-m" cx="190.43" cy="236" r="8.68" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Pesquera Bahía
 Empresas
 Conexiones: 3
-Grado ponderado: 5" data-node="Pesquera Bahía" style="cursor:pointer"/><circle class="pa-m" cx="349.21" cy="348.52" r="8.02" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="RoboFruit
+Grado ponderado: 5" data-node="Pesquera Bahía" style="cursor:pointer"/><circle class="pa-m" cx="328.07" cy="341.66" r="8.68" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="RoboFruit
 Startups
 Conexiones: 2
-Grado ponderado: 5" data-node="RoboFruit" style="cursor:pointer"/><circle class="pa-m" cx="242.44" cy="250.21" r="7.17" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="ForestEye
+Grado ponderado: 5" data-node="RoboFruit" style="cursor:pointer"/><circle class="pa-m" cx="460.05" cy="422.06" r="7.77" fill="#1E9C89" stroke="#FCFBF9" stroke-width="0.75" data-tip="ForestEye
 Startups
 Conexiones: 2
-Grado ponderado: 4" data-node="ForestEye" style="cursor:pointer"/><circle class="pa-m" cx="163.79" cy="351.18" r="7.17" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Minera Altiplano
+Grado ponderado: 4" data-node="ForestEye" style="cursor:pointer"/><circle class="pa-m" cx="607.81" cy="301.85" r="7.77" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Minera Altiplano
 Empresas
 Conexiones: 2
-Grado ponderado: 4" data-node="Minera Altiplano" style="cursor:pointer"/><circle class="pa-m" cx="530.73" cy="282.05" r="7.17" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Salmones Fiordo
+Grado ponderado: 4" data-node="Minera Altiplano" style="cursor:pointer"/><circle class="pa-m" cx="222.73" cy="375.09" r="7.77" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Salmones Fiordo
 Empresas
 Conexiones: 2
-Grado ponderado: 4" data-node="Salmones Fiordo" style="cursor:pointer"/><circle class="pa-m" cx="189.12" cy="397.85" r="6.21" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Metalúrgica Bío
+Grado ponderado: 4" data-node="Salmones Fiordo" style="cursor:pointer"/><circle class="pa-m" cx="497.93" cy="253.71" r="6.73" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Metalúrgica Bío
 Empresas
 Conexiones: 1
-Grado ponderado: 3" data-node="Metalúrgica Bío" style="cursor:pointer"/><circle class="pa-m" cx="316.87" cy="173.94" r="6.21" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oficina de Riego
+Grado ponderado: 3" data-node="Metalúrgica Bío" style="cursor:pointer"/><circle class="pa-m" cx="393.31" cy="458.95" r="6.73" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Oficina de Riego
 Servicios públicos
 Conexiones: 1
-Grado ponderado: 3" data-node="Oficina de Riego" style="cursor:pointer"/><circle class="pa-m" cx="176.87" cy="270.34" r="6.21" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Solar Atacama
+Grado ponderado: 3" data-node="Oficina de Riego" style="cursor:pointer"/><circle class="pa-m" cx="635.22" cy="359.81" r="6.73" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Solar Atacama
 Empresas
 Conexiones: 2
-Grado ponderado: 3" data-node="Solar Atacama" style="cursor:pointer"/><circle class="pa-m" cx="629.28" cy="324.92" r="3.59" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lácteos del Sur
+Grado ponderado: 3" data-node="Solar Atacama" style="cursor:pointer"/><circle class="pa-m" cx="38.61" cy="303.48" r="3.88" fill="#E8A33D" stroke="#FCFBF9" stroke-width="0.75" data-tip="Lácteos del Sur
 Empresas
 Conexiones: 1
-Grado ponderado: 1" data-node="Lácteos del Sur" style="cursor:pointer"/><circle class="pa-m" cx="298.42" cy="396.42" r="3.59" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Servicio de Salud Regional
+Grado ponderado: 1" data-node="Lácteos del Sur" style="cursor:pointer"/><circle class="pa-m" cx="493.83" cy="279.16" r="3.88" fill="#7B5CD6" stroke="#FCFBF9" stroke-width="0.75" data-tip="Servicio de Salud Regional
 Servicios públicos
 Conexiones: 1
-Grado ponderado: 1" data-node="Servicio de Salud Regional" style="cursor:pointer"/></g><g class="pa-labels"><text x="511.94" y="310.79" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. Minera del Norte">U. Minera del Norte</text><text x="251.09" y="271.73" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. Austral Andina">U. Austral Andina</text><text x="566.72" y="353.74" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Lab. de Materiales">Lab. de Materiales</text><text x="83.28" y="363.69" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. del Valle Central">U. del Valle Central</text><text x="200.67" y="377.85" text-anchor="end" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Instituto del Litio">Instituto del Litio</text><text x="373.83" y="210.02" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Lab. de Robótica Agrícola">Lab. de Robótica Agrícola</text><text x="232.37" y="442.61" text-anchor="end" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Celulosa Laja">Celulosa Laja</text><text x="479.78" y="433.26" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Centro de Acuicultura">Centro de Acuicultura</text><text x="307.77" y="242.64" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="BioLitio">BioLitio</text></g></g></g><text x="696" y="494" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>
+Grado ponderado: 1" data-node="Servicio de Salud Regional" style="cursor:pointer"/></g><g class="pa-labels"><text x="149.09" y="334.98" text-anchor="end" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. Minera del Norte">U. Minera del Norte</text><text x="448.91" y="389.88" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. del Pacífico Sur">U. del Pacífico Sur</text><text x="510.61" y="194.18" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. de los Lagos Altos">U. de los Lagos Altos</text><text x="656.13" y="250.95" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="U. del Valle Central">U. del Valle Central</text><text x="464.37" y="233.79" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Instituto del Litio">Instituto del Litio</text><text x="318.3" y="435.26" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Lab. de Robótica Agrícola">Lab. de Robótica Agrícola</text><text x="394.79" y="170.76" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Celulosa Laja">Celulosa Laja</text><text x="584.96" y="320.36" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Servicio de Pesca">Servicio de Pesca</text><text x="318.11" y="211.09" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Centro de Acuicultura">Centro de Acuicultura</text><text x="543.16" y="271.19" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Logística Puerto">Logística Puerto</text><text x="295.83" y="308.97" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Viña Cordillera">Viña Cordillera</text><text x="511.38" y="342.84" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="SolarTrack">SolarTrack</text><text x="570.44" y="374.04" text-anchor="start" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="BioLitio">BioLitio</text><text x="100.01" y="251.12" text-anchor="middle" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Municipalidad Costera">Municipalidad Costera</text></g></g></g><text x="720" y="510" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

@@ -76,6 +76,15 @@ export interface TableColumn {
 }
 
 export type Row = Record<string, string | number | Date | null | undefined>;
+/**
+ * A table, in any of these shapes (all become rows):
+ * rows `[{ region: "Biobío", sales: 1240 }]`; columns `{ region: ["Biobío"], sales: [1240] }`;
+ * header + rows `[["region", "sales"], ["Biobío", 1240]]` or `{ columns: ["region", "sales"], rows: [["Biobío", 1240]] }`;
+ * CSV/TSV text `"region,sales\nBiobío,1240"`.
+ */
+export type Table = Row[] | Record<string, Array<Row[string]>> | [string[], ...Array<Array<Row[string]>>] | { columns: string[]; rows: Array<Array<Row[string]>> } | string;
+/** Margin around the chart: a number, [vertical, horizontal], [top, right, bottom, left] or per side. Default: 8 top and bottom, 0 at the sides. */
+export type Padding = number | [number, number] | [number, number, number, number] | { top?: number; right?: number; bottom?: number; left?: number; x?: number; y?: number };
 
 export type Format =
   /** JS only: your own formatter, used for value labels, tooltips and axis ticks. */
@@ -124,7 +133,7 @@ export interface Theme {
   type: { title: number; subtitle: number; label: number; axis: number; legend: number; source: number; titleWeight: number };
   marks: { barRadius: number; barMax: number; barMaxH: number; lineWidth: number; pointRadius: number; gap: number; ring: number; areaOpacity: number; bandOpacity: number; dotOpacity: number };
   axes: { inside: boolean; grid: boolean };
-  layout: { padding: number; paddingSmall: number };
+  layout: { padding?: Padding };
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends any[] ? T[K] | string : DeepPartial<T[K]>) : T[K] };
@@ -218,7 +227,7 @@ export interface MapView {
 
 export interface Spec {
   type?: ChartType;
-  data?: Row[] | Record<string, number>;
+  data?: Table | Record<string, number>;
   title?: string;
   subtitle?: string;
   source?: string;
@@ -386,7 +395,7 @@ export interface Spec {
   locale?: Locale;
   width?: number;
   height?: number;
-  padding?: number;
+  padding?: Padding;
   fontFamily?: string;
   fontImport?: boolean;
   background?: boolean;
@@ -686,13 +695,14 @@ export declare function resolve(spec: Spec): Spec;
 
 export declare const schema: Record<string, unknown>;
 /** Library-wide defaults (font, textScale, locale, theme, palette…). The spec always wins. `configure(null)` resets. */
-export declare function configure(options?: Partial<Spec> | null): Partial<Spec>;
+/** Defaults for every chart. `fontHosts` adds hosts allowed for `font.import` (Google Fonts, Bunny, Typekit and cdnfonts always are). */
+export declare function configure(options?: (Partial<Spec> & { fontHosts?: string | string[] }) | null): Partial<Spec>;
 /** Add a chart type (the light entries 'plotagents/maps', 'plotagents/table' and 'plotagents/types/*' use it). */
 export declare function registerRenderer(type: string, render: (spec: Spec, theme: Theme) => string): void;
 export interface DashboardSpec {
   title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
   locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];
-  data?: Row[];
+  data?: Table;
   kpis?: Array<{ label: string; value?: number; delta?: number; period?: string; previous?: number; display?: string; trend?: number[]; good?: 'up' | 'down'; format?: Format;
     field?: string; agg?: 'sum' | 'mean' | 'median' | 'min' | 'max' | 'count' | 'distinct' | 'ratio'; over?: string; scale?: number;
     compare?: { field: string; current: string | number; previous: string | number }; trendBy?: string }>;
@@ -715,6 +725,10 @@ export declare function planDashboard(spec: DashboardSpec): object;
 /** Browser: draws a dashboard into an element. */
 /** Browser: wires the filters and charts of a dashboard already in the DOM. */
 export declare function mountDashboard(root: Element, plan: object): { plan: object; update(): void; destroy(): void };
+/** Any accepted table shape (columns, header + rows, CSV) → rows. */
+export declare function toRows(data: Table): Row[];
+/** Rows → [header, ...rows]: field names written once. Rows with different fields come back as is. */
+export declare function packTable(rows: Row[]): Table;
 export declare function packRows(spans: number[]): Array<Array<{ i: number; span: number }>>;
 export declare function balancedRows(spans: number[], hasPrimary?: boolean): Array<Array<{ i: number; span: number }>>;
 export declare function renderDashboard(target: string | Element, spec: DashboardSpec): { update(): void; destroy(): void };

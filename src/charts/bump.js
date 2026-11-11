@@ -13,7 +13,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, parseDate } from '../format.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldKind, inferXY, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldKind, inferXY, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { xLabels } from '../axes.js';
 import { langOf } from '../i18n.js';
@@ -68,7 +68,7 @@ export function bump(spec, theme) {
   // Orden de color: por puesto final (quien termina arriba toma el primer color).
   const byEnd = [...keep].sort((a, b) => (R(a, lastP) ?? Infinity) - (R(b, lastP) ?? Infinity) || (a < b ? -1 : 1));
   const cmap = colorMap(byEnd, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const colorOf = (s) => (hl && !hl.has(s) ? theme.dim : cmap.get(s));
   const rows = Math.min(N, Math.max(...keep.flatMap((s) => periods.map((p) => R(s, p) ?? 0)))) + (keep.some((s) => periods.some((p) => R(s, p) > N)) ? 1 : 0);
   const fmt = y ? makeFormat(spec.format, locale, [...val.values()]) : null;
