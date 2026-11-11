@@ -9,9 +9,9 @@ const svg = plot({ type, data, x, y, series, title, subtitle, source });
 
 ## Reglas para un buen gráfico
 
-1. **`title` es el hallazgo**, una oración completa con la cifra clave: "Biobío concentra el 30% de las ventas", no "Ventas por región".
-2. **`subtitle` dice cómo leerlo**: medida, unidad y período.
-3. **Define siempre `source`.** Si los datos son inventados, usa `source: "illustrative data"`.
+1. **`title`, `subtitle` y `source` son opcionales.** Omítelos si la página que rodea al gráfico ya los dice. Si pones `title`, que sea el hallazgo, una oración completa con la cifra clave: "Biobío concentra el 30% de las ventas", no "Ventas por región". `subtitle` dice cómo leerlo (medida, unidad, período); `source`, de dónde salen los datos.
+2. **Elige la forma de `data` según la tabla.** Filas (`[{ region: "Biobío", ventas: 1240 }]`) sirven para pocas filas. Para muchas, escribe los nombres de campo una vez: encabezado + filas `[["region", "ventas"], ["Biobío", 1240], ["Ñuble", 830]]`, columnas `{ region: ["Biobío", "Ñuble"], ventas: [1240, 830] }` o texto CSV `"region,ventas\nBiobío,1240"`. En un dashboard, pasa `data` una vez arriba.
+3. `padding` es 8 px arriba y abajo y 0 a los lados por defecto; pon un número, `[vertical, horizontal]` o `{ top, right, bottom, left }` para cambiarlo.
 4. `data` es una lista de filas (`[{ region: "Biobío", sales: 1240 }]`). Para una tabla ancha, pasa `y: ["revenue", "costs"]`.
 5. Usa `safePlot(spec)` como tu herramienta: nunca lanza excepciones y devuelve `errors`, `warnings` y `suggestions`, cada uno con un `fix`. Si `ok` es `false`, corrige el spec y vuelve a llamarla.
 6. Define `locale: "en"` para formatos numéricos en inglés (el valor por defecto es español: `1.234,5`); también hay `"pt"`, `"fr"`, `"de"` o `"auto"` para reconocerlo a partir del texto. Las tablas lo reconocen por sí solas.
@@ -94,7 +94,7 @@ Los nombres de seaborn funcionan (`histplot`, `kdeplot`, `boxplot`, `violinplot`
 
 Cuando alguien pida un dashboard, llama a `safeDashboard({ title, subtitle, source, data, kpis, charts, filters })` (herramienta: `toolDefinition({ kind: 'dashboard' })`). La disposición, los anchos, los colores compartidos y los filtros se deciden por ti:
 
-- `title` es la **pregunta** que responde el tablero; cada gráfico igual lleva su hallazgo como título.
+- `title` es la **pregunta** que responde el tablero; el título de un gráfico, si lo pones, dice su hallazgo.
 - Como máximo **5 KPI**, calculados a partir de `data` cuando sea posible: `{ label, field, agg: "sum", compare: { field: "year", current: 2025, previous: 2024 }, trendBy: "month" }`.
 - **De 4 a 6 gráficos**. La primera serie de tiempo (o la que tenga `primary: true`) va a todo el ancho; el resto llena filas equilibradas.
 - `filters: ["region", "channel"]` se convierten en botones que filtran todos los gráficos y KPI.

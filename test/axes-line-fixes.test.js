@@ -211,11 +211,11 @@ test('el primer punto no queda bajo una etiqueta interior del eje y', () => {
   const data = [];
   for (const s of ['A', 'B']) for (let y = 2018; y <= 2025; y++) data.push({ y, s, v: 100 + (y - 2018) * (s === 'A' ? 10 : 3) });
   const svg = plot({ type: 'line', data, x: 'y', y: 'v', series: 's', index: true });
-  const rx = +svg.match(/class="pa-cross" x="([\d.]+)"/)[1];
+  const rx = +svg.match(/class="pa-cross" x="(-?[\d.]+)"/)[1];
   assert.ok(cross(svg)[0].x > rx + 4 + 15, 'el trazado arranca pasada la etiqueta "100"');
   // Sin choque, el trazado sigue arrancando en el borde (aspecto por defecto intacto).
   const free = plot({ type: 'line', data: data.map((r) => ({ ...r, v: r.v + 7 })), x: 'y', y: 'v', series: 's' });
-  const rx2 = +free.match(/class="pa-cross" x="([\d.]+)"/)[1];
+  const rx2 = +free.match(/class="pa-cross" x="(-?[\d.]+)"/)[1];
   assert.ok(Math.abs(cross(free)[0].x - (rx2 + 4)) < 0.2);
 });
 
@@ -257,8 +257,8 @@ test('12 series largas a 260 px: el trazado no colapsa y las etiquetas no se sal
 
 test('un solo valor de x queda centrado; el área de un x se ve', () => {
   const svg = plot({ type: 'line', data: [{ m: '2024-03', a: 5 }], x: 'm', y: 'a' });
-  const rx = +svg.match(/class="pa-cross" x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/)[1];
-  const rw = +svg.match(/class="pa-cross" x="[\d.]+" y="[\d.]+" width="([\d.]+)"/)[1];
+  const rx = +svg.match(/class="pa-cross" x="(-?[\d.]+)" y="[\d.]+" width="([\d.]+)"/)[1];
+  const rw = +svg.match(/class="pa-cross" x="-?[\d.]+" y="[\d.]+" width="([\d.]+)"/)[1];
   const cx = cross(svg)[0].x;
   assert.ok(Math.abs(cx - (rx + rw / 2)) < 2, `centro ${cx} vs ${rx + rw / 2}`);
   assert.ok(svg.includes('>mar 2024<'));

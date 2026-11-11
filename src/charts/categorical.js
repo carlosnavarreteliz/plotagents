@@ -7,7 +7,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
@@ -90,7 +90,7 @@ function setup(spec, theme, m, extent, { type, zero = false, dodge = true, rowSt
   const fmt = makeFormat(spec.format, locale, m.all);
   const multiHue = m.hues.length > 1;
   const cmap = colorMap(m.hues, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const colorOf = (c, h) => {
     if (hl && !hl.has(c) && !hl.has(h)) return theme.dim;
     if (multiHue) return cmap.get(h);

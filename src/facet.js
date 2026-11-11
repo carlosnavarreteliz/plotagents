@@ -36,7 +36,7 @@ export function facet(spec, theme, renderOne) {
   const gap = spec.panelGap ?? 14;
   // Columnas pedidas, pero nunca paneles más angostos que el mínimo de un gráfico
   // (240 px, ver createFrame): más angostos se montarían unos sobre otros.
-  const fit = Math.max(1, Math.floor((area.w + gap) / 240));
+  const fit = Math.max(1, Math.floor((area.w + gap) / (240 + gap)));
   const want = (typeof spec.columns === 'number' ? spec.columns : undefined) ?? spec.colWrap ?? spec.col_wrap ?? Math.max(1, Math.floor((area.w + gap) / 230));
   const cols = Math.max(1, Math.min(keys.length, want, fit));
   const pw = (area.w - gap * (cols - 1)) / cols;

@@ -2,24 +2,18 @@
 // resto se agrupa en "Otros"). Etiquetas dentro cuando caben, afuera con
 // líneas guía sin choques, o como tabla-leyenda al lado. Media dona opcional.
 import { tipper } from '../tooltip.js';
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, arcPath } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, textOn } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
 
 const f = (n) => n.toFixed(2);
 
-function arc(cx, cy, R, r, a0, a1) {
-  if (a1 - a0 >= Math.PI * 2 - 1e-6) a1 = a0 + Math.PI * 2 - 1e-4;
-  const large = a1 - a0 > Math.PI ? 1 : 0;
-  const p = (rad, a) => `${f(cx + rad * Math.cos(a))},${f(cy + rad * Math.sin(a))}`;
-  if (r <= 0.01) return `M${f(cx)},${f(cy)}L${p(R, a0)}A${f(R)},${f(R)} 0 ${large} 1 ${p(R, a1)}Z`;
-  return `M${p(R, a0)}A${f(R)},${f(R)} 0 ${large} 1 ${p(R, a1)}L${p(r, a1)}A${f(r)},${f(r)} 0 ${large} 0 ${p(r, a0)}Z`;
-}
+const arc = (cx, cy, R, r, a0, a1) => arcPath(cx, cy, r, R, a0, a1);
 
 export function donut(spec, theme) {
   const data = ensureData(spec);
@@ -55,7 +49,7 @@ export function donut(spec, theme) {
   const total = slices.reduce((a, b) => a + b.v, 0);
   const fmt = makeFormat(spec.format, locale, slices.map((s) => s.v));
   const cmap = colorMap(slices.filter((s) => !s.other).map((s) => s.k), theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const colorOf = (s) => (s.other ? theme.other : hl && !hl.has(s.k) ? theme.dim : cmap.get(s.k));
   const pct = (v) => formatNumber((v / (total || 1)) * 100, (v / (total || 1)) * 100 < 10 ? 1 : 0, locale, true) + '%';
   // Segmentos punteados: rayado del mismo color (p. ej. una parte estimada).

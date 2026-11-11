@@ -71,7 +71,16 @@ export function flowchart(spec, theme) {
   // ── Carriles y orden dentro de cada capa (baricentros) ───────────────────
   const laneKeys = spec.lanes ?? uniq(N.map((n) => n.lane).filter((v) => v !== null && v !== undefined && v !== '').map(String));
   const hasLanes = laneKeys.length > 0 && spec.swimlanes !== false;
-  const laneOf = (n) => (hasLanes ? Math.max(0, laneKeys.indexOf(String(n.lane ?? laneKeys[0]))) : 0);
+  // Índice de carril con un Map (indexOf por nodo era cuadrático con miles de carriles).
+  const laneIdx = new Map();
+  laneKeys.forEach((k, i) => { if (!laneIdx.has(String(k))) laneIdx.set(String(k), i); });
+  const laneOf = (n) => (hasLanes ? laneIdx.get(String(n.lane ?? laneKeys[0])) ?? 0 : 0);
+  // Nodos de cada celda (capa × carril), armados una vez cuando las capas ya están ordenadas.
+  let cells = null;
+  const cellOf = (l, k) => {
+    if (!cells) { cells = new Map(); layers.forEach((ls, li) => ls.forEach((n) => { const key = li * nLanes + laneOf(n); const c = cells.get(key); if (c) c.push(n); else cells.set(key, [n]); })); }
+    return cells.get(l * nLanes + k) || [];
+  };
   const layers = Array.from({ length: L }, () => []);
   for (const n of N) layers[layer.get(n.id)].push(n);
   const pos = new Map();
@@ -176,7 +185,7 @@ export function flowchart(spec, theme) {
   if (TB) {
     if (hasLanes) {
       for (let l = 0; l < L; l++) for (let k = 0; k < nLanes; k++) {
-        const cell = layers[l].filter((n) => laneOf(n) === k);
+        const cell = cellOf(l, k);
         const [b0, b1] = laneBand[k];
         const slot = (b1 - b0) / Math.max(1, cell.length);
         cell.forEach((n, i) => { n.vc = b0 + slot * (i + 0.5); });
@@ -189,7 +198,7 @@ export function flowchart(spec, theme) {
     }
   } else {
     // LR: carriles como bandas horizontales con alto según su contenido.
-    const cellH = (k) => Math.max(0, ...layers.map((ls) => { const c = ls.filter((n) => laneOf(n) === k); return c.reduce((a, n) => a + n.h, 0) + Math.max(0, c.length - 1) * gapV; }));
+    const cellH = (k) => Math.max(0, ...layers.map((_, l) => { const c = cellOf(l, k); return c.reduce((a, n) => a + n.h, 0) + Math.max(0, c.length - 1) * gapV; }));
     let v = area.y + roomL;
     for (let k = 0; k < nLanes; k++) {
       const h = cellH(k) + 2 * lanePad + laneHead;
@@ -197,7 +206,7 @@ export function flowchart(spec, theme) {
       v += h + (hasLanes ? 6 : 0);
     }
     for (let l = 0; l < L; l++) for (let k = 0; k < nLanes; k++) {
-      const cell = layers[l].filter((n) => laneOf(n) === k);
+      const cell = cellOf(l, k);
       const [b0, b1] = laneBand[k];
       const inner0 = b0 + laneHead + lanePad, inner1 = b1 - lanePad;
       const tot = cell.reduce((a, n) => a + n.h, 0) + Math.max(0, cell.length - 1) * gapV;

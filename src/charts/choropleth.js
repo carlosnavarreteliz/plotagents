@@ -7,7 +7,7 @@
 // línea guía. En el navegador: zoom con clic, rueda (+ Ctrl/⌘) o pellizco.
 import { tipper } from '../tooltip.js';
 import { binnedScale } from '../colorscales.js';
-import { el, g, text, linkWrap } from '../svg.js';
+import { el, g, text, linkWrap, hitsAny } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ramp, textOn, colorMap, themeFor } from '../theme.js';
@@ -466,7 +466,7 @@ function drawMarkers(mk, proj, theme, fmt, placed) {
   if (mk.labels) for (const m of mk.items) {
     if (m.label === undefined || m.label === null || m.label === '') continue;
     const w = measure(String(m.label), 11, 600);
-    const hit = (box) => placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+    const hit = (box) => hitsAny(box, placed);
     // A la derecha del punto; si choca, a la izquierda; si no, encima.
     const cands = [
       { box: [m.x + m.r + 3, m.y - 8, m.x + m.r + 6 + w, m.y + 8], x: m.x + m.r + 4, y: m.y + 4, anchor: 'start' },
@@ -554,7 +554,7 @@ function mapLabels(items, theme, placedBoxes = [], bounds = null) {
     // Dentro del área: un rótulo junto al borde (Arica en un Chile acostado) se corre hacia adentro.
     const it = bounds ? { ...it0, cx: Math.max(bounds.x + w / 2 + 2, Math.min(bounds.x + bounds.w - w / 2 - 2, it0.cx)) } : it0;
     const box = [it.cx - w / 2 - 2, it.cy - 13, it.cx + w / 2 + 2, it.cy + 13];
-    if (placedBoxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
+    if (hitsAny(box, placedBoxes)) continue;
     placedBoxes.push(box);
     const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round', textAnchor: 'middle' };
     out.push(g({ class: 'pa-map-label', 'pointer-events': 'none' }, [
@@ -918,7 +918,7 @@ function spriteMatrix(m, proj, F) {
 /** El href de un sprite: sólo rutas y http(s), sin fragmento. */
 function spriteHref(spec, locale) {
   const h = String(spec.sprite ?? '').trim();
-  if (!/^(https?:\/\/|\/|\.{0,2}\/)[^#"<>\s]*$/i.test(h)) throw new PlotError(T(locale, `\`sprite\` debe ser la ruta de un archivo (/maps/chile.svg), sin #: "${h}".`, `\`sprite\` must be a file path (/maps/chile.svg), without #: "${h}".`), 'sprite: "/maps/chile.svg"');
+  if (!/^(https?:\/\/|\/(?!\/)|\.{1,2}\/)[^#"<>\s]*$/i.test(h)) throw new PlotError(T(locale, `\`sprite\` debe ser la ruta de un archivo (/maps/chile.svg), sin #: "${h}".`, `\`sprite\` must be a file path (/maps/chile.svg), without #: "${h}".`), 'sprite: "/maps/chile.svg"');
   return h;
 }
 

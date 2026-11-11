@@ -44,11 +44,11 @@ const svg = plot({
 | Field | What it is |
 |---|---|
 | `type` | The chart type, such as `bar`, `line` or `treemap`. Leave it out to infer it from the data. |
-| `data` | A list of rows: `[{ region: "Biobío", sales: 1240 }]`. |
+| `data` | The table: rows `[{ region: "Biobío", sales: 1240 }]`, or, for many rows, header + rows `[["region", "sales"], ["Biobío", 1240]]`, columns `{ region: [...], sales: [...] }` or CSV text. |
 | `x`, `y`, `series` | Which field goes where. Each chart type documents its own roles in the [chart reference](charts.md). |
-| `title` | The finding, as a full sentence with the key number. |
-| `subtitle` | How to read the chart: measure, unit and period. |
-| `source` | Where the data comes from. Use `"illustrative data"` when it is made up. |
+| `title` | Optional. The finding, as a full sentence with the key number. |
+| `subtitle` | Optional. How to read the chart: measure, unit and period. |
+| `source` | Optional. Where the data comes from. |
 | `locale` | `"es"` (the default, `1.234,5`) or `"en"` (`1,234.5`). |
 
 ### Wide tables

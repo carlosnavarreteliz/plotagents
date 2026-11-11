@@ -15,7 +15,7 @@ export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
-import { parseRgb } from './rgb.js';
+import { parseRgb, isColor, lin, rgbToHex, luminance, contrast } from './rgb.js';
 export { parseRgb };
 
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
@@ -24,7 +24,7 @@ const STRUCT = {
   type: { title: 22, subtitle: 14.5, label: 12, axis: 11.5, legend: 12.5, source: 11, titleWeight: 600 },
   marks: { barRadius: 4, barMax: 36, barMaxH: 22, lineWidth: 2.25, pointRadius: 4, gap: 2, ring: 2, areaOpacity: 0.12, bandOpacity: 0.16, dotOpacity: 0.85 },
   axes: { inside: true, grid: true },
-  layout: { padding: 24, paddingSmall: 12 },
+  layout: {},
 };
 
 const papel = {
@@ -102,17 +102,28 @@ export const ramps = {
 };
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
 export function deepMerge(base, over) {
   if (!isObj(over)) return base;
   const out = { ...base };
-  for (const [k, v] of Object.entries(over)) out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  for (const [k, v] of Object.entries(over)) {
+    if (UNSAFE_KEY.has(k)) continue;
+    out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
+  }
   return out;
 }
 
+// Hojas de fuentes: un spec solo puede pedir una de estos servicios (otra URL
+// sería una hoja de estilos ajena dentro de la página). Los temas registrados
+// con registerTheme() y configure({ fontHosts }) amplían la lista desde el código.
+const FONT_HOSTS = new Set(['fonts.googleapis.com', 'fonts.bunny.net', 'use.typekit.net', 'fonts.cdnfonts.com']);
+export function allowFontHosts(hosts) { for (const h of [].concat(hosts || [])) if (typeof h === 'string' && h) FONT_HOSTS.add(h.toLowerCase()); }
+const fontHostOk = (url) => { try { return FONT_HOSTS.has(new URL(url).hostname.toLowerCase()); } catch { return false; } };
+const own = (o, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
+
 // Colores válidos: hex, rgb()/hsl() y nombres CSS. Cualquier otra cosa se
 // descarta: los colores viajan a atributos, CSS y tooltips (sin inyección).
-const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgba?|hsla?)\([\d\s.,%/+-]+\)|[a-z]{3,20}|transparent|none)$/i;
-export const isColor = (c) => typeof c === 'string' && COLOR_RE.test(c.trim());
+export { isColor };
 const COLOR_KEYS = ['surface', 'ink', 'lede', 'muted', 'grid', 'axis', 'tint', 'tint2', 'dim', 'other'];
 
 /** Alias legibles de los tokens (background → surface, text → ink, …). */
@@ -134,7 +145,7 @@ function normalizeTokens(t) {
 }
 
 /** Descarta colores inválidos (vuelve al del tema base). */
-function sanitize(theme, base) {
+function sanitize(theme, base, trusted = false) {
   for (const k of COLOR_KEYS) if (theme[k] !== undefined && !isColor(theme[k])) theme[k] = base[k];
   for (const k of ['categorical', 'sequential', 'diverging']) {
     if (Array.isArray(theme[k])) { const ok = theme[k].filter(isColor); theme[k] = ok.length ? ok : base[k]; }
@@ -142,8 +153,13 @@ function sanitize(theme, base) {
   if (theme.accent !== undefined && !isColor(theme.accent)) delete theme.accent;
   if (isObj(theme.tooltip)) for (const k of ['bg', 'ink']) if (theme.tooltip[k] !== undefined && !isColor(theme.tooltip[k])) delete theme.tooltip[k];
   if (isObj(theme.status)) for (const k of Object.keys(theme.status)) if (!isColor(theme.status[k])) theme.status[k] = base.status?.[k];
-  if (theme.font && typeof theme.font.import === 'string' && !/^https:\/\/[^\s'"()<>\\]+$/.test(theme.font.import)) theme.font = { ...theme.font, import: undefined };
-  if (theme.font && typeof theme.font.family === 'string') theme.font = { ...theme.font, family: theme.font.family.replace(/[<>{};]/g, '') };
+  if (theme.font && typeof theme.font.import === 'string') {
+    const u = theme.font.import;
+    const inherited = u === base.font?.import;
+    if (!/^https:\/\/[^\s'"()<>\\]+$/.test(u) || !(trusted || inherited || fontHostOk(u))) theme.font = { ...theme.font, import: undefined };
+  }
+  // Familia: letras, números, espacios, comas, comillas, guiones y puntos (nada que cierre CSS).
+  if (theme.font && typeof theme.font.family === 'string') theme.font = { ...theme.font, family: theme.font.family.replace(/[^\p{L}\p{N}\s,'"_.-]/gu, '') };
   return theme;
 }
 
@@ -172,7 +188,7 @@ function namedRamp(name) {
 export function registerTheme(name, theme) {
   if (!name || typeof name !== 'string') throw new TypeError('registerTheme(name, theme): falta el nombre.');
   if (name === 'papel' || name === 'noche' || name === 'light' || name === 'dark') throw new TypeError(`"${name}" es un tema de fábrica: usa otro nombre o { extends: "${name}" }.`);
-  themes[name] = { ...getTheme(theme || {}), name };
+  themes[name] = { ...getTheme(theme || {}, true), name };
   return themes[name];
 }
 
@@ -184,17 +200,17 @@ export function registerTheme(name, theme) {
  * Alias: background, text, accent, grid { color, dash, width }, tooltip { bg, ink }, radius, barRadius, font.
  * `categorical`, `sequential` y `diverging` aceptan también un nombre de paleta o colormap.
  */
-export function getTheme(t) {
+export function getTheme(t, trusted = false) {
   if (!t) return papel;
-  if (typeof t === 'string') return themes[t] || papel;
+  if (typeof t === 'string') return own(themes, t) || papel;
   const over = normalizeTokens(t);
-  const base = (typeof over.extends === 'string' ? themes[over.extends] : isObj(over.extends) ? getTheme(over.extends) : null) || (over.mode === 'dark' ? noche : papel);
+  const base = (typeof over.extends === 'string' ? own(themes, over.extends) : isObj(over.extends) ? getTheme(over.extends, trusted) : null) || (over.mode === 'dark' ? noche : papel);
   const merged = deepMerge(base, over);
   delete merged.extends;
   if (typeof merged.categorical === 'string') merged.categorical = namedPalette(merged.categorical) || base.categorical;
   if (typeof merged.sequential === 'string') merged.sequential = namedRamp(merged.sequential) || base.sequential;
   if (typeof merged.diverging === 'string') merged.diverging = namedRamp(merged.diverging) || base.diverging;
-  return sanitize(merged, base);
+  return sanitize(merged, base, trusted);
 }
 
 /** Tema efectivo de un spec: `theme` + atajos `palette`, `ramp` y `colorScale`. */
@@ -224,10 +240,7 @@ export function hexToRgb(hex) {
   return parseRgb(hex);
 }
 
-export function rgbToHex([r, g, b]) {
-  const f = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
-  return ('#' + f(r) + f(g) + f(b)).toUpperCase();
-}
+export { rgbToHex, luminance, contrast };
 
 /** Mezcla de dos colores: t = 0 → a, t = 1 → b. */
 export function mix(a, b, t) {
@@ -235,21 +248,8 @@ export function mix(a, b, t) {
   return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
 }
 
-const lin = (c) => {
-  c /= 255;
-  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-};
 const delin = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
 
-export function luminance(hex) {
-  const [r, g, b] = hexToRgb(hex).map(lin);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-export function contrast(a, b) {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
 
 /** Texto blanco o tinta según qué contraste mejor sobre el relleno. */
 export function textOn(fill, theme) {

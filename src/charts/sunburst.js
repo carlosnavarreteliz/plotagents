@@ -1,24 +1,17 @@
 // Sunburst: la misma jerarquía que el treemap, en anillos concéntricos. El
 // anillo interior es el primer nivel (color por categoría); los exteriores
 // heredan el color con pasos sutiles de luminosidad. Total al centro.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, arcPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn } from '../theme.js';
-import { humanize } from '../data.js';
+import { humanize, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
 const TAU = Math.PI * 2;
 const f = (n) => n.toFixed(2);
 
-function arcPath(cx, cy, r0, r1, a0, a1) {
-  if (a1 - a0 >= TAU - 1e-6) a1 = a0 + TAU - 1e-4;
-  const large = a1 - a0 > Math.PI ? 1 : 0;
-  const p = (r, a) => `${f(cx + r * Math.cos(a))},${f(cy + r * Math.sin(a))}`;
-  if (r0 <= 0.01) return `M${f(cx)},${f(cy)}L${p(r1, a0)}A${f(r1)},${f(r1)} 0 ${large} 1 ${p(r1, a1)}Z`;
-  return `M${p(r1, a0)}A${f(r1)},${f(r1)} 0 ${large} 1 ${p(r1, a1)}L${p(r0, a1)}A${f(r0)},${f(r0)} 0 ${large} 0 ${p(r0, a0)}Z`;
-}
 
 export function sunburst(spec, theme) {
   const locale = spec.locale || 'es';
@@ -31,7 +24,7 @@ export function sunburst(spec, theme) {
   (function walk(n) { vals.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, vals);
   const share = shareFmt(locale);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const dim = (n) => hl && !n.path.some((p) => hl.has(p));
 
   const top = root.children;

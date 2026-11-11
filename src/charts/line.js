@@ -8,7 +8,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError } from '../data.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
 import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
@@ -167,7 +167,7 @@ export function line(spec, theme, variant = 'line') {
 
   // Colores y foco
   const cmap = colorMap(m.seriesKeys, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (k) => !hl || hl.has(k);
   const colorOf = (k) => (focus(k) ? (!multi ? (spec.colors?.[k] || theme.categorical[0]) : cmap.get(k)) : theme.dim);
 

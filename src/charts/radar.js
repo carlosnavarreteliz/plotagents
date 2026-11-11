@@ -5,7 +5,7 @@ import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 
 export function radar(spec, theme) {
@@ -69,7 +69,7 @@ export function radar(spec, theme) {
 
   // Colores y foco
   const cmap = colorMap(seriesKeys, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (s) => !hl || hl.has(s);
   const colorOf = (s) => (focus(s) ? (seriesKeys.length === 1 ? cmap.get(s) || theme.categorical[0] : cmap.get(s)) : theme.dim);
   const legend = seriesKeys.length > 1 ? seriesKeys.map((s) => ({ label: s, color: colorOf(s), shape: 'square' })) : [];

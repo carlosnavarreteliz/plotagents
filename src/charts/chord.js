@@ -1,7 +1,7 @@
 // Diagrama de cuerdas: flujos entre grupos alrededor de un círculo. El largo
 // de cada arco es el total del grupo; cada cinta une dos grupos y su ancho es
 // el flujo. Útil para migraciones, comercio entre bloques o transferencias.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, esc } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable } from '../theme.js';
@@ -215,6 +215,3 @@ export function chord(spec, theme) {
   return frame.finish(body, { desc, type: 'chord' });
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-}

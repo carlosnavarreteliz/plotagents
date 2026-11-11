@@ -48,7 +48,8 @@ export function spark(spec, theme) {
   const lw = spec.lineWidth ?? Math.min(theme.marks?.lineWidth ?? 2.25, 1.75);
   const dotR = spec.dot === false ? 0 : spec.dotRadius ?? lw + 0.9;
   const frame = createFrame(spec, theme, { chrome: false, width: 120, height: 32, minWidth: 16, minHeight: 8, padding: Math.ceil(Math.max(dotR, lw / 2) + 0.5) });
-  const area = { x: frame.pad, y: frame.pad, w: frame.width - frame.pad * 2, h: frame.height - frame.pad * 2 };
+  const { top: pT, right: pR, bottom: pB, left: pL } = frame.padding;
+  const area = { x: pL, y: pT, w: frame.width - pL - pR, h: frame.height - pT - pB };
 
   let lo = Math.min(...ys), hi = Math.max(...ys);
   if (spec.yDomain) [lo, hi] = spec.yDomain;

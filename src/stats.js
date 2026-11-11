@@ -95,12 +95,15 @@ const niceBinStep = (span, n) => {
  * Histograma con anchos "bonitos". Por defecto, regla de Freedman–Diaconis
  * acotada a 5–50 barras. Opciones: bins (número), binWidth, domain [a,b].
  */
+// Tope de barras: un `bins` o `binWidth` absurdo (1e7) no debe agotar la memoria.
+export const MAX_BINS = 2000;
 export function histogram(vs, { bins, binWidth, domain } = {}) {
+  bins = bins > 0 ? Math.min(MAX_BINS, Math.round(bins)) || 1 : bins;
   const s = finite(vs).sort((a, b) => a - b);
   if (!s.length) return [];
   let [lo, hi] = domain || [s[0], s[s.length - 1]];
   if (lo === hi) { lo -= 0.5; hi += 0.5; }
-  let step = binWidth;
+  let step = binWidth > 0 && (hi - lo) / binWidth <= MAX_BINS ? binWidth : binWidth > 0 ? (hi - lo) / MAX_BINS : 0;
   if (!step) {
     let n = bins;
     if (!n) {

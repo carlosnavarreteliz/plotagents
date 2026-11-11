@@ -7,10 +7,10 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | Opción | Significado |
 |---|---|
 | `type` | Tipo de gráfico o alias. Omítelo (o usa `"auto"`) para inferirlo de los datos. |
-| `data` | Arreglo de objetos fila. También acepta `{ A: 1, B: 2 }` y arreglos de números. |
-| `title` | El hallazgo, como una oración. Se divide en líneas; nunca se trunca. |
-| `subtitle` | Cómo leer el gráfico: medida, unidad, período. |
-| `source` | Fuente de los datos, en letra pequeña abajo a la derecha. |
+| `data` | Arreglo de objetos fila. También encabezado + filas `[["region", "ventas"], ["Biobío", 1240]]` (o `{ columns, rows }`), columnas `{ region: [...], ventas: [...] }`, texto CSV/TSV, `{ A: 1, B: 2 }` y arreglos de números. |
+| `title` | Opcional. El hallazgo, como una oración. Se divide en líneas; nunca se trunca. |
+| `subtitle` | Opcional. Cómo leer el gráfico: medida, unidad, período. |
+| `source` | Opcional. Fuente de los datos, en letra pequeña abajo a la derecha. |
 | `series` / `hue` | Campo que divide los datos en grupos de color. |
 | `highlight` | Un nombre o una lista: destaca esos y atenúa el resto. |
 | `colors` | `{ "name": "#hex" }` para fijar el color de una entidad. |
@@ -27,7 +27,8 @@ Cada gráfico recibe una especificación con `data` (filas) y los nombres de cam
 | `theme`, `palette`, `ramp` | Consulta [temas](themes.md). |
 | `colorScale` (`cmap`) | Cualquier mapa de colores de matplotlib (`"viridis"`, `"RdBu_r"`…) o tu propia lista de colores. Consulta [escalas de color](colorscales.md). |
 | `font`, `textScale` | Tipografía (nombre de Google Fonts, pila CSS o `{ family, import }`) y un multiplicador del tamaño del texto (alias `fontScale`, `labelScale`). Fíjalos para todos los gráficos con `configure()`. |
-| `width`, `height`, `padding` | Píxeles. La altura es automática en barras horizontales, mapas de calor, tarjetas KPI y en treemaps, sunbursts y radares angostos. |
+| `width`, `height` | Píxeles. La altura es automática en barras horizontales, mapas de calor, tarjetas KPI y en treemaps, sunbursts y radares angostos. |
+| `padding` | Margen en px. Por defecto 8 arriba y abajo, 0 a los lados. Un número, `[vertical, horizontal]`, `[arriba, derecha, abajo, izquierda]` o `{ top, right, bottom, left }`. |
 | `legend` | Posición: `"top"` (por defecto), `"bottom"`, `"left"`, `"right"` o `false` para ocultarla. Las leyendas laterales pasan abajo por debajo de 520 px. Fijar una posición también fuerza una leyenda donde el gráfico, de otro modo, rotularía las líneas directamente. |
 | `exclude` | Un nombre o una lista: quita esas entradas de la leyenda (series, grupos del primer nivel) y recalcula ejes, proporciones y diseño. Los colores se mantienen y las entradas excluidas siguen en la leyenda, atenuadas y tachadas. |
 | `tooltip` | Lo que dice cada marca al pasar el cursor, además de su valor: una lista de campos (líneas «Campo: valor» de las filas de la marca), o `{ title, fields: [campo \| { field, label, format }], text, replace }`, donde `text` es un campo con líneas ya escritas, o `false`. Desde JavaScript, también `(d) => texto \| { title, lines }` con `d.rows`, `d.lines`. Una marca hecha de varias filas (un grupo del treemap, un año con varias series) muestra un campo sólo si sus filas coinciden. |
@@ -460,7 +461,7 @@ plot({ type: 'pointmap', data: cities, lon: 'lon', lat: 'lat', size: 'population
 | `tileOpacity`, `zoom`, `center` | Opacidad de las teselas, nivel de ampliación fijo y centro `[lon, lat]`. |
 | `labels`, `labelValues` | Cuántos puntos nombrar (los 8 más grandes por defecto), o una lista; `labelValues: false` oculta los valores. |
 
-La atribución siempre se dibuja. Las teselas son imágenes externas: se ven en SVG en línea, `render()` y `toHTML()`, **no** cuando el SVG se usa como `<img>`, se abre desde un conversor a PDF o sin conexión; en esos casos el contorno vectorial del mundo que está debajo sigue dando contexto. `await embedTiles(svg)` las incrusta como URI data: (no para OSM, cuya política de teselas prohíbe las descargas masivas; usa `esri-gray` o tu propio servidor). Para mucho tráfico, usa un proveedor con clave o tus propias teselas: los servidores de OSM son donados.
+La atribución siempre se dibuja. Las teselas son imágenes externas: se ven en SVG en línea, `render()` y `toHTML()`, **no** cuando el SVG se usa como `<img>`, se abre desde un conversor a PDF o sin conexión; en esos casos el contorno vectorial del mundo que está debajo sigue dando contexto. `await embedTiles(svg)` las incrusta como URI data: (no para OSM, cuya política de teselas prohíbe las descargas masivas; usa `esri-gray` o tu propio servidor). Solo descarga imágenes https de hosts públicos (nada de localhost ni IPs privadas, sin redirecciones, hasta 2 MB por tesela); pasa `{ hosts: ['teselas.ejemplo.com'] }` para permitir solo tus servidores. Para mucho tráfico, usa un proveedor con clave o tus propias teselas: los servidores de OSM son donados.
 
 ## Formas discontinuas: estimaciones, proyecciones, cifras provisionales
 

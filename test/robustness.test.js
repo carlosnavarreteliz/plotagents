@@ -192,7 +192,7 @@ test('lint: messages follow the locale', () => {
   const en = lint({ type: 'bar', data: bars, x: 'region', y: 'ventas', titel: 'x', locale: 'en' });
   assert.match(issue(es, 'unknown-option').message, /Opción desconocida/);
   assert.match(issue(en, 'unknown-option').message, /Unknown option/);
-  assert.match(issue(en, 'source').message, /source is missing/);
+  assert.ok(!en.suggestions.some((w) => w.code === 'source'), 'la fuente es opcional');
 });
 
 test('didYouMean / editDistance', () => {

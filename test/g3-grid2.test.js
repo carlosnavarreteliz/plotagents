@@ -118,11 +118,11 @@ test('heatmap cornerLabel: in the empty corner, by the column labels, split on \
 // ── binned colorScale: closed, repeated breaks ─────────────────────────────
 
 test('binned colorScale closed: "right" puts a value equal to a break in the class below', () => {
-  const left = binnedScale({ colorScale: { colors: ['a', 'b', 'c'], breaks: [10, 20] } });
-  const right = binnedScale({ colorScale: { colors: ['a', 'b', 'c'], breaks: [10, 20], closed: 'right' } });
+  const left = binnedScale({ colorScale: { colors: ['#aaaaaa', '#bbbbbb', '#cccccc'], breaks: [10, 20] } });
+  const right = binnedScale({ colorScale: { colors: ['#aaaaaa', '#bbbbbb', '#cccccc'], breaks: [10, 20], closed: 'right' } });
   assert.deepEqual([9, 10, 15, 20, 21].map(left.cls), [0, 1, 1, 2, 2]);
   assert.deepEqual([9, 10, 15, 20, 21].map(right.cls), [0, 0, 1, 1, 2]);
-  assert.throws(() => binnedScale({ colorScale: { colors: ['a', 'b'], breaks: [1], closed: 'up' } }), /closed/);
+  assert.throws(() => binnedScale({ colorScale: { colors: ['#aaaaaa', '#bbbbbb'], breaks: [1], closed: 'up' } }), /closed/);
   // Through the charts.
   const d = [{ x: 'a', y: 'r', v: 10 }, { x: 'b', y: 'r', v: 20 }];
   const cs = { colors: ['#111111', '#555555', '#999999'], breaks: [10, 20] };
@@ -134,14 +134,14 @@ test('binned colorScale closed: "right" puts a value equal to a break in the cla
 });
 
 test('binned colorScale: repeated breaks merge (no throw); the empty class and its color drop', () => {
-  const b = binnedScale({ colorScale: { colors: ['c0', 'c1', 'c2', 'c3', 'c4'], breaks: [1, 5, 5, 9] } });
+  const b = binnedScale({ colorScale: { colors: ['#000000', '#111111', '#222222', '#333333', '#444444'], breaks: [1, 5, 5, 9] } });
   assert.deepEqual(b.breaks, [1, 5, 9]);
-  assert.deepEqual(b.colors, ['c0', 'c1', 'c3', 'c4']);
-  assert.deepEqual([0, 1, 4, 5, 8, 9].map(b.color), ['c0', 'c1', 'c1', 'c3', 'c3', 'c4']);
-  const r = binnedScale({ colorScale: { colors: ['c0', 'c1', 'c2', 'c3', 'c4'], breaks: [1, 5, 5, 9], closed: 'right' } });
-  assert.deepEqual([5, 5.1].map(r.color), ['c1', 'c3']);
+  assert.deepEqual(b.colors, ['#000000', '#111111', '#333333', '#444444']);
+  assert.deepEqual([0, 1, 4, 5, 8, 9].map(b.color), ['#000000', '#111111', '#111111', '#333333', '#333333', '#444444']);
+  const r = binnedScale({ colorScale: { colors: ['#000000', '#111111', '#222222', '#333333', '#444444'], breaks: [1, 5, 5, 9], closed: 'right' } });
+  assert.deepEqual([5, 5.1].map(r.color), ['#111111', '#333333']);
   // Decreasing breaks still throw.
-  assert.throws(() => binnedScale({ colorScale: { colors: ['a', 'b', 'c'], breaks: [2, 1] } }), /creciente/);
+  assert.throws(() => binnedScale({ colorScale: { colors: ['#aaaaaa', '#bbbbbb', '#cccccc'], breaks: [2, 1] } }), /creciente/);
   const spec = { ...hm, colorScale: { colors: ['#000000', '#333333', '#666666', '#999999', '#cccccc'], breaks: [-1, 0.5, 0.5, 2] } };
   assert.equal(safePlot(spec).ok, true);
   assert.ok(lint(spec).suggestions.some((s) => s.code === 'colorscale-repeated-breaks'));

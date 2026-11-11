@@ -31,13 +31,144 @@ export function fieldsOf(data) {
   return [...set];
 }
 
+// ── Formas compactas de `data` ─────────────────────────────────────────────
+// Filas como objetos repiten cada nombre de campo en cada fila. Para tablas
+// grandes (y para el costo en tokens de un agente) se aceptan también:
+//   columnas:          { region: ["Biobío", "Ñuble"], ventas: [1240, 830] }
+//   encabezado + filas: [["region", "ventas"], ["Biobío", 1240], ["Ñuble", 830]]
+//                      { columns: ["region", "ventas"], rows: [["Biobío", 1240], …] }
+//   texto CSV / TSV:   "region,ventas\nBiobío,1240\nÑuble,830"
+// Todas se convierten a filas una sola vez (se recuerda por objeto).
+const ROWS = new WeakMap();
+// `r["__proto__"] = v` cambiaría el prototipo de la fila: ese nombre de campo se descarta.
+const safeKey = (k) => k !== '__proto__';
+let lastText = null, lastTextRows = null;
+
+/** Convierte cualquier forma aceptada de `data` a filas; lo demás vuelve tal cual. */
+export function toRows(data) {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'string') {
+    if (data === lastText) return lastTextRows;
+    const rows = parseDelimited(data);
+    if (!rows) return data;
+    lastText = data; lastTextRows = rows;
+    return rows;
+  }
+  if (typeof data !== 'object') return data;
+  const hit = ROWS.get(data);
+  if (hit) return hit;
+  let out = null;
+  const isHeader = (h) => Array.isArray(h) && h.length > 0 && h.every((c) => typeof c === 'string');
+  if (Array.isArray(data)) {
+    if (data.length && isHeader(data[0]) && data.every(Array.isArray)) out = fromMatrix(data[0], data, 1);
+  } else {
+    const cols = data.columns ?? data.fields ?? data.header;
+    const body = data.rows ?? data.values ?? data.data;
+    if (isHeader(cols) && Array.isArray(body) && body.every(Array.isArray)) out = fromMatrix(cols, body, 0);
+    else {
+      const keys = Object.keys(data);
+      if (keys.length && keys.every((k) => Array.isArray(data[k]))) {
+        let n = 0;
+        const ks = keys.filter(safeKey);
+        for (const k of ks) if (data[k].length > n) n = data[k].length;
+        out = new Array(n);
+        for (let i = 0; i < n; i++) {
+          const r = {};
+          for (const k of ks) { const v = data[k][i]; if (v !== undefined) r[k] = v; }
+          out[i] = r;
+        }
+      }
+    }
+  }
+  if (out) ROWS.set(data, out);
+  return out ?? data;
+}
+
+function fromMatrix(head, body, from) {
+  const out = new Array(Math.max(0, body.length - from));
+  for (let i = from; i < body.length; i++) {
+    const row = body[i], r = {};
+    for (let j = 0; j < head.length; j++) { const v = row[j]; if (v !== undefined && safeKey(head[j])) r[head[j]] = v; }
+    out[i - from] = r;
+  }
+  return out;
+}
+
+const PLAIN_NUM = /^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$/;
+
+/** CSV / TSV / «;» con comillas dobles. Devuelve null si no parece una tabla. */
+function parseDelimited(text) {
+  const src = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+  const nl = src.indexOf('\n');
+  if (nl < 0) return null;
+  const first = src.slice(0, nl);
+  const count = (c) => first.split(c).length - 1;
+  const delim = ['\t', ';', ',', '|'].map((c) => [c, count(c)]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = [];
+  let row = [], cell = '', q = false;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (q) {
+      if (ch === '"') { if (src[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"' && cell === '') q = true;
+    else if (ch === delim) { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  row.push(cell); rows.push(row);
+  const head = rows[0].map((h) => h.trim());
+  if (!head.length || head.some((h) => h === '')) return null;
+  const cellValue = (v) => {
+    const t = v.trim();
+    if (t === '') return null;
+    return PLAIN_NUM.test(t) ? Number(t) : t;
+  };
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cells = rows[i];
+    if (cells.length === 1 && cells[0].trim() === '') continue;
+    const r = {};
+    for (let j = 0; j < head.length; j++) if (safeKey(head[j])) r[head[j]] = j < cells.length ? cellValue(cells[j]) : null;
+    out.push(r);
+  }
+  return out;
+}
+
+/**
+ * Filas → encabezado + filas ([["campo", …], [v, …], …]) para incrustar datos en
+ * una página: los nombres de campo van una vez. Solo si todas las filas tienen
+ * los mismos campos (si no, vuelven tal cual).
+ */
+export function packTable(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return rows;
+  const r0 = rows[0];
+  if (!r0 || typeof r0 !== 'object' || Array.isArray(r0)) return rows;
+  const keys = Object.keys(r0);
+  if (!keys.length) return rows;
+  const out = [keys];
+  for (const r of rows) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return rows;
+    let n = 0;
+    for (const k in r) { n++; if (!(k in r0)) return rows; }
+    if (n !== keys.length) return rows;
+    const vals = new Array(keys.length);
+    for (let j = 0; j < keys.length; j++) { const v = r[keys[j]]; if (v === undefined) return rows; vals[j] = v; }
+    out.push(vals);
+  }
+  return out;
+}
+
+/** Lo que `highlight` destaca, como Set de textos (null si no hay). */
+export const highlightSet = (spec) => (spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String)));
+
 export function ensureData(spec) {
-  let data = spec.data;
+  let data = toRows(spec.data);
   if (!Array.isArray(data)) {
     if (data && typeof data === 'object') {
       // { "Biobío": 10, "Ñuble": 5 } → filas
       data = Object.entries(data).map(([k, v]) => ({ label: k, value: v }));
-    } else throw new PlotError('`data` debe ser un arreglo de objetos (filas).', 'Ejemplo: data: [{ region: "Biobío", ventas: 120 }]');
+    } else throw new PlotError('`data` debe ser una tabla: filas, columnas o CSV.', 'Ejemplos: [{ region: "Biobío", ventas: 120 }] · { region: ["Biobío"], ventas: [120] } · [["region", "ventas"], ["Biobío", 120]] · "region,ventas\\nBiobío,120"');
   }
   if (data.length && typeof data[0] !== 'object') {
     data = data.map((v, i) => ({ index: i + 1, value: v }));

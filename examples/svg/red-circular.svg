@@ -1,457 +1,457 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 600" width="720" height="600" role="img" aria-label="Julián conecta los 9 círculos de la novela" aria-describedby="pawrgkvu-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="network" data-pa-mode="light" data-pa-lang="es" data-pa-top="88" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><desc id="pawrgkvu-d">Red de 70 nodos y 246 conexiones. Más conectados: Julián (49), Capitán Ríos (15), Andrés (13).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid #3A47B8;outline-offset:2px}.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}</style><rect width="720" height="600" fill="#FCFBF9"/><g class="pa-header"><text x="24" y="43.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">Julián conecta los 9 círculos de la novela</text><text x="24" y="69.5" fill="#4A5070" font-size="14.5">Personajes que aparecen juntos en escena, ordenados por círculo</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" data-value="Casa Valdés" style="cursor:pointer"><rect x="21" y="85" width="99.24" height="19" rx="4" fill="transparent"/><circle cx="29" cy="94.5" r="5" fill="#3A47B8"/><text x="40" y="99" fill="#4A5070" font-size="12.5">Casa Valdés</text></g><g class="pa-key" data-color="#D42A5E" data-value="Barricada" style="cursor:pointer"><rect x="130.24" y="85" width="82.57" height="19" rx="4" fill="transparent"/><circle cx="138.24" cy="94.5" r="5" fill="#D42A5E"/><text x="149.24" y="99" fill="#4A5070" font-size="12.5">Barricada</text></g><g class="pa-key" data-color="#E8A33D" data-value="Puerto" style="cursor:pointer"><rect x="222.81" y="85" width="65.11" height="19" rx="4" fill="transparent"/><circle cx="230.81" cy="94.5" r="5" fill="#E8A33D"/><text x="241.81" y="99" fill="#4A5070" font-size="12.5">Puerto</text></g><g class="pa-key" data-color="#1E9C89" data-value="Convento" style="cursor:pointer"><rect x="297.92" y="85" width="81.65" height="19" rx="4" fill="transparent"/><circle cx="305.92" cy="94.5" r="5" fill="#1E9C89"/><text x="316.92" y="99" fill="#4A5070" font-size="12.5">Convento</text></g><g class="pa-key" data-color="#7B5CD6" data-value="Posada" style="cursor:pointer"><rect x="389.57" y="85" width="69.84" height="19" rx="4" fill="transparent"/><circle cx="397.57" cy="94.5" r="5" fill="#7B5CD6"/><text x="408.57" y="99" fill="#4A5070" font-size="12.5">Posada</text></g><g class="pa-key" data-color="#B5562E" data-value="Tribunal" style="cursor:pointer"><rect x="469.41" y="85" width="74.04" height="19" rx="4" fill="transparent"/><circle cx="477.41" cy="94.5" r="5" fill="#B5562E"/><text x="488.41" y="99" fill="#4A5070" font-size="12.5">Tribunal</text></g><g class="pa-key" data-color="#5BA3E0" data-value="Mercado" style="cursor:pointer"><rect x="553.44" y="85" width="77.45" height="19" rx="4" fill="transparent"/><circle cx="561.44" cy="94.5" r="5" fill="#5BA3E0"/><text x="572.44" y="99" fill="#4A5070" font-size="12.5">Mercado</text></g><g class="pa-key" data-color="#8E9A2F" data-value="Taller" style="cursor:pointer"><rect x="21" y="105" width="59.86" height="19" rx="4" fill="transparent"/><circle cx="29" cy="114.5" r="5" fill="#8E9A2F"/><text x="40" y="119" fill="#4A5070" font-size="12.5">Taller</text></g><g class="pa-key" data-color="#A5AAC0" data-value="Colegio" style="cursor:pointer"><rect x="90.86" y="105" width="69.31" height="19" rx="4" fill="transparent"/><circle cx="98.86" cy="114.5" r="5" fill="#A5AAC0"/><text x="109.86" y="119" fill="#4A5070" font-size="12.5">Colegio</text></g></g></g><g class="pa-body"><g class="pa-net" data-layout="circular"><g class="pa-links" fill="none" stroke-linecap="round" stroke-opacity="0.3" stroke-width="1"><path class="pa-m" d="M360,232.9Q390.9,305.2 497.2,280.2" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Inés" data-tip="Julián — Inés
-1"/><path class="pa-m" d="M360,232.9Q396.2,312.4 520.7,312.1" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Rosaura" data-tip="Julián — Rosaura
-1"/><path class="pa-m" d="M360,232.9Q382.5,299.5 459.9,254.9" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Elías" data-tip="Julián — Elías
-1"/><path class="pa-m" d="M360,232.9Q380,298.4 448.8,249.9" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Leonor" data-tip="Julián — Leonor
-1"/><path class="pa-m" d="M360,232.9Q395.2,310.5 516.2,303.7" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Ramiro" data-tip="Julián — Ramiro
-1"/><path class="pa-m" d="M360,232.9Q393.9,308.7 510.8,295.5" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Celia" data-tip="Julián — Celia
-1"/><path class="pa-m" d="M497.2,280.2Q426,321.1 516.2,303.7" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Ramiro" data-tip="Inés — Ramiro
-1"/><path class="pa-m" d="M497.2,280.2Q419.9,314.3 489,273.2" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Fermín" data-tip="Inés — Fermín
-1"/><path class="pa-m" d="M399.7,236.1Q393.8,301.5 470.3,260.4" stroke="#3A47B8" stroke-width="1.29" data-s="Bruno" data-t="Nieves" data-tip="Bruno — Nieves
-1"/><path class="pa-m" d="M437.2,245.5Q412.5,313.3 516.2,303.7" stroke="#3A47B8" stroke-width="1.29" data-s="Gaspar" data-t="Ramiro" data-tip="Gaspar — Ramiro
-1"/><path class="pa-m" d="M437.2,245.5Q383.4,297.7 386.6,234.4" stroke="#3A47B8" stroke-width="1.29" data-s="Gaspar" data-t="Olga" data-tip="Gaspar — Olga
-1"/><path class="pa-m" d="M425.1,241.7Q380.6,296.9 386.6,234.4" stroke="#3A47B8" stroke-width="1.29" data-s="Dámaso" data-t="Olga" data-tip="Dámaso — Olga
-1"/><path class="pa-m" d="M526.5,329.5Q427.4,356.9 493.2,413.4" stroke="#D42A5E" stroke-width="1.29" data-s="Andrés" data-t="Noé" data-tip="Andrés — Noé
-1"/><path class="pa-m" d="M527.8,338.3Q435,348 525.4,364.9" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Vera" data-tip="Lucio — Vera
-1"/><path class="pa-m" d="M527.8,338.3Q432.3,353.7 513.6,390.4" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Íñigo" data-tip="Lucio — Íñigo
-1"/><path class="pa-m" d="M527.8,338.3Q427.7,358.9 493.2,413.4" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Noé" data-tip="Lucio — Noé
-1"/><path class="pa-m" d="M527.8,338.3Q433.4,351.9 518.6,382.2" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Hugo" data-tip="Lucio — Hugo
-1"/><path class="pa-m" d="M528.1,347.2Q431.1,357.5 507.7,398.4" stroke="#D42A5E" stroke-width="1.29" data-s="Marcial" data-t="Simón" data-tip="Marcial — Simón
-1"/><path class="pa-m" d="M528.1,347.2Q429.5,359.2 500.9,406.1" stroke="#D42A5E" stroke-width="1.29" data-s="Marcial" data-t="Ruth" data-tip="Marcial — Ruth
-1"/><path class="pa-m" d="M507.7,398.4Q430.5,361.5 525.4,364.9" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Vera" data-tip="Simón — Vera
-1"/><path class="pa-m" d="M507.7,398.4Q427.8,367.2 513.6,390.4" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Íñigo" data-tip="Simón — Íñigo
-1"/><path class="pa-m" d="M513.6,390.4Q431.1,361.7 522.5,373.6" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Pablo" data-tip="Íñigo — Pablo
-1"/><path class="pa-m" d="M522.5,373.6Q428.3,365.2 500.9,406.1" stroke="#D42A5E" stroke-width="1.29" data-s="Pablo" data-t="Ruth" data-tip="Pablo — Ruth
-1"/><path class="pa-m" d="M500.9,406.1Q421.7,374.1 493.2,413.4" stroke="#D42A5E" stroke-width="1.29" data-s="Ruth" data-t="Noé" data-tip="Ruth — Noé
-1"/><path class="pa-m" d="M475.3,426.6Q393.4,388.1 393.2,454.9" stroke="#E8A33D" stroke-width="1.29" data-s="Capitán Ríos" data-t="Eloy" data-tip="Capitán Ríos — Eloy
-1"/><path class="pa-m" d="M454.4,437.7Q391.6,390.1 406.2,452.7" stroke="#E8A33D" stroke-width="1.29" data-s="Marta" data-t="Fabia" data-tip="Marta — Fabia
-1"/><path class="pa-m" d="M443.1,442.4Q391.9,390.5 418.9,450" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Basilio" data-tip="Esteban — Basilio
-1"/><path class="pa-m" d="M443.1,442.4Q394.7,389.8 431.2,446.5" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Ciro" data-tip="Esteban — Ciro
-1"/><path class="pa-m" d="M443.1,442.4Q386.2,391.6 393.2,454.9" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Eloy" data-tip="Esteban — Eloy
-1"/><path class="pa-m" d="M431.2,446.5Q380.5,392.9 380,456.3" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Dora" data-tip="Ciro — Dora
-1"/><path class="pa-m" d="M431.2,446.5Q383.5,392.6 393.2,454.9" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Eloy" data-tip="Ciro — Eloy
-1"/><path class="pa-m" d="M380,456.3Q374.9,394.3 406.2,452.7" stroke="#E8A33D" stroke-width="1.29" data-s="Dora" data-t="Fabia" data-tip="Dora — Fabia
-1"/><path class="pa-m" d="M393.2,454.9Q377.9,394 406.2,452.7" stroke="#E8A33D" stroke-width="1.29" data-s="Eloy" data-t="Fabia" data-tip="Eloy — Fabia
-1"/><path class="pa-m" d="M301.1,450Q336.4,392.9 313.8,452.7" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Pía" data-t="Sor Rita" data-tip="Sor Pía — Sor Rita
-1"/><path class="pa-m" d="M360,232.9Q338.8,340.6 265.6,437.7" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Padre Anselmo" data-tip="Julián — Padre Anselmo
-1"/><path class="pa-m" d="M244.7,426.6Q300.8,375.4 212.3,398.4" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Don Cosme" data-tip="Doña Benita — Don Cosme
-1"/><path class="pa-m" d="M244.7,426.6Q299.5,373.6 206.4,390.4" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Quique" data-tip="Doña Benita — Quique
-1"/><path class="pa-m" d="M212.3,398.4Q295.1,370.8 219.1,406.1" stroke="#7B5CD6" stroke-width="1.29" data-s="Don Cosme" data-t="Toña" data-tip="Don Cosme — Toña
-1"/><path class="pa-m" d="M360,232.9Q330,335.2 226.8,413.4" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Paca" data-tip="Julián — Paca
-1"/><path class="pa-m" d="M360,232.9Q329.1,305.2 222.8,280.2" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Amparo" data-tip="Julián — Amparo
-1"/><path class="pa-m" d="M244.7,426.6Q298.9,354.1 203.8,303.7" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Pepa" data-tip="Doña Benita — Pepa
-1"/><path class="pa-m" d="M276.9,442.4Q336.8,392 340,456.3" stroke="#1E9C89" stroke-width="1.29" data-s="Hermano Luis" data-t="Sor Edith" data-tip="Hermano Luis — Sor Edith
-1"/><path class="pa-m" d="M282.8,245.5Q310.1,309.7 215.6,287.7" stroke="#8E9A2F" stroke-width="1.29" data-s="Rufo" data-t="Vicente" data-tip="Rufo — Vicente
-1"/><path class="pa-m" d="M527.8,338.3Q360.8,338 195.9,320.7" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Testigo Roca" data-tip="Lucio — Testigo Roca
-1"/><path class="pa-m" d="M271.2,249.9Q375.2,314.3 516.2,303.7" stroke="#8E9A2F" stroke-width="1.29" data-s="Clemente" data-t="Ramiro" data-tip="Clemente — Ramiro
-1"/><path class="pa-m" d="M386.6,234.4Q332.7,332.1 212.3,398.4" stroke="#3A47B8" stroke-width="1.29" data-s="Olga" data-t="Don Cosme" data-tip="Olga — Don Cosme
-1"/><path class="pa-m" d="M525.4,364.9Q364,361.5 212.3,398.4" stroke="#D42A5E" stroke-width="1.29" data-s="Vera" data-t="Don Cosme" data-tip="Vera — Don Cosme
-1"/><path class="pa-m" d="M195.9,320.7Q353.9,325 497.2,280.2" stroke="#B5562E" stroke-width="1.29" data-s="Testigo Roca" data-t="Inés" data-tip="Testigo Roca — Inés
-1"/><path class="pa-m" d="M527.3,356.1Q369.6,364.4 235.4,420.2" stroke="#D42A5E" stroke-width="1.29" data-s="Teo" data-t="Remigio" data-tip="Teo — Remigio
-1"/><path class="pa-m" d="M191.9,347.2Q292.2,360.9 226.8,413.4" stroke="#B5562E" stroke-width="1.29" data-s="Alguacil Mora" data-t="Paca" data-tip="Alguacil Mora — Paca
-1"/><path class="pa-m" d="M215.6,287.7Q344.9,309.7 437.2,245.5" stroke="#5BA3E0" stroke-width="1.29" data-s="Vicente" data-t="Gaspar" data-tip="Vicente — Gaspar
-1"/><path class="pa-m" d="M209.2,295.5Q336.5,358.1 406.2,452.7" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Fabia" data-tip="Telmo — Fabia
-1"/><path class="pa-m" d="M513.6,390.4Q390.1,380.3 340,456.3" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Sor Edith" data-tip="Íñigo — Sor Edith
-1"/><path class="pa-m" d="M215.6,287.7Q353.4,350.5 475.3,426.6" stroke="#5BA3E0" stroke-width="1.29" data-s="Vicente" data-t="Capitán Ríos" data-tip="Vicente — Capitán Ríos
-1"/><path class="pa-m" d="M525.4,364.9Q365.5,363.2 219.1,406.1" stroke="#D42A5E" stroke-width="1.29" data-s="Vera" data-t="Toña" data-tip="Vera — Toña
-1"/><path class="pa-m" d="M222.8,280.2Q297.4,344.2 219.1,406.1" stroke="#5BA3E0" stroke-width="1.29" data-s="Amparo" data-t="Toña" data-tip="Amparo — Toña
-1"/><path class="pa-m" d="M333.4,234.4Q390.6,326.5 522.5,373.6" stroke="#A5AAC0" stroke-width="1.29" data-s="Alumna Sol" data-t="Pablo" data-tip="Alumna Sol — Pablo
-1"/><path class="pa-m" d="M249.7,260.4Q366,311.4 497.2,280.2" stroke="#8E9A2F" stroke-width="1.29" data-s="Aprendiz Leo" data-t="Inés" data-tip="Aprendiz Leo — Inés
-1"/><path class="pa-m" d="M454.4,437.7Q365.2,388.7 288.8,446.5" stroke="#E8A33D" stroke-width="1.29" data-s="Marta" data-t="Novicia Eva" data-tip="Marta — Novicia Eva
-1"/><path class="pa-m" d="M301.1,450Q342.2,393.7 340,456.3" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Pía" data-t="Sor Edith" data-tip="Sor Pía — Sor Edith
-1"/><path class="pa-m" d="M203.8,303.7Q356.6,349.4 500.9,406.1" stroke="#5BA3E0" stroke-width="1.29" data-s="Pepa" data-t="Ruth" data-tip="Pepa — Ruth
-1"/><path class="pa-m" d="M209.2,295.5Q303.6,313.6 260.1,254.9" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Sabina" data-tip="Telmo — Sabina
-1"/><path class="pa-m" d="M493.2,413.4Q352.5,356.9 193.5,329.5" stroke="#D42A5E" stroke-width="1.29" data-s="Noé" data-t="Abogado Sanz" data-tip="Noé — Abogado Sanz
-1"/><path class="pa-m" d="M431.2,446.5Q412.6,374.3 522.5,373.6" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Pablo" data-tip="Ciro — Pablo
-1"/><path class="pa-m" d="M448.8,249.9Q396,346.4 431.2,446.5" stroke="#3A47B8" stroke-width="1.29" data-s="Leonor" data-t="Ciro" data-tip="Leonor — Ciro
-1"/><path class="pa-m" d="M209.2,295.5Q295.2,319.3 222.8,280.2" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Amparo" data-tip="Telmo — Amparo
-1"/><path class="pa-m" d="M195.9,320.7Q341.8,361.4 443.1,442.4" stroke="#B5562E" stroke-width="1.29" data-s="Testigo Roca" data-t="Esteban" data-tip="Testigo Roca — Esteban
-1"/><path class="pa-m" d="M313.8,452.7Q369.6,347.8 448.8,249.9" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Rita" data-t="Leonor" data-tip="Sor Rita — Leonor
-1"/><path class="pa-m" d="M235.4,420.2Q294.3,364.4 192.7,356.1" stroke="#7B5CD6" stroke-width="1.29" data-s="Remigio" data-t="Fiscal Ponce" data-tip="Remigio — Fiscal Ponce
-1"/><path class="pa-m" d="M489,273.2Q359.1,344.2 226.8,413.4" stroke="#3A47B8" stroke-width="1.29" data-s="Fermín" data-t="Paca" data-tip="Fermín — Paca
-1"/><path class="pa-m" d="M497.2,280.2Q353.4,326.9 193.5,329.5" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Abogado Sanz" data-tip="Inés — Abogado Sanz
-1"/><path class="pa-m" d="M507.7,398.4Q399.2,332.1 386.6,234.4" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Olga" data-tip="Simón — Olga
-1"/><path class="pa-m" d="M513.6,390.4Q373.3,376.1 265.6,437.7" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Padre Anselmo" data-tip="Íñigo — Padre Anselmo
-1"/><path class="pa-m" d="M399.7,236.1Q406.2,325 525.4,364.9" stroke="#3A47B8" stroke-width="1.29" data-s="Bruno" data-t="Vera" data-tip="Bruno — Vera
-1"/><path class="pa-m" d="M465.2,432.4Q399.7,387.5 431.2,446.5" stroke="#E8A33D" stroke-width="1.29" data-s="Lola" data-t="Ciro" data-tip="Lola — Ciro
-1"/><path class="pa-m" d="M516.2,303.7Q393.6,360.9 353.3,457" stroke="#3A47B8" stroke-width="1.29" data-s="Ramiro" data-t="Sor Clara" data-tip="Ramiro — Sor Clara
-1"/><path class="pa-m" d="M333.4,234.4Q383,303.9 489,273.2" stroke="#A5AAC0" stroke-width="1.29" data-s="Alumna Sol" data-t="Fermín" data-tip="Alumna Sol — Fermín
-1"/><path class="pa-m" d="M504.4,287.7Q397,357.1 380,456.3" stroke="#3A47B8" stroke-width="1.29" data-s="Catalina" data-t="Dora" data-tip="Catalina — Dora
-1"/><path class="pa-m" d="M191.9,347.2Q314.7,370.2 326.8,454.9" stroke="#B5562E" stroke-width="1.29" data-s="Alguacil Mora" data-t="Sor Ana" data-tip="Alguacil Mora — Sor Ana
-1"/><path class="pa-m" d="M265.6,437.7Q349.1,390.1 406.2,452.7" stroke="#1E9C89" stroke-width="1.29" data-s="Padre Anselmo" data-t="Fabia" data-tip="Padre Anselmo — Fabia
-1"/><path class="pa-m" d="M360,232.9Q387,302.1 480,266.6" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Abril" data-tip="Julián — Abril
-2"/><path class="pa-m" d="M360,232.9Q374.6,296.5 425.1,241.7" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Dámaso" data-tip="Julián — Dámaso
-2"/><path class="pa-m" d="M360,232.9Q366,294.9 386.6,234.4" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Olga" data-tip="Julián — Olga
-2"/><path class="pa-m" d="M360,232.9Q384.8,300.8 470.3,260.4" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Nieves" data-tip="Julián — Nieves
-2"/><path class="pa-m" d="M373.4,233.3Q377.7,296.6 425.1,241.7" stroke="#3A47B8" stroke-width="1.58" data-s="Tomasa" data-t="Dámaso" data-tip="Tomasa — Dámaso
-2"/><path class="pa-m" d="M373.4,233.3Q369,295 386.6,234.4" stroke="#3A47B8" stroke-width="1.58" data-s="Tomasa" data-t="Olga" data-tip="Tomasa — Olga
-2"/><path class="pa-m" d="M520.7,312.1Q421,318.6 470.3,260.4" stroke="#3A47B8" stroke-width="1.58" data-s="Rosaura" data-t="Nieves" data-tip="Rosaura — Nieves
-2"/><path class="pa-m" d="M459.9,254.9Q399.8,302.3 437.2,245.5" stroke="#3A47B8" stroke-width="1.58" data-s="Elías" data-t="Gaspar" data-tip="Elías — Gaspar
-2"/><path class="pa-m" d="M526.5,329.5Q434,347.9 522.5,373.6" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Pablo" data-tip="Andrés — Pablo
-2"/><path class="pa-m" d="M527.8,338.3Q431,355.5 507.7,398.4" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Simón" data-tip="Lucio — Simón
-2"/><path class="pa-m" d="M527.8,338.3Q429.5,357.2 500.9,406.1" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Ruth" data-tip="Lucio — Ruth
-2"/><path class="pa-m" d="M527.3,356.1Q434.8,352 525.4,364.9" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Vera" data-tip="Teo — Vera
-2"/><path class="pa-m" d="M527.3,356.1Q429.3,361.2 500.9,406.1" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Ruth" data-tip="Teo — Ruth
-2"/><path class="pa-m" d="M528.1,347.2Q432.4,355.7 513.6,390.4" stroke="#D42A5E" stroke-width="1.58" data-s="Marcial" data-t="Íñigo" data-tip="Marcial — Íñigo
-2"/><path class="pa-m" d="M525.4,364.9Q433.8,355.9 522.5,373.6" stroke="#D42A5E" stroke-width="1.58" data-s="Vera" data-t="Pablo" data-tip="Vera — Pablo
-2"/><path class="pa-m" d="M513.6,390.4Q430.3,363.6 518.6,382.2" stroke="#D42A5E" stroke-width="1.58" data-s="Íñigo" data-t="Hugo" data-tip="Íñigo — Hugo
-2"/><path class="pa-m" d="M360,232.9Q397.5,316.3 526.5,329.5" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Andrés" data-tip="Julián — Andrés
-2"/><path class="pa-m" d="M475.3,426.6Q390.4,388.4 380,456.3" stroke="#E8A33D" stroke-width="1.58" data-s="Capitán Ríos" data-t="Dora" data-tip="Capitán Ríos — Dora
-2"/><path class="pa-m" d="M454.4,437.7Q397.3,388.7 431.2,446.5" stroke="#E8A33D" stroke-width="1.58" data-s="Marta" data-t="Ciro" data-tip="Marta — Ciro
-2"/><path class="pa-m" d="M276.9,442.4Q333.8,391.6 326.8,454.9" stroke="#1E9C89" stroke-width="1.58" data-s="Hermano Luis" data-t="Sor Ana" data-tip="Hermano Luis — Sor Ana
-2"/><path class="pa-m" d="M360,232.9Q346.8,343.4 301.1,450" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Sor Pía" data-tip="Julián — Sor Pía
-2"/><path class="pa-m" d="M360,232.9Q341.3,341.7 276.9,442.4" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Hermano Luis" data-tip="Julián — Hermano Luis
-2"/><path class="pa-m" d="M194.6,364.9Q285.3,346 193.5,329.5" stroke="#B5562E" stroke-width="1.58" data-s="Juez Arteaga" data-t="Abogado Sanz" data-tip="Juez Arteaga — Abogado Sanz
-2"/><path class="pa-m" d="M192.7,356.1Q284.6,348 191.9,347.2" stroke="#B5562E" stroke-width="1.58" data-s="Fiscal Ponce" data-t="Alguacil Mora" data-tip="Fiscal Ponce — Alguacil Mora
-2"/><path class="pa-m" d="M192.7,356.1Q285.4,342 195.9,320.7" stroke="#B5562E" stroke-width="1.58" data-s="Fiscal Ponce" data-t="Testigo Roca" data-tip="Fiscal Ponce — Testigo Roca
-2"/><path class="pa-m" d="M192.2,338.3Q284.8,340 193.5,329.5" stroke="#B5562E" stroke-width="1.58" data-s="Escribano Gil" data-t="Abogado Sanz" data-tip="Escribano Gil — Abogado Sanz
-2"/><path class="pa-m" d="M360,232.9Q335.2,300.8 249.7,260.4" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Aprendiz Leo" data-tip="Julián — Aprendiz Leo
-2"/><path class="pa-m" d="M360,232.9Q340,298.4 271.2,249.9" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Clemente" data-tip="Julián — Clemente
-2"/><path class="pa-m" d="M215.6,287.7Q296.6,317.5 222.8,280.2" stroke="#5BA3E0" stroke-width="1.58" data-s="Vicente" data-t="Amparo" data-tip="Vicente — Amparo
-2"/><path class="pa-m" d="M526.5,329.5Q423.4,359.9 475.3,426.6" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Capitán Ríos" data-tip="Andrés — Capitán Ríos
-2"/><path class="pa-m" d="M526.5,329.5Q371.5,359.9 244.7,426.6" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Doña Benita" data-tip="Andrés — Doña Benita
-2"/><path class="pa-m" d="M475.3,426.6Q374.1,339.4 307.4,238.6" stroke="#E8A33D" stroke-width="1.58" data-s="Capitán Ríos" data-t="Profesor Lago" data-tip="Capitán Ríos — Profesor Lago
-2"/><path class="pa-m" d="M386.6,234.4Q358.5,344.8 326.8,454.9" stroke="#3A47B8" stroke-width="1.58" data-s="Olga" data-t="Sor Ana" data-tip="Olga — Sor Ana
-2"/><path class="pa-m" d="M500.9,406.1Q425.6,347.6 510.8,295.5" stroke="#D42A5E" stroke-width="1.58" data-s="Ruth" data-t="Celia" data-tip="Ruth — Celia
-2"/><path class="pa-m" d="M527.8,338.3Q415.1,321.1 437.2,245.5" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Gaspar" data-tip="Lucio — Gaspar
-2"/><path class="pa-m" d="M525.4,364.9Q360,354 194.6,364.9" stroke="#D42A5E" stroke-width="1.58" data-s="Vera" data-t="Juez Arteaga" data-tip="Vera — Juez Arteaga
-2"/><path class="pa-m" d="M510.8,295.5Q405.8,309.9 412.6,238.6" stroke="#3A47B8" stroke-width="1.58" data-s="Celia" data-t="Matías" data-tip="Celia — Matías
-2"/><path class="pa-m" d="M301.1,450Q358.6,344.7 412.6,238.6" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Pía" data-t="Matías" data-tip="Sor Pía — Matías
-2"/><path class="pa-m" d="M219.1,406.1Q312.3,381.6 288.8,446.5" stroke="#7B5CD6" stroke-width="1.58" data-s="Toña" data-t="Novicia Eva" data-tip="Toña — Novicia Eva
-2"/><path class="pa-m" d="M448.8,249.9Q364,346.4 288.8,446.5" stroke="#3A47B8" stroke-width="1.58" data-s="Leonor" data-t="Novicia Eva" data-tip="Leonor — Novicia Eva
-2"/><path class="pa-m" d="M235.4,420.2Q348,384.8 431.2,446.5" stroke="#7B5CD6" stroke-width="1.58" data-s="Remigio" data-t="Ciro" data-tip="Remigio — Ciro
-2"/><path class="pa-m" d="M288.8,446.5Q306.3,370.3 192.7,356.1" stroke="#1E9C89" stroke-width="1.58" data-s="Novicia Eva" data-t="Fiscal Ponce" data-tip="Novicia Eva — Fiscal Ponce
-2"/><path class="pa-m" d="M206.4,390.4Q313.6,331.3 307.4,238.6" stroke="#7B5CD6" stroke-width="1.58" data-s="Quique" data-t="Profesor Lago" data-tip="Quique — Profesor Lago
-2"/><path class="pa-m" d="M527.3,356.1Q435.4,348 528.1,347.2" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Marcial" data-tip="Teo — Marcial
-2"/><path class="pa-m" d="M209.2,295.5Q349.7,353.5 465.2,432.4" stroke="#5BA3E0" stroke-width="1.58" data-s="Telmo" data-t="Lola" data-tip="Telmo — Lola
-2"/><path class="pa-m" d="M265.6,437.7Q375.3,372.3 522.5,373.6" stroke="#1E9C89" stroke-width="1.58" data-s="Padre Anselmo" data-t="Pablo" data-tip="Padre Anselmo — Pablo
-2"/><path class="pa-m" d="M522.5,373.6Q413.9,329 437.2,245.5" stroke="#D42A5E" stroke-width="1.58" data-s="Pablo" data-t="Gaspar" data-tip="Pablo — Gaspar
-2"/><path class="pa-m" d="M240,266.6Q355.5,307.1 459.9,254.9" stroke="#8E9A2F" stroke-width="1.58" data-s="Maestro Ibar" data-t="Elías" data-tip="Maestro Ibar — Elías
-2"/><path class="pa-m" d="M393.2,454.9Q341.5,388.1 244.7,426.6" stroke="#E8A33D" stroke-width="1.58" data-s="Eloy" data-t="Doña Benita" data-tip="Eloy — Doña Benita
-2"/><path class="pa-m" d="M271.2,249.9Q331.1,299.1 320.3,236.1" stroke="#8E9A2F" stroke-width="1.58" data-s="Clemente" data-t="Bedel Juan" data-tip="Clemente — Bedel Juan
-2"/><path class="pa-m" d="M260.1,254.9Q336,349.9 353.3,457" stroke="#8E9A2F" stroke-width="1.58" data-s="Sabina" data-t="Sor Clara" data-tip="Sabina — Sor Clara
-2"/><path class="pa-m" d="M301.1,450Q340.8,343.7 333.4,234.4" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Pía" data-t="Alumna Sol" data-tip="Sor Pía — Alumna Sol
-2"/><path class="pa-m" d="M276.9,442.4Q323.9,344.5 282.8,245.5" stroke="#1E9C89" stroke-width="1.58" data-s="Hermano Luis" data-t="Rufo" data-tip="Hermano Luis — Rufo
-2"/><path class="pa-m" d="M443.1,442.4Q344.8,355.8 209.2,295.5" stroke="#E8A33D" stroke-width="1.58" data-s="Esteban" data-t="Telmo" data-tip="Esteban — Telmo
-2"/><path class="pa-m" d="M386.6,234.4Q364.5,345.3 353.3,457" stroke="#3A47B8" stroke-width="1.58" data-s="Olga" data-t="Sor Clara" data-tip="Olga — Sor Clara
-2"/><path class="pa-m" d="M203.8,303.7Q350.8,354.1 475.3,426.6" stroke="#5BA3E0" stroke-width="1.58" data-s="Pepa" data-t="Capitán Ríos" data-tip="Pepa — Capitán Ríos
-2"/><path class="pa-m" d="M353.3,457Q320.7,370.7 191.9,347.2" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Clara" data-t="Alguacil Mora" data-tip="Sor Clara — Alguacil Mora
-2"/><path class="pa-m" d="M431.2,446.5Q338.6,364.3 193.5,329.5" stroke="#E8A33D" stroke-width="1.58" data-s="Ciro" data-t="Abogado Sanz" data-tip="Ciro — Abogado Sanz
-2"/><path class="pa-m" d="M194.6,364.9Q288.8,338.4 209.2,295.5" stroke="#B5562E" stroke-width="1.58" data-s="Juez Arteaga" data-t="Telmo" data-tip="Juez Arteaga — Telmo
-2"/><path class="pa-m" d="M307.4,238.6Q340.7,345.8 326.8,454.9" stroke="#A5AAC0" stroke-width="1.58" data-s="Profesor Lago" data-t="Sor Ana" data-tip="Profesor Lago — Sor Ana
-2"/><path class="pa-m" d="M448.8,249.9Q344.3,332 201.4,382.2" stroke="#3A47B8" stroke-width="1.58" data-s="Leonor" data-t="Zoilo" data-tip="Leonor — Zoilo
-2"/><path class="pa-m" d="M260.1,254.9Q353.5,347.6 431.2,446.5" stroke="#8E9A2F" stroke-width="1.58" data-s="Sabina" data-t="Ciro" data-tip="Sabina — Ciro
-2"/><path class="pa-m" d="M360,232.9Q377.4,297.4 437.2,245.5" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Gaspar" data-tip="Julián — Gaspar
-3"/><path class="pa-m" d="M360,232.9Q389,303.6 489,273.2" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Fermín" data-tip="Julián — Fermín
-3"/><path class="pa-m" d="M437.2,245.5Q392,299.4 425.1,241.7" stroke="#3A47B8" stroke-width="1.8" data-s="Gaspar" data-t="Dámaso" data-tip="Gaspar — Dámaso
-3"/><path class="pa-m" d="M412.6,238.6Q386.5,297.8 425.1,241.7" stroke="#3A47B8" stroke-width="1.8" data-s="Matías" data-t="Dámaso" data-tip="Matías — Dámaso
-3"/><path class="pa-m" d="M386.6,234.4Q390.8,301.1 470.3,260.4" stroke="#3A47B8" stroke-width="1.8" data-s="Olga" data-t="Nieves" data-tip="Olga — Nieves
-3"/><path class="pa-m" d="M526.5,329.5Q432,351.7 513.6,390.4" stroke="#D42A5E" stroke-width="1.8" data-s="Andrés" data-t="Íñigo" data-tip="Andrés — Íñigo
-3"/><path class="pa-m" d="M526.5,329.5Q429.2,355.2 500.9,406.1" stroke="#D42A5E" stroke-width="1.8" data-s="Andrés" data-t="Ruth" data-tip="Andrés — Ruth
-3"/><path class="pa-m" d="M528.1,347.2Q427.8,360.9 493.2,413.4" stroke="#D42A5E" stroke-width="1.8" data-s="Marcial" data-t="Noé" data-tip="Marcial — Noé
-3"/><path class="pa-m" d="M525.4,364.9Q427.2,364.9 493.2,413.4" stroke="#D42A5E" stroke-width="1.8" data-s="Vera" data-t="Noé" data-tip="Vera — Noé
-3"/><path class="pa-m" d="M513.6,390.4Q424.5,370.6 493.2,413.4" stroke="#D42A5E" stroke-width="1.8" data-s="Íñigo" data-t="Noé" data-tip="Íñigo — Noé
-3"/><path class="pa-m" d="M493.2,413.4Q425.6,368.7 518.6,382.2" stroke="#D42A5E" stroke-width="1.8" data-s="Noé" data-t="Hugo" data-tip="Noé — Hugo
-3"/><path class="pa-m" d="M360,232.9Q397.8,318.3 527.8,338.3" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Lucio" data-tip="Julián — Lucio
-3"/><path class="pa-m" d="M360,232.9Q393.2,331.8 507.7,398.4" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Simón" data-tip="Julián — Simón
-3"/><path class="pa-m" d="M454.4,437.7Q404.9,385.5 465.2,432.4" stroke="#E8A33D" stroke-width="1.8" data-s="Marta" data-t="Lola" data-tip="Marta — Lola
-3"/><path class="pa-m" d="M353.3,457Q337.3,391.1 265.6,437.7" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Clara" data-t="Padre Anselmo" data-tip="Sor Clara — Padre Anselmo
-3"/><path class="pa-m" d="M353.3,457Q342.5,393 288.8,446.5" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Clara" data-t="Novicia Eva" data-tip="Sor Clara — Novicia Eva
-3"/><path class="pa-m" d="M265.6,437.7Q325.5,389.5 301.1,450" stroke="#1E9C89" stroke-width="1.8" data-s="Padre Anselmo" data-t="Sor Pía" data-tip="Padre Anselmo — Sor Pía
-3"/><path class="pa-m" d="M313.8,452.7Q342.1,394 326.8,454.9" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Rita" data-t="Sor Ana" data-tip="Sor Rita — Sor Ana
-3"/><path class="pa-m" d="M313.8,452.7Q333.6,392.1 288.8,446.5" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Rita" data-t="Novicia Eva" data-tip="Sor Rita — Novicia Eva
-3"/><path class="pa-m" d="M226.8,413.4Q295.5,370.6 206.4,390.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Paca" data-t="Quique" data-tip="Paca — Quique
-3"/><path class="pa-m" d="M235.4,420.2Q296.3,370.3 201.4,382.2" stroke="#7B5CD6" stroke-width="1.8" data-s="Remigio" data-t="Zoilo" data-tip="Remigio — Zoilo
-3"/><path class="pa-m" d="M235.4,420.2Q297.4,372.1 206.4,390.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Remigio" data-t="Quique" data-tip="Remigio — Quique
-3"/><path class="pa-m" d="M360,232.9Q334.1,338.1 244.7,426.6" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Doña Benita" data-tip="Julián — Doña Benita
-3"/><path class="pa-m" d="M360,232.9Q333,302.1 240,266.6" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Maestro Ibar" data-tip="Julián — Maestro Ibar
-3"/><path class="pa-m" d="M360,232.9Q327.5,306.9 215.6,287.7" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Vicente" data-tip="Julián — Vicente
-3"/><path class="pa-m" d="M360,232.9Q392.5,306.9 504.4,287.7" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Catalina" data-tip="Julián — Catalina
-4"/><path class="pa-m" d="M373.4,233.3Q385.5,299.6 459.9,254.9" stroke="#3A47B8" stroke-width="1.99" data-s="Tomasa" data-t="Elías" data-tip="Tomasa — Elías
-4"/><path class="pa-m" d="M399.7,236.1Q380.8,296.6 412.6,238.6" stroke="#3A47B8" stroke-width="1.99" data-s="Bruno" data-t="Matías" data-tip="Bruno — Matías
-4"/><path class="pa-m" d="M448.8,249.9Q386,298.7 386.6,234.4" stroke="#3A47B8" stroke-width="1.99" data-s="Leonor" data-t="Olga" data-tip="Leonor — Olga
-4"/><path class="pa-m" d="M480,266.6Q401.7,304.1 425.1,241.7" stroke="#3A47B8" stroke-width="1.99" data-s="Abril" data-t="Dámaso" data-tip="Abril — Dámaso
-4"/><path class="pa-m" d="M526.5,329.5Q434.7,346 525.4,364.9" stroke="#D42A5E" stroke-width="1.99" data-s="Andrés" data-t="Vera" data-tip="Andrés — Vera
-4"/><path class="pa-m" d="M527.8,338.3Q435.4,346 527.3,356.1" stroke="#D42A5E" stroke-width="1.99" data-s="Lucio" data-t="Teo" data-tip="Lucio — Teo
-4"/><path class="pa-m" d="M527.3,356.1Q434.2,353.9 522.5,373.6" stroke="#D42A5E" stroke-width="1.99" data-s="Teo" data-t="Pablo" data-tip="Teo — Pablo
-4"/><path class="pa-m" d="M507.7,398.4Q428.9,365.4 518.6,382.2" stroke="#D42A5E" stroke-width="1.99" data-s="Simón" data-t="Hugo" data-tip="Simón — Hugo
-4"/><path class="pa-m" d="M513.6,390.4Q426.3,369 500.9,406.1" stroke="#D42A5E" stroke-width="1.99" data-s="Íñigo" data-t="Ruth" data-tip="Íñigo — Ruth
-4"/><path class="pa-m" d="M522.5,373.6Q432.2,359.8 518.6,382.2" stroke="#D42A5E" stroke-width="1.99" data-s="Pablo" data-t="Hugo" data-tip="Pablo — Hugo
-4"/><path class="pa-m" d="M360,232.9Q397.2,324.3 525.4,364.9" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Vera" data-tip="Julián — Vera
-4"/><path class="pa-m" d="M465.2,432.4Q391.1,389.4 393.2,454.9" stroke="#E8A33D" stroke-width="1.99" data-s="Lola" data-t="Eloy" data-tip="Lola — Eloy
-4"/><path class="pa-m" d="M465.2,432.4Q394.1,388.9 406.2,452.7" stroke="#E8A33D" stroke-width="1.99" data-s="Lola" data-t="Fabia" data-tip="Lola — Fabia
-4"/><path class="pa-m" d="M360,232.9Q385.9,338.1 475.3,426.6" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Capitán Ríos" data-tip="Julián — Capitán Ríos
-4"/><path class="pa-m" d="M360,232.9Q381.2,340.6 454.4,437.7" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Marta" data-tip="Julián — Marta
-4"/><path class="pa-m" d="M340,456.3Q345.1,394.3 313.8,452.7" stroke="#1E9C89" stroke-width="1.99" data-s="Sor Edith" data-t="Sor Rita" data-tip="Sor Edith — Sor Rita
-4"/><path class="pa-m" d="M265.6,437.7Q331.3,390.6 326.8,454.9" stroke="#1E9C89" stroke-width="1.99" data-s="Padre Anselmo" data-t="Sor Ana" data-tip="Padre Anselmo — Sor Ana
-4"/><path class="pa-m" d="M276.9,442.4Q330.9,391.2 313.8,452.7" stroke="#1E9C89" stroke-width="1.99" data-s="Hermano Luis" data-t="Sor Rita" data-tip="Hermano Luis — Sor Rita
-4"/><path class="pa-m" d="M326.8,454.9Q336.5,392.6 288.8,446.5" stroke="#1E9C89" stroke-width="1.99" data-s="Sor Ana" data-t="Novicia Eva" data-tip="Sor Ana — Novicia Eva
-4"/><path class="pa-m" d="M360,232.9Q358.5,345 353.3,457" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Sor Clara" data-tip="Julián — Sor Clara
-4"/><path class="pa-m" d="M226.8,413.4Q298.3,374.1 219.1,406.1" stroke="#7B5CD6" stroke-width="1.99" data-s="Paca" data-t="Toña" data-tip="Paca — Toña
-4"/><path class="pa-m" d="M219.1,406.1Q293.7,369 206.4,390.4" stroke="#7B5CD6" stroke-width="1.99" data-s="Toña" data-t="Quique" data-tip="Toña — Quique
-4"/><path class="pa-m" d="M360,232.9Q332,336.7 235.4,420.2" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Remigio" data-tip="Julián — Remigio
-4"/><path class="pa-m" d="M194.6,364.9Q285.2,352 192.7,356.1" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Fiscal Ponce" data-tip="Juez Arteaga — Fiscal Ponce
-4"/><path class="pa-m" d="M194.6,364.9Q285.9,344 195.9,320.7" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Testigo Roca" data-tip="Juez Arteaga — Testigo Roca
-4"/><path class="pa-m" d="M192.7,356.1Q284.9,344 193.5,329.5" stroke="#B5562E" stroke-width="1.99" data-s="Fiscal Ponce" data-t="Abogado Sanz" data-tip="Fiscal Ponce — Abogado Sanz
-4"/><path class="pa-m" d="M240,266.6Q313,305.9 271.2,249.9" stroke="#8E9A2F" stroke-width="1.99" data-s="Maestro Ibar" data-t="Clemente" data-tip="Maestro Ibar — Clemente
-4"/><path class="pa-m" d="M360,232.9Q324.8,310.5 203.8,303.7" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Pepa" data-tip="Julián — Pepa
-4"/><path class="pa-m" d="M360,232.9Q354,294.9 333.4,234.4" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Alumna Sol" data-tip="Julián — Alumna Sol
-4"/><path class="pa-m" d="M475.3,426.6Q358.9,345.7 240,266.6" stroke="#E8A33D" stroke-width="1.99" data-s="Capitán Ríos" data-t="Maestro Ibar" data-tip="Capitán Ríos — Maestro Ibar
-4"/><path class="pa-m" d="M194.6,364.9Q287.6,340.2 203.8,303.7" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Pepa" data-tip="Juez Arteaga — Pepa
-4"/><path class="pa-m" d="M360,232.9Q371.8,295.8 412.6,238.6" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Matías" data-tip="Julián — Matías
-5"/><path class="pa-m" d="M526.5,329.5Q430.7,353.5 507.7,398.4" stroke="#D42A5E" stroke-width="2.15" data-s="Andrés" data-t="Simón" data-tip="Andrés — Simón
-5"/><path class="pa-m" d="M526.5,329.5Q433.1,349.9 518.6,382.2" stroke="#D42A5E" stroke-width="2.15" data-s="Andrés" data-t="Hugo" data-tip="Andrés — Hugo
-5"/><path class="pa-m" d="M360,232.9Q397.6,322.3 527.3,356.1" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Teo" data-tip="Julián — Teo
-5"/><path class="pa-m" d="M475.3,426.6Q399.2,387 418.9,450" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Basilio" data-tip="Capitán Ríos — Basilio
-5"/><path class="pa-m" d="M475.3,426.6Q402,386.2 431.2,446.5" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Ciro" data-tip="Capitán Ríos — Ciro
-5"/><path class="pa-m" d="M475.3,426.6Q396.3,387.6 406.2,452.7" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Fabia" data-tip="Capitán Ríos — Fabia
-5"/><path class="pa-m" d="M360,232.9Q383.7,339.5 465.2,432.4" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Lola" data-tip="Julián — Lola
-5"/><path class="pa-m" d="M353.3,457Q339.8,392.1 276.9,442.4" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Hermano Luis" data-tip="Sor Clara — Hermano Luis
-5"/><path class="pa-m" d="M353.3,457Q348.1,394.4 313.8,452.7" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Sor Rita" data-tip="Sor Clara — Sor Rita
-5"/><path class="pa-m" d="M353.3,457Q351,394.9 326.8,454.9" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Sor Ana" data-tip="Sor Clara — Sor Ana
-5"/><path class="pa-m" d="M244.7,426.6Q302.4,377.1 219.1,406.1" stroke="#7B5CD6" stroke-width="2.15" data-s="Doña Benita" data-t="Toña" data-tip="Doña Benita — Toña
-5"/><path class="pa-m" d="M244.7,426.6Q298.4,371.7 201.4,382.2" stroke="#7B5CD6" stroke-width="2.15" data-s="Doña Benita" data-t="Zoilo" data-tip="Doña Benita — Zoilo
-5"/><path class="pa-m" d="M240,266.6Q315.6,305 282.8,245.5" stroke="#8E9A2F" stroke-width="2.15" data-s="Maestro Ibar" data-t="Rufo" data-tip="Maestro Ibar — Rufo
-5"/><path class="pa-m" d="M360,232.9Q348.2,295.8 307.4,238.6" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Profesor Lago" data-tip="Julián — Profesor Lago
-5"/><path class="pa-m" d="M475.3,426.6Q384.4,388.5 353.3,457" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Sor Clara" data-tip="Capitán Ríos — Sor Clara
-5"/><path class="pa-m" d="M526.5,329.5Q435.1,344 527.3,356.1" stroke="#D42A5E" stroke-width="2.3" data-s="Andrés" data-t="Teo" data-tip="Andrés — Teo
-6"/><path class="pa-m" d="M244.7,426.6Q306,380.3 235.4,420.2" stroke="#7B5CD6" stroke-width="2.3" data-s="Doña Benita" data-t="Remigio" data-tip="Doña Benita — Remigio
-6"/><path class="pa-m" d="M194.6,364.9Q285,348 192.2,338.3" stroke="#B5562E" stroke-width="2.3" data-s="Juez Arteaga" data-t="Escribano Gil" data-tip="Juez Arteaga — Escribano Gil
-6"/><path class="pa-m" d="M194.6,364.9Q285,350 191.9,347.2" stroke="#B5562E" stroke-width="2.3" data-s="Juez Arteaga" data-t="Alguacil Mora" data-tip="Juez Arteaga — Alguacil Mora
-6"/><path class="pa-m" d="M360,232.9Q322.2,318.3 192.2,338.3" stroke="#3A47B8" stroke-width="2.3" data-s="Julián" data-t="Escribano Gil" data-tip="Julián — Escribano Gil
-6"/><path class="pa-m" d="M360,232.9Q351.1,295.3 320.3,236.1" stroke="#3A47B8" stroke-width="2.3" data-s="Julián" data-t="Bedel Juan" data-tip="Julián — Bedel Juan
-6"/><path class="pa-m" d="M475.3,426.6Q404.6,385.3 443.1,442.4" stroke="#E8A33D" stroke-width="2.43" data-s="Capitán Ríos" data-t="Esteban" data-tip="Capitán Ríos — Esteban
-7"/><path class="pa-m" d="M360,232.9Q378.7,341.7 443.1,442.4" stroke="#3A47B8" stroke-width="2.43" data-s="Julián" data-t="Esteban" data-tip="Julián — Esteban
-7"/><path class="pa-m" d="M353.3,457Q345.2,393.8 301.1,450" stroke="#1E9C89" stroke-width="2.43" data-s="Sor Clara" data-t="Sor Pía" data-tip="Sor Clara — Sor Pía
-7"/><path class="pa-m" d="M360,232.9Q373.2,343.4 418.9,450" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Basilio" data-tip="Julián — Basilio
-8"/><path class="pa-m" d="M360,232.9Q355.5,344.8 340,456.3" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Sor Edith" data-tip="Julián — Sor Edith
-8"/><path class="pa-m" d="M360,232.9Q322.4,322.3 192.7,356.1" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Fiscal Ponce" data-tip="Julián — Fiscal Ponce
-8"/><path class="pa-m" d="M240,266.6Q310.5,307.1 260.1,254.9" stroke="#8E9A2F" stroke-width="2.56" data-s="Maestro Ibar" data-t="Sabina" data-tip="Maestro Ibar — Sabina
-8"/><path class="pa-m" d="M526.5,329.5Q435.3,342 528.1,347.2" stroke="#D42A5E" stroke-width="2.68" data-s="Andrés" data-t="Marcial" data-tip="Andrés — Marcial
-9"/><path class="pa-m" d="M360,232.9Q397.8,320.3 528.1,347.2" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Marcial" data-tip="Julián — Marcial
-9"/><path class="pa-m" d="M244.7,426.6Q304.1,378.7 226.8,413.4" stroke="#7B5CD6" stroke-width="2.68" data-s="Doña Benita" data-t="Paca" data-tip="Doña Benita — Paca
-9"/><path class="pa-m" d="M360,232.9Q326.8,331.8 212.3,398.4" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Don Cosme" data-tip="Julián — Don Cosme
-9"/><path class="pa-m" d="M360,232.9Q322.8,324.3 194.6,364.9" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Juez Arteaga" data-tip="Julián — Juez Arteaga
-9"/><path class="pa-m" d="M360,232.9Q322.2,320.3 191.9,347.2" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Alguacil Mora" data-tip="Julián — Alguacil Mora
-9"/><path class="pa-m" d="M307.4,238.6Q342.2,296.2 333.4,234.4" stroke="#A5AAC0" stroke-width="2.68" data-s="Profesor Lago" data-t="Alumna Sol" data-tip="Profesor Lago — Alumna Sol
-9"/><path class="pa-m" d="M475.3,426.6Q407.2,384.2 454.4,437.7" stroke="#E8A33D" stroke-width="2.79" data-s="Capitán Ríos" data-t="Marta" data-tip="Capitán Ríos — Marta
-10"/><path class="pa-m" d="M203.8,303.7Q292.3,322.8 215.6,287.7" stroke="#5BA3E0" stroke-width="2.79" data-s="Pepa" data-t="Vicente" data-tip="Pepa — Vicente
-10"/><path class="pa-m" d="M203.8,303.7Q290.9,324.6 209.2,295.5" stroke="#5BA3E0" stroke-width="2.9" data-s="Pepa" data-t="Telmo" data-tip="Pepa — Telmo
-11"/><path class="pa-m" d="M307.4,238.6Q339.2,296.6 320.3,236.1" stroke="#A5AAC0" stroke-width="2.9" data-s="Profesor Lago" data-t="Bedel Juan" data-tip="Profesor Lago — Bedel Juan
-11"/><path class="pa-m" d="M360,232.9Q363,294.7 373.4,233.3" stroke="#3A47B8" stroke-width="3" data-s="Julián" data-t="Tomasa" data-tip="Julián — Tomasa
-12"/><path class="pa-m" d="M360,232.9Q368.9,295.3 399.7,236.1" stroke="#3A47B8" stroke-width="3" data-s="Julián" data-t="Bruno" data-tip="Julián — Bruno
-12"/><path class="pa-m" d="M526.5,329.5Q435.2,340 527.8,338.3" stroke="#D42A5E" stroke-width="3" data-s="Andrés" data-t="Lucio" data-tip="Andrés — Lucio
-12"/><path class="pa-m" d="M475.3,426.6Q409.6,383 465.2,432.4" stroke="#E8A33D" stroke-width="3" data-s="Capitán Ríos" data-t="Lola" data-tip="Capitán Ríos — Lola
-12"/><path class="pa-m" d="M353.3,457Q354,395.2 340,456.3" stroke="#1E9C89" stroke-width="3" data-s="Sor Clara" data-t="Sor Edith" data-tip="Sor Clara — Sor Edith
-12"/><path class="pa-m" d="M240,266.6Q308.2,308.3 249.7,260.4" stroke="#8E9A2F" stroke-width="3" data-s="Maestro Ibar" data-t="Aprendiz Leo" data-tip="Maestro Ibar — Aprendiz Leo
-12"/><path class="pa-m" d="M203.8,303.7Q294,321.1 222.8,280.2" stroke="#5BA3E0" stroke-width="3" data-s="Pepa" data-t="Amparo" data-tip="Pepa — Amparo
-12"/></g><g class="pa-nodes"><circle class="pa-m" cx="360" cy="232.94" r="8.21" fill="#3A47B8" data-tip="Julián
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 600" width="720" height="600" role="img" aria-label="Julián conecta los 9 círculos de la novela" aria-describedby="pawrgkvu-d" font-family="&#39;Mozilla Text&#39;, &#39;Inter&#39;, system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" class="pa-chart" data-pa-type="network" data-pa-mode="light" data-pa-lang="es" data-pa-top="72" style="max-width:100%;height:auto;font-variant-numeric:lining-nums"><desc id="pawrgkvu-d">Red de 70 nodos y 246 conexiones. Más conectados: Julián (49), Capitán Ríos (15), Andrés (13).</desc><style>.pa-m{transition:opacity .15s ease}.pa-focus .pa-m{opacity:.28}.pa-focus .pa-m.pa-on{opacity:1}@media (prefers-reduced-motion:reduce){.pa-m{transition:none}}.pa-chart:focus-visible{outline:2px solid #3A47B8;outline-offset:2px}.pa-focus .pa-net .pa-m{opacity:.12}.pa-focus .pa-net .pa-m.pa-on{opacity:1}</style><rect width="720" height="600" fill="#FCFBF9"/><g class="pa-header"><text x="0" y="27.8" fill="#141A3F" font-size="22" font-weight="600" letter-spacing="-0.01em">Julián conecta los 9 círculos de la novela</text><text x="0" y="53.5" fill="#4A5070" font-size="14.5">Personajes que aparecen juntos en escena, ordenados por círculo</text><g class="pa-legend"><g class="pa-key" data-color="#3A47B8" data-value="Casa Valdés" style="cursor:pointer"><rect x="-3" y="69" width="99.24" height="19" rx="4" fill="transparent"/><circle cx="5" cy="78.5" r="5" fill="#3A47B8"/><text x="16" y="83" fill="#4A5070" font-size="12.5">Casa Valdés</text></g><g class="pa-key" data-color="#D42A5E" data-value="Barricada" style="cursor:pointer"><rect x="106.24" y="69" width="82.57" height="19" rx="4" fill="transparent"/><circle cx="114.24" cy="78.5" r="5" fill="#D42A5E"/><text x="125.24" y="83" fill="#4A5070" font-size="12.5">Barricada</text></g><g class="pa-key" data-color="#E8A33D" data-value="Puerto" style="cursor:pointer"><rect x="198.81" y="69" width="65.11" height="19" rx="4" fill="transparent"/><circle cx="206.81" cy="78.5" r="5" fill="#E8A33D"/><text x="217.81" y="83" fill="#4A5070" font-size="12.5">Puerto</text></g><g class="pa-key" data-color="#1E9C89" data-value="Convento" style="cursor:pointer"><rect x="273.92" y="69" width="81.65" height="19" rx="4" fill="transparent"/><circle cx="281.92" cy="78.5" r="5" fill="#1E9C89"/><text x="292.92" y="83" fill="#4A5070" font-size="12.5">Convento</text></g><g class="pa-key" data-color="#7B5CD6" data-value="Posada" style="cursor:pointer"><rect x="365.57" y="69" width="69.84" height="19" rx="4" fill="transparent"/><circle cx="373.57" cy="78.5" r="5" fill="#7B5CD6"/><text x="384.57" y="83" fill="#4A5070" font-size="12.5">Posada</text></g><g class="pa-key" data-color="#B5562E" data-value="Tribunal" style="cursor:pointer"><rect x="445.41" y="69" width="74.04" height="19" rx="4" fill="transparent"/><circle cx="453.41" cy="78.5" r="5" fill="#B5562E"/><text x="464.41" y="83" fill="#4A5070" font-size="12.5">Tribunal</text></g><g class="pa-key" data-color="#5BA3E0" data-value="Mercado" style="cursor:pointer"><rect x="529.44" y="69" width="77.45" height="19" rx="4" fill="transparent"/><circle cx="537.44" cy="78.5" r="5" fill="#5BA3E0"/><text x="548.44" y="83" fill="#4A5070" font-size="12.5">Mercado</text></g><g class="pa-key" data-color="#8E9A2F" data-value="Taller" style="cursor:pointer"><rect x="616.89" y="69" width="59.86" height="19" rx="4" fill="transparent"/><circle cx="624.89" cy="78.5" r="5" fill="#8E9A2F"/><text x="635.89" y="83" fill="#4A5070" font-size="12.5">Taller</text></g><g class="pa-key" data-color="#A5AAC0" data-value="Colegio" style="cursor:pointer"><rect x="-3" y="89" width="69.31" height="19" rx="4" fill="transparent"/><circle cx="5" cy="98.5" r="5" fill="#A5AAC0"/><text x="16" y="103" fill="#4A5070" font-size="12.5">Colegio</text></g></g></g><g class="pa-body"><g class="pa-net" data-layout="circular"><g class="pa-links" fill="none" stroke-linecap="round" stroke-opacity="0.3" stroke-width="1"><path class="pa-m" d="M360,220.1Q394.4,300.6 512.9,272.8" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Inés" data-tip="Julián — Inés
+1"/><path class="pa-m" d="M360,220.1Q400.3,308.6 539.1,308.3" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Rosaura" data-tip="Julián — Rosaura
+1"/><path class="pa-m" d="M360,220.1Q385.1,294.3 471.3,244.5" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Elías" data-tip="Julián — Elías
+1"/><path class="pa-m" d="M360,220.1Q382.3,293 459,238.9" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Leonor" data-tip="Julián — Leonor
+1"/><path class="pa-m" d="M360,220.1Q399.2,306.5 534.2,298.9" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Ramiro" data-tip="Julián — Ramiro
+1"/><path class="pa-m" d="M360,220.1Q397.8,304.5 528.1,289.8" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Celia" data-tip="Julián — Celia
+1"/><path class="pa-m" d="M512.9,272.8Q433.6,318.4 534.2,298.9" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Ramiro" data-tip="Inés — Ramiro
+1"/><path class="pa-m" d="M512.9,272.8Q426.8,310.7 503.8,264.9" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Fermín" data-tip="Inés — Fermín
+1"/><path class="pa-m" d="M404.3,223.6Q397.6,296.5 483,250.7" stroke="#3A47B8" stroke-width="1.29" data-s="Bruno" data-t="Nieves" data-tip="Bruno — Nieves
+1"/><path class="pa-m" d="M446.1,234Q418.6,309.7 534.2,298.9" stroke="#3A47B8" stroke-width="1.29" data-s="Gaspar" data-t="Ramiro" data-tip="Gaspar — Ramiro
+1"/><path class="pa-m" d="M446.1,234Q386,292.3 389.7,221.7" stroke="#3A47B8" stroke-width="1.29" data-s="Gaspar" data-t="Olga" data-tip="Gaspar — Olga
+1"/><path class="pa-m" d="M432.6,229.8Q383,291.3 389.7,221.7" stroke="#3A47B8" stroke-width="1.29" data-s="Dámaso" data-t="Olga" data-tip="Dámaso — Olga
+1"/><path class="pa-m" d="M545.6,327.7Q435.2,358.2 508.5,421.2" stroke="#D42A5E" stroke-width="1.29" data-s="Andrés" data-t="Noé" data-tip="Andrés — Noé
+1"/><path class="pa-m" d="M547.1,337.6Q443.6,348.3 544.4,367.2" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Vera" data-tip="Lucio — Vera
+1"/><path class="pa-m" d="M547.1,337.6Q440.6,354.7 531.3,395.7" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Íñigo" data-tip="Lucio — Íñigo
+1"/><path class="pa-m" d="M547.1,337.6Q435.5,360.5 508.5,421.2" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Noé" data-tip="Lucio — Noé
+1"/><path class="pa-m" d="M547.1,337.6Q441.9,352.6 536.8,386.4" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Hugo" data-tip="Lucio — Hugo
+1"/><path class="pa-m" d="M547.3,347.5Q439.2,359 524.7,404.6" stroke="#D42A5E" stroke-width="1.29" data-s="Marcial" data-t="Simón" data-tip="Marcial — Simón
+1"/><path class="pa-m" d="M547.3,347.5Q437.5,360.9 517.1,413.1" stroke="#D42A5E" stroke-width="1.29" data-s="Marcial" data-t="Ruth" data-tip="Marcial — Ruth
+1"/><path class="pa-m" d="M524.7,404.6Q438.5,363.4 544.4,367.2" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Vera" data-tip="Simón — Vera
+1"/><path class="pa-m" d="M524.7,404.6Q435.6,369.8 531.3,395.7" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Íñigo" data-tip="Simón — Íñigo
+1"/><path class="pa-m" d="M531.3,395.7Q439.3,363.6 541.2,376.9" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Pablo" data-tip="Íñigo — Pablo
+1"/><path class="pa-m" d="M541.2,376.9Q436.1,367.5 517.1,413.1" stroke="#D42A5E" stroke-width="1.29" data-s="Pablo" data-t="Ruth" data-tip="Pablo — Ruth
+1"/><path class="pa-m" d="M517.1,413.1Q428.8,377.5 508.5,421.2" stroke="#D42A5E" stroke-width="1.29" data-s="Ruth" data-t="Noé" data-tip="Ruth — Noé
+1"/><path class="pa-m" d="M488.5,435.9Q397.2,393 397,467.5" stroke="#E8A33D" stroke-width="1.29" data-s="Capitán Ríos" data-t="Eloy" data-tip="Capitán Ríos — Eloy
+1"/><path class="pa-m" d="M465.3,448.4Q395.3,395.3 411.5,465.1" stroke="#E8A33D" stroke-width="1.29" data-s="Marta" data-t="Fabia" data-tip="Marta — Fabia
+1"/><path class="pa-m" d="M452.6,453.6Q395.6,395.8 425.6,462" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Basilio" data-tip="Esteban — Basilio
+1"/><path class="pa-m" d="M452.6,453.6Q398.7,394.9 439.4,458.2" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Ciro" data-tip="Esteban — Ciro
+1"/><path class="pa-m" d="M452.6,453.6Q389.2,397 397,467.5" stroke="#E8A33D" stroke-width="1.29" data-s="Esteban" data-t="Eloy" data-tip="Esteban — Eloy
+1"/><path class="pa-m" d="M439.4,458.2Q382.9,398.4 382.3,469" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Dora" data-tip="Ciro — Dora
+1"/><path class="pa-m" d="M439.4,458.2Q386.2,398 397,467.5" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Eloy" data-tip="Ciro — Eloy
+1"/><path class="pa-m" d="M382.3,469Q376.6,399.9 411.5,465.1" stroke="#E8A33D" stroke-width="1.29" data-s="Dora" data-t="Fabia" data-tip="Dora — Fabia
+1"/><path class="pa-m" d="M397,467.5Q379.9,399.6 411.5,465.1" stroke="#E8A33D" stroke-width="1.29" data-s="Eloy" data-t="Fabia" data-tip="Eloy — Fabia
+1"/><path class="pa-m" d="M294.4,462Q333.6,398.4 308.5,465.1" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Pía" data-t="Sor Rita" data-tip="Sor Pía — Sor Rita
+1"/><path class="pa-m" d="M360,220.1Q336.3,340.1 254.7,448.4" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Padre Anselmo" data-tip="Julián — Padre Anselmo
+1"/><path class="pa-m" d="M231.5,435.9Q294,378.9 195.3,404.6" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Don Cosme" data-tip="Doña Benita — Don Cosme
+1"/><path class="pa-m" d="M231.5,435.9Q292.5,376.9 188.7,395.7" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Quique" data-tip="Doña Benita — Quique
+1"/><path class="pa-m" d="M195.3,404.6Q287.6,373.7 202.9,413.1" stroke="#7B5CD6" stroke-width="1.29" data-s="Don Cosme" data-t="Toña" data-tip="Don Cosme — Toña
+1"/><path class="pa-m" d="M360,220.1Q326.6,334 211.5,421.2" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Paca" data-tip="Julián — Paca
+1"/><path class="pa-m" d="M360,220.1Q325.6,300.6 207.1,272.8" stroke="#3A47B8" stroke-width="1.29" data-s="Julián" data-t="Amparo" data-tip="Julián — Amparo
+1"/><path class="pa-m" d="M231.5,435.9Q291.9,355.1 185.8,298.9" stroke="#7B5CD6" stroke-width="1.29" data-s="Doña Benita" data-t="Pepa" data-tip="Doña Benita — Pepa
+1"/><path class="pa-m" d="M267.4,453.6Q334.1,397.3 337.7,469" stroke="#1E9C89" stroke-width="1.29" data-s="Hermano Luis" data-t="Sor Edith" data-tip="Hermano Luis — Sor Edith
+1"/><path class="pa-m" d="M273.9,234Q304.4,305.7 199,281.1" stroke="#8E9A2F" stroke-width="1.29" data-s="Rufo" data-t="Vicente" data-tip="Rufo — Vicente
+1"/><path class="pa-m" d="M547.1,337.6Q360.9,337.2 177.1,317.9" stroke="#D42A5E" stroke-width="1.29" data-s="Lucio" data-t="Testigo Roca" data-tip="Lucio — Testigo Roca
+1"/><path class="pa-m" d="M261,238.9Q376.9,310.8 534.2,298.9" stroke="#8E9A2F" stroke-width="1.29" data-s="Clemente" data-t="Ramiro" data-tip="Clemente — Ramiro
+1"/><path class="pa-m" d="M389.7,221.7Q329.6,330.7 195.3,404.6" stroke="#3A47B8" stroke-width="1.29" data-s="Olga" data-t="Don Cosme" data-tip="Olga — Don Cosme
+1"/><path class="pa-m" d="M544.4,367.2Q364.4,363.4 195.3,404.6" stroke="#D42A5E" stroke-width="1.29" data-s="Vera" data-t="Don Cosme" data-tip="Vera — Don Cosme
+1"/><path class="pa-m" d="M177.1,317.9Q353.2,322.7 512.9,272.8" stroke="#B5562E" stroke-width="1.29" data-s="Testigo Roca" data-t="Inés" data-tip="Testigo Roca — Inés
+1"/><path class="pa-m" d="M546.5,357.4Q370.7,366.7 221.1,428.8" stroke="#D42A5E" stroke-width="1.29" data-s="Teo" data-t="Remigio" data-tip="Teo — Remigio
+1"/><path class="pa-m" d="M172.7,347.5Q284.4,362.7 211.5,421.2" stroke="#B5562E" stroke-width="1.29" data-s="Alguacil Mora" data-t="Paca" data-tip="Alguacil Mora — Paca
+1"/><path class="pa-m" d="M199,281.1Q343.1,305.7 446.1,234" stroke="#5BA3E0" stroke-width="1.29" data-s="Vicente" data-t="Gaspar" data-tip="Vicente — Gaspar
+1"/><path class="pa-m" d="M191.9,289.8Q333.8,359.6 411.5,465.1" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Fabia" data-tip="Telmo — Fabia
+1"/><path class="pa-m" d="M531.3,395.7Q393.5,384.3 337.7,469" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Sor Edith" data-tip="Íñigo — Sor Edith
+1"/><path class="pa-m" d="M199,281.1Q352.7,351.1 488.5,435.9" stroke="#5BA3E0" stroke-width="1.29" data-s="Vicente" data-t="Capitán Ríos" data-tip="Vicente — Capitán Ríos
+1"/><path class="pa-m" d="M544.4,367.2Q366.1,365.3 202.9,413.1" stroke="#D42A5E" stroke-width="1.29" data-s="Vera" data-t="Toña" data-tip="Vera — Toña
+1"/><path class="pa-m" d="M207.1,272.8Q290.3,344.1 202.9,413.1" stroke="#5BA3E0" stroke-width="1.29" data-s="Amparo" data-t="Toña" data-tip="Amparo — Toña
+1"/><path class="pa-m" d="M330.3,221.7Q394.1,324.4 541.2,376.9" stroke="#A5AAC0" stroke-width="1.29" data-s="Alumna Sol" data-t="Pablo" data-tip="Alumna Sol — Pablo
+1"/><path class="pa-m" d="M237,250.7Q366.7,307.5 512.9,272.8" stroke="#8E9A2F" stroke-width="1.29" data-s="Aprendiz Leo" data-t="Inés" data-tip="Aprendiz Leo — Inés
+1"/><path class="pa-m" d="M465.3,448.4Q365.8,393.7 280.6,458.2" stroke="#E8A33D" stroke-width="1.29" data-s="Marta" data-t="Novicia Eva" data-tip="Marta — Novicia Eva
+1"/><path class="pa-m" d="M294.4,462Q340.2,399.2 337.7,469" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Pía" data-t="Sor Edith" data-tip="Sor Pía — Sor Edith
+1"/><path class="pa-m" d="M185.8,298.9Q356.2,350 517.1,413.1" stroke="#5BA3E0" stroke-width="1.29" data-s="Pepa" data-t="Ruth" data-tip="Pepa — Ruth
+1"/><path class="pa-m" d="M191.9,289.8Q297.1,310 248.7,244.5" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Sabina" data-tip="Telmo — Sabina
+1"/><path class="pa-m" d="M508.5,421.2Q351.7,358.2 174.4,327.7" stroke="#D42A5E" stroke-width="1.29" data-s="Noé" data-t="Abogado Sanz" data-tip="Noé — Abogado Sanz
+1"/><path class="pa-m" d="M439.4,458.2Q418.6,377.6 541.2,376.9" stroke="#E8A33D" stroke-width="1.29" data-s="Ciro" data-t="Pablo" data-tip="Ciro — Pablo
+1"/><path class="pa-m" d="M459,238.9Q400.1,346.6 439.4,458.2" stroke="#3A47B8" stroke-width="1.29" data-s="Leonor" data-t="Ciro" data-tip="Leonor — Ciro
+1"/><path class="pa-m" d="M191.9,289.8Q287.8,316.3 207.1,272.8" stroke="#5BA3E0" stroke-width="1.29" data-s="Telmo" data-t="Amparo" data-tip="Telmo — Amparo
+1"/><path class="pa-m" d="M177.1,317.9Q339.7,363.3 452.6,453.6" stroke="#B5562E" stroke-width="1.29" data-s="Testigo Roca" data-t="Esteban" data-tip="Testigo Roca — Esteban
+1"/><path class="pa-m" d="M308.5,465.1Q370.7,348.2 459,238.9" stroke="#1E9C89" stroke-width="1.29" data-s="Sor Rita" data-t="Leonor" data-tip="Sor Rita — Leonor
+1"/><path class="pa-m" d="M221.1,428.8Q286.8,366.7 173.5,357.4" stroke="#7B5CD6" stroke-width="1.29" data-s="Remigio" data-t="Fiscal Ponce" data-tip="Remigio — Fiscal Ponce
+1"/><path class="pa-m" d="M503.8,264.9Q359,344.1 211.5,421.2" stroke="#3A47B8" stroke-width="1.29" data-s="Fermín" data-t="Paca" data-tip="Fermín — Paca
+1"/><path class="pa-m" d="M512.9,272.8Q352.6,324.9 174.4,327.7" stroke="#3A47B8" stroke-width="1.29" data-s="Inés" data-t="Abogado Sanz" data-tip="Inés — Abogado Sanz
+1"/><path class="pa-m" d="M524.7,404.6Q403.7,330.7 389.7,221.7" stroke="#D42A5E" stroke-width="1.29" data-s="Simón" data-t="Olga" data-tip="Simón — Olga
+1"/><path class="pa-m" d="M531.3,395.7Q374.9,379.7 254.7,448.4" stroke="#D42A5E" stroke-width="1.29" data-s="Íñigo" data-t="Padre Anselmo" data-tip="Íñigo — Padre Anselmo
+1"/><path class="pa-m" d="M404.3,223.6Q411.5,322.7 544.4,367.2" stroke="#3A47B8" stroke-width="1.29" data-s="Bruno" data-t="Vera" data-tip="Bruno — Vera
+1"/><path class="pa-m" d="M477.2,442.4Q404.2,392.4 439.4,458.2" stroke="#E8A33D" stroke-width="1.29" data-s="Lola" data-t="Ciro" data-tip="Lola — Ciro
+1"/><path class="pa-m" d="M534.2,298.9Q397.5,362.7 352.6,469.8" stroke="#3A47B8" stroke-width="1.29" data-s="Ramiro" data-t="Sor Clara" data-tip="Ramiro — Sor Clara
+1"/><path class="pa-m" d="M330.3,221.7Q385.7,299.2 503.8,264.9" stroke="#A5AAC0" stroke-width="1.29" data-s="Alumna Sol" data-t="Fermín" data-tip="Alumna Sol — Fermín
+1"/><path class="pa-m" d="M521,281.1Q401.2,358.5 382.3,469" stroke="#3A47B8" stroke-width="1.29" data-s="Catalina" data-t="Dora" data-tip="Catalina — Dora
+1"/><path class="pa-m" d="M172.7,347.5Q309.5,373.1 323,467.5" stroke="#B5562E" stroke-width="1.29" data-s="Alguacil Mora" data-t="Sor Ana" data-tip="Alguacil Mora — Sor Ana
+1"/><path class="pa-m" d="M254.7,448.4Q347.9,395.3 411.5,465.1" stroke="#1E9C89" stroke-width="1.29" data-s="Padre Anselmo" data-t="Fabia" data-tip="Padre Anselmo — Fabia
+1"/><path class="pa-m" d="M360,220.1Q390.1,297.2 493.8,257.5" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Abril" data-tip="Julián — Abril
+2"/><path class="pa-m" d="M360,220.1Q376.3,291 432.6,229.8" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Dámaso" data-tip="Julián — Dámaso
+2"/><path class="pa-m" d="M360,220.1Q366.7,289.1 389.7,221.7" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Olga" data-tip="Julián — Olga
+2"/><path class="pa-m" d="M360,220.1Q387.7,295.7 483,250.7" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Nieves" data-tip="Julián — Nieves
+2"/><path class="pa-m" d="M374.9,220.5Q379.7,291.1 432.6,229.8" stroke="#3A47B8" stroke-width="1.58" data-s="Tomasa" data-t="Dámaso" data-tip="Tomasa — Dámaso
+2"/><path class="pa-m" d="M374.9,220.5Q370,289.2 389.7,221.7" stroke="#3A47B8" stroke-width="1.58" data-s="Tomasa" data-t="Olga" data-tip="Tomasa — Olga
+2"/><path class="pa-m" d="M539.1,308.3Q428,315.5 483,250.7" stroke="#3A47B8" stroke-width="1.58" data-s="Rosaura" data-t="Nieves" data-tip="Rosaura — Nieves
+2"/><path class="pa-m" d="M471.3,244.5Q404.4,297.4 446.1,234" stroke="#3A47B8" stroke-width="1.58" data-s="Elías" data-t="Gaspar" data-tip="Elías — Gaspar
+2"/><path class="pa-m" d="M545.6,327.7Q442.5,348.3 541.2,376.9" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Pablo" data-tip="Andrés — Pablo
+2"/><path class="pa-m" d="M547.1,337.6Q439.1,356.7 524.7,404.6" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Simón" data-tip="Lucio — Simón
+2"/><path class="pa-m" d="M547.1,337.6Q437.4,358.6 517.1,413.1" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Ruth" data-tip="Lucio — Ruth
+2"/><path class="pa-m" d="M546.5,357.4Q443.4,352.8 544.4,367.2" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Vera" data-tip="Teo — Vera
+2"/><path class="pa-m" d="M546.5,357.4Q437.3,363.1 517.1,413.1" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Ruth" data-tip="Teo — Ruth
+2"/><path class="pa-m" d="M547.3,347.5Q440.7,357 531.3,395.7" stroke="#D42A5E" stroke-width="1.58" data-s="Marcial" data-t="Íñigo" data-tip="Marcial — Íñigo
+2"/><path class="pa-m" d="M544.4,367.2Q442.2,357.2 541.2,376.9" stroke="#D42A5E" stroke-width="1.58" data-s="Vera" data-t="Pablo" data-tip="Vera — Pablo
+2"/><path class="pa-m" d="M531.3,395.7Q438.3,365.7 536.8,386.4" stroke="#D42A5E" stroke-width="1.58" data-s="Íñigo" data-t="Hugo" data-tip="Íñigo — Hugo
+2"/><path class="pa-m" d="M360,220.1Q401.8,313 545.6,327.7" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Andrés" data-tip="Julián — Andrés
+2"/><path class="pa-m" d="M488.5,435.9Q393.9,393.4 382.3,469" stroke="#E8A33D" stroke-width="1.58" data-s="Capitán Ríos" data-t="Dora" data-tip="Capitán Ríos — Dora
+2"/><path class="pa-m" d="M465.3,448.4Q401.5,393.7 439.4,458.2" stroke="#E8A33D" stroke-width="1.58" data-s="Marta" data-t="Ciro" data-tip="Marta — Ciro
+2"/><path class="pa-m" d="M267.4,453.6Q330.8,397 323,467.5" stroke="#1E9C89" stroke-width="1.58" data-s="Hermano Luis" data-t="Sor Ana" data-tip="Hermano Luis — Sor Ana
+2"/><path class="pa-m" d="M360,220.1Q345.2,343.2 294.4,462" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Sor Pía" data-tip="Julián — Sor Pía
+2"/><path class="pa-m" d="M360,220.1Q339.2,341.3 267.4,453.6" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Hermano Luis" data-tip="Julián — Hermano Luis
+2"/><path class="pa-m" d="M175.6,367.2Q276.8,346.1 174.4,327.7" stroke="#B5562E" stroke-width="1.58" data-s="Juez Arteaga" data-t="Abogado Sanz" data-tip="Juez Arteaga — Abogado Sanz
+2"/><path class="pa-m" d="M173.5,357.4Q275.9,348.3 172.7,347.5" stroke="#B5562E" stroke-width="1.58" data-s="Fiscal Ponce" data-t="Alguacil Mora" data-tip="Fiscal Ponce — Alguacil Mora
+2"/><path class="pa-m" d="M173.5,357.4Q276.9,341.7 177.1,317.9" stroke="#B5562E" stroke-width="1.58" data-s="Fiscal Ponce" data-t="Testigo Roca" data-tip="Fiscal Ponce — Testigo Roca
+2"/><path class="pa-m" d="M172.9,337.6Q276.2,339.4 174.4,327.7" stroke="#B5562E" stroke-width="1.58" data-s="Escribano Gil" data-t="Abogado Sanz" data-tip="Escribano Gil — Abogado Sanz
+2"/><path class="pa-m" d="M360,220.1Q332.3,295.7 237,250.7" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Aprendiz Leo" data-tip="Julián — Aprendiz Leo
+2"/><path class="pa-m" d="M360,220.1Q337.7,293 261,238.9" stroke="#3A47B8" stroke-width="1.58" data-s="Julián" data-t="Clemente" data-tip="Julián — Clemente
+2"/><path class="pa-m" d="M199,281.1Q289.4,314.4 207.1,272.8" stroke="#5BA3E0" stroke-width="1.58" data-s="Vicente" data-t="Amparo" data-tip="Vicente — Amparo
+2"/><path class="pa-m" d="M545.6,327.7Q430.7,361.6 488.5,435.9" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Capitán Ríos" data-tip="Andrés — Capitán Ríos
+2"/><path class="pa-m" d="M545.6,327.7Q372.8,361.6 231.5,435.9" stroke="#D42A5E" stroke-width="1.58" data-s="Andrés" data-t="Doña Benita" data-tip="Andrés — Doña Benita
+2"/><path class="pa-m" d="M488.5,435.9Q375.7,338.8 301.4,226.3" stroke="#E8A33D" stroke-width="1.58" data-s="Capitán Ríos" data-t="Profesor Lago" data-tip="Capitán Ríos — Profesor Lago
+2"/><path class="pa-m" d="M389.7,221.7Q358.4,344.8 323,467.5" stroke="#3A47B8" stroke-width="1.58" data-s="Olga" data-t="Sor Ana" data-tip="Olga — Sor Ana
+2"/><path class="pa-m" d="M517.1,413.1Q433.2,347.9 528.1,289.8" stroke="#D42A5E" stroke-width="1.58" data-s="Ruth" data-t="Celia" data-tip="Ruth — Celia
+2"/><path class="pa-m" d="M547.1,337.6Q421.5,318.4 446.1,234" stroke="#D42A5E" stroke-width="1.58" data-s="Lucio" data-t="Gaspar" data-tip="Lucio — Gaspar
+2"/><path class="pa-m" d="M544.4,367.2Q360,355 175.6,367.2" stroke="#D42A5E" stroke-width="1.58" data-s="Vera" data-t="Juez Arteaga" data-tip="Vera — Juez Arteaga
+2"/><path class="pa-m" d="M528.1,289.8Q411,305.9 418.6,226.3" stroke="#3A47B8" stroke-width="1.58" data-s="Celia" data-t="Matías" data-tip="Celia — Matías
+2"/><path class="pa-m" d="M294.4,462Q358.4,344.6 418.6,226.3" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Pía" data-t="Matías" data-tip="Sor Pía — Matías
+2"/><path class="pa-m" d="M202.9,413.1Q306.8,385.8 280.6,458.2" stroke="#7B5CD6" stroke-width="1.58" data-s="Toña" data-t="Novicia Eva" data-tip="Toña — Novicia Eva
+2"/><path class="pa-m" d="M459,238.9Q364.4,346.6 280.6,458.2" stroke="#3A47B8" stroke-width="1.58" data-s="Leonor" data-t="Novicia Eva" data-tip="Leonor — Novicia Eva
+2"/><path class="pa-m" d="M221.1,428.8Q346.6,389.3 439.4,458.2" stroke="#7B5CD6" stroke-width="1.58" data-s="Remigio" data-t="Ciro" data-tip="Remigio — Ciro
+2"/><path class="pa-m" d="M280.6,458.2Q300.2,373.3 173.5,357.4" stroke="#1E9C89" stroke-width="1.58" data-s="Novicia Eva" data-t="Fiscal Ponce" data-tip="Novicia Eva — Fiscal Ponce
+2"/><path class="pa-m" d="M188.7,395.7Q308.3,329.7 301.4,226.3" stroke="#7B5CD6" stroke-width="1.58" data-s="Quique" data-t="Profesor Lago" data-tip="Quique — Profesor Lago
+2"/><path class="pa-m" d="M546.5,357.4Q444.1,348.3 547.3,347.5" stroke="#D42A5E" stroke-width="1.58" data-s="Teo" data-t="Marcial" data-tip="Teo — Marcial
+2"/><path class="pa-m" d="M191.9,289.8Q348.6,354.5 477.2,442.4" stroke="#5BA3E0" stroke-width="1.58" data-s="Telmo" data-t="Lola" data-tip="Telmo — Lola
+2"/><path class="pa-m" d="M254.7,448.4Q377.1,375.4 541.2,376.9" stroke="#1E9C89" stroke-width="1.58" data-s="Padre Anselmo" data-t="Pablo" data-tip="Padre Anselmo — Pablo
+2"/><path class="pa-m" d="M541.2,376.9Q420.1,327.2 446.1,234" stroke="#D42A5E" stroke-width="1.58" data-s="Pablo" data-t="Gaspar" data-tip="Pablo — Gaspar
+2"/><path class="pa-m" d="M226.2,257.5Q354.9,302.7 471.3,244.5" stroke="#8E9A2F" stroke-width="1.58" data-s="Maestro Ibar" data-t="Elías" data-tip="Maestro Ibar — Elías
+2"/><path class="pa-m" d="M397,467.5Q339.4,393 231.5,435.9" stroke="#E8A33D" stroke-width="1.58" data-s="Eloy" data-t="Doña Benita" data-tip="Eloy — Doña Benita
+2"/><path class="pa-m" d="M261,238.9Q327.8,293.8 315.7,223.6" stroke="#8E9A2F" stroke-width="1.58" data-s="Clemente" data-t="Bedel Juan" data-tip="Clemente — Bedel Juan
+2"/><path class="pa-m" d="M248.7,244.5Q333.3,350.5 352.6,469.8" stroke="#8E9A2F" stroke-width="1.58" data-s="Sabina" data-t="Sor Clara" data-tip="Sabina — Sor Clara
+2"/><path class="pa-m" d="M294.4,462Q338.6,343.6 330.3,221.7" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Pía" data-t="Alumna Sol" data-tip="Sor Pía — Alumna Sol
+2"/><path class="pa-m" d="M267.4,453.6Q319.8,344.5 273.9,234" stroke="#1E9C89" stroke-width="1.58" data-s="Hermano Luis" data-t="Rufo" data-tip="Hermano Luis — Rufo
+2"/><path class="pa-m" d="M452.6,453.6Q343,357 191.9,289.8" stroke="#E8A33D" stroke-width="1.58" data-s="Esteban" data-t="Telmo" data-tip="Esteban — Telmo
+2"/><path class="pa-m" d="M389.7,221.7Q365,345.3 352.6,469.8" stroke="#3A47B8" stroke-width="1.58" data-s="Olga" data-t="Sor Clara" data-tip="Olga — Sor Clara
+2"/><path class="pa-m" d="M185.8,298.9Q349.7,355.1 488.5,435.9" stroke="#5BA3E0" stroke-width="1.58" data-s="Pepa" data-t="Capitán Ríos" data-tip="Pepa — Capitán Ríos
+2"/><path class="pa-m" d="M352.6,469.8Q316.2,373.6 172.7,347.5" stroke="#1E9C89" stroke-width="1.58" data-s="Sor Clara" data-t="Alguacil Mora" data-tip="Sor Clara — Alguacil Mora
+2"/><path class="pa-m" d="M439.4,458.2Q336.1,366.6 174.4,327.7" stroke="#E8A33D" stroke-width="1.58" data-s="Ciro" data-t="Abogado Sanz" data-tip="Ciro — Abogado Sanz
+2"/><path class="pa-m" d="M175.6,367.2Q280.7,337.6 191.9,289.8" stroke="#B5562E" stroke-width="1.58" data-s="Juez Arteaga" data-t="Telmo" data-tip="Juez Arteaga — Telmo
+2"/><path class="pa-m" d="M301.4,226.3Q338.5,345.9 323,467.5" stroke="#A5AAC0" stroke-width="1.58" data-s="Profesor Lago" data-t="Sor Ana" data-tip="Profesor Lago — Sor Ana
+2"/><path class="pa-m" d="M459,238.9Q342.5,330.5 183.2,386.4" stroke="#3A47B8" stroke-width="1.58" data-s="Leonor" data-t="Zoilo" data-tip="Leonor — Zoilo
+2"/><path class="pa-m" d="M248.7,244.5Q352.8,347.9 439.4,458.2" stroke="#8E9A2F" stroke-width="1.58" data-s="Sabina" data-t="Ciro" data-tip="Sabina — Ciro
+2"/><path class="pa-m" d="M360,220.1Q379.4,291.9 446.1,234" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Gaspar" data-tip="Julián — Gaspar
+3"/><path class="pa-m" d="M360,220.1Q392.4,298.9 503.8,264.9" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Fermín" data-tip="Julián — Fermín
+3"/><path class="pa-m" d="M446.1,234Q395.7,294.1 432.6,229.8" stroke="#3A47B8" stroke-width="1.8" data-s="Gaspar" data-t="Dámaso" data-tip="Gaspar — Dámaso
+3"/><path class="pa-m" d="M418.6,226.3Q389.5,292.4 432.6,229.8" stroke="#3A47B8" stroke-width="1.8" data-s="Matías" data-t="Dámaso" data-tip="Matías — Dámaso
+3"/><path class="pa-m" d="M389.7,221.7Q394.3,296 483,250.7" stroke="#3A47B8" stroke-width="1.8" data-s="Olga" data-t="Nieves" data-tip="Olga — Nieves
+3"/><path class="pa-m" d="M545.6,327.7Q440.3,352.5 531.3,395.7" stroke="#D42A5E" stroke-width="1.8" data-s="Andrés" data-t="Íñigo" data-tip="Andrés — Íñigo
+3"/><path class="pa-m" d="M545.6,327.7Q437.1,356.4 517.1,413.1" stroke="#D42A5E" stroke-width="1.8" data-s="Andrés" data-t="Ruth" data-tip="Andrés — Ruth
+3"/><path class="pa-m" d="M547.3,347.5Q435.6,362.7 508.5,421.2" stroke="#D42A5E" stroke-width="1.8" data-s="Marcial" data-t="Noé" data-tip="Marcial — Noé
+3"/><path class="pa-m" d="M544.4,367.2Q434.9,367.2 508.5,421.2" stroke="#D42A5E" stroke-width="1.8" data-s="Vera" data-t="Noé" data-tip="Vera — Noé
+3"/><path class="pa-m" d="M531.3,395.7Q431.9,373.5 508.5,421.2" stroke="#D42A5E" stroke-width="1.8" data-s="Íñigo" data-t="Noé" data-tip="Íñigo — Noé
+3"/><path class="pa-m" d="M508.5,421.2Q433.2,371.5 536.8,386.4" stroke="#D42A5E" stroke-width="1.8" data-s="Noé" data-t="Hugo" data-tip="Noé — Hugo
+3"/><path class="pa-m" d="M360,220.1Q402.1,315.2 547.1,337.6" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Lucio" data-tip="Julián — Lucio
+3"/><path class="pa-m" d="M360,220.1Q397.1,330.3 524.7,404.6" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Simón" data-tip="Julián — Simón
+3"/><path class="pa-m" d="M465.3,448.4Q410.1,390.2 477.2,442.4" stroke="#E8A33D" stroke-width="1.8" data-s="Marta" data-t="Lola" data-tip="Marta — Lola
+3"/><path class="pa-m" d="M352.6,469.8Q334.6,396.3 254.7,448.4" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Clara" data-t="Padre Anselmo" data-tip="Sor Clara — Padre Anselmo
+3"/><path class="pa-m" d="M352.6,469.8Q340.5,398.5 280.6,458.2" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Clara" data-t="Novicia Eva" data-tip="Sor Clara — Novicia Eva
+3"/><path class="pa-m" d="M254.7,448.4Q321.5,394.6 294.4,462" stroke="#1E9C89" stroke-width="1.8" data-s="Padre Anselmo" data-t="Sor Pía" data-tip="Padre Anselmo — Sor Pía
+3"/><path class="pa-m" d="M308.5,465.1Q340.1,399.6 323,467.5" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Rita" data-t="Sor Ana" data-tip="Sor Rita — Sor Ana
+3"/><path class="pa-m" d="M308.5,465.1Q330.6,397.5 280.6,458.2" stroke="#1E9C89" stroke-width="1.8" data-s="Sor Rita" data-t="Novicia Eva" data-tip="Sor Rita — Novicia Eva
+3"/><path class="pa-m" d="M211.5,421.2Q288.1,373.5 188.7,395.7" stroke="#7B5CD6" stroke-width="1.8" data-s="Paca" data-t="Quique" data-tip="Paca — Quique
+3"/><path class="pa-m" d="M221.1,428.8Q289,373.2 183.2,386.4" stroke="#7B5CD6" stroke-width="1.8" data-s="Remigio" data-t="Zoilo" data-tip="Remigio — Zoilo
+3"/><path class="pa-m" d="M221.1,428.8Q290.2,375.3 188.7,395.7" stroke="#7B5CD6" stroke-width="1.8" data-s="Remigio" data-t="Quique" data-tip="Remigio — Quique
+3"/><path class="pa-m" d="M360,220.1Q331.1,337.4 231.5,435.9" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Doña Benita" data-tip="Julián — Doña Benita
+3"/><path class="pa-m" d="M360,220.1Q329.9,297.2 226.2,257.5" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Maestro Ibar" data-tip="Julián — Maestro Ibar
+3"/><path class="pa-m" d="M360,220.1Q323.8,302.5 199,281.1" stroke="#3A47B8" stroke-width="1.8" data-s="Julián" data-t="Vicente" data-tip="Julián — Vicente
+3"/><path class="pa-m" d="M360,220.1Q396.2,302.5 521,281.1" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Catalina" data-tip="Julián — Catalina
+4"/><path class="pa-m" d="M374.9,220.5Q388.4,294.4 471.3,244.5" stroke="#3A47B8" stroke-width="1.99" data-s="Tomasa" data-t="Elías" data-tip="Tomasa — Elías
+4"/><path class="pa-m" d="M404.3,223.6Q383.2,291 418.6,226.3" stroke="#3A47B8" stroke-width="1.99" data-s="Bruno" data-t="Matías" data-tip="Bruno — Matías
+4"/><path class="pa-m" d="M459,238.9Q389,293.4 389.7,221.7" stroke="#3A47B8" stroke-width="1.99" data-s="Leonor" data-t="Olga" data-tip="Leonor — Olga
+4"/><path class="pa-m" d="M493.8,257.5Q406.4,299.4 432.6,229.8" stroke="#3A47B8" stroke-width="1.99" data-s="Abril" data-t="Dámaso" data-tip="Abril — Dámaso
+4"/><path class="pa-m" d="M545.6,327.7Q443.2,346.1 544.4,367.2" stroke="#D42A5E" stroke-width="1.99" data-s="Andrés" data-t="Vera" data-tip="Andrés — Vera
+4"/><path class="pa-m" d="M547.1,337.6Q444,346.1 546.5,357.4" stroke="#D42A5E" stroke-width="1.99" data-s="Lucio" data-t="Teo" data-tip="Lucio — Teo
+4"/><path class="pa-m" d="M546.5,357.4Q442.7,355 541.2,376.9" stroke="#D42A5E" stroke-width="1.99" data-s="Teo" data-t="Pablo" data-tip="Teo — Pablo
+4"/><path class="pa-m" d="M524.7,404.6Q436.8,367.7 536.8,386.4" stroke="#D42A5E" stroke-width="1.99" data-s="Simón" data-t="Hugo" data-tip="Simón — Hugo
+4"/><path class="pa-m" d="M531.3,395.7Q433.9,371.7 517.1,413.1" stroke="#D42A5E" stroke-width="1.99" data-s="Íñigo" data-t="Ruth" data-tip="Íñigo — Ruth
+4"/><path class="pa-m" d="M541.2,376.9Q440.5,361.5 536.8,386.4" stroke="#D42A5E" stroke-width="1.99" data-s="Pablo" data-t="Hugo" data-tip="Pablo — Hugo
+4"/><path class="pa-m" d="M360,220.1Q401.5,321.9 544.4,367.2" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Vera" data-tip="Julián — Vera
+4"/><path class="pa-m" d="M477.2,442.4Q394.7,394.5 397,467.5" stroke="#E8A33D" stroke-width="1.99" data-s="Lola" data-t="Eloy" data-tip="Lola — Eloy
+4"/><path class="pa-m" d="M477.2,442.4Q398,394 411.5,465.1" stroke="#E8A33D" stroke-width="1.99" data-s="Lola" data-t="Fabia" data-tip="Lola — Fabia
+4"/><path class="pa-m" d="M360,220.1Q388.9,337.4 488.5,435.9" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Capitán Ríos" data-tip="Julián — Capitán Ríos
+4"/><path class="pa-m" d="M360,220.1Q383.7,340.1 465.3,448.4" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Marta" data-tip="Julián — Marta
+4"/><path class="pa-m" d="M337.7,469Q343.4,399.9 308.5,465.1" stroke="#1E9C89" stroke-width="1.99" data-s="Sor Edith" data-t="Sor Rita" data-tip="Sor Edith — Sor Rita
+4"/><path class="pa-m" d="M254.7,448.4Q328,395.8 323,467.5" stroke="#1E9C89" stroke-width="1.99" data-s="Padre Anselmo" data-t="Sor Ana" data-tip="Padre Anselmo — Sor Ana
+4"/><path class="pa-m" d="M267.4,453.6Q327.6,396.5 308.5,465.1" stroke="#1E9C89" stroke-width="1.99" data-s="Hermano Luis" data-t="Sor Rita" data-tip="Hermano Luis — Sor Rita
+4"/><path class="pa-m" d="M323,467.5Q333.8,398 280.6,458.2" stroke="#1E9C89" stroke-width="1.99" data-s="Sor Ana" data-t="Novicia Eva" data-tip="Sor Ana — Novicia Eva
+4"/><path class="pa-m" d="M360,220.1Q358.3,345 352.6,469.8" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Sor Clara" data-tip="Julián — Sor Clara
+4"/><path class="pa-m" d="M211.5,421.2Q291.2,377.5 202.9,413.1" stroke="#7B5CD6" stroke-width="1.99" data-s="Paca" data-t="Toña" data-tip="Paca — Toña
+4"/><path class="pa-m" d="M202.9,413.1Q286.1,371.7 188.7,395.7" stroke="#7B5CD6" stroke-width="1.99" data-s="Toña" data-t="Quique" data-tip="Toña — Quique
+4"/><path class="pa-m" d="M360,220.1Q328.7,335.8 221.1,428.8" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Remigio" data-tip="Julián — Remigio
+4"/><path class="pa-m" d="M175.6,367.2Q276.6,352.8 173.5,357.4" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Fiscal Ponce" data-tip="Juez Arteaga — Fiscal Ponce
+4"/><path class="pa-m" d="M175.6,367.2Q277.4,343.9 177.1,317.9" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Testigo Roca" data-tip="Juez Arteaga — Testigo Roca
+4"/><path class="pa-m" d="M173.5,357.4Q276.3,343.9 174.4,327.7" stroke="#B5562E" stroke-width="1.99" data-s="Fiscal Ponce" data-t="Abogado Sanz" data-tip="Fiscal Ponce — Abogado Sanz
+4"/><path class="pa-m" d="M226.2,257.5Q307.6,301.5 261,238.9" stroke="#8E9A2F" stroke-width="1.99" data-s="Maestro Ibar" data-t="Clemente" data-tip="Maestro Ibar — Clemente
+4"/><path class="pa-m" d="M360,220.1Q320.8,306.5 185.8,298.9" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Pepa" data-tip="Julián — Pepa
+4"/><path class="pa-m" d="M360,220.1Q353.3,289.1 330.3,221.7" stroke="#3A47B8" stroke-width="1.99" data-s="Julián" data-t="Alumna Sol" data-tip="Julián — Alumna Sol
+4"/><path class="pa-m" d="M488.5,435.9Q358.8,345.8 226.2,257.5" stroke="#E8A33D" stroke-width="1.99" data-s="Capitán Ríos" data-t="Maestro Ibar" data-tip="Capitán Ríos — Maestro Ibar
+4"/><path class="pa-m" d="M175.6,367.2Q279.3,339.6 185.8,298.9" stroke="#B5562E" stroke-width="1.99" data-s="Juez Arteaga" data-t="Pepa" data-tip="Juez Arteaga — Pepa
+4"/><path class="pa-m" d="M360,220.1Q373.2,290.2 418.6,226.3" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Matías" data-tip="Julián — Matías
+5"/><path class="pa-m" d="M545.6,327.7Q438.8,354.5 524.7,404.6" stroke="#D42A5E" stroke-width="2.15" data-s="Andrés" data-t="Simón" data-tip="Andrés — Simón
+5"/><path class="pa-m" d="M545.6,327.7Q441.5,350.4 536.8,386.4" stroke="#D42A5E" stroke-width="2.15" data-s="Andrés" data-t="Hugo" data-tip="Andrés — Hugo
+5"/><path class="pa-m" d="M360,220.1Q402,319.7 546.5,357.4" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Teo" data-tip="Julián — Teo
+5"/><path class="pa-m" d="M488.5,435.9Q403.7,391.8 425.6,462" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Basilio" data-tip="Capitán Ríos — Basilio
+5"/><path class="pa-m" d="M488.5,435.9Q406.8,390.9 439.4,458.2" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Ciro" data-tip="Capitán Ríos — Ciro
+5"/><path class="pa-m" d="M488.5,435.9Q400.5,392.5 411.5,465.1" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Fabia" data-tip="Capitán Ríos — Fabia
+5"/><path class="pa-m" d="M360,220.1Q386.4,338.8 477.2,442.4" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Lola" data-tip="Julián — Lola
+5"/><path class="pa-m" d="M352.6,469.8Q337.5,397.5 267.4,453.6" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Hermano Luis" data-tip="Sor Clara — Hermano Luis
+5"/><path class="pa-m" d="M352.6,469.8Q346.7,400.1 308.5,465.1" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Sor Rita" data-tip="Sor Clara — Sor Rita
+5"/><path class="pa-m" d="M352.6,469.8Q350,400.6 323,467.5" stroke="#1E9C89" stroke-width="2.15" data-s="Sor Clara" data-t="Sor Ana" data-tip="Sor Clara — Sor Ana
+5"/><path class="pa-m" d="M231.5,435.9Q295.7,380.8 202.9,413.1" stroke="#7B5CD6" stroke-width="2.15" data-s="Doña Benita" data-t="Toña" data-tip="Doña Benita — Toña
+5"/><path class="pa-m" d="M231.5,435.9Q291.3,374.8 183.2,386.4" stroke="#7B5CD6" stroke-width="2.15" data-s="Doña Benita" data-t="Zoilo" data-tip="Doña Benita — Zoilo
+5"/><path class="pa-m" d="M226.2,257.5Q310.5,300.4 273.9,234" stroke="#8E9A2F" stroke-width="2.15" data-s="Maestro Ibar" data-t="Rufo" data-tip="Maestro Ibar — Rufo
+5"/><path class="pa-m" d="M360,220.1Q346.8,290.2 301.4,226.3" stroke="#3A47B8" stroke-width="2.15" data-s="Julián" data-t="Profesor Lago" data-tip="Julián — Profesor Lago
+5"/><path class="pa-m" d="M488.5,435.9Q387.2,393.5 352.6,469.8" stroke="#E8A33D" stroke-width="2.15" data-s="Capitán Ríos" data-t="Sor Clara" data-tip="Capitán Ríos — Sor Clara
+5"/><path class="pa-m" d="M545.6,327.7Q443.7,343.9 546.5,357.4" stroke="#D42A5E" stroke-width="2.3" data-s="Andrés" data-t="Teo" data-tip="Andrés — Teo
+6"/><path class="pa-m" d="M231.5,435.9Q299.8,384.3 221.1,428.8" stroke="#7B5CD6" stroke-width="2.3" data-s="Doña Benita" data-t="Remigio" data-tip="Doña Benita — Remigio
+6"/><path class="pa-m" d="M175.6,367.2Q276.4,348.3 172.9,337.6" stroke="#B5562E" stroke-width="2.3" data-s="Juez Arteaga" data-t="Escribano Gil" data-tip="Juez Arteaga — Escribano Gil
+6"/><path class="pa-m" d="M175.6,367.2Q276.4,350.6 172.7,347.5" stroke="#B5562E" stroke-width="2.3" data-s="Juez Arteaga" data-t="Alguacil Mora" data-tip="Juez Arteaga — Alguacil Mora
+6"/><path class="pa-m" d="M360,220.1Q317.9,315.2 172.9,337.6" stroke="#3A47B8" stroke-width="2.3" data-s="Julián" data-t="Escribano Gil" data-tip="Julián — Escribano Gil
+6"/><path class="pa-m" d="M360,220.1Q350,289.6 315.7,223.6" stroke="#3A47B8" stroke-width="2.3" data-s="Julián" data-t="Bedel Juan" data-tip="Julián — Bedel Juan
+6"/><path class="pa-m" d="M488.5,435.9Q409.7,389.9 452.6,453.6" stroke="#E8A33D" stroke-width="2.43" data-s="Capitán Ríos" data-t="Esteban" data-tip="Capitán Ríos — Esteban
+7"/><path class="pa-m" d="M360,220.1Q380.8,341.3 452.6,453.6" stroke="#3A47B8" stroke-width="2.43" data-s="Julián" data-t="Esteban" data-tip="Julián — Esteban
+7"/><path class="pa-m" d="M352.6,469.8Q343.6,399.4 294.4,462" stroke="#1E9C89" stroke-width="2.43" data-s="Sor Clara" data-t="Sor Pía" data-tip="Sor Clara — Sor Pía
+7"/><path class="pa-m" d="M360,220.1Q374.8,343.2 425.6,462" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Basilio" data-tip="Julián — Basilio
+8"/><path class="pa-m" d="M360,220.1Q355,344.8 337.7,469" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Sor Edith" data-tip="Julián — Sor Edith
+8"/><path class="pa-m" d="M360,220.1Q318,319.7 173.5,357.4" stroke="#3A47B8" stroke-width="2.56" data-s="Julián" data-t="Fiscal Ponce" data-tip="Julián — Fiscal Ponce
+8"/><path class="pa-m" d="M226.2,257.5Q304.8,302.7 248.7,244.5" stroke="#8E9A2F" stroke-width="2.56" data-s="Maestro Ibar" data-t="Sabina" data-tip="Maestro Ibar — Sabina
+8"/><path class="pa-m" d="M545.6,327.7Q443.9,341.7 547.3,347.5" stroke="#D42A5E" stroke-width="2.68" data-s="Andrés" data-t="Marcial" data-tip="Andrés — Marcial
+9"/><path class="pa-m" d="M360,220.1Q402.2,317.5 547.3,347.5" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Marcial" data-tip="Julián — Marcial
+9"/><path class="pa-m" d="M231.5,435.9Q297.7,382.6 211.5,421.2" stroke="#7B5CD6" stroke-width="2.68" data-s="Doña Benita" data-t="Paca" data-tip="Doña Benita — Paca
+9"/><path class="pa-m" d="M360,220.1Q322.9,330.3 195.3,404.6" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Don Cosme" data-tip="Julián — Don Cosme
+9"/><path class="pa-m" d="M360,220.1Q318.5,321.9 175.6,367.2" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Juez Arteaga" data-tip="Julián — Juez Arteaga
+9"/><path class="pa-m" d="M360,220.1Q317.8,317.5 172.7,347.5" stroke="#3A47B8" stroke-width="2.68" data-s="Julián" data-t="Alguacil Mora" data-tip="Julián — Alguacil Mora
+9"/><path class="pa-m" d="M301.4,226.3Q340.1,290.5 330.3,221.7" stroke="#A5AAC0" stroke-width="2.68" data-s="Profesor Lago" data-t="Alumna Sol" data-tip="Profesor Lago — Alumna Sol
+9"/><path class="pa-m" d="M488.5,435.9Q412.6,388.7 465.3,448.4" stroke="#E8A33D" stroke-width="2.79" data-s="Capitán Ríos" data-t="Marta" data-tip="Capitán Ríos — Marta
+10"/><path class="pa-m" d="M185.8,298.9Q284.6,320.3 199,281.1" stroke="#5BA3E0" stroke-width="2.79" data-s="Pepa" data-t="Vicente" data-tip="Pepa — Vicente
+10"/><path class="pa-m" d="M185.8,298.9Q283,322.2 191.9,289.8" stroke="#5BA3E0" stroke-width="2.9" data-s="Pepa" data-t="Telmo" data-tip="Pepa — Telmo
+11"/><path class="pa-m" d="M301.4,226.3Q336.8,291 315.7,223.6" stroke="#A5AAC0" stroke-width="2.9" data-s="Profesor Lago" data-t="Bedel Juan" data-tip="Profesor Lago — Bedel Juan
+11"/><path class="pa-m" d="M360,220.1Q363.3,288.9 374.9,220.5" stroke="#3A47B8" stroke-width="3" data-s="Julián" data-t="Tomasa" data-tip="Julián — Tomasa
+12"/><path class="pa-m" d="M360,220.1Q370,289.6 404.3,223.6" stroke="#3A47B8" stroke-width="3" data-s="Julián" data-t="Bruno" data-tip="Julián — Bruno
+12"/><path class="pa-m" d="M545.6,327.7Q443.8,339.4 547.1,337.6" stroke="#D42A5E" stroke-width="3" data-s="Andrés" data-t="Lucio" data-tip="Andrés — Lucio
+12"/><path class="pa-m" d="M488.5,435.9Q415.3,387.4 477.2,442.4" stroke="#E8A33D" stroke-width="3" data-s="Capitán Ríos" data-t="Lola" data-tip="Capitán Ríos — Lola
+12"/><path class="pa-m" d="M352.6,469.8Q353.3,401 337.7,469" stroke="#1E9C89" stroke-width="3" data-s="Sor Clara" data-t="Sor Edith" data-tip="Sor Clara — Sor Edith
+12"/><path class="pa-m" d="M226.2,257.5Q302.2,304.1 237,250.7" stroke="#8E9A2F" stroke-width="3" data-s="Maestro Ibar" data-t="Aprendiz Leo" data-tip="Maestro Ibar — Aprendiz Leo
+12"/><path class="pa-m" d="M185.8,298.9Q286.4,318.4 207.1,272.8" stroke="#5BA3E0" stroke-width="3" data-s="Pepa" data-t="Amparo" data-tip="Pepa — Amparo
+12"/></g><g class="pa-nodes"><circle class="pa-m" cx="360" cy="220.08" r="9.34" fill="#3A47B8" data-tip="Julián
 Casa Valdés
 Conexiones: 49
-Grado ponderado: 203" data-node="Julián" style="cursor:pointer"/><circle class="pa-m" cx="475.26" cy="426.57" r="4.71" fill="#E8A33D" data-tip="Capitán Ríos
+Grado ponderado: 203" data-node="Julián" style="cursor:pointer"/><circle class="pa-m" cx="488.49" cy="435.93" r="5.36" fill="#E8A33D" data-tip="Capitán Ríos
 Puerto
 Conexiones: 15
-Grado ponderado: 67" data-node="Capitán Ríos" style="cursor:pointer"/><circle class="pa-m" cx="526.46" cy="329.45" r="4.31" fill="#D42A5E" data-tip="Andrés
+Grado ponderado: 67" data-node="Capitán Ríos" style="cursor:pointer"/><circle class="pa-m" cx="545.57" cy="327.67" r="4.9" fill="#D42A5E" data-tip="Andrés
 Barricada
 Conexiones: 13
-Grado ponderado: 56" data-node="Andrés" style="cursor:pointer"/><circle class="pa-m" cx="353.32" cy="456.97" r="4.31" fill="#1E9C89" data-tip="Sor Clara
+Grado ponderado: 56" data-node="Andrés" style="cursor:pointer"/><circle class="pa-m" cx="352.55" cy="469.83" r="4.9" fill="#1E9C89" data-tip="Sor Clara
 Convento
 Conexiones: 13
-Grado ponderado: 56" data-node="Sor Clara" style="cursor:pointer"/><circle class="pa-m" cx="203.76" cy="303.67" r="3.86" fill="#5BA3E0" data-tip="Pepa
+Grado ponderado: 56" data-node="Sor Clara" style="cursor:pointer"/><circle class="pa-m" cx="185.83" cy="298.92" r="4.4" fill="#5BA3E0" data-tip="Pepa
 Mercado
 Conexiones: 8
-Grado ponderado: 45" data-node="Pepa" style="cursor:pointer"/><circle class="pa-m" cx="194.59" cy="364.95" r="3.6" fill="#B5562E" data-tip="Juez Arteaga
+Grado ponderado: 45" data-node="Pepa" style="cursor:pointer"/><circle class="pa-m" cx="175.61" cy="367.24" r="4.09" fill="#B5562E" data-tip="Juez Arteaga
 Tribunal
 Conexiones: 9
-Grado ponderado: 39" data-node="Juez Arteaga" style="cursor:pointer"/><circle class="pa-m" cx="239.97" cy="266.55" r="3.55" fill="#8E9A2F" data-tip="Maestro Ibar
+Grado ponderado: 39" data-node="Juez Arteaga" style="cursor:pointer"/><circle class="pa-m" cx="226.19" cy="257.55" r="4.04" fill="#8E9A2F" data-tip="Maestro Ibar
 Taller
 Conexiones: 7
-Grado ponderado: 38" data-node="Maestro Ibar" style="cursor:pointer"/><circle class="pa-m" cx="244.74" cy="426.57" r="3.41" fill="#7B5CD6" data-tip="Doña Benita
+Grado ponderado: 38" data-node="Maestro Ibar" style="cursor:pointer"/><circle class="pa-m" cx="231.51" cy="435.93" r="3.88" fill="#7B5CD6" data-tip="Doña Benita
 Posada
 Conexiones: 10
-Grado ponderado: 35" data-node="Doña Benita" style="cursor:pointer"/><circle class="pa-m" cx="465.18" cy="432.41" r="3.21" fill="#E8A33D" data-tip="Lola
+Grado ponderado: 35" data-node="Doña Benita" style="cursor:pointer"/><circle class="pa-m" cx="477.25" cy="442.45" r="3.65" fill="#E8A33D" data-tip="Lola
 Puerto
 Conexiones: 7
-Grado ponderado: 31" data-node="Lola" style="cursor:pointer"/><circle class="pa-m" cx="307.42" cy="238.56" r="3.21" fill="#A5AAC0" data-tip="Profesor Lago
+Grado ponderado: 31" data-node="Lola" style="cursor:pointer"/><circle class="pa-m" cx="301.39" cy="226.34" r="3.65" fill="#A5AAC0" data-tip="Profesor Lago
 Colegio
 Conexiones: 6
-Grado ponderado: 31" data-node="Profesor Lago" style="cursor:pointer"/><circle class="pa-m" cx="527.79" cy="338.32" r="3.15" fill="#D42A5E" data-tip="Lucio
+Grado ponderado: 31" data-node="Profesor Lago" style="cursor:pointer"/><circle class="pa-m" cx="547.05" cy="337.55" r="3.59" fill="#D42A5E" data-tip="Lucio
 Barricada
 Conexiones: 11
-Grado ponderado: 30" data-node="Lucio" style="cursor:pointer"/><circle class="pa-m" cx="528.06" cy="347.23" r="2.99" fill="#D42A5E" data-tip="Marcial
+Grado ponderado: 30" data-node="Lucio" style="cursor:pointer"/><circle class="pa-m" cx="547.35" cy="347.48" r="3.41" fill="#D42A5E" data-tip="Marcial
 Barricada
 Conexiones: 7
-Grado ponderado: 27" data-node="Marcial" style="cursor:pointer"/><circle class="pa-m" cx="339.99" cy="456.26" r="2.99" fill="#1E9C89" data-tip="Sor Edith
+Grado ponderado: 27" data-node="Marcial" style="cursor:pointer"/><circle class="pa-m" cx="337.7" cy="469.04" r="3.41" fill="#1E9C89" data-tip="Sor Edith
 Convento
 Conexiones: 6
-Grado ponderado: 27" data-node="Sor Edith" style="cursor:pointer"/><circle class="pa-m" cx="527.26" cy="356.12" r="2.94" fill="#D42A5E" data-tip="Teo
+Grado ponderado: 27" data-node="Sor Edith" style="cursor:pointer"/><circle class="pa-m" cx="546.46" cy="357.4" r="3.34" fill="#D42A5E" data-tip="Teo
 Barricada
 Conexiones: 8
-Grado ponderado: 26" data-node="Teo" style="cursor:pointer"/><circle class="pa-m" cx="192.74" cy="356.12" r="2.76" fill="#B5562E" data-tip="Fiscal Ponce
+Grado ponderado: 26" data-node="Teo" style="cursor:pointer"/><circle class="pa-m" cx="173.54" cy="357.4" r="3.14" fill="#B5562E" data-tip="Fiscal Ponce
 Tribunal
 Conexiones: 7
-Grado ponderado: 23" data-node="Fiscal Ponce" style="cursor:pointer"/><circle class="pa-m" cx="326.8" cy="454.85" r="2.76" fill="#1E9C89" data-tip="Sor Ana
+Grado ponderado: 23" data-node="Fiscal Ponce" style="cursor:pointer"/><circle class="pa-m" cx="322.99" cy="467.46" r="3.14" fill="#1E9C89" data-tip="Sor Ana
 Convento
 Conexiones: 8
-Grado ponderado: 23" data-node="Sor Ana" style="cursor:pointer"/><circle class="pa-m" cx="525.41" cy="364.95" r="2.7" fill="#D42A5E" data-tip="Vera
+Grado ponderado: 23" data-node="Sor Ana" style="cursor:pointer"/><circle class="pa-m" cx="544.39" cy="367.24" r="3.07" fill="#D42A5E" data-tip="Vera
 Barricada
 Conexiones: 11
-Grado ponderado: 22" data-node="Vera" style="cursor:pointer"/><circle class="pa-m" cx="191.94" cy="347.23" r="2.64" fill="#B5562E" data-tip="Alguacil Mora
+Grado ponderado: 22" data-node="Vera" style="cursor:pointer"/><circle class="pa-m" cx="172.65" cy="347.48" r="3" fill="#B5562E" data-tip="Alguacil Mora
 Tribunal
 Conexiones: 6
-Grado ponderado: 21" data-node="Alguacil Mora" style="cursor:pointer"/><circle class="pa-m" cx="454.43" cy="437.71" r="2.64" fill="#E8A33D" data-tip="Marta
+Grado ponderado: 21" data-node="Alguacil Mora" style="cursor:pointer"/><circle class="pa-m" cx="465.27" cy="448.35" r="3" fill="#E8A33D" data-tip="Marta
 Puerto
 Conexiones: 6
-Grado ponderado: 21" data-node="Marta" style="cursor:pointer"/><circle class="pa-m" cx="313.81" cy="452.75" r="2.64" fill="#1E9C89" data-tip="Sor Rita
+Grado ponderado: 21" data-node="Marta" style="cursor:pointer"/><circle class="pa-m" cx="308.51" cy="465.12" r="3" fill="#1E9C89" data-tip="Sor Rita
 Convento
 Conexiones: 7
-Grado ponderado: 21" data-node="Sor Rita" style="cursor:pointer"/><circle class="pa-m" cx="443.08" cy="442.42" r="2.58" fill="#E8A33D" data-tip="Esteban
+Grado ponderado: 21" data-node="Sor Rita" style="cursor:pointer"/><circle class="pa-m" cx="452.62" cy="453.6" r="2.93" fill="#E8A33D" data-tip="Esteban
 Puerto
 Conexiones: 7
-Grado ponderado: 20" data-node="Esteban" style="cursor:pointer"/><circle class="pa-m" cx="522.51" cy="373.64" r="2.58" fill="#D42A5E" data-tip="Pablo
+Grado ponderado: 20" data-node="Esteban" style="cursor:pointer"/><circle class="pa-m" cx="541.16" cy="376.93" r="2.93" fill="#D42A5E" data-tip="Pablo
 Barricada
 Conexiones: 10
-Grado ponderado: 20" data-node="Pablo" style="cursor:pointer"/><circle class="pa-m" cx="235.38" cy="420.2" r="2.58" fill="#7B5CD6" data-tip="Remigio
+Grado ponderado: 20" data-node="Pablo" style="cursor:pointer"/><circle class="pa-m" cx="221.08" cy="428.84" r="2.93" fill="#7B5CD6" data-tip="Remigio
 Posada
 Conexiones: 7
-Grado ponderado: 20" data-node="Remigio" style="cursor:pointer"/><circle class="pa-m" cx="209.18" cy="295.52" r="2.58" fill="#5BA3E0" data-tip="Telmo
+Grado ponderado: 20" data-node="Remigio" style="cursor:pointer"/><circle class="pa-m" cx="191.87" cy="289.84" r="2.93" fill="#5BA3E0" data-tip="Telmo
 Mercado
 Conexiones: 7
-Grado ponderado: 20" data-node="Telmo" style="cursor:pointer"/><circle class="pa-m" cx="373.35" cy="233.29" r="2.58" fill="#3A47B8" data-tip="Tomasa
+Grado ponderado: 20" data-node="Telmo" style="cursor:pointer"/><circle class="pa-m" cx="374.89" cy="220.47" r="2.93" fill="#3A47B8" data-tip="Tomasa
 Casa Valdés
 Conexiones: 4
-Grado ponderado: 20" data-node="Tomasa" style="cursor:pointer"/><circle class="pa-m" cx="320.27" cy="236.11" r="2.51" fill="#A5AAC0" data-tip="Bedel Juan
+Grado ponderado: 20" data-node="Tomasa" style="cursor:pointer"/><circle class="pa-m" cx="315.71" cy="223.61" r="2.86" fill="#A5AAC0" data-tip="Bedel Juan
 Colegio
 Conexiones: 3
-Grado ponderado: 19" data-node="Bedel Juan" style="cursor:pointer"/><circle class="pa-m" cx="431.21" cy="446.51" r="2.51" fill="#E8A33D" data-tip="Ciro
+Grado ponderado: 19" data-node="Bedel Juan" style="cursor:pointer"/><circle class="pa-m" cx="439.38" cy="458.16" r="2.86" fill="#E8A33D" data-tip="Ciro
 Puerto
 Conexiones: 11
-Grado ponderado: 19" data-node="Ciro" style="cursor:pointer"/><circle class="pa-m" cx="518.58" cy="382.16" r="2.51" fill="#D42A5E" data-tip="Hugo
+Grado ponderado: 19" data-node="Ciro" style="cursor:pointer"/><circle class="pa-m" cx="536.78" cy="386.43" r="2.86" fill="#D42A5E" data-tip="Hugo
 Barricada
 Conexiones: 6
-Grado ponderado: 19" data-node="Hugo" style="cursor:pointer"/><circle class="pa-m" cx="386.63" cy="234.35" r="2.51" fill="#3A47B8" data-tip="Olga
+Grado ponderado: 19" data-node="Hugo" style="cursor:pointer"/><circle class="pa-m" cx="389.68" cy="221.65" r="2.86" fill="#3A47B8" data-tip="Olga
 Casa Valdés
 Conexiones: 10
-Grado ponderado: 19" data-node="Olga" style="cursor:pointer"/><circle class="pa-m" cx="226.81" cy="413.37" r="2.51" fill="#7B5CD6" data-tip="Paca
+Grado ponderado: 19" data-node="Olga" style="cursor:pointer"/><circle class="pa-m" cx="211.53" cy="421.21" r="2.86" fill="#7B5CD6" data-tip="Paca
 Posada
 Conexiones: 6
-Grado ponderado: 19" data-node="Paca" style="cursor:pointer"/><circle class="pa-m" cx="513.65" cy="390.44" r="2.51" fill="#D42A5E" data-tip="Íñigo
+Grado ponderado: 19" data-node="Paca" style="cursor:pointer"/><circle class="pa-m" cx="531.29" cy="395.66" r="2.86" fill="#D42A5E" data-tip="Íñigo
 Barricada
 Conexiones: 10
-Grado ponderado: 19" data-node="Íñigo" style="cursor:pointer"/><circle class="pa-m" cx="399.73" cy="236.11" r="2.44" fill="#3A47B8" data-tip="Bruno
+Grado ponderado: 19" data-node="Íñigo" style="cursor:pointer"/><circle class="pa-m" cx="404.29" cy="223.61" r="2.78" fill="#3A47B8" data-tip="Bruno
 Casa Valdés
 Conexiones: 4
-Grado ponderado: 18" data-node="Bruno" style="cursor:pointer"/><circle class="pa-m" cx="507.75" cy="398.44" r="2.44" fill="#D42A5E" data-tip="Simón
+Grado ponderado: 18" data-node="Bruno" style="cursor:pointer"/><circle class="pa-m" cx="524.71" cy="404.57" r="2.78" fill="#D42A5E" data-tip="Simón
 Barricada
 Conexiones: 8
-Grado ponderado: 18" data-node="Simón" style="cursor:pointer"/><circle class="pa-m" cx="301.12" cy="449.96" r="2.44" fill="#1E9C89" data-tip="Sor Pía
+Grado ponderado: 18" data-node="Simón" style="cursor:pointer"/><circle class="pa-m" cx="294.36" cy="462.01" r="2.78" fill="#1E9C89" data-tip="Sor Pía
 Convento
 Conexiones: 7
-Grado ponderado: 18" data-node="Sor Pía" style="cursor:pointer"/><circle class="pa-m" cx="219.09" cy="406.09" r="2.44" fill="#7B5CD6" data-tip="Toña
+Grado ponderado: 18" data-node="Sor Pía" style="cursor:pointer"/><circle class="pa-m" cx="202.91" cy="413.11" r="2.78" fill="#7B5CD6" data-tip="Toña
 Posada
 Conexiones: 7
-Grado ponderado: 18" data-node="Toña" style="cursor:pointer"/><circle class="pa-m" cx="215.56" cy="287.69" r="2.44" fill="#5BA3E0" data-tip="Vicente
+Grado ponderado: 18" data-node="Toña" style="cursor:pointer"/><circle class="pa-m" cx="198.97" cy="281.11" r="2.78" fill="#5BA3E0" data-tip="Vicente
 Mercado
 Conexiones: 6
-Grado ponderado: 18" data-node="Vicente" style="cursor:pointer"/><circle class="pa-m" cx="333.37" cy="234.35" r="2.37" fill="#A5AAC0" data-tip="Alumna Sol
+Grado ponderado: 18" data-node="Vicente" style="cursor:pointer"/><circle class="pa-m" cx="330.32" cy="221.65" r="2.7" fill="#A5AAC0" data-tip="Alumna Sol
 Colegio
 Conexiones: 5
-Grado ponderado: 17" data-node="Alumna Sol" style="cursor:pointer"/><circle class="pa-m" cx="222.84" cy="280.22" r="2.37" fill="#5BA3E0" data-tip="Amparo
+Grado ponderado: 17" data-node="Alumna Sol" style="cursor:pointer"/><circle class="pa-m" cx="207.1" cy="272.78" r="2.7" fill="#5BA3E0" data-tip="Amparo
 Mercado
 Conexiones: 5
-Grado ponderado: 17" data-node="Amparo" style="cursor:pointer"/><circle class="pa-m" cx="288.79" cy="446.51" r="2.37" fill="#1E9C89" data-tip="Novicia Eva
+Grado ponderado: 17" data-node="Amparo" style="cursor:pointer"/><circle class="pa-m" cx="280.62" cy="458.16" r="2.7" fill="#1E9C89" data-tip="Novicia Eva
 Convento
 Conexiones: 7
-Grado ponderado: 17" data-node="Novicia Eva" style="cursor:pointer"/><circle class="pa-m" cx="500.91" cy="406.09" r="2.37" fill="#D42A5E" data-tip="Ruth
+Grado ponderado: 17" data-node="Novicia Eva" style="cursor:pointer"/><circle class="pa-m" cx="517.09" cy="413.11" r="2.7" fill="#D42A5E" data-tip="Ruth
 Barricada
 Conexiones: 9
-Grado ponderado: 17" data-node="Ruth" style="cursor:pointer"/><circle class="pa-m" cx="276.92" cy="442.42" r="2.3" fill="#1E9C89" data-tip="Hermano Luis
+Grado ponderado: 17" data-node="Ruth" style="cursor:pointer"/><circle class="pa-m" cx="267.38" cy="453.6" r="2.62" fill="#1E9C89" data-tip="Hermano Luis
 Convento
 Conexiones: 6
-Grado ponderado: 16" data-node="Hermano Luis" style="cursor:pointer"/><circle class="pa-m" cx="412.58" cy="238.56" r="2.3" fill="#3A47B8" data-tip="Matías
+Grado ponderado: 16" data-node="Hermano Luis" style="cursor:pointer"/><circle class="pa-m" cx="418.61" cy="226.34" r="2.62" fill="#3A47B8" data-tip="Matías
 Casa Valdés
 Conexiones: 5
-Grado ponderado: 16" data-node="Matías" style="cursor:pointer"/><circle class="pa-m" cx="493.19" cy="413.37" r="2.3" fill="#D42A5E" data-tip="Noé
+Grado ponderado: 16" data-node="Matías" style="cursor:pointer"/><circle class="pa-m" cx="508.47" cy="421.21" r="2.62" fill="#D42A5E" data-tip="Noé
 Barricada
 Conexiones: 8
-Grado ponderado: 16" data-node="Noé" style="cursor:pointer"/><circle class="pa-m" cx="249.7" cy="260.44" r="2.23" fill="#8E9A2F" data-tip="Aprendiz Leo
+Grado ponderado: 16" data-node="Noé" style="cursor:pointer"/><circle class="pa-m" cx="237.03" cy="250.74" r="2.54" fill="#8E9A2F" data-tip="Aprendiz Leo
 Taller
 Conexiones: 3
-Grado ponderado: 15" data-node="Aprendiz Leo" style="cursor:pointer"/><circle class="pa-m" cx="425.1" cy="241.68" r="2.23" fill="#3A47B8" data-tip="Dámaso
+Grado ponderado: 15" data-node="Aprendiz Leo" style="cursor:pointer"/><circle class="pa-m" cx="432.57" cy="229.82" r="2.54" fill="#3A47B8" data-tip="Dámaso
 Casa Valdés
 Conexiones: 6
-Grado ponderado: 15" data-node="Dámaso" style="cursor:pointer"/><circle class="pa-m" cx="437.2" cy="245.46" r="2.23" fill="#3A47B8" data-tip="Gaspar
+Grado ponderado: 15" data-node="Dámaso" style="cursor:pointer"/><circle class="pa-m" cx="446.07" cy="234.03" r="2.54" fill="#3A47B8" data-tip="Gaspar
 Casa Valdés
 Conexiones: 8
-Grado ponderado: 15" data-node="Gaspar" style="cursor:pointer"/><circle class="pa-m" cx="265.57" cy="437.71" r="2.23" fill="#1E9C89" data-tip="Padre Anselmo
+Grado ponderado: 15" data-node="Gaspar" style="cursor:pointer"/><circle class="pa-m" cx="254.73" cy="448.35" r="2.54" fill="#1E9C89" data-tip="Padre Anselmo
 Convento
 Conexiones: 7
-Grado ponderado: 15" data-node="Padre Anselmo" style="cursor:pointer"/><circle class="pa-m" cx="418.88" cy="449.96" r="2.16" fill="#E8A33D" data-tip="Basilio
+Grado ponderado: 15" data-node="Padre Anselmo" style="cursor:pointer"/><circle class="pa-m" cx="425.64" cy="462.01" r="2.45" fill="#E8A33D" data-tip="Basilio
 Puerto
 Conexiones: 3
-Grado ponderado: 14" data-node="Basilio" style="cursor:pointer"/><circle class="pa-m" cx="192.21" cy="338.32" r="2.16" fill="#B5562E" data-tip="Escribano Gil
+Grado ponderado: 14" data-node="Basilio" style="cursor:pointer"/><circle class="pa-m" cx="172.95" cy="337.55" r="2.45" fill="#B5562E" data-tip="Escribano Gil
 Tribunal
 Conexiones: 3
-Grado ponderado: 14" data-node="Escribano Gil" style="cursor:pointer"/><circle class="pa-m" cx="406.19" cy="452.75" r="2.16" fill="#E8A33D" data-tip="Fabia
+Grado ponderado: 14" data-node="Escribano Gil" style="cursor:pointer"/><circle class="pa-m" cx="411.49" cy="465.12" r="2.45" fill="#E8A33D" data-tip="Fabia
 Puerto
 Conexiones: 7
-Grado ponderado: 14" data-node="Fabia" style="cursor:pointer"/><circle class="pa-m" cx="212.25" cy="398.44" r="2.08" fill="#7B5CD6" data-tip="Don Cosme
+Grado ponderado: 14" data-node="Fabia" style="cursor:pointer"/><circle class="pa-m" cx="195.29" cy="404.57" r="2.36" fill="#7B5CD6" data-tip="Don Cosme
 Posada
 Conexiones: 5
-Grado ponderado: 13" data-node="Don Cosme" style="cursor:pointer"/><circle class="pa-m" cx="206.35" cy="390.44" r="2.08" fill="#7B5CD6" data-tip="Quique
+Grado ponderado: 13" data-node="Don Cosme" style="cursor:pointer"/><circle class="pa-m" cx="188.71" cy="395.66" r="2.36" fill="#7B5CD6" data-tip="Quique
 Posada
 Conexiones: 5
-Grado ponderado: 13" data-node="Quique" style="cursor:pointer"/><circle class="pa-m" cx="260.12" cy="254.87" r="2.08" fill="#8E9A2F" data-tip="Sabina
+Grado ponderado: 13" data-node="Quique" style="cursor:pointer"/><circle class="pa-m" cx="248.65" cy="244.52" r="2.36" fill="#8E9A2F" data-tip="Sabina
 Taller
 Conexiones: 4
-Grado ponderado: 13" data-node="Sabina" style="cursor:pointer"/><circle class="pa-m" cx="193.54" cy="329.45" r="2" fill="#B5562E" data-tip="Abogado Sanz
+Grado ponderado: 13" data-node="Sabina" style="cursor:pointer"/><circle class="pa-m" cx="174.43" cy="327.67" r="2.27" fill="#B5562E" data-tip="Abogado Sanz
 Tribunal
 Conexiones: 6
-Grado ponderado: 12" data-node="Abogado Sanz" style="cursor:pointer"/><circle class="pa-m" cx="448.82" cy="249.86" r="1.91" fill="#3A47B8" data-tip="Leonor
+Grado ponderado: 12" data-node="Abogado Sanz" style="cursor:pointer"/><circle class="pa-m" cx="459.02" cy="238.94" r="2.17" fill="#3A47B8" data-tip="Leonor
 Casa Valdés
 Conexiones: 6
-Grado ponderado: 11" data-node="Leonor" style="cursor:pointer"/><circle class="pa-m" cx="393.2" cy="454.85" r="1.82" fill="#E8A33D" data-tip="Eloy
+Grado ponderado: 11" data-node="Leonor" style="cursor:pointer"/><circle class="pa-m" cx="397.01" cy="467.46" r="2.07" fill="#E8A33D" data-tip="Eloy
 Puerto
 Conexiones: 6
-Grado ponderado: 10" data-node="Eloy" style="cursor:pointer"/><circle class="pa-m" cx="201.42" cy="382.16" r="1.82" fill="#7B5CD6" data-tip="Zoilo
+Grado ponderado: 10" data-node="Eloy" style="cursor:pointer"/><circle class="pa-m" cx="183.22" cy="386.43" r="2.07" fill="#7B5CD6" data-tip="Zoilo
 Posada
 Conexiones: 3
-Grado ponderado: 10" data-node="Zoilo" style="cursor:pointer"/><circle class="pa-m" cx="271.18" cy="249.86" r="1.73" fill="#8E9A2F" data-tip="Clemente
+Grado ponderado: 10" data-node="Zoilo" style="cursor:pointer"/><circle class="pa-m" cx="260.98" cy="238.94" r="1.97" fill="#8E9A2F" data-tip="Clemente
 Taller
 Conexiones: 4
-Grado ponderado: 9" data-node="Clemente" style="cursor:pointer"/><circle class="pa-m" cx="459.88" cy="254.87" r="1.73" fill="#3A47B8" data-tip="Elías
+Grado ponderado: 9" data-node="Clemente" style="cursor:pointer"/><circle class="pa-m" cx="471.35" cy="244.52" r="1.97" fill="#3A47B8" data-tip="Elías
 Casa Valdés
 Conexiones: 4
-Grado ponderado: 9" data-node="Elías" style="cursor:pointer"/><circle class="pa-m" cx="195.91" cy="320.69" r="1.73" fill="#B5562E" data-tip="Testigo Roca
+Grado ponderado: 9" data-node="Elías" style="cursor:pointer"/><circle class="pa-m" cx="177.08" cy="317.89" r="1.97" fill="#B5562E" data-tip="Testigo Roca
 Tribunal
 Conexiones: 5
-Grado ponderado: 9" data-node="Testigo Roca" style="cursor:pointer"/><circle class="pa-m" cx="470.3" cy="260.44" r="1.63" fill="#3A47B8" data-tip="Nieves
+Grado ponderado: 9" data-node="Testigo Roca" style="cursor:pointer"/><circle class="pa-m" cx="482.97" cy="250.74" r="1.85" fill="#3A47B8" data-tip="Nieves
 Casa Valdés
 Conexiones: 4
-Grado ponderado: 8" data-node="Nieves" style="cursor:pointer"/><circle class="pa-m" cx="282.8" cy="245.46" r="1.63" fill="#8E9A2F" data-tip="Rufo
+Grado ponderado: 8" data-node="Nieves" style="cursor:pointer"/><circle class="pa-m" cx="273.93" cy="234.03" r="1.85" fill="#8E9A2F" data-tip="Rufo
 Taller
 Conexiones: 3
-Grado ponderado: 8" data-node="Rufo" style="cursor:pointer"/><circle class="pa-m" cx="480.03" cy="266.55" r="1.5" fill="#3A47B8" data-tip="Abril
+Grado ponderado: 8" data-node="Rufo" style="cursor:pointer"/><circle class="pa-m" cx="493.81" cy="257.55" r="1.61" fill="#3A47B8" data-tip="Abril
 Casa Valdés
 Conexiones: 2
-Grado ponderado: 6" data-node="Abril" style="cursor:pointer"/><circle class="pa-m" cx="504.44" cy="287.69" r="1.5" fill="#3A47B8" data-tip="Catalina
-Casa Valdés
-Conexiones: 2
-Grado ponderado: 5" data-node="Catalina" style="cursor:pointer"/><circle class="pa-m" cx="510.82" cy="295.52" r="1.5" fill="#3A47B8" data-tip="Celia
-Casa Valdés
-Conexiones: 3
-Grado ponderado: 5" data-node="Celia" style="cursor:pointer"/><circle class="pa-m" cx="380.01" cy="456.26" r="1.5" fill="#E8A33D" data-tip="Dora
-Puerto
-Conexiones: 4
-Grado ponderado: 5" data-node="Dora" style="cursor:pointer"/><circle class="pa-m" cx="489" cy="273.16" r="1.5" fill="#3A47B8" data-tip="Fermín
+Grado ponderado: 6" data-node="Abril" style="cursor:pointer"/><circle class="pa-m" cx="503.81" cy="264.91" r="1.61" fill="#3A47B8" data-tip="Fermín
 Casa Valdés
 Conexiones: 4
-Grado ponderado: 6" data-node="Fermín" style="cursor:pointer"/><circle class="pa-m" cx="497.16" cy="280.22" r="1.5" fill="#3A47B8" data-tip="Inés
+Grado ponderado: 6" data-node="Fermín" style="cursor:pointer"/><circle class="pa-m" cx="512.9" cy="272.78" r="1.61" fill="#3A47B8" data-tip="Inés
 Casa Valdés
 Conexiones: 6
-Grado ponderado: 6" data-node="Inés" style="cursor:pointer"/><circle class="pa-m" cx="516.24" cy="303.67" r="1.5" fill="#3A47B8" data-tip="Ramiro
-Casa Valdés
-Conexiones: 5
-Grado ponderado: 5" data-node="Ramiro" style="cursor:pointer"/><circle class="pa-m" cx="520.67" cy="312.07" r="1.5" fill="#3A47B8" data-tip="Rosaura
+Grado ponderado: 6" data-node="Inés" style="cursor:pointer"/><circle class="pa-m" cx="521.03" cy="281.11" r="1.5" fill="#3A47B8" data-tip="Catalina
 Casa Valdés
 Conexiones: 2
-Grado ponderado: 3" data-node="Rosaura" style="cursor:pointer"/></g><g class="pa-labels"><text x="360" y="219.73" dy="0.35em" text-anchor="start" transform="rotate(-90 360 219.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Julián">Julián</text><text x="483.19" y="432.18" dy="0.35em" text-anchor="start" transform="rotate(35.3 483.2 432.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Capitán Ríos">Capitán Ríos</text><text x="535.73" y="328.59" dy="0.35em" text-anchor="start" transform="rotate(-5.3 535.7 328.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Andrés">Andrés</text><text x="352.76" y="466.27" dy="0.35em" text-anchor="end" transform="rotate(273.4 352.8 466.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Clara">Sor Clara</text><text x="195.19" y="301.4" dy="0.35em" text-anchor="end" transform="rotate(14.8 195.2 301.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Pepa">Pepa</text><text x="186.06" y="365.98" dy="0.35em" text-anchor="end" transform="rotate(353.1 186.1 366)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Juez Arteaga">Juez Arteaga</text><text x="232.81" y="261.88" dy="0.35em" text-anchor="end" transform="rotate(33.2 232.8 261.9)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Maestro Ibar">Maestro Ibar</text><text x="237.88" y="431.42" dy="0.35em" text-anchor="end" transform="rotate(324.7 237.9 431.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Doña Benita">Doña Benita</text><text x="303.79" y="231.21" dy="0.35em" text-anchor="end" transform="rotate(63.7 303.8 231.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Profesor Lago">Profesor Lago</text><text x="536.05" y="347.33" dy="0.35em" text-anchor="start" transform="rotate(0.8 536 347.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Marcial">Marcial</text><text x="338.58" y="464.13" dy="0.35em" text-anchor="end" transform="rotate(280.2 338.6 464.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Edith">Sor Edith</text><text x="324.55" y="462.28" dy="0.35em" text-anchor="end" transform="rotate(286.8 324.6 462.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Ana">Sor Ana</text><text x="533.05" y="365.87" dy="0.35em" text-anchor="start" transform="rotate(6.9 533.1 365.9)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Vera">Vera</text><text x="459.88" y="443.06" dy="0.35em" text-anchor="start" transform="rotate(44.5 459.9 443.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Marta">Marta</text><text x="310.8" y="459.77" dy="0.35em" text-anchor="end" transform="rotate(293.2 310.8 459.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Rita">Sor Rita</text><text x="184.3" y="347.33" dy="0.35em" text-anchor="end" transform="rotate(359.2 184.3 347.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Alguacil Mora">Alguacil Mora</text><text x="374.25" y="225.77" dy="0.35em" text-anchor="start" transform="rotate(-83.2 374.3 225.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Tomasa">Tomasa</text><text x="388.38" y="227.05" dy="0.35em" text-anchor="start" transform="rotate(-76.5 388.4 227.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Olga">Olga</text><text x="525.89" y="383.87" dy="0.35em" text-anchor="start" transform="rotate(13.2 525.9 383.9)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Hugo">Hugo</text><text x="435.52" y="452.66" dy="0.35em" text-anchor="start" transform="rotate(55 435.5 452.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Ciro">Ciro</text><text x="220.13" y="416.79" dy="0.35em" text-anchor="end" transform="rotate(332.8 220.1 416.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Paca">Paca</text><text x="317.7" y="229.06" dy="0.35em" text-anchor="end" transform="rotate(70 317.7 229.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Bedel Juan">Bedel Juan</text><text x="402.28" y="229.12" dy="0.35em" text-anchor="start" transform="rotate(-70 402.3 229.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Bruno">Bruno</text><text x="514.75" y="400.97" dy="0.35em" text-anchor="start" transform="rotate(19.9 514.7 401)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Simón">Simón</text><text x="208.64" y="284.94" dy="0.35em" text-anchor="end" transform="rotate(21.6 208.6 284.9)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Vicente">Vicente</text><text x="284.56" y="452.55" dy="0.35em" text-anchor="end" transform="rotate(305 284.6 452.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Novicia Eva">Novicia Eva</text><text x="331.65" y="227.18" dy="0.35em" text-anchor="end" transform="rotate(76.5 331.6 227.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Alumna Sol">Alumna Sol</text><text x="415.81" y="232.01" dy="0.35em" text-anchor="start" transform="rotate(-63.7 415.8 232)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Matías">Matías</text><text x="499.68" y="416.7" dy="0.35em" text-anchor="start" transform="rotate(27.2 499.7 416.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Noé">Noé</text><text x="441.63" y="239.75" dy="0.35em" text-anchor="start" transform="rotate(-52.2 441.6 239.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Gaspar">Gaspar</text><text x="260.42" y="442.77" dy="0.35em" text-anchor="end" transform="rotate(315.5 260.4 442.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Padre Anselmo">Padre Ansel…</text><text x="409.01" y="459.32" dy="0.35em" text-anchor="start" transform="rotate(66.8 409 459.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Fabia">Fabia</text><text x="205.6" y="400.84" dy="0.35em" text-anchor="end" transform="rotate(340.1 205.6 400.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Don Cosme">Don Cosme</text><text x="254.87" y="250.13" dy="0.35em" text-anchor="end" transform="rotate(42.1 254.9 250.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sabina">Sabina</text><text x="186.57" y="328.8" dy="0.35em" text-anchor="end" transform="rotate(5.3 186.6 328.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Abogado Sanz">Abogado Sanz</text><text x="395.18" y="461.38" dy="0.35em" text-anchor="start" transform="rotate(73.2 395.2 461.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Eloy">Eloy</text><text x="194.78" y="383.72" dy="0.35em" text-anchor="end" transform="rotate(346.8 194.8 383.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Zoilo">Zoilo</text><text x="464.87" y="250.36" dy="0.35em" text-anchor="start" transform="rotate(-42.1 464.9 250.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Elías">Elías</text><text x="278.73" y="240.22" dy="0.35em" text-anchor="end" transform="rotate(52.2 278.7 240.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Rufo">Rufo</text><text x="485.47" y="263" dy="0.35em" text-anchor="start" transform="rotate(-33.2 485.5 263)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Abril">Abril</text><text x="503.03" y="277.44" dy="0.35em" text-anchor="start" transform="rotate(-25.3 503 277.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Inés">Inés</text><text x="516.99" y="293.49" dy="0.35em" text-anchor="start" transform="rotate(-18.2 517 293.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Celia">Celia</text><text x="381.16" y="462.66" dy="0.35em" text-anchor="start" transform="rotate(79.8 381.2 462.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Dora">Dora</text><text x="527.04" y="310.77" dy="0.35em" text-anchor="start" transform="rotate(-11.6 527 310.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Rosaura">Rosaura</text></g></g></g><text x="696" y="574" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>
+Grado ponderado: 5" data-node="Catalina" style="cursor:pointer"/><circle class="pa-m" cx="528.13" cy="289.84" r="1.5" fill="#3A47B8" data-tip="Celia
+Casa Valdés
+Conexiones: 3
+Grado ponderado: 5" data-node="Celia" style="cursor:pointer"/><circle class="pa-m" cx="382.3" cy="469.04" r="1.5" fill="#E8A33D" data-tip="Dora
+Puerto
+Conexiones: 4
+Grado ponderado: 5" data-node="Dora" style="cursor:pointer"/><circle class="pa-m" cx="534.17" cy="298.92" r="1.5" fill="#3A47B8" data-tip="Ramiro
+Casa Valdés
+Conexiones: 5
+Grado ponderado: 5" data-node="Ramiro" style="cursor:pointer"/><circle class="pa-m" cx="539.11" cy="308.29" r="1.5" fill="#3A47B8" data-tip="Rosaura
+Casa Valdés
+Conexiones: 2
+Grado ponderado: 3" data-node="Rosaura" style="cursor:pointer"/></g><g class="pa-labels"><text x="360" y="205.74" dy="0.35em" text-anchor="start" transform="rotate(-90 360 205.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Julián">Julián</text><text x="496.95" y="441.92" dy="0.35em" text-anchor="start" transform="rotate(35.3 497 441.9)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Capitán Ríos">Capitán Ríos</text><text x="555.44" y="326.75" dy="0.35em" text-anchor="start" transform="rotate(-5.3 555.4 326.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Andrés">Andrés</text><text x="351.96" y="479.71" dy="0.35em" text-anchor="end" transform="rotate(273.4 352 479.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Clara">Sor Clara</text><text x="176.74" y="296.52" dy="0.35em" text-anchor="end" transform="rotate(14.8 176.7 296.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Pepa">Pepa</text><text x="166.58" y="368.32" dy="0.35em" text-anchor="end" transform="rotate(353.1 166.6 368.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Juez Arteaga">Juez Arteaga</text><text x="218.62" y="252.6" dy="0.35em" text-anchor="end" transform="rotate(33.2 218.6 252.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Maestro Ibar">Maestro Ibar</text><text x="224.26" y="441.06" dy="0.35em" text-anchor="end" transform="rotate(324.7 224.3 441.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Doña Benita">Doña Benita</text><text x="297.56" y="218.59" dy="0.35em" text-anchor="end" transform="rotate(63.7 297.6 218.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Profesor Lago">Profesor Lago</text><text x="555.75" y="347.6" dy="0.35em" text-anchor="start" transform="rotate(0.8 555.8 347.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Marcial">Marcial</text><text x="336.21" y="477.31" dy="0.35em" text-anchor="end" transform="rotate(280.2 336.2 477.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Edith">Sor Edith</text><text x="320.63" y="475.26" dy="0.35em" text-anchor="end" transform="rotate(286.8 320.6 475.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Ana">Sor Ana</text><text x="552.41" y="368.2" dy="0.35em" text-anchor="start" transform="rotate(6.9 552.4 368.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Vera">Vera</text><text x="470.98" y="453.96" dy="0.35em" text-anchor="start" transform="rotate(44.5 471 454)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Marta">Marta</text><text x="305.36" y="472.47" dy="0.35em" text-anchor="end" transform="rotate(293.2 305.4 472.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Rita">Sor Rita</text><text x="164.65" y="347.59" dy="0.35em" text-anchor="end" transform="rotate(359.2 164.6 347.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Alguacil Mora">Alguacil Mora</text><text x="375.83" y="212.6" dy="0.35em" text-anchor="start" transform="rotate(-83.2 375.8 212.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Tomasa">Tomasa</text><text x="457.76" y="459.63" dy="0.35em" text-anchor="start" transform="rotate(49.5 457.8 459.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Esteban">Esteban</text><text x="391.52" y="214.01" dy="0.35em" text-anchor="start" transform="rotate(-76.5 391.5 214)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Olga">Olga</text><text x="544.43" y="388.22" dy="0.35em" text-anchor="start" transform="rotate(13.2 544.4 388.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Hugo">Hugo</text><text x="443.89" y="464.59" dy="0.35em" text-anchor="start" transform="rotate(55 443.9 464.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Ciro">Ciro</text><text x="204.54" y="424.8" dy="0.35em" text-anchor="end" transform="rotate(332.8 204.5 424.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Paca">Paca</text><text x="313.02" y="216.23" dy="0.35em" text-anchor="end" transform="rotate(70 313 216.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Bedel Juan">Bedel Juan</text><text x="406.95" y="216.31" dy="0.35em" text-anchor="start" transform="rotate(-70 407 216.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Bruno">Bruno</text><text x="532.02" y="407.22" dy="0.35em" text-anchor="start" transform="rotate(19.9 532 407.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Simón">Simón</text><text x="290.55" y="468.79" dy="0.35em" text-anchor="end" transform="rotate(299.3 290.5 468.8)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sor Pía">Sor Pía</text><text x="191.74" y="278.24" dy="0.35em" text-anchor="end" transform="rotate(21.6 191.7 278.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Vicente">Vicente</text><text x="276.2" y="464.47" dy="0.35em" text-anchor="end" transform="rotate(305 276.2 464.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Novicia Eva">Novicia Eva</text><text x="328.52" y="214.16" dy="0.35em" text-anchor="end" transform="rotate(76.5 328.5 214.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Alumna Sol">Alumna Sol</text><text x="421.99" y="219.51" dy="0.35em" text-anchor="start" transform="rotate(-63.7 422 219.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Matías">Matías</text><text x="515.25" y="424.69" dy="0.35em" text-anchor="start" transform="rotate(27.2 515.3 424.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Noé">Noé</text><text x="262.44" y="459.4" dy="0.35em" text-anchor="end" transform="rotate(310.5 262.4 459.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Hermano Luis">Hermano Luis</text><text x="436.59" y="223.45" dy="0.35em" text-anchor="start" transform="rotate(-57.8 436.6 223.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Dámaso">Dámaso</text><text x="450.69" y="228.08" dy="0.35em" text-anchor="start" transform="rotate(-52.2 450.7 228.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Gaspar">Gaspar</text><text x="249.36" y="453.63" dy="0.35em" text-anchor="end" transform="rotate(315.5 249.4 453.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Padre Anselmo">Padre Anselmo</text><text x="429.29" y="468.51" dy="0.35em" text-anchor="start" transform="rotate(60.7 429.3 468.5)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Basilio">Basilio</text><text x="414.43" y="471.96" dy="0.35em" text-anchor="start" transform="rotate(66.8 414.4 472)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Fabia">Fabia</text><text x="188.37" y="407.08" dy="0.35em" text-anchor="end" transform="rotate(340.1 188.4 407.1)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Don Cosme">Don Cosme</text><text x="243.19" y="239.59" dy="0.35em" text-anchor="end" transform="rotate(42.1 243.2 239.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Sabina">Sabina</text><text x="167.19" y="326.99" dy="0.35em" text-anchor="end" transform="rotate(5.3 167.2 327)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Abogado Sanz">Abogado Sanz</text><text x="463.91" y="233.7" dy="0.35em" text-anchor="start" transform="rotate(-47 463.9 233.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Leonor">Leonor</text><text x="399.06" y="474.23" dy="0.35em" text-anchor="start" transform="rotate(73.2 399.1 474.2)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Eloy">Eloy</text><text x="176.33" y="388.04" dy="0.35em" text-anchor="end" transform="rotate(346.8 176.3 388)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Zoilo">Zoilo</text><text x="488.41" y="246.57" dy="0.35em" text-anchor="start" transform="rotate(-37.5 488.4 246.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Nieves">Nieves</text><text x="269.73" y="228.62" dy="0.35em" text-anchor="end" transform="rotate(52.2 269.7 228.6)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Rufo">Rufo</text><text x="509.58" y="261.7" dy="0.35em" text-anchor="start" transform="rotate(-29.1 509.6 261.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Fermín">Fermín</text><text x="527.07" y="278.71" dy="0.35em" text-anchor="start" transform="rotate(-21.6 527.1 278.7)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Catalina">Catalina</text><text x="540.46" y="297.26" dy="0.35em" text-anchor="start" transform="rotate(-14.8 540.5 297.3)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Ramiro">Ramiro</text><text x="383.45" y="475.43" dy="0.35em" text-anchor="start" transform="rotate(79.8 383.5 475.4)" fill="#141A3F" font-size="11.5" font-weight="500" stroke="#FCFBF9" stroke-width="2" paint-order="stroke" stroke-linejoin="round" data-node="Dora">Dora</text></g></g></g><text x="720" y="590" fill="#7C819C" font-size="11" text-anchor="end">Fuente: datos ilustrativos</text></svg>

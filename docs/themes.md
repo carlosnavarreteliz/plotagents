@@ -72,11 +72,11 @@ Both share the same eight hues, stepped separately for each surface and validate
 | `sequential` | colors, ramp or colormap name | Light → dark, for heatmaps and maps. |
 | `diverging` | colors, ramp or colormap name | Two poles with a neutral midpoint. |
 | `status` | `{ good, warning, critical }` | KPI deltas and meters. Never used for series. |
-| `font` | `{ family, mono, import }` | Font stack and optional Google Fonts URL (`fontImport: true` embeds it in the SVG). |
+| `font` | `{ family, mono, import }` | Font stack and optional stylesheet URL (`fontImport: true` embeds it in the SVG). From a spec, `import` must be https on Google Fonts, Bunny Fonts, Adobe Fonts (Typekit) or cdnfonts; other hosts are dropped. Themes registered with `registerTheme()` keep any https URL, and `configure({ fontHosts: ['fonts.example.com'] })` allows more hosts. |
 | `type` | `{ title, subtitle, label, axis, legend, source, titleWeight }` | Type sizes in px. Titles shrink automatically on narrow widths. |
 | `marks` | `{ barRadius, barMax, barMaxH, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity }` | Mark geometry. |
 | `axes` | `{ inside, grid }` | `inside: true` puts y labels on their gridlines inside the plot (more width for data). |
-| `layout` | `{ padding, paddingSmall }` | Outer margin on wide and narrow widths. |
+| `layout` | `{ padding }` | Outer margin for every chart with this theme (same forms as the `padding` option). Default 8 top and bottom, 0 at the sides. |
 
 ## Named palettes and ramps
 

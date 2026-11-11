@@ -8,7 +8,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize } from '../data.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
 import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
@@ -136,13 +136,13 @@ export function bar(spec, theme) {
   const maxCatW = Math.max(...cats.map((c) => measure(c, labelSize)));
   let horizontal = spec.horizontal ?? spec.orientation === 'horizontal';
   if (spec.horizontal === undefined && !spec.orientation) {
-    const slot = (frame.width - frame.pad * 2) / Math.max(1, cats.length);
+    const slot = (frame.width - frame.padding.left - frame.padding.right) / Math.max(1, cats.length);
     horizontal = m.nominal && (cats.length > 12 || maxCatW > slot - 10);
   }
 
   // Color: identidad por serie; una sola serie → un solo color (o highlight).
   const cmap = colorMap(seriesKeys, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const hlSeries = hl && seriesKeys.some((s) => hl.has(s));
   const colorFor = (c, si) => {
     if (multi) {

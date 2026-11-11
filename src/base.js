@@ -5,10 +5,10 @@
 // Cada archivo de src/types/ registra sus tipos sobre esta base. Es la entrada
 // para un empaquetador sin tree-shaking: una isla del navegador que dibuja
 // líneas no carga redes, mapas ni tablas.
-import { themeFor, colorMap, deepMerge, isColor, fontSpec } from './theme.js';
+import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts } from './theme.js';
 import { withContext } from './context.js';
 import { autoLocale } from './i18n.js';
-import { ensureData, PlotError, fieldKind, uniq, num } from './data.js';
+import { ensureData, PlotError, fieldKind, uniq, num, toRows } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
@@ -103,12 +103,18 @@ const DEFAULTS = {};
  */
 export function configure(options) {
   if (options === null) { for (const k of Object.keys(DEFAULTS)) delete DEFAULTS[k]; return {}; }
-  if (options) Object.assign(DEFAULTS, options);
+  if (options) {
+    const { fontHosts, ...rest } = options;
+    if (fontHosts) allowFontHosts(fontHosts);
+    Object.assign(DEFAULTS, rest);
+  }
   return { ...DEFAULTS };
 }
 
 function withDefaults(spec) {
   const s = { ...DEFAULTS, ...spec };
+  // Datos en columnas, encabezado + filas o CSV → filas (una vez por objeto).
+  if (s.data !== undefined) s.data = toRows(s.data);
   // Colores fijados por entidad: solo colores CSS válidos (viajan a atributos y al tooltip).
   if (s.colors && typeof s.colors === 'object') s.colors = Object.fromEntries(Object.entries(s.colors).filter(([, c]) => isColor(c)));
   // Tema global + tema del spec: el del spec se fusiona en profundidad sobre el global.

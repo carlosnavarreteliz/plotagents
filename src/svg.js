@@ -114,3 +114,16 @@ export function linkWrap(href, inner) {
   if (!/^(https?:\/\/|\/|\.{0,2}\/|#|\?)/i.test(h)) return inner;
   return `<a href="${esc(h)}" class="pa-link">${inner}</a>`;
 }
+
+/** Sector de anillo (o de torta si r0 ≈ 0) de a0 a a1 radianes; coordenadas con 2 decimales. */
+export function arcPath(cx, cy, r0, r1, a0, a1) {
+  const f = (n) => n.toFixed(2);
+  if (a1 - a0 >= Math.PI * 2 - 1e-6) a1 = a0 + Math.PI * 2 - 1e-4;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const p = (r, a) => `${f(cx + r * Math.cos(a))},${f(cy + r * Math.sin(a))}`;
+  if (r0 <= 0.01) return `M${f(cx)},${f(cy)}L${p(r1, a0)}A${f(r1)},${f(r1)} 0 ${large} 1 ${p(r1, a1)}Z`;
+  return `M${p(r1, a0)}A${f(r1)},${f(r1)} 0 ${large} 1 ${p(r1, a1)}L${p(r0, a1)}A${f(r0)},${f(r0)} 0 ${large} 0 ${p(r0, a0)}Z`;
+}
+
+/** ¿Se toca la caja [x0, y0, x1, y1] con alguna de `boxes`? (choques de etiquetas) */
+export const hitsAny = (box, boxes) => boxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));

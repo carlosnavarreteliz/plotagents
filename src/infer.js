@@ -12,7 +12,7 @@ export const ALIASES = {
   pointmap: 'pointmap', dotmap: 'pointmap', 'dot-map': 'pointmap', tilemap: 'pointmap', basemap: 'pointmap', 'mapa-puntos': 'pointmap', 'mapa-de-puntos': 'pointmap', latlon: 'pointmap',
   graph: 'network', force: 'network', red: 'network', 'chord-diagram': 'chord', cuerdas: 'chord',
   populationpyramid: 'pyramid', population: 'pyramid', piramide: 'pyramid', 'pirámide': 'pyramid',
-  flow: 'flowchart', diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
+  diagram: 'flowchart', process: 'flowchart', diagrama: 'flowchart',
   map: 'choropleth', mapa: 'choropleth', choroplethmap: 'choropleth', symbol: 'symbolmap', bubblemap: 'symbolmap', 'mapa-simbolos': 'symbolmap',
   words: 'wordcloud', 'word-cloud': 'wordcloud', wordclouds: 'wordcloud', tagcloud: 'wordcloud', 'tag-cloud': 'wordcloud', nube: 'wordcloud', 'nube-de-palabras': 'wordcloud', cloud: 'wordcloud',
   timeline: 'gantt', roadmap: 'gantt', schedule: 'gantt', cronograma: 'gantt', 'carta-gantt': 'gantt', ganttchart: 'gantt', 'gantt-chart': 'gantt', planning: 'gantt',

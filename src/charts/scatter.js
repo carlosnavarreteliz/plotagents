@@ -1,12 +1,12 @@
 // Dispersión y burbujas: relación entre dos variables numéricas, con tamaño
 // opcional (área proporcional), escalas log y línea de tendencia.
 import { tipper } from '../tooltip.js';
-import { el, g, text, tip, dotLayer } from '../svg.js';
+import { el, g, text, tip, dotLayer, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { extent } from '../stats.js';
@@ -49,7 +49,7 @@ export function scatter(spec, theme) {
   }
   const keys = series ? uniq(pts.map((p) => p.k)) : [''];
   const cmap = colorMap(keys, theme, spec.colors);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (p) => !hl || hl.has(p.name) || hl.has(p.k);
   const colorOf = (p) => (!focus(p) ? theme.dim : series ? cmap.get(p.k) : theme.categorical[0]);
 
@@ -211,7 +211,7 @@ export function scatter(spec, theme) {
       let lx = xS(p.x) + r + 4, ly = yS(p.y) + 4, anchor = 'start';
       if (lx + w > inner.x + inner.w) { lx = xS(p.x) - r - 4; anchor = 'end'; }
       const box = anchor === 'start' ? [lx, ly - 11, lx + w, ly + 3] : [lx - w, ly - 11, lx, ly + 3];
-      if (placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
+      if (hitsAny(box, placed)) continue;
       placed.push(box);
       body.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }, p.name.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
     }

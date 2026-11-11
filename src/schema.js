@@ -41,12 +41,12 @@ export const schema = {
         'Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, spark (a sparkline for a table cell), rail (one row of a distribution for a table cell: min–max, a band, the median, the value and reference ticks), network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). "auto" (default) picks from the data.',
     },
     data: {
-      description: 'Array of rows, e.g. [{ "region": "Biobío", "sales": 1240 }]. For kpi it can be omitted in favor of `items`.',
-      anyOf: [{ type: 'array', items: { type: 'object' } }, { type: 'object' }],
+      description: 'The table. Rows [{ "region": "Biobío", "sales": 1240 }], or, shorter for many rows (field names once): header + rows [["region", "sales"], ["Biobío", 1240], ["Ñuble", 830]], columns { "region": ["Biobío", "Ñuble"], "sales": [1240, 830] }, or CSV/TSV text "region,sales\\nBiobío,1240". For kpi it can be omitted in favor of `items`.',
+      anyOf: [{ type: 'array', items: { anyOf: [{ type: 'object' }, { type: 'array' }] } }, { type: 'object' }, { type: 'string' }],
     },
-    title: { type: 'string', description: 'The finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales".' },
-    subtitle: { type: 'string', description: 'How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
-    source: { type: 'string', description: 'Data source, shown at the bottom right.' },
+    title: { type: 'string', description: 'Optional. When set, the finding as a full sentence, ideally with the key number, e.g. "Biobío accounts for 32% of sales". Leave it out when the page around the chart already titles it.' },
+    subtitle: { type: 'string', description: 'Optional. How to read the chart: measure, unit and period, e.g. "Sales by region, CLP millions, 2025".' },
+    source: { type: 'string', description: 'Optional. Data source, shown at the bottom right.' },
     locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'], description: 'Language and number format. Default "es" (1.234,5); "en" for 1,234.5; also "pt", "fr", "de". "auto" recognizes the language from the title, subtitle, column names and categories (tables do this when `locale` is omitted).' },
     x: field('x-axis or category field (bar, line, area, scatter, heatmap, box, violin…).'),
     y: fieldOrList('Value field. For line/bar a list of fields (wide table) turns each one into a series.'),
@@ -426,7 +426,7 @@ export const schema = {
     textScale: { type: 'number', description: 'Multiplies every text size (1.5, 2…); the layout is recomputed so nothing overlaps. Aliases: fontScale, labelScale. configure({ textScale }) sets it for every chart.' },
     width: { type: 'number', description: 'Width in px (default 720; render() uses the container width).' },
     height: { type: 'number', description: 'Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars.' },
-    padding: number('Outer padding in px (default from the width).'),
+    padding: { description: 'Margin around the chart in px. Default: 8 top and bottom, 0 at the sides (the chart reaches the edges of its container). A number for every side, [vertical, horizontal], [top, right, bottom, left] or { top, right, bottom, left }.', anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 4 }, { type: 'object', properties: { top: { type: 'number' }, right: { type: 'number' }, bottom: { type: 'number' }, left: { type: 'number' } } }] },
   },
 };
 
@@ -439,11 +439,11 @@ export const dashboardSchema = {
   properties: {
     title: { type: 'string', description: 'The question the dashboard answers, e.g. "How are southern sales doing?"' },
     subtitle: { type: 'string', description: 'Scope: measure, unit, period.' },
-    source: { type: 'string', description: 'Data source, shown once at the bottom.' },
+    source: { type: 'string', description: 'Optional. Data source, shown once at the bottom.' },
     updated: { type: 'string', description: 'Last update, e.g. "2026-01-05".' },
     locale: { type: 'string', enum: ['es', 'en', 'pt', 'fr', 'de', 'auto'] },
     theme: { description: 'One theme for every chart: "papel" (light) or "noche" (dark), or a theme object.', anyOf: [{ type: 'string' }, { type: 'object' }] },
-    data: { type: 'array', items: { type: 'object' }, description: 'Shared rows: charts without their own `data` use these, and computed KPIs and filters work on them.' },
+    data: { anyOf: [{ type: 'array', items: { anyOf: [{ type: 'object' }, { type: 'array' }] } }, { type: 'object' }, { type: 'string' }], description: 'Shared table: charts without their own `data` use it, and computed KPIs and filters work on it. Rows, header + rows [["region", "sales"], ["Biobío", 1240]], columns { "region": [...], "sales": [...] } or CSV text. Pass it once here instead of in every chart.' },
     kpis: {
       type: 'array', description: 'Up to 5 key figures. Fixed ({ label, value, delta, period }) or computed from `data` ({ label, field, agg, compare, trendBy }).',
       items: { type: 'object', properties: {
@@ -479,7 +479,7 @@ export function toolDefinition({ name, flavor = 'anthropic', kind = 'chart' } = 
   }
   name = name ?? 'plot';
   const description =
-    'Draws an elegant, accessible chart from tabular data. Pass rows in `data`, name the fields (x, y, series/hue…) and write a `title` that states the finding. Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, rail (one row of a distribution sized for a table cell), table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
+    'Draws an elegant, accessible chart from tabular data. Pass the table in `data` (rows, or header + rows [["field", …], [v, …]] to write field names once), name the fields (x, y, series/hue…) and, if the chart needs one, a `title` that states the finding (title, subtitle and source are optional). Returns an SVG. Types: bar, count, line, area, wordcloud (words sized by frequency, or raw text to count), gantt (tasks with start/end, phases, progress, dependencies, milestones), scatter, bubble, regplot, residplot, jointplot, corr (correlation matrix of numeric fields, optional clustering: clustermap), pairplot (scatter-plot matrix with distributions and r), hist, kde, ecdf, box, violin, strip, swarm, point, radar, treemap, sunburst, donut, pie, heatmap, sankey, kpi, rail (one row of a distribution sized for a table cell), table (exact values with per-column indicators: data bars, ▲/▼ changes, cell colors, sparklines, progress meters, status pills; paginated, cards on phones), choropleth (Chile regions, US states and world countries built in, or any GeoJSON/TopoJSON in `geo`, with markers, layers and fitTo), symbolmap, pointmap (lat/lon dots over a tile basemap), network, chord, pyramid, flowchart (seaborn names accepted). `facet` makes panels; `time` shows one period (add `slider: true` for controls). `data` is required except for kpi (`items`), flowchart (`nodes`/`edges`), chord (`matrix`) and wordcloud raw `text`. Set `locale: "en"` for English number formats.';
   const { $schema, $id, title, ...params } = schema;
   if (flavor === 'openai') return { type: 'function', function: { name, description, parameters: params } };
   return { name, description, input_schema: params };

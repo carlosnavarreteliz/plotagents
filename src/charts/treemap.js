@@ -8,7 +8,7 @@ import { measure, wrap, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn, ramp } from '../theme.js';
 import { formatNumber } from '../format.js';
-import { humanize, ensureData } from '../data.js';
+import { humanize, ensureData, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { binnedScale } from '../colorscales.js';
 import { ctx } from '../context.js';
@@ -69,7 +69,7 @@ export function treemap(spec, theme) {
   (function walk(n) { allValues.push(n.value); n.children.forEach(walk); })(root);
   const fmt = makeFormat(spec.format, locale, allValues);
   const share = shareFmt(locale);
-  const hl = spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
 
   // Variación vs. el periodo anterior (con `time`) o vs. `compareData`.
   const prevRows = spec.compareData ?? spec._prev?.data;

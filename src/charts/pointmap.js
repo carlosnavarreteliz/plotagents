@@ -8,7 +8,7 @@
 //
 // Ojo: un SVG usado como <img> no carga recursos externos (las teselas). Usa el
 // SVG en línea, toHTML(), o embedTiles() para incrustarlas como data: URI.
-import { el, g, text, tip, dotLayer, esc } from '../svg.js';
+import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, ramp, hexToRgb, rgbToHex, mix } from '../theme.js';
@@ -177,7 +177,7 @@ function worldGeo() {
 }
 
 // ── Etiquetas ───────────────────────────────────────────────────────────────
-const hits = (box, boxes) => boxes.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+const hits = hitsAny;
 
 /** Valor "redondo" para la leyenda de tamaños (1, 2, 2,5 o 5 × 10ⁿ, hacia abajo). */
 function niceDown(v) {
@@ -562,7 +562,21 @@ function toBase64(buf) {
  * "carto-light" o un servidor propio si necesitas incrustar).
  * Devuelve el SVG (texto). Las teselas que fallan quedan con su URL.
  */
-export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, concurrency = 6 } = {}) {
+// Al incrustar teselas en un servidor solo se piden URLs https a hosts públicos:
+// nada de localhost, IPs privadas o de enlace local (metadatos de la nube).
+const PRIVATE_HOST = /^(localhost|.*\.localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|\[.*\])$/i;
+const MAX_TILE_BYTES = 2 * 1024 * 1024, MAX_EMBED = 400;
+function tileUrlOk(u, hosts) {
+  let url;
+  try { url = new URL(u); } catch { return false; }
+  if (url.protocol !== 'https:' || url.username || url.password) return false;
+  const h = url.hostname.toLowerCase();
+  if (hosts) return hosts.some((x) => h === x || h.endsWith('.' + x));
+  return !PRIVATE_HOST.test(h) && !/^\d+$/.test(h);
+}
+
+export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, concurrency = 6, hosts } = {}) {
+  const allow = hosts ? [].concat(hosts).map((h) => String(h).toLowerCase()) : null;
   const src = String(svg ?? '');
   if (typeof fetchFn !== 'function') throw new PlotError('embedTiles necesita fetch (Node 18+ o un navegador), o pásalo en { fetch }.', 'await embedTiles(svg, { fetch })');
   const tagRe = /<image\b[^>]*>/g;
@@ -573,8 +587,8 @@ export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userA
     const m = hrefRe.exec(tag);
     if (!m) continue;
     const u = unesc(m[1]);
-    if (/^data:/i.test(u) || refusesPrefetch(u)) continue;
-    urls.add(u);
+    if (/^data:/i.test(u) || refusesPrefetch(u) || !tileUrlOk(u, allow)) continue;
+    if (urls.size < MAX_EMBED) urls.add(u);
   }
   const out = new Map();
   const list = [...urls];
@@ -584,10 +598,14 @@ export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userA
     while (i < list.length) {
       const u = list[i++];
       try {
-        const res = await fetchFn(u, headers ? { headers } : undefined);
+        const res = await fetchFn(u, { redirect: 'error', ...(headers ? { headers } : {}) });
         if (!res || !res.ok) continue;
-        const type = (res.headers && typeof res.headers.get === 'function' && res.headers.get('content-type')) || (/\.jpe?g(\?|$)/i.test(u) ? 'image/jpeg' : /\.webp(\?|$)/i.test(u) ? 'image/webp' : 'image/png');
+        const hget = (k) => (res.headers && typeof res.headers.get === 'function' ? res.headers.get(k) : null);
+        const type = hget('content-type') || (/\.jpe?g(\?|$)/i.test(u) ? 'image/jpeg' : /\.webp(\?|$)/i.test(u) ? 'image/webp' : 'image/png');
+        // Solo imágenes, y de tamaño razonable.
+        if (!/^image\/(png|jpe?g|webp|gif|avif)\b/i.test(String(type)) || +hget('content-length') > MAX_TILE_BYTES) continue;
         const buf = await res.arrayBuffer();
+        if (buf.byteLength > MAX_TILE_BYTES) continue;
         out.set(u, `data:${String(type).split(';')[0].trim()};base64,${toBase64(buf)}`);
       } catch { /* la tesela queda con su URL */ }
     }

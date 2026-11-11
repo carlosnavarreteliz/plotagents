@@ -92,7 +92,6 @@
         "population",
         "piramide",
         "pirámide",
-        "flow",
         "diagram",
         "process",
         "diagrama",
@@ -181,35 +180,46 @@
         "stat",
         "stats",
         "number",
-        "heat"
+        "heat",
+        "flow"
       ],
       "description": "Compare: bar, count. Time: line, area. Schedules: gantt. Relationships: scatter, bubble, regplot, residplot, jointplot, radar, corr (correlation matrix; clustermap), pairplot (scatter-plot matrix). Distributions (seaborn): hist, kde, ecdf, box, violin, strip, swarm, point. Part-to-whole: treemap, sunburst, donut, pie. Other: heatmap, sankey, kpi, spark (a sparkline for a table cell), rail (one row of a distribution for a table cell: min–max, a band, the median, the value and reference ticks), network, chord, pyramid, flowchart, wordcloud. Maps: choropleth, symbolmap, pointmap (lat/lon dots over a tile basemap). seaborn names are accepted (barplot, countplot, histplot, kdeplot, boxplot, violinplot, lmplot…). \"auto\" (default) picks from the data."
     },
     "data": {
-      "description": "Array of rows, e.g. [{ \"region\": \"Biobío\", \"sales\": 1240 }]. For kpi it can be omitted in favor of `items`.",
+      "description": "The table. Rows [{ \"region\": \"Biobío\", \"sales\": 1240 }], or, shorter for many rows (field names once): header + rows [[\"region\", \"sales\"], [\"Biobío\", 1240], [\"Ñuble\", 830]], columns { \"region\": [\"Biobío\", \"Ñuble\"], \"sales\": [1240, 830] }, or CSV/TSV text \"region,sales\\nBiobío,1240\". For kpi it can be omitted in favor of `items`.",
       "anyOf": [
         {
           "type": "array",
           "items": {
-            "type": "object"
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array"
+              }
+            ]
           }
         },
         {
           "type": "object"
+        },
+        {
+          "type": "string"
         }
       ]
     },
     "title": {
       "type": "string",
-      "description": "The finding as a full sentence, ideally with the key number, e.g. \"Biobío accounts for 32% of sales\"."
+      "description": "Optional. When set, the finding as a full sentence, ideally with the key number, e.g. \"Biobío accounts for 32% of sales\". Leave it out when the page around the chart already titles it."
     },
     "subtitle": {
       "type": "string",
-      "description": "How to read the chart: measure, unit and period, e.g. \"Sales by region, CLP millions, 2025\"."
+      "description": "Optional. How to read the chart: measure, unit and period, e.g. \"Sales by region, CLP millions, 2025\"."
     },
     "source": {
       "type": "string",
-      "description": "Data source, shown at the bottom right."
+      "description": "Optional. Data source, shown at the bottom right."
     },
     "locale": {
       "type": "string",
@@ -3301,8 +3311,37 @@
       "description": "Height in px. Automatic for horizontal bars, heatmaps, KPI tiles, and narrow treemaps, sunbursts and radars."
     },
     "padding": {
-      "type": "number",
-      "description": "Outer padding in px (default from the width)."
+      "description": "Margin around the chart in px. Default: 8 top and bottom, 0 at the sides (the chart reaches the edges of its container). A number for every side, [vertical, horizontal], [top, right, bottom, left] or { top, right, bottom, left }.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 4
+        },
+        {
+          "type": "object",
+          "properties": {
+            "top": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            },
+            "bottom": {
+              "type": "number"
+            },
+            "left": {
+              "type": "number"
+            }
+          }
+        }
+      ]
     }
   }
 }

@@ -72,11 +72,11 @@ Ambos comparten los mismos ocho tonos, escalonados por separado para cada superf
 | `sequential` | colores, rampa o nombre de mapa de colores | De claro → oscuro, para mapas de calor y mapas. |
 | `diverging` | colores, rampa o nombre de mapa de colores | Dos polos con un punto medio neutro. |
 | `status` | `{ good, warning, critical }` | Deltas y medidores de KPI. Nunca se usa para series. |
-| `font` | `{ family, mono, import }` | Pila de fuentes y URL opcional de Google Fonts (`fontImport: true` la incrusta en el SVG). |
+| `font` | `{ family, mono, import }` | Pila de fuentes y URL opcional de su hoja de estilos (`fontImport: true` la incrusta en el SVG). Desde un spec, `import` debe ser https en Google Fonts, Bunny Fonts, Adobe Fonts (Typekit) o cdnfonts; otros hosts se descartan. Los temas registrados con `registerTheme()` conservan cualquier URL https, y `configure({ fontHosts: ['fonts.ejemplo.com'] })` permite más hosts. |
 | `type` | `{ title, subtitle, label, axis, legend, source, titleWeight }` | Tamaños de letra en px. Los títulos se achican de forma automática en anchos angostos. |
 | `marks` | `{ barRadius, barMax, barMaxH, lineWidth, pointRadius, gap, ring, areaOpacity, bandOpacity, dotOpacity }` | Geometría de las marcas. |
 | `axes` | `{ inside, grid }` | `inside: true` pone las etiquetas de y sobre sus líneas de cuadrícula, dentro del gráfico (más ancho para los datos). |
-| `layout` | `{ padding, paddingSmall }` | Margen exterior en anchos amplios y angostos. |
+| `layout` | `{ padding }` | Margen exterior de todos los gráficos con este tema (mismas formas que la opción `padding`). Por defecto 8 arriba y abajo, 0 a los lados. |
 
 ## Paletas y rampas con nombre
 
