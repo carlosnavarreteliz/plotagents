@@ -9,8 +9,8 @@ import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '.
 import { createFrame, hash as hashStr } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst, extent } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
+import { isEn } from '../i18n.js';
 
-const EN = (spec) => String(spec.locale || 'es').startsWith('en');
 const dec = (v, locale, d = 2) => formatNumber(v, d, locale);
 
 /** Lee puntos (x, y, grupo, nombre) válidos para escalas log si corresponde. */
@@ -32,7 +32,7 @@ function readPoints(spec, data, { needY = true } = {}) {
     .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && (!xLog || p.x > 0) && (!yLog || p.y > 0));
   if (!pts.length) {
     const log = xLog || yLog;
-    throw EN(spec)
+    throw isEn(spec.locale)
       ? new PlotError(`No row has numeric values in both \`${x}\` and \`${y}\`${log ? ' (> 0 for a log scale)' : ''}.`, `Check that \`x\` and \`y\` are measures with numbers${log ? ', or drop the log scale' : ''}; to compare a measure across categories use \`type: "box"\`.`)
       : new PlotError(`Ninguna fila tiene valores numéricos en \`${x}\` y \`${y}\`${log ? ' (> 0 para escala log)' : ''}.`, `Revisa que \`x\` e \`y\` sean medidas con números${log ? ', o quita la escala log' : ''}; para comparar una medida entre categorías usa \`type: "box"\`.`);
   }
@@ -73,7 +73,7 @@ export function regplot(spec, theme) {
   const data = ensureData(spec);
   const P = readPoints(spec, data);
   const { pts, keys, xLog, yLog } = P;
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const K = keys.length;
   const cmap = colorMap(keys, theme, spec.colors);
@@ -212,7 +212,7 @@ function pointLabels(pts, spec, xS, yS, r, inner, theme, P) {
 export function residplot(spec, theme) {
   const data = ensureData(spec);
   const P = readPoints(spec, data);
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const fxv = (v) => (spec.logx ? Math.log10(v) : v);
   const fit = polyfit(P.pts.map((p) => fxv(p.x)), P.pts.map((p) => p.y), { order: spec.order ?? 1 });
@@ -260,7 +260,7 @@ export function jointplot(spec, theme) {
   const data = ensureData(spec);
   const P = readPoints(spec, data);
   const { pts, keys, xLog, yLog } = P;
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const K = keys.length;
   const cmap = colorMap(keys, theme, spec.colors);

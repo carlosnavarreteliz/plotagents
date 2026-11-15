@@ -15,6 +15,7 @@ import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
 import { hash } from '../frame.js';
 import { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
+import { isEn } from '../i18n.js';
 
 export function prepareLine(spec) {
   let data = ensureData(spec);
@@ -111,7 +112,7 @@ export function line(spec, theme, variant = 'line') {
   const pct = stack && (spec.stack === 'percent' || spec.normalize);
   const xsAll = uniq(m.lines.flatMap((l) => l.points.map((p) => p.x))).sort((a, b) => a - b);
   if (!xsAll.length) return createFrame(spec, theme).finish([], { desc: '', type: variant });
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   if (!m.lines.some((l) => l.points.some((p) => Number.isFinite(p.y))))
     throw new PlotError(
       en ? `No numeric values in \`${m.y}\` to plot.` : `No hay valores numéricos en \`${m.y}\` para graficar.`,
@@ -615,7 +616,7 @@ function monotonePath(pts) {
 }
 
 export function describeLine(m, fmt, xFmt, locale = 'es') {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const parts = m.lines.slice(0, 6).map((l) => {
     const pts = l.points.filter((p) => Number.isFinite(p.v ?? p.y));
     if (pts.length < 2) return '';

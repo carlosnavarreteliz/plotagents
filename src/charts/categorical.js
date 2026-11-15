@@ -13,7 +13,7 @@ import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { tipper } from '../tooltip.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile, extent } from '../stats.js';
-import { esEn } from '../i18n.js';
+import { esEn, isEn } from '../i18n.js';
 
 const T = (en, es, locale) => esEn(locale, es, en);
 
@@ -65,7 +65,7 @@ function prepare(spec) {
   const all = [...groups.values()].flat();
   // Sin un solo número no hay eje de valores que dibujar.
   if (!all.length) {
-    const en = String(spec.locale || 'es').startsWith('en');
+    const en = isEn(spec.locale);
     throw en
       ? new PlotError(`No numeric values in \`${val}\`.`, `\`${val}\` must hold numbers (empty, null and non-finite values are skipped). To count rows per category, use \`type: "countplot"\`.`)
       : new PlotError(`No hay valores numéricos en \`${val}\`.`, `\`${val}\` debe tener números (se omiten vacíos, nulos y valores no finitos). Para contar filas por categoría usa \`type: "countplot"\`.`);
@@ -522,7 +522,7 @@ export function point(spec, theme) {
 // ── Descripción ────────────────────────────────────────────────────────────
 
 function describeGroups(m, stat, fmt, locale, kind, statName) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const rows = [];
   for (const c of m.cats) for (const h of m.hues) {
     const vs = m.get(c, h);

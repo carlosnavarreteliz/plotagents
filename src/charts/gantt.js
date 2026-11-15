@@ -24,7 +24,7 @@ import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, hi
 import { xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 const DAY = 864e5;
 const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
@@ -37,7 +37,7 @@ const depsOf = (v) => (blank(v) ? [] : Array.isArray(v) ? v.map(String) : String
 
 export function gantt(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const data = ensureData(spec);
   if (!data.length) throw new PlotError(T(locale, 'La carta Gantt no tiene tareas.', 'The Gantt chart has no tasks.'), 'data: [{ task: "Diseño", start: "2026-03-02", end: "2026-03-20" }]');
   const fields = fieldsOf(data);

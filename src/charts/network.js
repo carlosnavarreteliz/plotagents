@@ -17,6 +17,7 @@ import { colorMap } from '../theme.js';
 import { ctx } from '../context.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
 const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const GOLDEN = 2.399963229728653;
@@ -502,7 +503,7 @@ const hitsBox = (a, b) => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > 
 
 export function network(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { edges, nodes, byId, valueField } = prepareNetwork(spec);
   if (!nodes.length) throw new PlotError('La red no tiene conexiones válidas.', 'Entrega filas con { from, to, value }.');
   const layout = layoutName(spec.layout);

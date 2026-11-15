@@ -1,4 +1,5 @@
 import { parseRgb, lin, oklab, contrast } from './rgb.js';
+import { isEn } from './i18n.js';
 // Validador de paletas categóricas: lo mismo que se usó para validar las
 // paletas de fábrica, disponible para que un agente revise la suya.
 // Umbrales: banda de luminosidad OKLCH, croma mínimo, separación ΔE (OKLab×100)
@@ -26,7 +27,7 @@ function dE(a, b, kind) {
  * status: 'pass' | 'warn' | 'fail'. `pairs: 'all'` para dispersión y mapas.
  */
 export function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent', locale = 'es' } = {}) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const pal = colors.map(String);
   surface = surface || (mode === 'dark' ? '#0B0F2B' : '#FCFBF9');
   const checks = [];

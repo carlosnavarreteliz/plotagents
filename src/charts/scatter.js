@@ -11,6 +11,7 @@ import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, 
 import { createFrame, SIZES, hash } from '../frame.js';
 import { extent, sum } from '../stats.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 /** Muestra pareja de ~n filas (inferir tipos de campo sin recorrer 50 mil filas). */
 const sampleRows = (data, n = 200) => (data.length <= n ? data : Array.from({ length: n }, (_, i) => data[Math.floor((i * (data.length - 1)) / (n - 1))]));
@@ -32,7 +33,7 @@ export function scatter(spec, theme) {
   if (size) requireField(data, size, 'size');
   if (series) requireField(data, series, 'series');
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const xLog = spec.xScale === 'log', yLog = spec.yScale === 'log';
 
   // En escala log, los valores ≤ 0 no tienen posición: se omiten.
@@ -125,7 +126,7 @@ export function scatter(spec, theme) {
     const clipId = 'pa-clip-trend-' + Math.abs(hash(String(spec.title) + x + y + inner.w + pts.length)).toString(36);
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
     body.push(el('line', { x1: ax, y1: ay, x2: bx, y2: by, stroke: theme.ink, strokeWidth: 1.5, opacity: 0.55, clipPath: `url(#${clipId})` }));
-    const r2s = `R² = ${r2v.toFixed(2).replace('.', String(locale).startsWith('en') ? '.' : ',')}`;
+    const r2s = `R² = ${r2v.toFixed(2).replace('.', isEn(locale) ? '.' : ',')}`;
     const occ = pts.map((p) => [xS(p.x), yS(p.y)]);
     for (let i = 0; i <= 24; i++) occ.push([ax + ((bx - ax) * i) / 24, ay + ((by - ay) * i) / 24]);
     const qc = quietCorner(occ, inner, measure(r2s, 11.5) + 4, 16);

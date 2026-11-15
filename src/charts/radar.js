@@ -7,13 +7,14 @@ import { niceDomain, niceStep, linear } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
 export function radar(spec, theme) {
   const data = ensureData(spec);
   const fields = fieldsOf(data);
   const kinds = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let series = spec.hue ?? spec.series ?? (typeof spec.color === 'string' && !spec.color.startsWith('#') ? spec.color : undefined);
   let axes, seriesKeys;
   const values = new Map(); // serie → Map(eje → valor)

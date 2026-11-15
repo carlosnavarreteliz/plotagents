@@ -10,6 +10,7 @@ import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 const f = (n) => n.toFixed(2);
 
@@ -23,7 +24,7 @@ export function donut(spec, theme) {
   requireField(data, labelF, 'label');
   requireField(data, valueF, 'value');
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const isPie = spec.thickness !== undefined && spec.thickness >= 1;
   const half = !!spec.half;
 

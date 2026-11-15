@@ -15,6 +15,7 @@ import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
@@ -87,7 +88,7 @@ export function prepareBar(spec) {
     const keep = cats.slice(0, top);
     const rest = cats.slice(top);
     folded = rest.length;
-    const otherName = String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros';
+    const otherName = isEn(spec.locale) ? 'Other' : 'Otros';
     values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
     cats = [...keep, otherName];
   }
@@ -127,7 +128,7 @@ export function bar(spec, theme) {
   const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
   // `yFormat`: las marcas del eje de valores, aparte de `format` (rótulos y tooltip).
   const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, all) : fmt;
-  const missingLabel = spec.missingLabel ?? (String(locale).startsWith('en') ? 'no data' : 'sin dato');
+  const missingLabel = spec.missingLabel ?? (isEn(locale) ? 'no data' : 'sin dato');
   const vf = (c, i, v) => (m.isMissing(c, i) ? missingLabel : fmt(v));
 
   // Orientación
@@ -403,7 +404,7 @@ function textColor(fill, theme) {
 }
 
 export function describeBar(m, fmt, locale = 'es') {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const totals = m.cats.map((c) => [c, m.total(c)]);
   if (!totals.length) return '';
   const sorted = [...totals].sort((a, b) => b[1] - a[1]);

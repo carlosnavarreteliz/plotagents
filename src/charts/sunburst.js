@@ -9,13 +9,14 @@ import { textOn } from '../theme.js';
 import { humanize, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { isEn } from '../i18n.js';
 
 const f = (n) => n.toFixed(2);
 
 
 export function sunburst(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = focusNode(root, spec.focus);
   const levels = Math.max(1, height(focus));

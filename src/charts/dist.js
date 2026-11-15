@@ -11,10 +11,10 @@ import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '..
 import { createFrame, hash as hashStr } from '../frame.js';
 import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
+import { isEn } from '../i18n.js';
 
 // ── Utilidades compartidas (también las usa regplot.js) ───────────────────
 
-const EN = (spec) => String(spec.locale || 'es').startsWith('en');
 
 /** Error con pista cuando el campo no tiene ningún número graficable. */
 function noNumbers(field, en, isLog) {
@@ -111,7 +111,7 @@ export function hist(spec, theme) {
   requireField(data, field, horizontal ? 'y' : 'x');
   const hue = hueField(spec);
   if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
   const tr = T(isLog);
@@ -320,7 +320,7 @@ export function kde(spec, theme) {
   requireField(data, field, 'x');
   const hue = hueField(spec);
   if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const isLog = spec.xScale === 'log';
   const tr = T(isLog);
@@ -454,7 +454,7 @@ export function ecdf(spec, theme) {
   requireField(data, field, 'x');
   const hue = hueField(spec);
   if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const isLog = spec.xScale === 'log';
   const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);

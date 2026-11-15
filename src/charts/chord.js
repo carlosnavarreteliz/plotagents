@@ -7,6 +7,7 @@ import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
 const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const TAU = Math.PI * 2;
@@ -43,7 +44,7 @@ export function prepareChord(spec) {
 
 export function chord(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { names, m } = prepareChord(spec);
   const n = names.length;
   if (n < 2) throw new PlotError('El diagrama de cuerdas necesita al menos dos grupos.', 'Entrega filas { from, to, value } entre grupos distintos.');

@@ -10,6 +10,7 @@ import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, hu
 import { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame, hash, SIZES } from '../frame.js';
 import { binnedScale } from '../colorscales.js';
+import { isEn } from '../i18n.js';
 
 const CS = 11.5; // cuerpo del título de la esquina
 
@@ -212,7 +213,7 @@ export function heatmap(spec, theme) {
     body.push(g({ class: 'pa-corner', 'data-tip': cut ? corner.join(' ') : undefined }, nodes));
   }
 
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let best = null;
   for (const a of xs) for (const b of ys) { const v = val(a, b); if (Number.isFinite(v) && (apart.none || !apart.of(a, b)) && (!best || v > best[2])) best = [a, b, v]; }
   const desc = en

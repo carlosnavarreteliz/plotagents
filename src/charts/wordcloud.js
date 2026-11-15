@@ -21,7 +21,7 @@ import { colorMap, ramp } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 
 const STOP = new Set((
@@ -62,7 +62,7 @@ export function countWords(input, { locale, minLength = 3, stopwords = [] } = {}
 
 export function wordcloud(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   // ── Palabras ────────────────────────────────────────────────────────────
   let words, groupF = null, valueF = 'value';
   // `text` es un campo de los datos, o el texto mismo a contar (string o lista de strings).

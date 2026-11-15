@@ -6,6 +6,7 @@ import { createFrame } from './frame.js';
 import { colorMap, themeFor, readable } from './theme.js';
 import { ensureData, requireField, uniq, fieldKind, num } from './data.js';
 import { niceDomain } from './scale.js';
+import { isEn } from './i18n.js';
 
 const LINE_LIKE = new Set(['line', 'area', 'kde', 'ecdf', 'point', 'regplot', 'residplot']);
 
@@ -144,7 +145,7 @@ export function facet(spec, theme, renderOne) {
     // Panel anidado: se quita el estilo responsivo del SVG raíz del panel.
     return svg.replace(/^<svg /, `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" `).replace(/ style="[^"]*"/, '');
   });
-  const en = String(spec.locale || 'es').startsWith('en');
+  const en = isEn(spec.locale);
   const desc = (en ? `Small multiples by ${f}: ` : `Paneles por ${f}: `) + keys.join(', ') + '.';
   return frame.finish(g({ class: 'pa-facets' }, body), { desc, type: 'facet' });
 }

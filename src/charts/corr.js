@@ -14,8 +14,8 @@ import { leaves, elbows } from '../tree.js';
 import { ctx } from '../context.js';
 import { pearson, polyfit, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt } from './dist.js';
+import { isEn } from '../i18n.js';
 
-const isEN = (spec) => String(spec.locale || 'es').startsWith('en');
 
 // ── Estadística ────────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ export function clusterTree(r, idx = r.map((_, i) => i)) {
  */
 export function corr(spec, theme) {
   const data = ensureData(spec);
-  const en = isEN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const method = String(spec.method || 'pearson').toLowerCase() === 'spearman' ? 'spearman' : 'pearson';
   const long = typeof spec.x === 'string' && typeof spec.y === 'string' && typeof spec.value === 'string';
@@ -327,7 +327,7 @@ export function corr(spec, theme) {
  */
 export function pairplot(spec, theme) {
   const data = ensureData(spec);
-  const en = isEN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   let vars = corrVars(spec, data);
   const explicit = spec.vars || Array.isArray(spec.y);

@@ -10,7 +10,7 @@ import { niceStep, linear } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
-import { esEn } from '../i18n.js';
+import { esEn, isEn } from '../i18n.js';
 
 const T = (en, es, locale) => esEn(locale, es, en);
 const lead = (s) => { const m = /^\s*(\d+)/.exec(String(s)); return m ? +m[1] : NaN; };
@@ -172,7 +172,7 @@ export function pyramid(spec, theme) {
   }
 
   // Descripción
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let big = null;
   for (const a of ages) for (const s of sides) { const v = cur.get(a + '\u0000' + s) || 0; if (!big || v > big[2]) big = [a, s, v]; }
   const desc = (en ? 'Population pyramid. ' : 'Pirámide de población. ')

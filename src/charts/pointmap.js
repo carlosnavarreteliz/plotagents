@@ -16,7 +16,7 @@ import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 const RAD = Math.PI / 180;
 const MAX_LAT = 85.0511287798;
@@ -190,7 +190,7 @@ const deg = (v, pos, neg, locale) => `${formatNumber(Math.abs(v), 1, locale, tru
 /** Mapa de puntos (lon/lat) sobre teselas reales. */
 export function pointmap(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const dark = theme.mode === 'dark';
   const data = ensureData(spec);
   const fields = fieldsOf(data);
@@ -511,7 +511,7 @@ export function pointmap(spec, theme) {
 }
 
 function describePointmap({ pts, n, provider, world, hueF, keys, sizeF, valueF, fs, fv, locale, tileCount }) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const W = en ? 'W' : 'O';
   const lats = pts.map((p) => p.lat), lons = pts.map((p) => (p.lon > 180 ? p.lon - 360 : p.lon));
   const la0 = lo(lats), la1 = hi(lats);

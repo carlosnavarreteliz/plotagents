@@ -15,7 +15,7 @@ import { ramp, textOn, readable, contrast, mix } from '../theme.js';
 import { extent } from '../stats.js';
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
-import { words, langOf } from '../i18n.js';
+import { words, langOf, isEn } from '../i18n.js';
 import { railAccessors, railValues, railExtent, railMarks, railTip } from '../rail.js';
 
 // Tipos de columna (y sus alias): lo que el agente escriba se entiende.
@@ -653,7 +653,7 @@ export function table(spec, theme) {
         }
         const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
         out.push(...rail.out);
-        const en = String(locale).startsWith('en');
+        const en = isEn(locale);
         const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
           labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
         return { out, tip: tipText };

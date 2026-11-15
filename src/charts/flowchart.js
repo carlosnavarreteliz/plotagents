@@ -7,14 +7,14 @@ import { measure, wrap } from '../text.js';
 import { colorMap, readable, textOn, mix } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
-import { esEn } from '../i18n.js';
+import { esEn, isEn } from '../i18n.js';
 
 const T = (en, es, locale) => esEn(locale, es, en);
 const FS = 12.5, LH = 16, EDGE_FS = 11;
 
 export function flowchart(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
 
   // ── Entrada ───────────────────────────────────────────────────────────────
   const edgeRows = spec.edges ? ensureData({ data: spec.edges }) : spec.data ? ensureData(spec) : [];

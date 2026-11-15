@@ -20,6 +20,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
 export function sankey(spec, theme) {
   const data = ensureData(spec);
@@ -31,7 +32,7 @@ export function sankey(spec, theme) {
   requireField(data, to, 'to');
   requireField(data, valueF, 'value');
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
 
   // Enlaces agregados (valores no finitos o ≤ 0 se ignoran).
   const lmap = new Map();

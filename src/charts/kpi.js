@@ -6,12 +6,13 @@ import { makeFormat, formatNumber } from '../format.js';
 import { num } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 export function kpi(spec, theme) {
   // Un solo indicador como objeto también vale: items: { label, value }.
   const items = [].concat(spec.items || spec.data || []).filter((it) => it && typeof it === 'object').map((it) => ({ ...it }));
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const frame = createFrame(spec, theme, { height: 200 });
   const area = frame.layout([]);
   const n = Math.max(1, items.length);

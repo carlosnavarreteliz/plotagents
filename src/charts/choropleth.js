@@ -19,7 +19,7 @@ import { getGeo } from '../geo/registry.js';
 import { ISO2, microstateFeatures } from '../geo/iso.js';
 import { mercator, equalEarth, planar, projections, makeProjection, fit, aspectOf, pathD, centroid, rings, polygonsOf, isPointGeom, isLineGeom } from '../geo/projection.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } from '../dashed.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 
 /** `pathPrecision` / `simplify`: trazos relativos, redondeados y simplificados en la pantalla (null: los de siempre). */
@@ -54,7 +54,7 @@ function featureIndex(features, featureKey) {
 
 const nameOf = (f, locale) => {
   const p = f.properties || {};
-  return (String(locale).startsWith('en') ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? f.id ?? '');
+  return (isEn(locale) ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? f.id ?? '');
 };
 
 // Propiedades que suelen traer el nombre en GeoJSON de otras fuentes (INE, IGM, Natural Earth, GADM, censos).
@@ -941,7 +941,7 @@ export function mapSprite(spec0) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SPRITE_SIDE} ${SPRITE_SIDE}"><defs>${out.join('')}</defs></svg>`;
 }
 
-const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
+const rankText = (r, n, locale) => (isEn(locale) ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
 /** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
 function zoomLayer(B, children) {
@@ -1214,7 +1214,7 @@ export function symbolMap(spec, theme) {
 }
 
 function describeExtras(markers, layers, locale, links) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let s = '';
   if (links?.items.length) s += en ? ` ${links.items.length} lines${links.label ? ` (${links.label})` : ''}.` : ` ${links.items.length} líneas${links.label ? ` (${links.label})` : ''}.`;
   if (links?.unmatched.length) s += en ? ` Lines with an unknown end: ${links.unmatched.slice(0, 6).join(', ')}.` : ` Líneas con un extremo desconocido: ${links.unmatched.slice(0, 6).join(', ')}.`;
@@ -1225,7 +1225,7 @@ function describeExtras(markers, layers, locale, links) {
 }
 
 function describeMap(m, fmt, locale, what) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   if (m.categorical) {
     const cnt = new Map();
     for (const v of m.values.values()) cnt.set(v, (cnt.get(v) || 0) + 1);
