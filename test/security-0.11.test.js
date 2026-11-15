@@ -84,3 +84,8 @@ test('security 0.11: category cross products are capped (3 000 rows must not ask
   const ok = Array.from({ length: 600 }, (_, i) => ({ d: 'd' + (i % 30), h: 'h' + (i % 20), v: i }));
   assert.ok(safePlot({ type: 'heatmap', data: ok, x: 'd', y: 'h', value: 'v' }).ok);
 });
+
+test('loadGeo sólo descarga por http(s)', async () => {
+  const { loadGeo } = await import('../src/runtime.js');
+  for (const u of ['javascript:alert(1)', 'data:application/json,{}', 'file:///etc/passwd']) await assert.rejects(loadGeo(u), /http/);
+});

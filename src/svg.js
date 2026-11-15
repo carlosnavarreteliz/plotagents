@@ -36,7 +36,8 @@ export function el(tag, attrs = {}, children) {
     if (v === undefined || v === null || v === false) continue;
     const name = attrName(k);
     // Escala de texto global: todo font-size numérico se multiplica aquí.
-    const val = typeof v === 'number' ? r2(k === 'fontSize' ? v * ctx.textScale : v) : v;
+    // Un ancho o alto negativo (lienzo diminuto) es un error en SVG: se deja en 0.
+    const val = typeof v === 'number' ? r2(k === 'fontSize' ? v * ctx.textScale : (k === 'width' || k === 'height') && v < 0 ? 0 : v) : v;
     s += ` ${name}="${esc(val)}"`;
   }
   if (children === undefined || children === null || children === '') return s + '/>';

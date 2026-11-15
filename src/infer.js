@@ -33,7 +33,7 @@ export const ALIASES = {
 /** Tipo canónico + opciones implícitas del alias (p. ej. barplot → bar con ci). */
 export function normalizeType(t) {
   const k = String(t || '').toLowerCase();
-  const al = ALIASES[k];
+  const al = Object.hasOwn(ALIASES, k) ? ALIASES[k] : undefined;
   if (!al) return [k, {}];
   return Array.isArray(al) ? [al[0], al[1]] : [al, {}];
 }

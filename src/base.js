@@ -35,6 +35,26 @@ function guardCells(s) {
   if (A.size * B.size > MAX_CELLS) throw new PlotError(`${A.size} × ${B.size} categorías (${a} × ${b}) son ${A.size * B.size} celdas: el máximo es ${MAX_CELLS}.`, 'Agrupa o filtra los datos (`top`, `exclude`) antes de dibujar.');
 }
 
+// Campos que nombran categorías (no medidas): una celda vacía no es una categoría "null".
+const CAT_ROLES = ['x', 'y', 'series', 'hue', 'label', 'axis', 'from', 'to', 'group', 'sex', 'age'];
+const KEEP_BLANKS = new Set(['table', 'gantt', 'choropleth', 'symbolmap', 'pointmap', 'flowchart', 'kpi', 'dendrogram', 'network', 'scatter', 'bubble', 'regplot', 'residplot', 'jointplot', 'pairplot', 'corr', 'wordcloud']);
+
+/** Filas con null/undefined/'' en un campo de categoría van juntas en "(sin dato)" (como en `facet`). */
+function blankCategories(s) {
+  if (KEEP_BLANKS.has(s.type) || s.data == null) return;
+  // Flujos: `from`/`to` (o source/target) se infieren por nombre aunque el spec no los diga.
+  const flow = s.type === 'sankey' || s.type === 'chord' ? ['from', 'to', 'source', 'target'] : [];
+  const fields = new Set([...CAT_ROLES.map((k) => s[k]), ...flow, ...(Array.isArray(s.path) ? s.path : [])].filter((f) => typeof f === 'string'));
+  if (!fields.size) return;
+  let rows;
+  try { rows = ensureData(s); } catch { return; } // el renderer dará el error con su pista
+  const blank = (v) => v === null || v === undefined || v === '';
+  const hit = [...fields].filter((f) => rows.some((r) => blank(r[f])) && rows.some((r) => f in r) && fieldKind(rows, f) === 'category');
+  if (!hit.length) return;
+  const label = String(s.locale || 'es').startsWith('en') ? '(no data)' : '(sin dato)';
+  s.data = rows.map((r) => (hit.some((f) => blank(r[f])) ? { ...r, ...Object.fromEntries(hit.filter((f) => blank(r[f])).map((f) => [f, label])) } : r));
+}
+
 /** Normaliza el spec: tipo inferido y datos como filas. */
 export function resolve(spec = {}) {
   if (!spec || typeof spec !== 'object') throw new PlotError('El spec debe ser un objeto.', 'plot({ data: [...], x: "campo", y: "campo" })');
@@ -62,6 +82,7 @@ export function resolve(spec = {}) {
   }
   s.type = type;
   guardCells(s);
+  blankCategories(s);
   // Una jerarquía de miles de niveles agota la pila o la memoria; nadie lee más de unos pocos.
   if (Array.isArray(s.path) && s.path.length > MAX_LEVELS) throw new PlotError(`\`path\` tiene ${s.path.length} niveles: el máximo es ${MAX_LEVELS}.`, 'Deja los niveles que se leen (2–4) o agrupa los datos antes.');
   // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.

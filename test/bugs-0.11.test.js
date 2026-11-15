@@ -90,3 +90,17 @@ test('kpi: columns enorme no deja tarjetas con ancho negativo', () => {
   assert.ok(!/(width|height)="-/.test(svg));
   noBad(svg);
 });
+
+test('categorías vacías van en "(sin dato)", sin tocar los datos', () => {
+  const d = [{ c: 'a', s: 'x', v: 3 }, { c: null, s: 'y', v: 2 }, { c: 'b', s: '', v: 4 }];
+  for (const type of ['bar', 'donut', 'radar', 'heatmap', 'line'])
+    assert.ok(!/>null<|"null"/.test(plot({ type, data: d, x: 'c', y: type === 'heatmap' ? 's' : 'v', value: 'v', label: 'c', axis: 'c', series: type === 'donut' || type === 'heatmap' ? undefined : 's' })), type);
+  assert.ok(plot({ type: 'sankey', data: [{ from: 'a', to: null, value: 2 }, { from: 'a', to: 'b', value: 1 }] }).includes('(sin dato)'));
+  assert.ok(plot({ type: 'bar', data: d, x: 'c', y: 'v', locale: 'en' }).includes('(no data)'));
+  assert.equal(d[1].c, null);
+});
+
+test('lienzo diminuto: ningún ancho o alto negativo', () => {
+  const svg = plot({ type: 'box', data: [{ c: 'a', v: 1, s: 'x' }, { c: 'b', v: 2, s: 'y' }], x: 'c', y: 'v', series: 's', width: 60, height: 40, title: 'Un título bastante largo', subtitle: 'sub', source: 'src' });
+  assert.ok(!/(width|height)="-/.test(svg));
+});

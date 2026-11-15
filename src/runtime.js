@@ -75,7 +75,15 @@ function ensureAssets() {
 const geoCache = new Map();
 /** Descarga (una vez por URL) un GeoJSON o TopoJSON. */
 export function loadGeo(url) {
-  if (!geoCache.has(url)) geoCache.set(url, fetch(url).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); }));
+  // Sólo http(s) o rutas relativas: nada de data:, blob: ni javascript:. Las credenciales no viajan a otros orígenes.
+  let u;
+  try { u = new URL(url, globalThis.location?.href); } catch { return Promise.reject(new PlotError(`URL de mapa inválida: ${url}`)); }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return Promise.reject(new PlotError(`El mapa debe venir por http(s): ${url}`));
+  if (!geoCache.has(url)) {
+    const p = fetch(u.href, { credentials: 'same-origin' }).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); });
+    p.catch(() => geoCache.delete(url)); // un fallo (red caída) no queda guardado para siempre
+    geoCache.set(url, p);
+  }
   return geoCache.get(url);
 }
 
