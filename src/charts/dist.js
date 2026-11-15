@@ -1,7 +1,7 @@
 // Distribuciones al estilo seaborn: histograma (histplot), densidad (kdeplot)
 // y distribución acumulada (ecdfplot). Ejes recesivos, marcas finas y color
 // por grupo (`hue`) en orden fijo.
-import { el, g, text, tip, barPath, hitsAny } from '../svg.js';
+import { el, g, text, tip, barPath, hitsAny, polyline } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
@@ -223,7 +223,7 @@ export function hist(spec, theme) {
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y - 2, width: inner.w, height: inner.h + 2 })));
     body.push(yGrid(vAx.ticks, yS, inner, theme));
     body.push(g({ clipPath: `url(#${clipId})` }, drawBins({ bins, H, base, K, multiple, element: spec.element, xS, yS, theme, M, colorOf, single, inner, groups, fy, fx, stat, horizontal: false, statLabel })));
-    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: k.map(([t, d], i) => `${i ? 'L' : 'M'}${xS(tr.inv(t)).toFixed(2)},${yS(d).toFixed(2)}`).join(''), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: single ? 0.8 : 1 })));
+    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: polyline(k.map(([t, d]) => [xS(tr.inv(t)), yS(d)])), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: single ? 0.8 : 1 })));
     body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: Math.round(yS(0)) + 0.5, y2: Math.round(yS(0)) + 0.5, stroke: theme.axis, strokeWidth: 1 }));
     body.push(gridX(isLog ? bAx.ticks : bAx.ticks, xS, inner, theme, tickFmt(fx, bAx), { lines: false }));
     body.push(yTickLabels(vAx.ticks, yS, inner, theme, ticksF, { inside: false }));
@@ -240,7 +240,7 @@ export function hist(spec, theme) {
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w + 2, height: inner.h })));
     body.push(gridX(vAx.ticks, xS, inner, theme, tickFmt(fy, vAx), { lines: true }));
     body.push(drawBins({ bins, H, base, K, multiple, element: spec.element, xS, yS, theme, M, colorOf, single, inner, groups, fy, fx, stat, horizontal: true, statLabel }));
-    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: k.map(([t, d], i) => `${i ? 'L' : 'M'}${xS(d).toFixed(2)},${yS(tr.inv(t)).toFixed(2)}`).join(''), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', opacity: single ? 0.8 : 1 })));
+    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: polyline(k.map(([t, d]) => [xS(d), yS(tr.inv(t))])), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', opacity: single ? 0.8 : 1 })));
     body.push(el('line', { x1: Math.round(xS(0)) + 0.5, x2: Math.round(xS(0)) + 0.5, y1: inner.y, y2: inner.y + inner.h, stroke: theme.axis, strokeWidth: 1 }));
     body.push(g({ class: 'pa-axis' }, binTicks.ticks.map((t) => text(inner.x - 8, yS(t) + 4, bf(t), { fill: theme.muted, fontSize: theme.type?.axis ?? 11.5, textAnchor: 'end' }))));
     axisTitles(body, theme, area, inner, { y: spec.yLabel === false ? null : spec.yLabel ?? humanize(field), x: spec.xLabel ?? statLabel });
@@ -269,7 +269,7 @@ function drawBins({ bins, H, base, K, multiple, element, xS, yS, theme, M, color
         if (!horizontal) { pts.push([xS(b.x0), yS(H[gi][i])], [xS(b.x1), yS(H[gi][i])]); }
         else { pts.push([xS(H[gi][i]), yS(b.x0)], [xS(H[gi][i]), yS(b.x1)]); }
       });
-      const line = pts.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(2)},${b.toFixed(2)}`).join('');
+      const line = polyline(pts);
       const baseline = bins.map((b, i) => (!horizontal ? [[xS(b.x1), yS(base[gi][i])], [xS(b.x0), yS(base[gi][i])]] : [[xS(base[gi][i]), yS(b.x1)], [xS(base[gi][i]), yS(b.x0)]])).reverse().flat();
       const area = line + 'L' + baseline.map(([a, b]) => `${a.toFixed(2)},${b.toFixed(2)}`).join('L') + 'Z';
       out.push(g({ class: 'pa-m', 'data-tip': tip(groups[gi].key || statLabel, `n = ${groups[gi].values.length}`) }, [

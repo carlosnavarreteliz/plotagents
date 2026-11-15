@@ -1,6 +1,6 @@
 // Regresión al estilo seaborn: regplot / lmplot (puntos + ajuste + banda de
 // confianza), residplot (residuos) y jointplot (dispersión con marginales).
-import { el, g, text, tip, esc, barPath, dotLayer, hitsAny } from '../svg.js';
+import { el, g, text, tip, esc, barPath, dotLayer, hitsAny, polyline } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable, halo } from '../theme.js';
@@ -112,7 +112,7 @@ export function regplot(spec, theme) {
   body.push(yGrid(yAx.ticks, yS, inner, theme, { baseline: NaN }));
   body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
 
-  const L = (arr) => arr.map(([a, b], i) => `${i ? 'L' : 'M'}${xS(a).toFixed(2)},${yS(Math.max(yLog ? 1e-12 : -Infinity, b)).toFixed(2)}`).join('');
+  const L = (arr) => polyline(arr.map(([a, b]) => [xS(a), yS(Math.max(yLog ? 1e-12 : -Infinity, b))]));
   // Bandas primero, luego puntos, luego rectas encima.
   keys.forEach((k, i) => {
     const f = fits[i];
@@ -239,7 +239,7 @@ export function residplot(spec, theme) {
   body.push(g({}, dotLayer(res.map((p) => ({ class: 'pa-m', cx: xS(p.x), cy: yS(p.r), r, fill: theme.categorical[0], fillOpacity: (M.dotOpacity ?? 0.85) * 0.8, stroke: theme.surface, strokeWidth: 1.25, 'data-tip': tip(p.name, `${humanize(P.x)}: ${fx(p.x)}`, `${en ? 'Residual' : 'Residuo'}: ${fy(p.r)}`) })))));
   if (spec.lowess) {
     const lw = lowess(res.map((p) => p.x), res.map((p) => p.r));
-    body.push(el('path', { d: lw.map(([a, b], i) => `${i ? 'L' : 'M'}${xS(a).toFixed(2)},${yS(b).toFixed(2)}`).join(''), fill: 'none', stroke: theme.categorical[1], strokeWidth: M.lineWidth ?? 2 }));
+    body.push(el('path', { d: polyline(lw.map(([a, b]) => [xS(a), yS(b)])), fill: 'none', stroke: theme.categorical[1], strokeWidth: M.lineWidth ?? 2 }));
   }
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(yAx.ticks, yS, inner, theme, yt));
@@ -303,13 +303,13 @@ export function jointplot(spec, theme) {
     const mx = Math.max(...kx.flat().map((p) => p[1]), 1e-12), my = Math.max(...ky.flat().map((p) => p[1]), 1e-12);
     kx.forEach((c, i) => {
       if (!c.length) return;
-      const pth = c.map(([t, d], j) => `${j ? 'L' : 'M'}${xS(ix(t)).toFixed(2)},${(topBox.y + topBox.h - (d / mx) * topBox.h).toFixed(2)}`).join('');
+      const pth = polyline(c.map(([t, d]) => [xS(ix(t)), topBox.y + topBox.h - (d / mx) * topBox.h]));
       body.push(el('path', { d: `${pth}L${xS(ix(c[c.length - 1][0])).toFixed(2)},${topBox.y + topBox.h}L${xS(ix(c[0][0])).toFixed(2)},${topBox.y + topBox.h}Z`, fill: colorOf(keys[i]), fillOpacity: (M.areaOpacity ?? 0.12) * 1.5 }));
       body.push(el('path', { d: pth, fill: 'none', stroke: colorOf(keys[i]), strokeWidth: 1.75 }));
     });
     ky.forEach((c, i) => {
       if (!c.length) return;
-      const pth = c.map(([t, d], j) => `${j ? 'L' : 'M'}${(rightBox.x + (d / my) * rightBox.w).toFixed(2)},${yS(iy(t)).toFixed(2)}`).join('');
+      const pth = polyline(c.map(([t, d]) => [rightBox.x + (d / my) * rightBox.w, yS(iy(t))]));
       body.push(el('path', { d: `${pth}L${rightBox.x},${yS(iy(c[c.length - 1][0])).toFixed(2)}L${rightBox.x},${yS(iy(c[0][0])).toFixed(2)}Z`, fill: colorOf(keys[i]), fillOpacity: (M.areaOpacity ?? 0.12) * 1.5 }));
       body.push(el('path', { d: pth, fill: 'none', stroke: colorOf(keys[i]), strokeWidth: 1.75 }));
     });
@@ -346,7 +346,7 @@ export function jointplot(spec, theme) {
   if (spec.kind === 'reg') {
     keys.forEach((k, i) => {
       const f = fitGroup(groups[i], spec, { xLog, xMin: xAx.min, xMax: xAx.max });
-      const L = (arr) => arr.map(([a, b], j) => `${j ? 'L' : 'M'}${xS(a).toFixed(2)},${yS(b).toFixed(2)}`).join('');
+      const L = (arr) => polyline(arr.map(([a, b]) => [xS(a), yS(b)]));
       if (f.band) body.push(el('path', { d: L(f.band.map(([x, , hi]) => [x, hi])) + 'L' + L(f.band.map(([x, lo]) => [x, lo]).reverse()).slice(1) + 'Z', fill: colorOf(k), fillOpacity: M.bandOpacity ?? 0.16 }));
       body.push(el('path', { d: L(f.line), fill: 'none', stroke: K === 1 ? theme.ink : colorOf(k), strokeWidth: M.lineWidth ?? 2, opacity: 0.9 }));
     });

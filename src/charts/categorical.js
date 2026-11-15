@@ -2,7 +2,7 @@
 // puntos con dispersión (strip), enjambre (swarm) y estimación con
 // intervalo (point). Categorías en un eje, valores numéricos en el otro;
 // `hue` (alias de `series`) separa grupos por color.
-import { el, g, text, tip, dotLayer } from '../svg.js';
+import { el, g, text, tip, dotLayer, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
@@ -486,7 +486,7 @@ export function point(spec, theme) {
     const pts = m.cats.map((c) => [c, res.get(c + '\u0000' + h)]).filter(([, r]) => r);
     const parts = [];
     if (spec.join !== false && pts.length > 1) {
-      const d = pts.map(([c, r], i) => { const [x, y] = s.P(cposOf(c, hi2), r.e); return (i ? 'L' : 'M') + x.toFixed(2) + ',' + y.toFixed(2); }).join('');
+      const d = polyline(pts.map(([c, r]) => s.P(cposOf(c, hi2), r.e)));
       parts.push(el('path', { d, fill: 'none', stroke: color, strokeWidth: lw, strokeLinejoin: 'round', strokeLinecap: 'round', strokeOpacity: 0.9 }));
     }
     for (const [c, r] of pts) {

@@ -4,7 +4,7 @@
 //   pairplot  matriz de dispersión: dispersión abajo, distribución en la diagonal, r arriba
 // La escala de color es divergente y SIEMPRE simétrica en [-1, 1]: el mismo
 // color significa la misma fuerza en cualquier gráfico.
-import { el, g, text, tip, barPath, dotLayer } from '../svg.js';
+import { el, g, text, tip, barPath, dotLayer, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { ramp, textOn, colorMap, readable, halo } from '../theme.js';
@@ -423,7 +423,7 @@ export function pairplot(spec, theme) {
       curves.forEach((c, gi) => {
         if (!c.length) return;
         const yOf = (d) => base - (d / mx) * (base - top);
-        const line = c.map(([x, d], t) => `${t ? 'L' : 'M'}${xs(x).toFixed(2)},${yOf(d).toFixed(2)}`).join('');
+        const line = polyline(c.map(([x, d]) => [xs(x), yOf(d)]));
         out.push(el('path', { d: `${line}L${xs(c[c.length - 1][0]).toFixed(2)},${base}L${xs(c[0][0]).toFixed(2)},${base}Z`, fill: colorOf(keys[gi]), fillOpacity: (M.areaOpacity ?? 0.12) * 1.6 }));
         out.push(el('path', { d: line, fill: 'none', stroke: colorOf(keys[gi]), strokeWidth: 1.6 }));
       });

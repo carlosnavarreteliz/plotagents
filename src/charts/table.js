@@ -5,7 +5,7 @@
 // minigráfico, avance contra la meta, estado). En pantallas angostas cada fila
 // se vuelve una tarjeta. Las filas se paginan; en el navegador, render()
 // agrega orden por columna, búsqueda y paso de página.
-import { el, g, text, tip, linkWrap } from '../svg.js';
+import { el, g, text, tip, linkWrap, polyline } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js';
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';
@@ -529,7 +529,7 @@ export function table(spec, theme) {
     if (vals.length < 2) return '';
     const mn = Math.min(...vals), mx = Math.max(...vals);
     const pts = vals.map((v, k) => [x + (k / (vals.length - 1)) * (w - 4) + 1, cy + h / 2 - ((v - mn) / (mx - mn || 1)) * h]);
-    const d = pts.map(([a, b], k) => (k ? 'L' : 'M') + a.toFixed(1) + ',' + b.toFixed(1)).join('');
+    const d = polyline(pts, 1);
     const [lx, ly] = pts[pts.length - 1];
     return [
       el('path', { d: d + `L${lx.toFixed(1)},${(cy + h / 2).toFixed(1)}L${pts[0][0].toFixed(1)},${(cy + h / 2).toFixed(1)}Z`, fill: muted ? dimC : accent, fillOpacity: 0.08, stroke: 'none' }),

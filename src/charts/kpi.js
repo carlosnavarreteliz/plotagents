@@ -1,6 +1,6 @@
 // Indicadores (stat tiles): cuando la historia es un número, el número es
 // el gráfico. Valor, variación con flecha y texto, tendencia y meta.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, polyline } from '../svg.js';
 import { truncate, measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { num } from '../data.js';
@@ -90,7 +90,7 @@ export function kpi(spec, theme) {
       const mn = Math.min(...vals), mx = Math.max(...vals);
       const sx = cx + P, sw = tw - P * 2, sy = cy + th - P - 26, sh = 26;
       const pts = vals.map((v, k) => [sx + (k / (vals.length - 1)) * sw, sy + sh - ((v - mn) / (mx - mn || 1)) * sh]);
-      parts.push(el('path', { d: pts.map(([a, b], k) => (k ? 'L' : 'M') + a.toFixed(1) + ',' + b.toFixed(1)).join(''), fill: 'none', stroke: theme.muted, strokeWidth: 1.75, strokeLinejoin: 'round', strokeLinecap: 'round' }));
+      parts.push(el('path', { d: polyline(pts, 1), fill: 'none', stroke: theme.muted, strokeWidth: 1.75, strokeLinejoin: 'round', strokeLinecap: 'round' }));
       const [lx, ly] = pts[pts.length - 1];
       parts.push(el('circle', { cx: lx, cy: ly, r: 3.5, fill: theme.categorical[0], stroke: theme.tint, strokeWidth: 2 }));
     }

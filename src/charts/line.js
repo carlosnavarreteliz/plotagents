@@ -3,7 +3,7 @@
 // Etiquetas SIEMPRE al final de cada línea: si chocan se separan y una línea
 // guía fina las une con su punto. El eje y va por dentro para ganar ancho.
 import { tipper } from '../tooltip.js';
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
@@ -588,7 +588,7 @@ function splitGaps(points, xS, yS) {
 // Un decimal basta en trazados (0,05 px): SVG más liviano con muchos puntos.
 const f2 = (n) => n.toFixed(1);
 function linearPath(pts) {
-  return pts.map(([x, y], i) => (i ? 'L' : 'M') + f2(x) + ',' + f2(y)).join('');
+  return polyline(pts, 1);
 }
 function stepPath(pts) {
   return pts.map(([x, y], i) => (i ? `H${f2(x)}V${f2(y)}` : `M${f2(x)},${f2(y)}`)).join('');
