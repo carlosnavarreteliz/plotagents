@@ -16,6 +16,23 @@ import { isEn } from '../i18n.js';
 // ── Utilidades compartidas (también las usa regplot.js) ───────────────────
 
 
+/** Prólogo común de hist, kde y ecdf: datos, campo medido, hue, idioma y escala log. */
+function prologue(spec, horizontal = false) {
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
+  requireField(data, field, horizontal ? 'y' : 'x');
+  const hue = hueField(spec);
+  if (hue) requireField(data, hue, 'hue');
+  const en = isEn(spec.locale);
+  const locale = spec.locale || 'es';
+  const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
+  return { data, field, hue, en, locale, isLog };
+}
+
+/** Grupos con sus valores; en log, sólo los > 0 (un grupo puede quedar vacío). */
+const logGroups = (data, field, hue, isLog) => groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
+
 /** Error con pista cuando el campo no tiene ningún número graficable. */
 function noNumbers(field, en, isLog) {
   const logNote = isLog ? (en ? ' (on a log scale only values > 0 count)' : ' (en escala log solo cuentan valores > 0)') : '';
@@ -104,19 +121,11 @@ function rangeLabel(a, b, fx) {
  * cumulative, commonNorm (true), xScale 'log', xDomain, yDomain.
  */
 export function hist(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
   const horizontal = !spec.x && !!spec.y;
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, horizontal ? 'y' : 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = isEn(spec.locale);
-  const locale = spec.locale || 'es';
-  const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
+  const { data, field, hue, en, locale, isLog } = prologue(spec, horizontal);
   const tr = T(isLog);
   // Sin valores > 0 en log, un grupo queda vacío: fuera (leyenda fantasma y 0/0 al normalizar).
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
+  const groups = logGroups(data, field, hue, isLog).filter((gr) => gr.values.length);
   const all = groups.flatMap((gr) => gr.values);
   if (!all.length) throw noNumbers(field, en, isLog);
   const N = all.length;
@@ -314,17 +323,9 @@ function drawBins({ bins, H, base, K, multiple, element, xS, yS, theme, M, color
  * rug, labels ('auto' rotula el pico de cada grupo), xScale 'log', xDomain, yDomain.
  */
 export function kde(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = isEn(spec.locale);
-  const locale = spec.locale || 'es';
-  const isLog = spec.xScale === 'log';
+  const { data, field, hue, en, locale, isLog } = prologue(spec);
   const tr = T(isLog);
-  const groups0 = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
+  const groups0 = logGroups(data, field, hue, isLog);
   if (!groups0.some((gr) => gr.values.length)) throw noNumbers(field, en, isLog);
   const groups = groups0.filter((gr) => gr.values.length > 1);
   if (!groups.length) return emptyChart(spec, theme, en);
@@ -448,16 +449,8 @@ export function kde(spec, theme) {
 
 /** Distribución acumulada empírica. Opciones: x, hue, complementary, xScale 'log', xDomain. */
 export function ecdf(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = isEn(spec.locale);
-  const locale = spec.locale || 'es';
-  const isLog = spec.xScale === 'log';
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
+  const { data, field, hue, en, locale, isLog } = prologue(spec);
+  const groups = logGroups(data, field, hue, isLog).filter((gr) => gr.values.length);
   if (!groups.length) throw noNumbers(field, en, isLog);
   const all = groups.flatMap((gr) => gr.values);
   const K = groups.length;
