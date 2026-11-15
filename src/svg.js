@@ -17,6 +17,9 @@ export const esc = (s) => {
 /** Redondea a 2 decimales para SVG compactos. */
 export const r2 = (n) => Math.round(n * 100) / 100;
 
+/** Redondea a 1 decimal y lo devuelve como texto. */
+export const f1 = (v) => (Math.round(v * 10) / 10).toString();
+
 /** Trazo `M x,y L x,y…` de puntos [x, y], con `digits` decimales. */
 export const polyline = (pts, digits = 2) => pts.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(digits) + ',' + y.toFixed(digits)).join('');
 

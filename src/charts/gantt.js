@@ -23,12 +23,10 @@ import { colorMap, ramp, textOn, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
 import { xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
-import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
+import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, truthy } from '../dashed.js';
 import { esEn as T, isEn } from '../i18n.js';
 
 const DAY = 864e5;
-const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
-const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
 const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
 const blank = (v) => v === undefined || v === null || v === '';
 

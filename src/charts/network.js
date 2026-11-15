@@ -10,18 +10,16 @@
 // valor; `colors["a→b"]` fija una arista; `href` enlaza cada nodo; `stretch`
 // estira x e y por separado; `minRadius` pone un piso al radio.
 import { tipper } from '../tooltip.js';
-import { el, g, tip, esc, linkWrap } from '../svg.js';
+import { el, g, tip, esc, linkWrap, f1 } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
 import { ctx } from '../context.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick } from '../data.js';
 import { createFrame } from '../frame.js';
 import { isEn } from '../i18n.js';
 
-const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const GOLDEN = 2.399963229728653;
-const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 /** Disposiciones disponibles (`layout`). `circle` es alias de `circular`. */
 export const NETWORK_LAYOUTS = ['force', 'circular', 'radial', 'concentric', 'clusters', 'tree', 'grid'];

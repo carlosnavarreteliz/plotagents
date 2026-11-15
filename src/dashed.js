@@ -20,7 +20,7 @@ import { esEn as T } from './i18n.js';
 export const DASH = { outline: '4 2.5', line: '5 6', legend: '3.5 2.5' };
 
 const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
-const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
+export const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
 
 /**
  * Devuelve una función (clave, serie?) → boolean, o null si no hay `dashed`.

@@ -13,7 +13,7 @@
 // cuadrado que deja `gap` px entre centros, dentro del área), todos llevan
 // nombre y segunda línea, y el que se movió lleva una guía hasta su nodo. Sin
 // `height`, el gráfico crece hasta que caben.
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, f1 } from '../svg.js';
 import { halo } from '../theme.js';
 import { tipper } from '../tooltip.js';
 import { measure, truncate } from '../text.js';
@@ -240,7 +240,6 @@ export function sankey(spec, theme) {
 }
 
 const sum = (ls) => ls.reduce((a, l) => a + l.v, 0);
-const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 /**
  * Posiciones de rótulos en una columna: lo más cerca de `want` (ascendente) con

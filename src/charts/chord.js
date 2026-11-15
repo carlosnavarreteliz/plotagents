@@ -5,11 +5,10 @@ import { el, g, text, tip, esc } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable, halo } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick } from '../data.js';
 import { createFrame } from '../frame.js';
 import { isEn } from '../i18n.js';
 
-const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const TAU = Math.PI * 2;
 
 /** Matriz de flujos m[i][j] (de i hacia j) y nombres. */

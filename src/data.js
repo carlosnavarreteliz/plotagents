@@ -163,6 +163,9 @@ export function packTable(rows) {
 /** Lo que `highlight` destaca, como Set de textos (null si no hay). */
 export const highlightSet = (spec) => (spec.highlight == null ? null : new Set([].concat(spec.highlight).map(String)));
 
+/** Primer candidato que existe entre los campos. */
+export const pick = (fields, cands) => cands.find((c) => fields.includes(c));
+
 export function ensureData(spec) {
   let data = toRows(spec.data);
   if (!Array.isArray(data)) {
