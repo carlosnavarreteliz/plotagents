@@ -12,6 +12,7 @@ import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, ramp, hexToRgb, mix } from '../theme.js';
+import { isHex } from '../rgb.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
@@ -122,7 +123,6 @@ export function tileUrl(p, z, x, y) {
 }
 
 // ── Color ───────────────────────────────────────────────────────────────────
-const isHex = (c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c || ''));
 
 /**
  * Filtro "muted": casi sin saturación y llevado a dos tonos del tema. Los

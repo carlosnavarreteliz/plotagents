@@ -1,4 +1,4 @@
-import { parseRgb, isColor, lin, oklab, rgbToHex } from './rgb.js';
+import { isColor, isHex, gam, unit, toOklab, rgbToHex } from './rgb.js';
 // Escalas de color (colormaps) con nombre: todas las de matplotlib, más las
 // propias de plotagents y escalas a medida.
 //
@@ -110,8 +110,6 @@ export const CYCLIC = new Set('twilight twilight_shifted hsv'.split(' '));
 export const RAINBOW = new Set('jet rainbow gist_rainbow hsv nipy_spectral gist_ncar gist_stern'.split(' '));
 
 // ── Interpolación en OKLab ─────────────────────────────────────────────────
-const gam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - 0.055);
-const toLab = (hex) => oklab(parseRgb(hex).map(lin));
 function fromLab([L, a, b]) {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
   return rgbToHex([4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map(gam));
@@ -119,10 +117,10 @@ function fromLab([L, a, b]) {
 
 /** Color en t ∈ [0, 1] a lo largo de `stops` (equiespaciados), en OKLab. */
 export function interpolate(stops, t) {
-  t = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  t = unit(t);
   if (stops.length === 1) return stops[0];
   const p = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(p)), f = p - i;
-  const A = toLab(stops[i]), B = toLab(stops[i + 1]);
+  const A = toOklab(stops[i]), B = toOklab(stops[i + 1]);
   return fromLab(A.map((v, k) => v + (B[k] - v) * f));
 }
 
@@ -135,7 +133,6 @@ export function sample(stops, n) {
 const LOWER = new Map();
 for (const k of [...Object.keys(COLORMAPS), ...Object.keys(QUALITATIVE)]) LOWER.set(k.toLowerCase(), k);
 const unpack = (s) => s.match(/.{6}/g).map((h) => '#' + h);
-const isHex = (c) => typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c.trim());
 // Nombres CSS comunes en listas de colores (["white", "steelblue"]): antes se
 // descartaban en silencio y la escala caía a la por defecto.
 const NAMED = {
@@ -146,7 +143,7 @@ const NAMED = {
   cyan: '#00ffff', aqua: '#00ffff', turquoise: '#40e0d0', lightblue: '#add8e6', skyblue: '#87ceeb', steelblue: '#4682b4', blue: '#0000ff', darkblue: '#00008b', navy: '#000080', royalblue: '#4169e1', cornflowerblue: '#6495ed', dodgerblue: '#1e90ff',
   purple: '#800080', indigo: '#4b0082', violet: '#ee82ee', magenta: '#ff00ff', fuchsia: '#ff00ff', orchid: '#da70d6', lavender: '#e6e6fa', plum: '#dda0dd',
 };
-const toHex = (c) => (isHex(c) ? c.trim() : typeof c === 'string' ? NAMED[c.trim().toLowerCase()] : undefined);
+const toHex = (c) => (typeof c === 'string' && isHex(c.trim()) ? c.trim() : typeof c === 'string' ? NAMED[c.trim().toLowerCase()] : undefined);
 
 /** Nombres disponibles, por tipo. */
 export function colorScaleNames() {
