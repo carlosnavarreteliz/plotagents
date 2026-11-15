@@ -327,6 +327,7 @@ export function pointmap(spec, theme) {
   else if (spanX < tiny && spanY < tiny) z = 12;
   else z = Math.min(17, maxZ, Math.log2(Math.min(spanX > tiny ? availW / (spanX * TILE) : Infinity, spanY > tiny ? availH / (spanY * TILE) : Infinity)));
   z = Math.max(z, Math.log2(box.h / TILE), 0); // el mundo llena el alto: nunca hay franjas vacías arriba o abajo
+  if (!Number.isFinite(z)) z = 0; // un área de ancho negativo (padding enorme) daba NaN y el ciclo de teselas no terminaba
   const k = TILE * 2 ** z;
   // Centro: el de los datos (o `center`), en el centro del área útil; sin salirse del mundo en vertical.
   let mcx, mcy;
@@ -379,7 +380,7 @@ export function pointmap(spec, theme) {
       const tx0 = Math.floor(view.mx0 * N), tx1 = Math.floor(view.mx1 * N - tiny);
       const ty0 = Math.max(0, Math.floor(view.my0 * N)), ty1 = Math.min(N - 1, Math.floor(view.my1 * N - tiny));
       grid = { N, tx0, tx1, ty0, ty1 };
-      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || zt <= 0) break;
+      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || !(zt > 0)) break;
       zt--;
     }
     const { N, tx0, tx1, ty0, ty1 } = grid;

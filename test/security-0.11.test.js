@@ -66,6 +66,11 @@ test('security 0.11: embedTiles refuses internal hosts (trailing dot, single lab
   assert.deepEqual(asked, ['https://tiles.example.com/a.png']);
 });
 
+test('security 0.11: pointmap with an absurd padding terminates (NaN zoom looped forever)', () => {
+  const data = [{ lon: -73, lat: -37 }, { lon: -70.6, lat: -33.4 }];
+  for (const padding of [400, 1000, 1e9]) assert.ok(plot({ type: 'pointmap', data, lon: 'lon', lat: 'lat', padding }).startsWith('<svg'));
+});
+
 test('security 0.11: category cross products are capped (3 000 rows must not ask for 9 million cells)', () => {
   const d = Array.from({ length: 3000 }, (_, i) => ({ a: 'a' + i, b: 'b' + i, v: i % 7 }));
   const t0 = Date.now();
