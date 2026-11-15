@@ -65,3 +65,17 @@ test('security 0.11: embedTiles refuses internal hosts (trailing dot, single lab
   await embedTiles(`<svg>${urls.map((u) => `<image class="pa-tile" href="${u}"/>`).join('')}</svg>`, { fetch: fake });
   assert.deepEqual(asked, ['https://tiles.example.com/a.png']);
 });
+
+test('security 0.11: category cross products are capped (3 000 rows must not ask for 9 million cells)', () => {
+  const d = Array.from({ length: 3000 }, (_, i) => ({ a: 'a' + i, b: 'b' + i, v: i % 7 }));
+  const t0 = Date.now();
+  for (const spec of [{ type: 'heatmap', x: 'a', y: 'b', value: 'v' }, { type: 'heatmap' }, { type: 'radar', axis: 'a', series: 'b', value: 'v' }, { type: 'bar', x: 'a', series: 'b', y: 'v' }]) {
+    const r = safePlot({ data: d, ...spec });
+    assert.equal(r.ok, false, spec.type);
+    assert.match(r.errors[0].message, /celdas/);
+  }
+  assert.ok(Date.now() - t0 < 3000);
+  // Un mapa de calor normal sigue pasando.
+  const ok = Array.from({ length: 600 }, (_, i) => ({ d: 'd' + (i % 30), h: 'h' + (i % 20), v: i }));
+  assert.ok(safePlot({ type: 'heatmap', data: ok, x: 'd', y: 'h', value: 'v' }).ok);
+});

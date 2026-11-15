@@ -8,7 +8,7 @@
 import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts } from './theme.js';
 import { withContext } from './context.js';
 import { autoLocale } from './i18n.js';
-import { ensureData, PlotError, fieldKind, uniq, num, toRows } from './data.js';
+import { ensureData, PlotError, fieldKind, fieldsOf, uniq, num, toRows } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
@@ -18,6 +18,22 @@ import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
 // Los tipos se registran al importarse (src/types/*.js); el núcleo los trae todos.
 export const RENDERERS = {};
 const MAX_LEVELS = 24;
+const MAX_CELLS = 250000; // celdas (x × y) de un mapa de calor; 3 000 filas con ids distintos pedían 9 millones y mataban el proceso
+
+/** Cruces de categorías que crecen como producto (mapa de calor, radar, barras por serie): se rechazan antes de dibujar. */
+function guardCells(s) {
+  if (!['heatmap', 'radar', 'bar'].includes(s.type) || !Array.isArray(s.data) || s.data.length < 500) return;
+  const str = (f) => (typeof f === 'string' ? f : undefined);
+  let a, b;
+  if (s.type === 'heatmap') {
+    const nonNum = fieldsOf(s.data).filter((f) => fieldKind(s.data, f) !== 'number');
+    a = str(s.x) ?? nonNum[0]; b = str(s.y) ?? nonNum.find((f) => f !== a);
+  } else if (s.type === 'radar') { a = str(s.axis) ?? str(s.x); b = str(s.hue) ?? str(s.series); } else { a = str(s.x); b = str(s.series) ?? str(s.hue) ?? str(s.group); }
+  if (!a || !b) return;
+  const A = new Set(), B = new Set();
+  for (const r of s.data) if (r && typeof r === 'object') { A.add(r[a]); B.add(r[b]); }
+  if (A.size * B.size > MAX_CELLS) throw new PlotError(`${A.size} × ${B.size} categorías (${a} × ${b}) son ${A.size * B.size} celdas: el máximo es ${MAX_CELLS}.`, 'Agrupa o filtra los datos (`top`, `exclude`) antes de dibujar.');
+}
 
 /** Normaliza el spec: tipo inferido y datos como filas. */
 export function resolve(spec = {}) {
@@ -45,6 +61,7 @@ export function resolve(spec = {}) {
     throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   }
   s.type = type;
+  guardCells(s);
   // Una jerarquía de miles de niveles agota la pila o la memoria; nadie lee más de unos pocos.
   if (Array.isArray(s.path) && s.path.length > MAX_LEVELS) throw new PlotError(`\`path\` tiene ${s.path.length} niveles: el máximo es ${MAX_LEVELS}.`, 'Deja los niveles que se leen (2–4) o agrupa los datos antes.');
   // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.
