@@ -2,6 +2,7 @@
 // central, con los tramos de edad en la columna del medio (sin ejes repetidos).
 // Opcional: comparación con otro periodo como contorno escalonado.
 import { tipper } from '../tooltip.js';
+import { sum } from '../stats.js';
 import { el, g, text, tip, barPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
@@ -55,8 +56,8 @@ export function pyramid(spec, theme) {
     return m;
   };
   const cur = sumBy(rows), cmp = cmpRows ? sumBy(cmpRows) : null;
-  const total = [...cur.values()].reduce((a, b) => a + b, 0) || 1;
-  const cmpTotal = cmp ? [...cmp.values()].reduce((a, b) => a + b, 0) || 1 : 1;
+  const total = sum([...cur.values()]) || 1;
+  const cmpTotal = cmp ? sum([...cmp.values()]) || 1 : 1;
   const pct = spec.percent === true || spec.format === 'percent' || spec.format?.type === 'percent';
   const val = (m, a, s, tot) => { const v = m.get(a + '\u0000' + s) || 0; return pct ? v / tot : v; };
   const V = (a, s) => val(cur, a, s, total);

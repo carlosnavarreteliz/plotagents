@@ -1,6 +1,7 @@
 // Diagrama de flujo: nodos y conexiones con capas automáticas (Sugiyama
 // simplificado), carriles opcionales por unidad, formas por tipo y
 // conectores ortogonales con esquinas suaves que no atraviesan nodos.
+import { sum } from '../stats.js';
 import { el, g, text, tip } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { colorMap, readable, textOn, mix } from '../theme.js';
@@ -87,7 +88,7 @@ export function flowchart(spec, theme) {
   const reindex = () => layers.forEach((ls) => ls.forEach((n, i) => pos.set(n.id, laneOf(n) * 1000 + i)));
   layers.forEach((ls) => ls.sort((a, b) => laneOf(a) - laneOf(b)));
   reindex();
-  const bary = (n, nbrs) => { const ps = nbrs.map((id) => pos.get(id)).filter((v) => v !== undefined); return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : pos.get(n.id); };
+  const bary = (n, nbrs) => { const ps = nbrs.map((id) => pos.get(id)).filter((v) => v !== undefined); return ps.length ? sum(ps) / ps.length : pos.get(n.id); };
   for (let sweep = 0; sweep < 6; sweep++) {
     for (let l = 1; l < L; l++) { layers[l].sort((a, b) => laneOf(a) - laneOf(b) || bary(a, inc.get(a.id).filter((e) => !e.back).map((e) => e.s)) - bary(b, inc.get(b.id).filter((e) => !e.back).map((e) => e.s))); reindex(); }
     for (let l = L - 2; l >= 0; l--) { layers[l].sort((a, b) => laneOf(a) - laneOf(b) || bary(a, out.get(a.id).filter((e) => !e.back).map((e) => e.t)) - bary(b, out.get(b.id).filter((e) => !e.back).map((e) => e.t))); reindex(); }
@@ -134,7 +135,7 @@ export function flowchart(spec, theme) {
     if (hasLanes) {
       // Carriles con más nodos por capa reciben más ancho.
       const wts = laneKeys.map((_, k) => 1 + 0.75 * (maxPerCell(k) - 1));
-      const unit = crossW / wts.reduce((a, b) => a + b, 0);
+      const unit = crossW / sum(wts);
       let bx = x0;
       for (let k = 0; k < nLanes; k++) {
         const bw = unit * wts[k];

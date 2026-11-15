@@ -1,6 +1,7 @@
 // Sunburst: la misma jerarquía que el treemap, en anillos concéntricos. El
 // anillo interior es el primer nivel (color por categoría); los exteriores
 // heredan el color con pasos sutiles de luminosidad. Total al centro.
+import { sum } from '../stats.js';
 import { el, g, text, tip, arcPath } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -43,7 +44,7 @@ export function sunburst(spec, theme) {
   const r0 = R * (spec.hole ?? 0.3);
   // Anillos: el exterior más delgado cuando hay muchos niveles.
   const weights = Array.from({ length: levels }, (_, i) => (levels >= 3 && i === levels - 1 ? 0.62 : 1));
-  const wsum = weights.reduce((a, b) => a + b, 0);
+  const wsum = sum(weights);
   const radii = [r0];
   weights.forEach((w) => radii.push(radii[radii.length - 1] + ((R - r0) * w) / wsum));
 

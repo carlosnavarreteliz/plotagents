@@ -7,6 +7,7 @@
 // una cantidad redonda (`unit`) y la leyenda lo dice; los cuadros por serie se
 // reparten por restos mayores, así que siempre suman el total redondeado.
 import { tipper } from '../tooltip.js';
+import { sum } from '../stats.js';
 import { el, g, tip } from '../svg.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap } from '../theme.js';
@@ -48,9 +49,9 @@ export function waffle(spec, theme) {
   const unit = +unit0 > 0 ? Math.max(+unit0, total / 10000) : NICE.find((u) => total / u <= maxSq) ?? Math.ceil(total / maxSq);
   const exact = keys.map((k) => tot.get(k) / unit);
   const squares = exact.map(Math.floor);
-  let left = Math.round(total / unit) - squares.reduce((a, b) => a + b, 0);
+  let left = Math.round(total / unit) - sum(squares);
   exact.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).forEach(([, i]) => { if (left > 0) { squares[i]++; left--; } });
-  const n = squares.reduce((a, b) => a + b, 0);
+  const n = sum(squares);
 
   const fmt = makeFormat(spec.format ?? 'integer', locale, [...tot.values()]);
   const share = (v) => formatNumber((v / total) * 100, 1, locale, true) + '%';

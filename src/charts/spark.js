@@ -9,6 +9,7 @@ import { tipper } from '../tooltip.js';
 import { el, g, tip, r2 } from '../svg.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
+import { extent } from '../stats.js';
 import { ensureData, requireField, uniq, num, fieldKind, xValue, inferXY, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { langOf } from '../i18n.js';
@@ -51,7 +52,7 @@ export function spark(spec, theme) {
   const { top: pT, right: pR, bottom: pB, left: pL } = frame.padding;
   const area = { x: pL, y: pT, w: frame.width - pL - pR, h: frame.height - pT - pB };
 
-  let lo = Math.min(...ys), hi = Math.max(...ys);
+  let [lo, hi] = extent(ys);
   if (spec.yDomain) [lo, hi] = spec.yDomain;
   const flat = hi === lo;
   const x0 = xKeys[0], x1 = xKeys[xKeys.length - 1];
@@ -101,8 +102,8 @@ export function spark(spec, theme) {
   const firstP = l0.pts.find((p) => Number.isFinite(p.y));
   const lastP = [...l0.pts].reverse().find((p) => Number.isFinite(p.y));
   const desc = firstP && lastP
-    ? (en ? `Sparkline of ${y}: from ${fmt(firstP.y)} (${xs.get(firstP.x)}) to ${fmt(lastP.y)} (${xs.get(lastP.x)}); range ${fmt(Math.min(...ys))}–${fmt(Math.max(...ys))}.`
-      : `Sparkline de ${y}: de ${fmt(firstP.y)} (${xs.get(firstP.x)}) a ${fmt(lastP.y)} (${xs.get(lastP.x)}); rango ${fmt(Math.min(...ys))}–${fmt(Math.max(...ys))}.`)
+    ? (en ? `Sparkline of ${y}: from ${fmt(firstP.y)} (${xs.get(firstP.x)}) to ${fmt(lastP.y)} (${xs.get(lastP.x)}); range ${fmt(extent(ys)[0])}–${fmt(extent(ys)[1])}.`
+      : `Sparkline de ${y}: de ${fmt(firstP.y)} (${xs.get(firstP.x)}) a ${fmt(lastP.y)} (${xs.get(lastP.x)}); rango ${fmt(extent(ys)[0])}–${fmt(extent(ys)[1])}.`)
     : '';
   return frame.finish(body, { desc, type: 'spark' });
 }

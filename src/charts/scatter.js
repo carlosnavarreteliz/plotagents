@@ -5,11 +5,11 @@ import { el, g, text, tip, dotLayer, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
 import { createFrame, SIZES, hash } from '../frame.js';
-import { extent } from '../stats.js';
+import { extent, sum } from '../stats.js';
 import { ctx } from '../context.js';
 
 /** Muestra pareja de ~n filas (inferir tipos de campo sin recorrer 50 mil filas). */
@@ -113,7 +113,7 @@ export function scatter(spec, theme) {
   // Tendencia lineal (mínimos cuadrados)
   if (spec.trend) {
     const tx = pts.map((p) => (xLog ? Math.log10(p.x) : p.x)), ty = pts.map((p) => (yLog ? Math.log10(p.y) : p.y));
-    const n = tx.length, mx = tx.reduce((a, b) => a + b, 0) / n, my = ty.reduce((a, b) => a + b, 0) / n;
+    const n = tx.length, mx = sum(tx) / n, my = sum(ty) / n;
     let sxy = 0, sxx = 0, syy = 0;
     for (let i = 0; i < n; i++) { sxy += (tx[i] - mx) * (ty[i] - my); sxx += (tx[i] - mx) ** 2; syy += (ty[i] - my) ** 2; }
     const b = sxy / (sxx || 1), a = my - b * mx;
@@ -213,7 +213,7 @@ export function scatter(spec, theme) {
       const box = anchor === 'start' ? [lx, ly - 11, lx + w, ly + 3] : [lx - w, ly - 11, lx, ly + 3];
       if (hitsAny(box, placed)) continue;
       placed.push(box);
-      body.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }, p.name.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
+      body.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo(theme) }, p.name.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
     }
   }
 

@@ -12,6 +12,7 @@ import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggreg
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { ramp, textOn, readable, contrast, mix } from '../theme.js';
+import { extent } from '../stats.js';
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
 import { words, langOf } from '../i18n.js';
@@ -157,7 +158,7 @@ function prepareColumns(spec, data, theme, locale) {
       else if (isBool) type = 'check';
       else if (kind === 'date') type = 'date';
       else if (kind === 'number' || (kind === 'year' && !c.isLabel)) {
-        const lo = Math.min(...finite), hi = Math.max(...finite);
+        const [lo, hi] = extent(finite);
         if (ID_RE.test(String(c.field))) type = 'text';
         else if (kind === 'year') type = 'number';
         else if (DELTA_RE.test(String(c.field)) || DELTA_RE.test(String(c.label))) type = 'delta';
@@ -195,7 +196,7 @@ function prepareColumns(spec, data, theme, locale) {
       // una escala recortada; lo de fuera es un chevrón (ver src/rail.js).
       c.rg = railAccessors(c);
       const ends = data.flatMap((r) => railExtent(num(r[c.field]), railValues(c.rg, r)));
-      c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      [c.rlo, c.rhi] = extent(ends);
       // Con `clip`, la escala de la columna va del menor mínimo al mayor máximo.
       const mins = data.map((r) => c.rg.min(r)).filter(Number.isFinite), maxs = data.map((r) => c.rg.max(r)).filter(Number.isFinite);
       c.clo = mins.length ? Math.min(...mins) : c.rlo; c.chi = maxs.length ? Math.max(...maxs) : c.rhi;
@@ -241,10 +242,10 @@ function prepareColumns(spec, data, theme, locale) {
     }
     c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
     if (type === 'bar' || type === 'heat') {
-      c.lo = Math.min(0, ...finite);
-      c.hi = Math.max(0, ...finite);
+      c.lo = Math.min(0, extent(finite)[0]);
+      c.hi = Math.max(0, extent(finite)[1]);
       if (type === 'heat') {
-        c.hlo = Math.min(...finite); c.hhi = Math.max(...finite);
+        [c.hlo, c.hhi] = extent(finite);
         const cs = resolveColorScale(c.colorScale ?? c.cmap);
         c.mid = c.midpoint ?? spec.midpoint ?? (cs && typeof c.colorScale === 'object' && c.colorScale.mid !== undefined ? +c.colorScale.mid : undefined) ?? ((!cs || cs.kind === 'diverging') && c.hlo < 0 && c.hhi > 0 ? 0 : undefined);
         c.stops = cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;

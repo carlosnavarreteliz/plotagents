@@ -12,7 +12,7 @@ import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, ramp, hexToRgb, mix } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
@@ -255,7 +255,7 @@ export function pointmap(spec, theme) {
   const fv = makeFormat(spec.valueFormat ?? spec.format, locale, values);
 
   // Color: por categoría (hue), por valor (rampa) o uno solo.
-  const hl = spec.highlight === undefined || spec.highlight === null ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (p) => !hl || hl.has(p.name) || hl.has(p.k);
   let legend = [];
   let colorOf;

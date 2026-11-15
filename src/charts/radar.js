@@ -4,7 +4,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 
@@ -129,7 +129,7 @@ export function radar(spec, theme) {
   // Valores de los anillos sobre el primer radio (arriba), con halo.
   rings.forEach((t) => {
     const r = rOf(t);
-    body.push(text(cx + 4, cy - r - 3, ringFmt(t), { fill: theme.muted, fontSize: (theme.type?.axis ?? 11.5) - 1, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+    body.push(text(cx + 4, cy - r - 3, ringFmt(t), { fill: theme.muted, fontSize: (theme.type?.axis ?? 11.5) - 1, ...halo(theme) }));
   });
 
   // Etiquetas de eje fuera del círculo, ancladas según el ángulo.

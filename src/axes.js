@@ -2,7 +2,7 @@
 import { el, g, text, linkWrap } from './svg.js';
 import { measure, truncate } from './text.js';
 import { SIZES } from './frame.js';
-import { isColor } from './theme.js';
+import { isColor, halo } from './theme.js';
 import { ctx } from './context.js';
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
@@ -154,7 +154,7 @@ export function yTickLabels(ticks, y, area, theme, fmt, { inside, unit } = {}) {
     const py = Math.round(y(t)) + 0.5;
     const label = fmt(t) + (unit && i === ticks.length - 1 ? ' ' + unit : '');
     return ins
-      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
+      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, ...halo(theme) })
       : text(area.x - 8, py + 4, label, { fill: theme.muted, fontSize: size, textAnchor: 'end' });
   }));
 }

@@ -7,7 +7,7 @@ import { el, g, text, tip } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
-import { colorMap, readable } from '../theme.js';
+import { colorMap, readable, halo } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
 import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside } from '../axes.js';
 import { createFrame } from '../frame.js';
@@ -356,7 +356,7 @@ export function line(spec, theme, variant = 'line') {
         const box = [bx0 - 2, ay - 10, bx1 + 2, ay + 3];
         if (!placedAnn.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { placedAnn.push(box); break; }
       }
-      body.push(text(ax, ay, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+      body.push(text(ax, ay, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', ...halo(theme) }));
     }
   }
 
@@ -369,7 +369,7 @@ export function line(spec, theme, variant = 'line') {
       cutX = Math.max(inner.x, xS(Math.max(startX, x0)));
       body.push(el('rect', { x: cutX, y: inner.y, width: Math.max(0, inner.x + inner.w - cutX), height: inner.h, fill: theme.tint, opacity: 0.55, 'pointer-events': 'none' }));
       body.push(el('line', { x1: cutX, x2: cutX, y1: inner.y, y2: inner.y + inner.h, stroke: theme.muted, strokeWidth: 1, strokeDasharray: '2 3', opacity: 0.8 }));
-      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, ...halo(theme) }));
     }
   }
   // Con xDomain/yDomain los datos fuera del rango no se salen del área de trazado.

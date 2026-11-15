@@ -10,7 +10,7 @@ import { binnedScale } from '../colorscales.js';
 import { el, g, text, linkWrap, hitsAny } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ramp, textOn, colorMap, themeFor } from '../theme.js';
+import { ramp, textOn, colorMap, themeFor, halo } from '../theme.js';
 import { resolve } from '../base.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
@@ -453,7 +453,7 @@ function drawLayer(L, proj, theme, locale) {
 
 function drawMarkers(mk, proj, theme, fmt, placed) {
   const dots = [], labs = [];
-  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  const hl = halo(theme);
   for (const m of [...mk.items].sort((a, b) => b.r - a.r)) {
     const [x, y] = proj([m.lon, m.lat]);
     m.x = x; m.y = y;
@@ -475,7 +475,7 @@ function drawMarkers(mk, proj, theme, fmt, placed) {
     const c = cands.find((k) => !hit(k.box));
     if (!c) continue;
     placed.push(c.box);
-    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...halo }));
+    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...hl }));
   }
   return [g({ class: 'pa-markers' }, dots), g({ class: 'pa-map-label pa-marker-labels', 'pointer-events': 'none' }, labs)];
 }
@@ -555,10 +555,10 @@ function mapLabels(items, theme, placedBoxes = [], bounds = null) {
     const box = [it.cx - w / 2 - 2, it.cy - 13, it.cx + w / 2 + 2, it.cy + 13];
     if (hitsAny(box, placedBoxes)) continue;
     placedBoxes.push(box);
-    const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round', textAnchor: 'middle' };
+    const hl = { ...halo(theme), textAnchor: 'middle' };
     out.push(g({ class: 'pa-map-label', 'pointer-events': 'none' }, [
-      text(it.cx, it.cy - 2, it.name, { fill: theme.ink, fontSize: 11, fontWeight: 600, ...halo }),
-      text(it.cx, it.cy + 11, it.label, { fill: theme.lede, fontSize: 11, ...halo }),
+      text(it.cx, it.cy - 2, it.name, { fill: theme.ink, fontSize: 11, fontWeight: 600, ...hl }),
+      text(it.cx, it.cy + 11, it.label, { fill: theme.lede, fontSize: 11, ...hl }),
     ]));
   }
   return out;

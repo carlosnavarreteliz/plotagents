@@ -13,7 +13,7 @@ import { makeFormat } from '../format.js';
 import { colorMap, readable } from '../theme.js';
 import { niceDomain, linear } from '../scale.js';
 import { extent, MAX_BINS } from '../stats.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { xLabels } from '../axes.js';
 import { langOf } from '../i18n.js';
@@ -34,7 +34,7 @@ export function dotplot(spec, theme) {
   const keys = series ? uniq(data.map((r) => String(r[series]))) : [];
   const cmap = colorMap(keys, theme, spec.colors);
   const colorOf = (r) => (series ? cmap.get(String(r[series])) : spec.colors?.[String(r[labelF])] ?? theme.categorical[0]);
-  const hl = spec.highlight === undefined || spec.highlight === null ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const isHL = (r) => !!hl && labelF && hl.has(String(r[labelF]));
 
   // Tramos.

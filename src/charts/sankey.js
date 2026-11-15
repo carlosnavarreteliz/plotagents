@@ -14,6 +14,7 @@
 // nombre y segunda línea, y el que se movió lleva una guía hasta su nodo. Sin
 // `height`, el gráfico crece hasta que caben.
 import { el, g, text, tip } from '../svg.js';
+import { halo } from '../theme.js';
 import { tipper } from '../tooltip.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
@@ -210,7 +211,7 @@ export function sankey(spec, theme) {
     const lx = isLeft ? n.x - 8 : n.x + NW + 8;
     const anchor = isLeft ? 'end' : 'start';
     const maxW = isLeft ? leftW - 10 - leadW : ci === cols.length - 1 ? rightW - 10 - leadW : (inner.w / Math.max(1, cols.length - 1)) * 0.55;
-    const halo = ci > 0 && ci < cols.length - 1 ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
+    const hl = ci > 0 && ci < cols.length - 1 ? halo(theme) : {};
     const cy = n.y + n.h / 2;
     const L = lab.get(n);
     if (L) {
@@ -219,16 +220,16 @@ export function sankey(spec, theme) {
       const tx = edge + sgn * off;
       if (L.moved) parts.push(el('path', { class: 'pa-leader', d: `M${f1(edge + sgn * 2)},${f1(L.from)}L${f1(tx - sgn * 3)},${f1(L.ny)}`, fill: 'none', stroke: theme.muted, strokeWidth: 0.75 }));
       if (L.two) {
-        parts.push(text(tx, L.ly - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...halo }));
-        parts.push(text(tx, L.ly + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...halo }));
+        parts.push(text(tx, L.ly - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...hl }));
+        parts.push(text(tx, L.ly + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...hl }));
       } else {
-        parts.push(text(tx, L.ly + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo }));
+        parts.push(text(tx, L.ly + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...hl }));
       }
     } else if (n.h >= 30) {
-      parts.push(text(lx, cy - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...halo }));
-      parts.push(text(lx, cy + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...halo }));
+      parts.push(text(lx, cy - 2, truncate(label(n), maxW, 12.5, 500), { fill: theme.ink, fontSize: 12.5, fontWeight: 500, textAnchor: anchor, ...hl }));
+      parts.push(text(lx, cy + 13, truncate(second(n), maxW, 12), { fill: theme.lede, fontSize: 12, textAnchor: anchor, ...hl }));
     } else if (n.h >= 8 || c.length < 12) {
-      parts.push(text(lx, cy + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo }));
+      parts.push(text(lx, cy + 4, truncate(label(n), maxW, 12, 500), { fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...hl }));
     }
     body.push(g({ 'data-key': n.id, 'data-tip': T([], n.name, fmt(n.value), n.sub !== undefined && n.sub !== null && String(n.sub) !== fmt(n.value) ? String(n.sub) : '', n.tipText ? String(n.tipText) : '') }, parts));
   }

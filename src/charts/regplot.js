@@ -7,7 +7,7 @@ import { colorMap, readable, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
 import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
-import { polyfit, lowess, histogram, kde as kdeEst } from '../stats.js';
+import { polyfit, lowess, histogram, kde as kdeEst, extent } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
 
 const EN = (spec) => String(spec.locale || 'es').startsWith('en');
@@ -44,8 +44,9 @@ function readPoints(spec, data, { needY = true } = {}) {
 function fitGroup(gp, spec, { xLog, xMin, xMax, steps = 90 }) {
   const fx = (v) => (spec.logx ? Math.log10(v) : v);
   const xs = gp.map((p) => fx(p.x)), ys = gp.map((p) => p.y);
-  const lo = spec.truncate === false ? xMin : Math.min(...gp.map((p) => p.x));
-  const hi = spec.truncate === false ? xMax : Math.max(...gp.map((p) => p.x));
+  const [gLo, gHi] = extent(gp.map((p) => p.x));
+  const lo = spec.truncate === false ? xMin : gLo;
+  const hi = spec.truncate === false ? xMax : gHi;
   const grid = Array.from({ length: steps }, (_, i) => {
     const t = i / (steps - 1);
     return xLog ? 10 ** (Math.log10(lo) + (Math.log10(hi) - Math.log10(lo)) * t) : lo + (hi - lo) * t;

@@ -10,7 +10,7 @@ import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
 import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
-import { mean, sd, meanCI } from '../stats.js';
+import { mean, sd, meanCI, sum } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
@@ -70,7 +70,7 @@ export function prepareBar(spec) {
     if (errorbar === 'se') { const mm = mean(v), d = sd(v) / Math.sqrt(v.length); return [mm - d, mm + d]; }
     return meanCI(v, level);
   }));
-  const total = (c) => values.get(c).reduce((a, b) => a + b, 0);
+  const total = (c) => sum(values.get(c));
   if (kind === 'year' || kind === 'number') cats.sort((a, b) => num(a) - num(b));
   else if (kind === 'date') cats.sort((a, b) => parseDate(a) - parseDate(b));
   const nominal = kind === 'category';
