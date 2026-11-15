@@ -7,9 +7,8 @@ import { measure, wrap } from '../text.js';
 import { colorMap, readable, textOn, mix } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
-import { esEn, isEn } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
-const T = (en, es, locale) => esEn(locale, es, en);
 const FS = 12.5, LH = 16, EDGE_FS = 11;
 
 export function flowchart(spec, theme) {
@@ -35,7 +34,7 @@ export function flowchart(spec, theme) {
     for (const id of [String(a), String(b)]) if (!nodes.has(id)) nodes.set(id, { id, label: id, type: 'process', lane: null, group: null, detail: '' });
     edges.push({ s: String(a), t: String(b), label: r[lf] != null ? String(r[lf]) : '' });
   }
-  if (!nodes.size) throw new PlotError(T('The flow chart has no nodes.', 'El diagrama de flujo no tiene nodos.', locale), T('Pass `nodes: [{ id, label, type }]` and `data: [{ from, to }]`.', 'Entrega `nodes: [{ id, label, type }]` y `data: [{ from, to }]`.', locale));
+  if (!nodes.size) throw new PlotError(T(locale, 'El diagrama de flujo no tiene nodos.', 'The flow chart has no nodes.'), T(locale, 'Entrega `nodes: [{ id, label, type }]` y `data: [{ from, to }]`.', 'Pass `nodes: [{ id, label, type }]` and `data: [{ from, to }]`.'));
   const N = [...nodes.values()];
   const out = new Map(N.map((n) => [n.id, []])), inc = new Map(N.map((n) => [n.id, []]));
   for (const e of edges) { out.get(e.s).push(e); inc.get(e.t).push(e); }
@@ -368,7 +367,7 @@ export function flowchart(spec, theme) {
     const bold = n.type === 'start' || n.type === 'end' ? 600 : 500;
     const ty0 = y + n.h / 2 - (n.lines.length * n.lh) / 2 + n.lh * 0.74;
     const texts = n.lines.map((l, i) => text(x + n.w / 2, ty0 + i * n.lh, l, { fill: tcol, fontSize: n.fs, fontWeight: bold, textAnchor: 'middle' }));
-    const kind = { start: T('Start', 'Inicio', locale), end: T('End', 'Fin', locale), decision: T('Decision', 'Decisión', locale), data: T('Data', 'Dato', locale), note: T('Note', 'Nota', locale), process: T('Step', 'Paso', locale) }[n.type] || '';
+    const kind = { start: T(locale, 'Inicio', 'Start'), end: T(locale, 'Fin', 'End'), decision: T(locale, 'Decisión', 'Decision'), data: T(locale, 'Dato', 'Data'), note: T(locale, 'Nota', 'Note'), process: T(locale, 'Paso', 'Step') }[n.type] || '';
     nodeParts.push(g({ class: 'pa-m', 'data-tip': tip(n.label, n.detail, [kind, n.lane, n.group].filter(Boolean).join(' · ')) }, [shape, ...texts]));
   }
   body.push(g({ class: 'pa-nodes' }, nodeParts));

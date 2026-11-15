@@ -13,9 +13,8 @@ import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { tipper } from '../tooltip.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile, extent } from '../stats.js';
-import { esEn, isEn } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
-const T = (en, es, locale) => esEn(locale, es, en);
 
 /** Pseudoaleatorio determinista en [0,1) a partir de un entero. */
 function rand(i) {
@@ -257,9 +256,9 @@ export function box(spec, theme) {
     parts.push(seg(s, cpos - w / 2 + 0.75, f.median, cpos + w / 2 - 0.75, f.median, { stroke: color, strokeWidth: Math.max(2.5, lw), strokeLinecap: 'butt' }));
     if (spec.showMeans || spec.mean) { const [x, y] = s.P(cpos, f.mean); parts.push(el('path', { d: `M${x},${y - 4}L${x + 4},${y}L${x},${y + 4}L${x - 4},${y}Z`, fill: theme.surface, stroke: color, strokeWidth: 1.5 })); }
     if (!spec.points) for (const v of f.outliers) { const [x, y] = s.P(cpos, v); parts.push(el('circle', { cx: x, cy: y, r: 2.75, fill: 'none', stroke: color, strokeWidth: 1.25 })); }
-    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${f.n}`, `${T('Median', 'Mediana', s.locale)}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T('Whiskers', 'Bigotes', s.locale)}: ${s.fmt(f.whiskerLo)} – ${s.fmt(f.whiskerHi)}`, f.outliers.length ? `${T('Outliers', 'Atípicos', s.locale)}: ${f.outliers.length}` : '') }, parts));
+    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${f.n}`, `${T(s.locale, 'Mediana', 'Median')}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T(s.locale, 'Bigotes', 'Whiskers')}: ${s.fmt(f.whiskerLo)} – ${s.fmt(f.whiskerHi)}`, f.outliers.length ? `${T(s.locale, 'Atípicos', 'Outliers')}: ${f.outliers.length}` : '') }, parts));
   }));
-  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T('Box plot', 'Diagrama de caja', s.locale), T('median', 'mediana', s.locale)), 'box');
+  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T(s.locale, 'Diagrama de caja', 'Box plot'), T(s.locale, 'mediana', 'median')), 'box');
 }
 
 // ── Violín ─────────────────────────────────────────────────────────────────
@@ -313,7 +312,7 @@ export function violin(spec, theme) {
         seg(s, cpos - (side === 1 ? 0 : w), v, cpos + (side === -1 ? 0 : w), v, { stroke: color, strokeWidth: 2, strokeLinecap: 'round' }),
         el('circle', { cx: x, cy: y, r: 3.5, fill: color, stroke: theme.surface, strokeWidth: 1.5 }),
       ];
-      s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T('Value', 'Valor', s.locale)}: ${s.fmt(v)}`) }, parts));
+      s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T(s.locale, 'Valor', 'Value')}: ${s.fmt(v)}`) }, parts));
       return;
     }
     const right = D.d.map(([v, d]) => s.P(cpos + (side === -1 ? 0 : wOf(d)), v));
@@ -337,9 +336,9 @@ export function violin(spec, theme) {
     } else if (inner === 'points' || inner === 'stick') {
       for (const v of m.get(c, h)) parts.push(seg(s, cpos - 3, v, cpos + 3, v, { stroke: theme.ink, strokeOpacity: 0.55, strokeWidth: 1 }));
     }
-    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T('Median', 'Mediana', s.locale)}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T('Range', 'Rango', s.locale)}: ${s.fmt(f.min)} – ${s.fmt(f.max)}`) }, parts));
+    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T(s.locale, 'Mediana', 'Median')}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T(s.locale, 'Rango', 'Range')}: ${s.fmt(f.min)} – ${s.fmt(f.max)}`) }, parts));
   }));
-  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T('Violin plot', 'Gráfico de violín', s.locale), T('median', 'mediana', s.locale)), 'violin');
+  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T(s.locale, 'Gráfico de violín', 'Violin plot'), T(s.locale, 'mediana', 'median')), 'violin');
 }
 
 // ── Puntos con dispersión (strip) ──────────────────────────────────────────
@@ -369,7 +368,7 @@ export function strip(spec, theme) {
     }
     s.body.marks.push(g({}, parts));
   }));
-  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip');
+  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T(s.locale, 'Gráfico de puntos por categoría', 'Strip plot'), T(s.locale, 'promedio', 'mean')), 'strip');
 }
 
 // ── Enjambre (swarm / beeswarm) ────────────────────────────────────────────
@@ -427,7 +426,7 @@ export function swarm(spec, theme) {
     parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
-  return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
+  return finish(s, describeGroups(m, median, s.fmt, s.locale, T(s.locale, 'Gráfico de enjambre', 'Swarm plot'), T(s.locale, 'mediana', 'median')), 'swarm');
 }
 
 // ── Estimación con intervalo (point) ───────────────────────────────────────
@@ -496,8 +495,8 @@ export function point(spec, theme) {
       if (eb) bits.push(seg(s, cp, r.lo, cp, r.hi, { stroke: color, strokeWidth: 2, strokeLinecap: 'round' }));
       const [x, y] = s.P(cp, r.e);
       bits.push(el('circle', { cx: x, cy: y, r: (theme.marks?.pointRadius ?? 4) + 0.5, fill: color, stroke: theme.surface, strokeWidth: theme.marks?.ring ?? 2 }));
-      const ebName = eb === 'ci' ? `IC ${Math.round((spec.level ?? 0.95) * 100)}%` : eb === 'sd' ? T('± SD', '± DE', s.locale) : eb === 'se' ? T('± SE', '± EE', s.locale) : eb === 'pi' ? T('95% range', 'rango 95%', s.locale) : '';
-      const estName = est === 'median' ? T('Median', 'Mediana', s.locale) : est === 'sum' ? T('Sum', 'Suma', s.locale) : T('Mean', 'Promedio', s.locale);
+      const ebName = eb === 'ci' ? `IC ${Math.round((spec.level ?? 0.95) * 100)}%` : eb === 'sd' ? T(s.locale, '± DE', '± SD') : eb === 'se' ? T(s.locale, '± EE', '± SE') : eb === 'pi' ? T(s.locale, 'rango 95%', '95% range') : '';
+      const estName = est === 'median' ? T(s.locale, 'Mediana', 'Median') : est === 'sum' ? T(s.locale, 'Suma', 'Sum') : T(s.locale, 'Promedio', 'Mean');
       parts.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `${estName}: ${s.fmt(r.e)}`, eb ? `${ebName}: ${s.fmt(r.lo)} – ${s.fmt(r.hi)}` : '', `n = ${r.n}`) }, bits));
     }
     if (showEnd && vertical && pts.length) {
@@ -515,8 +514,8 @@ export function point(spec, theme) {
       s.body.post.push(text(e.x, e.y + 4, truncate(e.label, endW - 12, 12, 500), { fill: readable(e.color, theme), fontSize: 12, fontWeight: 600 }));
     }
   }
-  const estW = est === 'median' ? T('median', 'mediana', s.locale) : est === 'sum' ? T('sum', 'suma', s.locale) : T('mean', 'promedio', s.locale);
-  return finish(s, describeGroups(m, (vs) => estimate(vs, est, false).e, s.fmt, s.locale, T('Point plot', 'Gráfico de estimación con intervalo', s.locale), estW), 'point');
+  const estW = est === 'median' ? T(s.locale, 'mediana', 'median') : est === 'sum' ? T(s.locale, 'suma', 'sum') : T(s.locale, 'promedio', 'mean');
+  return finish(s, describeGroups(m, (vs) => estimate(vs, est, false).e, s.fmt, s.locale, T(s.locale, 'Gráfico de estimación con intervalo', 'Point plot'), estW), 'point');
 }
 
 // ── Descripción ────────────────────────────────────────────────────────────

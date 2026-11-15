@@ -10,9 +10,8 @@ import { niceStep, linear } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
-import { esEn, isEn } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
-const T = (en, es, locale) => esEn(locale, es, en);
 const lead = (s) => { const m = /^\s*(\d+)/.exec(String(s)); return m ? +m[1] : NaN; };
 
 export function pyramid(spec, theme) {
@@ -40,7 +39,7 @@ export function pyramid(spec, theme) {
   }
 
   const sides = spec.sides ?? uniq(rows.map((r) => String(r[sideF])));
-  if (sides.length !== 2) throw new PlotError(T(`A population pyramid needs exactly 2 groups in "${sideF}" (found ${sides.length}).`, `La pirámide necesita exactamente 2 grupos en "${sideF}" (hay ${sides.length}).`, locale), T('Filter the data to two groups, e.g. men and women.', 'Filtra los datos a dos grupos, por ejemplo hombres y mujeres.', locale));
+  if (sides.length !== 2) throw new PlotError(T(locale, `La pirámide necesita exactamente 2 grupos en "${sideF}" (hay ${sides.length}).`, `A population pyramid needs exactly 2 groups in "${sideF}" (found ${sides.length}).`), T(locale, 'Filtra los datos a dos grupos, por ejemplo hombres y mujeres.', 'Filter the data to two groups, e.g. men and women.'));
   let ages = uniq([...rows, ...(cmpRows || [])].map((r) => String(r[ageF])));
   if (ages.every((a) => Number.isFinite(lead(a)))) ages.sort((a, b) => lead(a) - lead(b));
   if (spec.ageOrder) ages = spec.ageOrder.map(String);
@@ -72,7 +71,7 @@ export function pyramid(spec, theme) {
 
   const cmap = colorMap(sides, theme, spec.colors);
   const colorOf = (s) => cmap.get(s);
-  const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T('Comparison', 'Comparación', locale));
+  const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T(locale, 'Comparación', 'Comparison'));
   const legend = cmp && spec.legend !== false ? [{ label: cmpLabel, color: theme.ink, shape: 'line' }] : [];
 
   const frame = createFrame(spec, theme, { height: 420 });
