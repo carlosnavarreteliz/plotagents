@@ -7,7 +7,7 @@ import { makeFormat, formatNumber } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
-import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
+import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth, xBaseline } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
 import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
@@ -500,7 +500,7 @@ export function ecdf(spec, theme) {
     ]));
   }
   body.push(text(inner.x + inner.w, py50 - 5, en ? 'Median' : 'Mediana', { fill: theme.muted, fontSize: theme.type?.axis ?? 11.5, textAnchor: 'end', ...halo(theme) }));
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(vAx.ticks, yS, inner, theme, ticksF));
   axisTitles(body, theme, area, inner, { x: spec.xLabel ?? humanize(field), y: spec.yLabel === false ? null : spec.yLabel ?? (spec.complementary ? (en ? 'Share above' : 'Proporción sobre el valor') : en ? 'Cumulative share' : 'Proporción acumulada') });

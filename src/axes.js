@@ -210,6 +210,9 @@ export function quietCorner(points, inner, w, h = 14, pad = 8) {
   return { x: best.tx, y: best.ty, anchor: best.anchor };
 }
 
+/** Línea base inferior del área `inner` (eje x de un gráfico con ejes propios). */
+export const xBaseline = (inner, theme) => el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis });
+
 /** Trazo de grilla y base según el tema (theme.grid { dash, width }, theme.axis { width }). */
 export function gridAttrs(theme, base = false) {
   const st = base ? theme.axisStyle : theme.gridStyle;

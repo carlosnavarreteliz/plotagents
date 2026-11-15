@@ -7,7 +7,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
-import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
+import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside, xBaseline } from '../axes.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { extent, sum } from '../stats.js';
 import { ctx } from '../context.js';
@@ -105,7 +105,7 @@ export function scatter(spec, theme) {
   const body = [];
   body.push(yGrid(yS.ticks(dy.step), yS, inner, theme, { baseline: NaN }));
   body.push(gridX(xS.ticks(dx.step), xS, inner, theme, xtf, { baseline: NaN }));
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
   // Títulos de ejes: horizontales, nunca rotados.
   body.push(text(area.x, area.y + 10, spec.yLabel ?? humanize(y), { fill: theme.lede, fontSize: SIZES.axis, fontWeight: 500 }));
   body.push(text(inner.x + inner.w, inner.y + inner.h + 40, spec.xLabel ?? humanize(x), { fill: theme.lede, fontSize: SIZES.axis, fontWeight: 500, textAnchor: 'end' }));

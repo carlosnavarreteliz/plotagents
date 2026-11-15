@@ -5,7 +5,7 @@ import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, readable, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
-import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner } from '../axes.js';
+import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, quietCorner, xBaseline } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
 import { polyfit, lowess, histogram, kde as kdeEst, extent } from '../stats.js';
 import { hueField, axisDomain, tickFmt, axisTitles } from './dist.js';
@@ -110,7 +110,7 @@ export function regplot(spec, theme) {
   const body = [];
   body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
   body.push(yGrid(yAx.ticks, yS, inner, theme, { baseline: NaN }));
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
 
   const L = (arr) => polyline(arr.map(([a, b]) => [xS(a), yS(Math.max(yLog ? 1e-12 : -Infinity, b))]));
   // Bandas primero, luego puntos, luego rectas encima.
@@ -286,7 +286,7 @@ export function jointplot(spec, theme) {
   const yS = yAx.scale(inner.y + inner.h - r - 2, inner.y + r + 2);
   if (spec._domains && typeof spec._domains === 'object') { spec._domains.x = [xAx.min, xAx.max]; spec._domains.y = [yAx.min, yAx.max]; }
   const body = [yGrid(yAx.ticks, yS, inner, theme, { baseline: NaN })];
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
 
   // Marginales: comparten bins / grilla en el espacio de la escala.
   const tx = (v) => (xLog ? Math.log10(v) : v), ty = (v) => (yLog ? Math.log10(v) : v);
