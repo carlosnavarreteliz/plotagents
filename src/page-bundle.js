@@ -44,7 +44,7 @@ export function pageBundle(specs, read, { dashboard = false } = {}) {
   const typeEntries = new Set(), geoEntries = new Set();
   for (const s of specs) {
     if (!s || typeof s !== 'object') continue;
-    const t = P.types[s.type];
+    const t = Object.hasOwn(P.types, s.type) && P.types[s.type]; // hasOwn: "constructor" no es un tipo
     if (!t) return null; // un tipo que no se sabe dónde vive: mejor la biblioteca entera
     typeEntries.add(t);
     if (MAP_TYPES.has(s.type)) {
@@ -53,7 +53,7 @@ export function pageBundle(specs, read, { dashboard = false } = {}) {
       else if (s.geo === undefined) names.push('chile');
       if (typeof s.geo === 'string' && !isGeoUrl(s.geo)) names.push(s.geo);
       for (const L of [].concat(s.layers || [])) if (L && typeof L.geo === 'string' && !isGeoUrl(L.geo)) names.push(L.geo);
-      for (const n of names) { const g = P.geo[String(n).toLowerCase()]; if (g) geoEntries.add(g); }
+      for (const n of names) { const k = String(n).toLowerCase(), g = Object.hasOwn(P.geo, k) && P.geo[k]; if (g) geoEntries.add(g); }
     }
   }
   const out = [], seen = new Set();

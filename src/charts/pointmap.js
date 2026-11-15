@@ -327,6 +327,7 @@ export function pointmap(spec, theme) {
   else if (spanX < tiny && spanY < tiny) z = 12;
   else z = Math.min(17, maxZ, Math.log2(Math.min(spanX > tiny ? availW / (spanX * TILE) : Infinity, spanY > tiny ? availH / (spanY * TILE) : Infinity)));
   z = Math.max(z, Math.log2(box.h / TILE), 0); // el mundo llena el alto: nunca hay franjas vacías arriba o abajo
+  if (!Number.isFinite(z)) z = 0; // un área de ancho negativo (padding enorme) daba NaN y el ciclo de teselas no terminaba
   const k = TILE * 2 ** z;
   // Centro: el de los datos (o `center`), en el centro del área útil; sin salirse del mundo en vertical.
   let mcx, mcy;
@@ -379,7 +380,7 @@ export function pointmap(spec, theme) {
       const tx0 = Math.floor(view.mx0 * N), tx1 = Math.floor(view.mx1 * N - tiny);
       const ty0 = Math.max(0, Math.floor(view.my0 * N)), ty1 = Math.min(N - 1, Math.floor(view.my1 * N - tiny));
       grid = { N, tx0, tx1, ty0, ty1 };
-      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || zt <= 0) break;
+      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || !(zt > 0)) break;
       zt--;
     }
     const { N, tx0, tx1, ty0, ty1 } = grid;
@@ -565,14 +566,16 @@ function toBase64(buf) {
 // Al incrustar teselas en un servidor solo se piden URLs https a hosts públicos:
 // nada de localhost, IPs privadas o de enlace local (metadatos de la nube).
 const PRIVATE_HOST = /^(localhost|.*\.localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|\[.*\])$/i;
+// Un host sin punto ("intranet", "metadata") es de la red interna; 0.x.x.x y los rangos reservados tampoco son públicos.
+const INTERNAL_HOST = /^([^.]+|0\.\d+\.\d+\.\d+|192\.0\.0\.\d+|198\.1[89]\.\d+\.\d+|2(2[4-9]|[3-5]\d)\.\d+\.\d+\.\d+)$/;
 const MAX_TILE_BYTES = 2 * 1024 * 1024, MAX_EMBED = 400;
 function tileUrlOk(u, hosts) {
   let url;
   try { url = new URL(u); } catch { return false; }
   if (url.protocol !== 'https:' || url.username || url.password) return false;
-  const h = url.hostname.toLowerCase();
+  const h = url.hostname.toLowerCase().replace(/\.+$/, ''); // "localhost." es localhost
   if (hosts) return hosts.some((x) => h === x || h.endsWith('.' + x));
-  return !PRIVATE_HOST.test(h) && !/^\d+$/.test(h);
+  return !PRIVATE_HOST.test(h) && !INTERNAL_HOST.test(h) && !/^\d+$/.test(h);
 }
 
 export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, concurrency = 6, hosts } = {}) {
