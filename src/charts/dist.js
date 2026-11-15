@@ -488,21 +488,32 @@ export function ecdf(spec, theme) {
     const pts = ecdfEst(groups[k].values);
     const comp = !!spec.complementary;
     const Y = (p) => (comp ? 1 - p : p);
-    let d = `M${xS(Math.max(xAx.min, pts[0][0])).toFixed(2)},${yS(Y(0)).toFixed(2)}`;
-    // Escalones a menos de medio píxel se funden en uno (50 mil valores → ~1 por columna).
-    let prev = 0, colX = NaN, colP0 = 0, colP1 = 0;
-    const flush = () => { if (Number.isFinite(colX)) { const px = colX.toFixed(2); d += `L${px},${yS(Y(colP0)).toFixed(2)}L${px},${yS(Y(colP1)).toFixed(2)}`; } };
-    for (const [x, p] of pts) {
-      const fx0 = xS(Math.min(xAx.max, Math.max(xAx.min, x)));
-      if (Number.isFinite(colX) && Math.abs(fx0 - colX) < 0.5) colP1 = p;
-      else { flush(); colX = fx0; colP0 = prev; colP1 = p; }
-      prev = p;
-    }
-    flush();
-    d += `L${xS(xAx.max).toFixed(2)},${yS(Y(1)).toFixed(2)}`;
+    // Escalones a menos de `px` píxeles se funden en uno (50 mil valores → ~1 por columna).
+    // Trazo relativo (h/v) sobre décimas de píxel ya redondeadas: el error no se acumula
+    // y cada escalón cuesta ~10 bytes en vez de ~30.
+    const T = (v) => Math.round(v * 10);
+    const stepPath = (px) => {
+      let cx = T(xS(Math.max(xAx.min, pts[0][0]))), cy = T(yS(Y(0)));
+      let d = `M${cx / 10},${cy / 10}`;
+      const go = (nx, ny) => { if (nx !== cx) d += `h${(nx - cx) / 10}`; if (ny !== cy) d += `v${(ny - cy) / 10}`; cx = nx; cy = ny; };
+      let prev = 0, colX = NaN, colP0 = 0, colP1 = 0;
+      const flush = () => { if (Number.isFinite(colX)) { go(T(colX), T(yS(Y(colP0)))); go(cx, T(yS(Y(colP1)))); } };
+      for (const [x, p] of pts) {
+        const fx0 = xS(Math.min(xAx.max, Math.max(xAx.min, x)));
+        if (Number.isFinite(colX) && Math.abs(fx0 - colX) < px) colP1 = p;
+        else { flush(); colX = fx0; colP0 = prev; colP1 = p; }
+        prev = p;
+      }
+      flush();
+      go(T(xS(xAx.max)), cy); go(cx, T(yS(Y(1))));
+      return d;
+    };
+    const d = stepPath(0.5);
+    // El área de contacto (trazo de 12 px) no necesita el detalle del trazo visible.
+    const dHit = pts.length > 400 ? stepPath(3) : d;
     const vs = [...groups[k].values].sort((a, b) => a - b);
     body.push(g({ class: 'pa-m', 'data-tip': tip(groups[k].key || humanize(field), `P25: ${fx(quantile(vs, 0.25))}`, `${en ? 'Median' : 'Mediana'}: ${fx(quantile(vs, 0.5))}`, `P75: ${fx(quantile(vs, 0.75))}`, `P90: ${fx(quantile(vs, 0.9))}`) }, [
-      el('path', { d, fill: 'none', stroke: 'transparent', strokeWidth: 12 }),
+      el('path', { d: dHit, fill: 'none', stroke: 'transparent', strokeWidth: 12 }),
       el('path', { d, fill: 'none', stroke: colorOf(k), strokeWidth: hl && hl.has(groups[k].key) ? (M.lineWidth ?? 2) + 0.75 : M.lineWidth ?? 2, strokeLinejoin: 'round' }),
     ]));
   }

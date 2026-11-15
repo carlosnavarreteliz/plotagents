@@ -85,22 +85,48 @@ export const tip = (...lines) => lines.filter((l) => l !== undefined && l !== nu
  * mouse. Es tan rápido como Canvas y conserva lo vectorial (ver docs).
  */
 export function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
-  if (circles.length <= threshold) return circles.map(({ 'data-href': href, ...c }) => linkWrap(href, el('circle', c))).join('');
+  if (circles.length <= threshold) {
+    // Un décimo de píxel basta para la posición (el valor por defecto de `el` serían dos decimales).
+    const t = (v) => (typeof v === 'number' ? Math.round(v * 10) / 10 : v);
+    return circles.map(({ 'data-href': href, ...c }) => linkWrap(href, el('circle', { ...c, cx: t(c.cx), cy: t(c.cy) }))).join('');
+  }
   const groups = new Map();
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  const near = [];
+  const near = [], pal = [], palIdx = new Map();
+  let last = null, lastG = null;
   for (const c of circles) {
     delete c['data-href']; // en capas densas no hay enlaces por punto
-    const k = [c.fill, c.fillOpacity, c.r, c.stroke, c.strokeWidth].join('|');
-    if (!groups.has(k)) groups.set(k, { attrs: c, d: [] });
+    // Puntos seguidos suelen compartir estilo: se reutiliza el grupo anterior sin armar la clave.
+    let gr = last && last.fill === c.fill && last.fillOpacity === c.fillOpacity && last.r === c.r && last.stroke === c.stroke && last.strokeWidth === c.strokeWidth ? lastG : null;
+    if (!gr) {
+      const k = [c.fill, c.fillOpacity, c.r, c.stroke, c.strokeWidth].join('|');
+      gr = groups.get(k);
+      if (!gr) groups.set(k, (gr = { attrs: c, d: [], px: 0, py: 0 }));
+    }
+    last = c; lastG = gr;
     const r = +c.r, cx = +c.cx, cy = +c.cy;
-    groups.get(k).d.push(`M${r2(cx - r)},${r2(cy)}a${r},${r} 0 1,0 ${r2(2 * r)},0a${r},${r} 0 1,0 ${r2(-2 * r)},0`);
+    // Un décimo de píxel basta; el movimiento es relativo al punto anterior del grupo
+    // (sobre coordenadas ya redondeadas, así el error no se acumula).
+    const sx = Math.round((cx - r) * 10), sy = Math.round(cy * 10);
+    const dx = sx - gr.px, dy = sy - gr.py;
+    gr.px = sx; gr.py = sy;
+    gr.d.push(`${gr.d.length ? 'm' : 'M'}${dx / 10}${dy < 0 ? '' : ' '}${dy / 10}`);
     x0 = Math.min(x0, cx - r); y0 = Math.min(y0, cy - r); x1 = Math.max(x1, cx + r); y1 = Math.max(y1, cy + r);
-    if (near.length < maxTips) near.push([r2(cx), r2(cy), c['data-tip'] || '', c.fill]);
+    if (near.length < maxTips) {
+      let ci = palIdx.get(c.fill);
+      if (ci === undefined) palIdx.set(c.fill, (ci = pal.push(c.fill) - 1));
+      near.push([Math.round(cx * 10) / 10, Math.round(cy * 10) / 10, c['data-tip'] || '', ci]);
+    }
   }
-  const paths = [...groups.values()].map(({ attrs, d }) =>
-    el('path', { d: d.join(''), fill: attrs.fill, fillOpacity: attrs.fillOpacity, stroke: attrs.stroke && attrs.stroke !== 'none' ? attrs.stroke : null, strokeWidth: attrs.stroke && attrs.stroke !== 'none' ? Math.min(+attrs.strokeWidth || 1, 0.75) : null }));
-  const hover = el('rect', { class: 'pa-near', x: x0, y: y0, width: Math.max(1, x1 - x0), height: Math.max(1, y1 - y0), fill: 'transparent', 'data-near': JSON.stringify(near) });
+  const paths = [...groups.values()].map(({ attrs, d }) => {
+    const r = +attrs.r, R = r2(r), W = r2(2 * r);
+    // Dos arcos por círculo, sin separadores innecesarios (las banderas del arco pueden ir pegadas).
+    const arc = `a${R} ${R} 0 10${W} 0 ${R} ${R} 0 10${-W} 0`;
+    return el('path', { d: d.join(arc) + arc, fill: attrs.fill, fillOpacity: attrs.fillOpacity, stroke: attrs.stroke && attrs.stroke !== 'none' ? attrs.stroke : null, strokeWidth: attrs.stroke && attrs.stroke !== 'none' ? Math.min(+attrs.strokeWidth || 1, 0.75) : null });
+  });
+  // data-near va entre comillas simples: el JSON no necesita escapar sus comillas dobles (6 bytes cada una).
+  const json = JSON.stringify({ c: pal, p: near }).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/</g, '&lt;');
+  const hover = `<rect class="pa-near" x="${r2(x0)}" y="${r2(y0)}" width="${r2(Math.max(1, x1 - x0))}" height="${r2(Math.max(1, y1 - y0))}" fill="transparent" data-near='${json}'/>`;
   return g({ class: 'pa-dense' }, [...paths, hover]);
 }
 
