@@ -21,7 +21,7 @@ import { makeFormat, parseDate, formatDate, formatNumber } from '../format.js';
 import { timeTicks, niceStep, linear } from '../scale.js';
 import { colorMap, ramp, textOn, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
-import { xLabels } from '../axes.js';
+import { objList, xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { esEn as T } from '../i18n.js';
@@ -113,7 +113,7 @@ export function gantt(spec, theme) {
 
   // ── Dominio ─────────────────────────────────────────────────────────────
   const todayV = spec.today === true ? (isTime ? Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) : NaN) : blank(spec.today) || spec.today === false ? NaN : toT(spec.today);
-  const refs = (spec.refLines || []).filter((r) => r && r.x !== undefined).map((r) => ({ ...r, t: toT(r.x) })).filter((r) => Number.isFinite(r.t));
+  const refs = objList(spec.refLines).filter((r) => r.x !== undefined).map((r) => ({ ...r, t: toT(r.x) })).filter((r) => Number.isFinite(r.t));
   let t0 = Math.min(...tasks.map((t) => t.start)), t1 = Math.max(...tasks.map((t) => t.end));
   for (const v of [todayV, ...refs.map((r) => r.t)]) if (Number.isFinite(v)) { t0 = Math.min(t0, v); t1 = Math.max(t1, v); }
   if (Array.isArray(spec.xDomain)) { const [a, b] = spec.xDomain.map(toT); if (Number.isFinite(a)) t0 = a; if (Number.isFinite(b)) t1 = b; }

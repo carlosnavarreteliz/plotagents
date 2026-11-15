@@ -17,7 +17,8 @@ export function kpi(spec, theme) {
   const n = Math.max(1, items.length);
   const fit = Math.max(1, Math.floor((area.w + 12) / 180));
   // Filas parejas: 4 tarjetas donde caben 3 → 2×2, no 3+1.
-  const cols = spec.columns ?? (n <= fit ? n : Math.ceil(n / Math.ceil(n / fit)));
+  const wantCols = Math.round(+spec.columns);
+  const cols = wantCols >= 1 ? wantCols : n <= fit ? n : Math.ceil(n / Math.ceil(n / fit));
   const gap = 12;
   const tw = (area.w - gap * (cols - 1)) / cols;
   const hasTrend = items.some((it) => Array.isArray(it.trend) && it.trend.length > 1);

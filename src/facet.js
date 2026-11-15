@@ -6,6 +6,7 @@ import { createFrame } from './frame.js';
 import { colorMap, themeFor, readable } from './theme.js';
 import { ensureData, requireField, uniq, fieldKind, num } from './data.js';
 import { niceDomain } from './scale.js';
+import { objList } from './axes.js';
 
 const LINE_LIKE = new Set(['line', 'area', 'kde', 'ecdf', 'point', 'regplot', 'residplot']);
 
@@ -13,9 +14,12 @@ export function facet(spec, theme, renderOne) {
   const data = ensureData(spec);
   const f = spec.facet ?? spec.col;
   requireField(data, f, 'facet');
-  let keys = uniq(data.map((r) => String(r[f])));
+  // Filas sin valor en el campo no son un panel "null"/"undefined": van juntas en "(sin dato)".
+  const blank = String(spec.locale || 'es').startsWith('en') ? '(no data)' : '(sin dato)';
+  const fv = (r) => (r[f] == null || r[f] === '' ? blank : String(r[f]));
+  let keys = uniq(data.map(fv));
   const fk = fieldKind(data, f);
-  if (fk === 'year' || fk === 'number') keys.sort((a, b) => num(a) - num(b));
+  if (fk === 'year' || fk === 'number') keys.sort((a, b) => (a === blank ? 1 : b === blank ? -1 : num(a) - num(b)));
   if (spec.facetOrder) keys = [...spec.facetOrder.map(String).filter((k) => keys.includes(k)), ...keys.filter((k) => !spec.facetOrder.map(String).includes(k))];
 
   // Colores globales: la misma serie tiene el mismo color en todos los paneles.
@@ -50,7 +54,7 @@ export function facet(spec, theme, renderOne) {
     width: Math.floor(pw), height: ph, padding: 0, colors, legend: false, theme: panelTheme, palette: undefined,
     labels: spec.panelLabels ?? (multiSeries && LINE_LIKE.has(spec.type) ? false : spec.labels),
   };
-  const subsets = keys.map((k) => data.filter((r) => String(r[f]) === k));
+  const subsets = keys.map((k) => data.filter((r) => fv(r) === k));
   // `panelNote`: una línea bajo el nombre del panel (un campo o una función).
   const notes = subsets.map((d, i) => {
     const note = typeof spec.panelNote === 'function' ? spec.panelNote(keys[i], d) : spec.panelNote ? d.map((r) => r[spec.panelNote]).find((v) => v !== undefined && v !== null && v !== '') : undefined;
@@ -121,7 +125,7 @@ export function facet(spec, theme, renderOne) {
   const draw = (k, i, extra = {}) => {
     try {
       // Anotaciones con `panel` van sólo a ese panel; sin `panel`, a todos.
-      const ann = (spec.annotations || []).filter((a) => a.panel === undefined || String(a.panel) === k);
+      const ann = objList(spec.annotations).filter((a) => a.panel === undefined || String(a.panel) === k);
       return renderOne({ ...base, data: subsets[i], title: k, subtitle: notes[i], annotations: ann, yDomain: spanDomains ? spanDomains[i] : yDomain, xDomain, ...(pads || {}), ...(titleColors[i] ? { _titleColor: titleColors[i] } : {}), ...extra });
     } catch (e) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}"></svg>`;

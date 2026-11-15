@@ -9,7 +9,7 @@ import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
-import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
+import { objList, xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
@@ -158,7 +158,7 @@ export function line(spec, theme, variant = 'line') {
     ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale)
     : spec.index ? makeFormat({ type: 'number', decimals: spec.format?.decimals ?? 0 }, locale) : makeFormat(spec.format, locale, rawY);
   let [ymin, ymax] = extent(allY);
-  const refs = spec.refLines || [];
+  const refs = objList(spec.refLines);
   for (const r of refs) if (r.y !== undefined) { ymin = Math.min(ymin, r.y); ymax = Math.max(ymax, r.y); }
   const yLog = spec.yScale === 'log' && ymin > 0;
   const zero = !yLog && (spec.zero ?? (isArea || (ymin >= 0 && ymin <= ymax * 0.45) || (ymax <= 0 && ymax >= ymin * 0.45)));
@@ -339,7 +339,7 @@ export function line(spec, theme, variant = 'line') {
     if (xb.label) parts.push(text(px0 + 4, inner.y + 12, truncate(String(xb.label), Math.max(40, px1 - px0 - 8), 11), { fill: theme.muted, fontSize: 11 }));
     body.unshift(g({ class: 'pa-xband' }, parts));
   }
-  for (const a of spec.annotations || []) {
+  for (const a of objList(spec.annotations)) {
     const xv = m.kind === 'category' ? m.cats.indexOf(String(a.x)) : xValue(a.x, m.kind);
     if (!Number.isFinite(xv) || xv < x0 || xv > x1) continue;
     const px = Math.round(xS(xv)) + 0.5;

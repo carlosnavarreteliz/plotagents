@@ -99,7 +99,7 @@ export function wordcloud(spec, theme) {
   if (!words.length) throw new PlotError(T(locale, 'La nube no tiene palabras.', 'The word cloud has no words.'), T(locale, 'Pasa filas { palabra, valor } o `text: "…"` con el texto a contar.', 'Pass rows { word, value } or `text: "…"` with the text to count.'));
   words.sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
   const total = words.reduce((a, w) => a + w.value, 0);
-  const top = spec.top ?? 80;
+  const top = Math.floor(+spec.top) >= 1 ? Math.floor(+spec.top) : 80;
   const dropped = Math.max(0, words.length - top);
   words = words.slice(0, top);
 
