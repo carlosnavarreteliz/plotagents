@@ -20,7 +20,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, parseDate, formatDate, formatNumber } from '../format.js';
 import { timeTicks, niceStep, linear } from '../scale.js';
 import { colorMap, ramp, textOn, readable } from '../theme.js';
-import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet, push } from '../data.js';
 import { xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, truthy } from '../dashed.js';
@@ -136,7 +136,7 @@ export function gantt(spec, theme) {
   if (spec.critical) {
     const byName = new Map(tasks.map((t) => [t.name, t]));
     const succ = new Map();
-    for (const t of tasks) for (const d of t.deps) if (byName.has(d)) { if (!succ.has(d)) succ.set(d, []); succ.get(d).push(t); }
+    for (const t of tasks) for (const d of t.deps) if (byName.has(d)) { push(succ, d, t); }
     const finish = Math.max(...tasks.map((t) => t.end));
     const slack = new Map(), seen = new Set();
     const slackOf = (t) => {

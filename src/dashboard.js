@@ -21,7 +21,7 @@
 //   los gráficos que tienen ese campo y a los KPIs calculados.
 // · En teléfonos, una columna en el orden de lectura.
 import { themeFor, colorMap } from './theme.js';
-import { ensureData, num, uniq, fieldKind, aggregate, PlotError, toRows } from './data.js';
+import { ensureData, num, uniq, fieldKind, aggregate, PlotError, toRows, push } from './data.js';
 import { makeFormat, formatNumber, parseDate } from './format.js';
 import { esc } from './svg.js';
 import { render } from './runtime.js';
@@ -264,7 +264,7 @@ export function kpiMarkup(plan, rows) {
     // `trendBy: "mes"`: minigráfico calculado (mismo agregado por periodo).
     if (k.trendBy && !k.trend && rows && rows.length) {
       const by = new Map();
-      for (const r of cmp ? inPeriod(cmp.current) : rows) { const key = r[k.trendBy]; if (!by.has(key)) by.set(key, []); by.get(key).push(r); }
+      for (const r of cmp ? inPeriod(cmp.current) : rows) { const key = r[k.trendBy]; push(by, key, r); }
       // Periodos numéricos (1…12) se ordenan como números; el resto, como texto (fechas ISO).
       const allNum = [...by.keys()].every((x) => Number.isFinite(num(x)));
       const ks = [...by.keys()].sort((x, y) => (allNum ? num(x) - num(y) : String(x) < String(y) ? -1 : String(x) > String(y) ? 1 : 0));

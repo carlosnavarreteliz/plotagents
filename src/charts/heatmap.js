@@ -6,7 +6,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ramp, textOn, isColor, mix } from '../theme.js';
 import { extent } from '../stats.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize, push } from '../data.js';
 import { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame, hash, SIZES } from '../frame.js';
 import { binnedScale } from '../colorscales.js';
@@ -31,9 +31,8 @@ export function heatmap(spec, theme) {
   const cellRows = new Map();
   for (const r of data) {
     const k = String(r[x]) + '\u0000' + String(r[y]);
-    if (!cells.has(k)) { cells.set(k, []); cellRows.set(k, []); }
-    cells.get(k).push(num(r[valueF]));
-    cellRows.get(k).push(r);
+    push(cells, k, num(r[valueF]));
+    push(cellRows, k, r);
   }
   const TT = tipper(spec, data, locale);
   const val = (a, b) => { const v = cells.get(a + '\u0000' + b); return v ? aggregate(v, spec.aggregate || 'sum') : NaN; };

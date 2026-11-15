@@ -15,7 +15,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
 import { ctx } from '../context.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick, push } from '../data.js';
 import { createFrame } from '../frame.js';
 import { isEn } from '../i18n.js';
 
@@ -403,7 +403,7 @@ function concentricLayout(nodes, { pin, gap }) {
 /** Un racimo por grupo (espiral de girasol), con los centros en una elipse. */
 function clustersLayout(nodes, groupsCount, { pin, gap, aspect }) {
   const by = new Map();
-  for (const n of [...nodes].sort(byGroup)) { if (n === pin) continue; if (!by.has(n.gi)) by.set(n.gi, []); by.get(n.gi).push(n); }
+  for (const n of [...nodes].sort(byGroup)) { if (n === pin) continue; push(by, n.gi, n); }
   const cl = [...by.entries()].map(([gi, list]) => {
     const c = 2 * Math.sqrt(list.reduce((a, n) => a + n.r * n.r, 0) / list.length) + gap;
     const offs = list.map((n, i) => [c * Math.sqrt(i) * Math.cos(i * GOLDEN), c * Math.sqrt(i) * Math.sin(i * GOLDEN)]);

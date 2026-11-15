@@ -8,7 +8,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet, push } from '../data.js';
 import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI, sum } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
@@ -46,8 +46,7 @@ export function prepareBar(spec) {
     const c = r[x] === null || r[x] === undefined ? '' : String(r[x]);
     const s = series ? String(r[series]) : '';
     const k = key(c, s);
-    if (!buckets.has(k)) buckets.set(k, []);
-    buckets.get(k).push(how === 'count' ? 1 : num(r[y]));
+    push(buckets, k, how === 'count' ? 1 : num(r[y]));
   }
   let cats = uniq(data.map((r) => (r[x] === null || r[x] === undefined ? '' : String(r[x]))));
   const seriesKeys = series ? uniq(data.map((r) => String(r[series]))) : [''];

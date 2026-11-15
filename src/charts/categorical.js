@@ -7,7 +7,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet, push } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
@@ -54,9 +54,8 @@ function prepare(spec) {
     const v = num(r[val]);
     if (!Number.isFinite(v)) continue;
     const k = catOf(r) + '\u0000' + (hue ? String(r[hue]) : '');
-    if (!groups.has(k)) { groups.set(k, []); groupRows.set(k, []); }
-    groups.get(k).push(v);
-    groupRows.get(k).push(r);
+    push(groups, k, v);
+    push(groupRows, k, r);
   }
   const get = (c, h) => groups.get(c + '\u0000' + h) || [];
   // Las filas detrás de cada valor, en el mismo orden (para el tooltip de cada punto).

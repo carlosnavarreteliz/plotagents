@@ -5,7 +5,7 @@ import { measure, wrap } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, highlightSet, push } from '../data.js';
 import { createFrame } from '../frame.js';
 import { isEn } from '../i18n.js';
 
@@ -40,8 +40,7 @@ export function radar(spec, theme) {
     for (const r of data) {
       const s = series ? String(r[series]) : seriesKeys[0];
       const k = s + '\u0000' + String(r[axisF]);
-      if (!acc.has(k)) acc.set(k, []);
-      acc.get(k).push(num(r[valueF]));
+      push(acc, k, num(r[valueF]));
     }
     for (const s of seriesKeys) values.set(s, new Map(axes.map((a) => [a, aggregate(acc.get(s + '\u0000' + a) || [], spec.aggregate || 'mean')])));
   }

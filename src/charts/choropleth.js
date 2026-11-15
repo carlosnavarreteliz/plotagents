@@ -12,7 +12,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { ramp, textOn, colorMap, themeFor, halo } from '../theme.js';
 import { resolve } from '../base.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, push } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { quantile } from '../stats.js';
 import { getGeo } from '../geo/registry.js';
@@ -265,10 +265,8 @@ function prepare(spec, locale) {
     const f = idx.get(normKey(r[key]));
     if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
     if (!keyOf.has(f)) keyOf.set(f, String(r[key]));
-    if (!rowsOf.has(f)) rowsOf.set(f, []);
-    rowsOf.get(f).push(r);
-    if (!buckets.has(f)) buckets.set(f, []);
-    buckets.get(f).push(categorical ? r[valueF] : num(r[valueF]));
+    push(rowsOf, f, r);
+    push(buckets, f, categorical ? r[valueF] : num(r[valueF]));
   }
   // Con `microstates: true` sólo se dibujan los que tienen datos; con "all", todos.
   if (spec.microstates && spec.microstates !== 'all') features = features.filter((f) => !f.properties?.microstate || buckets.has(f));

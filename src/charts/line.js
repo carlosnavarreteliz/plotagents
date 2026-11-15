@@ -8,7 +8,7 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable, halo } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet, push } from '../data.js';
 import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
@@ -57,10 +57,8 @@ export function prepareLine(spec) {
     if (r0 !== null && Number.isFinite(r0) && xv < r0) continue;
     if (r1 !== null && Number.isFinite(r1) && xv > r1) continue;
     const m = map.get(s);
-    if (!m.has(xv)) m.set(xv, []);
-    m.get(xv).push(num(r[y]));
-    if (!rowsAt.has(xv)) rowsAt.set(xv, []);
-    rowsAt.get(xv).push(r);
+    push(m, xv, num(r[y]));
+    push(rowsAt, xv, r);
     if (band) {
       const k = s + '\u0000' + xv;
       if (!bands.has(k)) bands.set(k, { lo: [], hi: [] });

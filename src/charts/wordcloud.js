@@ -18,7 +18,7 @@ import { g, text, tip } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap, ramp } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, push } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { esEn as T, isEn } from '../i18n.js';
@@ -131,7 +131,7 @@ export function wordcloud(spec, theme) {
     const keyOf = (i, j) => i * 100003 + j;
     const cellsOf = (b) => { const out = []; for (let i = Math.floor(b[0] / cell); i <= Math.floor(b[2] / cell); i++) for (let j = Math.floor(b[1] / cell); j <= Math.floor(b[3] / cell); j++) out.push(keyOf(i, j)); return out; };
     const hit = (b) => { for (const c of cellsOf(b)) for (const o of grid.get(c) || []) if (!(b[2] <= o[0] || b[0] >= o[2] || b[3] <= o[1] || b[1] >= o[3])) return true; return false; };
-    const add = (b) => { for (const c of cellsOf(b)) { if (!grid.has(c)) grid.set(c, []); grid.get(c).push(b); } };
+    const add = (b) => { for (const c of cellsOf(b)) { push(grid, c, b); } };
     const ratio = area.w / Math.max(1, area.h);
     for (const [idx, w] of words.entries()) {
       const t = vmax === vmin ? 0.6 : Math.sqrt((w.value - vmin) / (vmax - vmin));
