@@ -9,7 +9,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
-import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
+import { objList, gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { mean, sd, meanCI } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
@@ -81,7 +81,8 @@ export function prepareBar(spec) {
 
   // Cola larga → "Otros" (nunca 40 barras ilegibles).
   // Solo categorías nominales: los periodos (años, meses) nunca se pliegan en "Otros".
-  const top = spec.top ?? (nominal && cats.length > 40 ? 25 : null);
+  const topN = Math.floor(+spec.top); // top ≤ 0 o no numérico: se ignora
+  const top = topN >= 1 ? topN : spec.top === false ? null : nominal && cats.length > 40 ? 25 : null;
   let folded = 0;
   if (top && cats.length > top) {
     const keep = cats.slice(0, top);
@@ -178,7 +179,7 @@ export function bar(spec, theme) {
   const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
   const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : vf(c, 0, values.get(c)[0]));
   const valueLabelW = showLabels ? Math.max(...cats.map((c) => measure(labelOf(c), SIZES.label, 600))) : 0;
-  const hideAxis = spec.axis === false || (showLabels && !multi && !(spec.refLines || []).length && spec.axis !== true);
+  const hideAxis = spec.axis === false || (showLabels && !multi && !objList(spec.refLines).length && spec.axis !== true);
   const maxBar = spec.barWidth || (horizontal ? theme.marks?.barMaxH ?? 22 : theme.marks?.barMax ?? 36);
 
   let area = frame.layout(legend);
@@ -190,7 +191,7 @@ export function bar(spec, theme) {
   const runs = groupF ? groupRuns(cats, m.data, m.x, groupF) : null;
   const tickEvery = Math.max(1, Math.floor((spec.xTicks ?? spec.yTicks)?.every ?? 1));
   const body = [];
-  const refs = (spec.refLines || []).map((r) => ({ ...r, y: r.value ?? r.y }));
+  const refs = objList(spec.refLines).map((r) => ({ ...r, y: r.value ?? r.y }));
 
   if (!horizontal) {
     // ── Columnas
@@ -380,7 +381,8 @@ export function bar(spec, theme) {
     body.push(refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), xS, inner, theme, fmt));
   }
 
-  const desc = describeBar(m, fmt, locale);
+  // En 100% apilado cada categoría suma 1: el total crudo (p. ej. 4) saldría como "400%".
+  const desc = describeBar(pct && typeof spec.format !== 'function' ? { ...m, total: () => 1 } : m, fmt, locale);
   return frame.finish(body, { desc, type: 'bar', defs: H.defs() });
 }
 

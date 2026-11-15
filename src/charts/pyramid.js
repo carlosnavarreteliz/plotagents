@@ -3,7 +3,7 @@
 // Opcional: comparación con otro periodo como contorno escalonado.
 import { tipper } from '../tooltip.js';
 import { el, g, text, tip, barPath } from '../svg.js';
-import { measure } from '../text.js';
+import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceStep, linear } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
@@ -84,7 +84,9 @@ export function pyramid(spec, theme) {
     area = { ...area, h: frame.bottom - area.y };
   }
   const ageSize = theme.type?.axis ?? 11.5;
-  const centerW = Math.max(...ages.map((a) => measure(a, ageSize, 500))) + 18;
+  // Etiquetas de edad larguísimas se recortan para que las barras no queden con ancho negativo.
+  const centerMax = Math.max(40, area.w * 0.4);
+  const centerW = Math.min(Math.max(...ages.map((a) => measure(a, ageSize, 500))) + 18, centerMax);
   const labelsOn = spec.labels === true;
   const sample = fmt(vmax);
   const endPad = labelsOn ? measure(sample, 11, 600) + 8 : 4;
@@ -119,7 +121,7 @@ export function pyramid(spec, theme) {
   // Encabezados: nombre de cada lado en su color (legible) y su participación.
   const sideTot = (s) => ages.reduce((a, ag) => a + (cur.get(ag + '\u0000' + s) || 0), 0);
   sides.forEach((s, k) => {
-    const lab = s;
+    const lab = truncate(s, Math.max(30, halfW - 70), 13, 600); // nombres largos no se salen del lienzo
     const sh = share(sideTot(s)) ;
     const hx = k === 0 ? cx0 - 2 : cx1 + 2;
     const anchor = k === 0 ? 'end' : 'start';
@@ -132,7 +134,7 @@ export function pyramid(spec, theme) {
   top.forEach((a, i) => {
     const y = yOf(i);
     // Etiqueta de edad en la columna central.
-    body.push(text((cx0 + cx1) / 2, y + bh / 2 + ageSize * 0.36, a, { fill: theme.lede, fontSize: ageSize, fontWeight: 500, textAnchor: 'middle' }));
+    body.push(text((cx0 + cx1) / 2, y + bh / 2 + ageSize * 0.36, truncate(a, centerW - 12, ageSize, 500), { fill: theme.lede, fontSize: ageSize, fontWeight: 500, textAnchor: 'middle' }));
     sides.forEach((s, k) => {
       const v = V(a, s);
       const w = len(Math.min(v, dmax));

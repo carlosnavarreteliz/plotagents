@@ -58,7 +58,7 @@ export function buildHierarchy(spec) {
 /** Busca un nodo por ruta; si no existe, devuelve el más profundo que coincida. */
 export function findNode(root, focus = []) {
   let node = root;
-  for (const name of focus || []) {
+  for (const name of Array.isArray(focus) ? focus : focus == null || typeof focus === 'object' ? [] : [focus]) {
     const next = node.children.find((c) => c.name === String(name));
     if (!next) break;
     node = next;

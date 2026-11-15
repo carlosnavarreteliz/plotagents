@@ -62,7 +62,7 @@ export function bump(spec, theme) {
     }
   }
   const R = (s, p) => rank.get(s + '\u0000' + p);
-  const N = spec.top ?? Math.min(all.length, 12);
+  const N = Math.floor(+spec.top) >= 1 ? Math.floor(+spec.top) : Math.min(all.length, 12);
   const keep = all.filter((s) => periods.some((p) => R(s, p) <= N));
   const lastP = periods[periods.length - 1], firstP = periods[0];
   // Orden de color: por puesto final (quien termina arriba toma el primer color).

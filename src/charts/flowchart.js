@@ -2,7 +2,7 @@
 // simplificado), carriles opcionales por unidad, formas por tipo y
 // conectores ortogonales con esquinas suaves que no atraviesan nodos.
 import { el, g, text, tip } from '../svg.js';
-import { measure, wrap } from '../text.js';
+import { measure, wrap, truncate } from '../text.js';
 import { colorMap, readable, textOn, mix } from '../theme.js';
 import { ensureData, uniq, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
@@ -331,10 +331,11 @@ export function flowchart(spec, theme) {
       const [ax, ay] = screen[best], [bx, by] = screen[best + 1];
       const t = bl > 70 ? 0.4 : 0.5;
       const lx = ax + (bx - ax) * t, ly = ay + (by - ay) * t;
-      const w = measure(r.e.label, EDGE_FS, 600) + 12;
+      const elab = truncate(r.e.label, 140, EDGE_FS, 600); // etiqueta larguísima: no se sale del lienzo
+      const w = measure(elab, EDGE_FS, 600) + 12;
       labelParts.push(g({ class: 'pa-edge-label' }, [
         el('rect', { x: lx - w / 2, y: ly - 9, width: w, height: 18, rx: 9, fill: theme.surface, stroke: theme.grid, strokeWidth: 1 }),
-        text(lx, ly + 4, r.e.label, { fill: theme.lede, fontSize: EDGE_FS, fontWeight: 600, textAnchor: 'middle' }),
+        text(lx, ly + 4, elab, { fill: theme.lede, fontSize: EDGE_FS, fontWeight: 600, textAnchor: 'middle' }),
       ]));
     }
   }

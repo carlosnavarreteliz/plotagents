@@ -65,7 +65,7 @@ export function waffle(spec, theme) {
 
   const frame = createFrame(spec, theme, { height: 300 });
   const area = frame.layout(legend);
-  const cols = Math.max(1, Math.round(spec.columns ?? (n <= 100 ? 10 : n <= 200 ? 20 : 25)));
+  const cols = Math.max(1, Math.round(+spec.columns || (n <= 100 ? 10 : n <= 200 ? 20 : 25)));
   const rowsN = Math.ceil(n / cols);
   const gap = theme.marks?.gap ?? 2;
   const cell = Math.max(3, Math.min(spec.cellSize ?? 22, area.w / cols, spec.height !== undefined ? area.h / rowsN : Infinity));
