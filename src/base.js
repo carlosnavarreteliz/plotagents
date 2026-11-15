@@ -17,6 +17,7 @@ import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
 
 // Los tipos se registran al importarse (src/types/*.js); el núcleo los trae todos.
 export const RENDERERS = {};
+const MAX_LEVELS = 24;
 
 /** Normaliza el spec: tipo inferido y datos como filas. */
 export function resolve(spec = {}) {
@@ -44,6 +45,8 @@ export function resolve(spec = {}) {
     throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   }
   s.type = type;
+  // Una jerarquía de miles de niveles agota la pila o la memoria; nadie lee más de unos pocos.
+  if (Array.isArray(s.path) && s.path.length > MAX_LEVELS) throw new PlotError(`\`path\` tiene ${s.path.length} niveles: el máximo es ${MAX_LEVELS}.`, 'Deja los niveles que se leen (2–4) o agrupa los datos antes.');
   // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.
   if (s.locale === 'auto' || (s.locale === undefined && type === 'table')) {
     s.locale = autoLocale(s, Array.isArray(s.data) ? s.data : []);
@@ -106,7 +109,7 @@ export function configure(options) {
   if (options) {
     const { fontHosts, ...rest } = options;
     if (fontHosts) allowFontHosts(fontHosts);
-    Object.assign(DEFAULTS, rest);
+    for (const k of Object.keys(rest)) if (k !== '__proto__') DEFAULTS[k] = rest[k];
   }
   return { ...DEFAULTS };
 }

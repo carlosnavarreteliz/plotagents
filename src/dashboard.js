@@ -39,7 +39,7 @@ export function tidy(spec) {
   const rows = (o) => (o.data === undefined ? o : { ...o, data: toRows(o.data) });
   return { ...rows(spec), charts: list(spec.charts).filter((c) => c && typeof c === 'object').map(rows), kpis: list(spec.kpis), filters: list(spec.filters).filter((f) => typeof f === 'string' || (typeof f === 'object' && typeof f.field === 'string')) };
 }
-export const hasField = (r, f) => r !== null && typeof r === 'object' && f in r;
+export const hasField = (r, f) => r !== null && typeof r === 'object' && Object.hasOwn(r, f); // hasOwn: "constructor" o "toString" no son campos
 
 
 // Ancho (de 12) según el tipo: lo que se lee de izquierda a derecha, ancho.

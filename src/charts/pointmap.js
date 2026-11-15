@@ -565,14 +565,16 @@ function toBase64(buf) {
 // Al incrustar teselas en un servidor solo se piden URLs https a hosts públicos:
 // nada de localhost, IPs privadas o de enlace local (metadatos de la nube).
 const PRIVATE_HOST = /^(localhost|.*\.localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|\[.*\])$/i;
+// Un host sin punto ("intranet", "metadata") es de la red interna; 0.x.x.x y los rangos reservados tampoco son públicos.
+const INTERNAL_HOST = /^([^.]+|0\.\d+\.\d+\.\d+|192\.0\.0\.\d+|198\.1[89]\.\d+\.\d+|2(2[4-9]|[3-5]\d)\.\d+\.\d+\.\d+)$/;
 const MAX_TILE_BYTES = 2 * 1024 * 1024, MAX_EMBED = 400;
 function tileUrlOk(u, hosts) {
   let url;
   try { url = new URL(u); } catch { return false; }
   if (url.protocol !== 'https:' || url.username || url.password) return false;
-  const h = url.hostname.toLowerCase();
+  const h = url.hostname.toLowerCase().replace(/\.+$/, ''); // "localhost." es localhost
   if (hosts) return hosts.some((x) => h === x || h.endsWith('.' + x));
-  return !PRIVATE_HOST.test(h) && !/^\d+$/.test(h);
+  return !PRIVATE_HOST.test(h) && !INTERNAL_HOST.test(h) && !/^\d+$/.test(h);
 }
 
 export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, concurrency = 6, hosts } = {}) {

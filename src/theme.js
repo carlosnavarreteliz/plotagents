@@ -165,7 +165,7 @@ function sanitize(theme, base, trusted = false) {
 
 /** Paleta categórica por nombre: propias, matplotlib cualitativas o muestras de una colormap. */
 function namedPalette(name, n = 8) {
-  if (palettes[name]) return palettes[name];
+  if (own(palettes, name)) return palettes[name]; // own(): "constructor" no es una paleta
   const cs = resolveColorScale(name);
   if (!cs) return null;
   if (cs.kind === 'qualitative') return cs.stops;
@@ -175,7 +175,7 @@ function namedPalette(name, n = 8) {
 
 /** Rampa secuencial/divergente por nombre: propias o cualquier colormap. */
 function namedRamp(name) {
-  if (ramps[name]) return ramps[name];
+  if (own(ramps, name)) return ramps[name];
   const cs = resolveColorScale(name);
   return cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
 }
