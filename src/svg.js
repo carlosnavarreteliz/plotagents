@@ -120,8 +120,9 @@ export function dotLayer(circles, { threshold = 1500, maxTips = 20000 } = {}) {
   }
   const paths = [...groups.values()].map(({ attrs, d }) => {
     const r = +attrs.r, R = r2(r), W = r2(2 * r);
-    // Dos arcos por círculo, sin separadores innecesarios (las banderas del arco pueden ir pegadas).
-    const arc = `a${R} ${R} 0 10${W} 0 ${R} ${R} 0 10${-W} 0`;
+    // Dos arcos por círculo. Las banderas van separadas: pegadas (`0 106`) son válidas,
+    // pero algunos conversores a PDF (Batik, librsvg antiguo) no las leen.
+    const arc = `a${R} ${R} 0 1 0 ${W} 0 ${R} ${R} 0 1 0 ${-W} 0`;
     return el('path', { d: d.join(arc) + arc, fill: attrs.fill, fillOpacity: attrs.fillOpacity, stroke: attrs.stroke && attrs.stroke !== 'none' ? attrs.stroke : null, strokeWidth: attrs.stroke && attrs.stroke !== 'none' ? Math.min(+attrs.strokeWidth || 1, 0.75) : null });
   });
   // data-near va entre comillas simples: el JSON no necesita escapar sus comillas dobles (6 bytes cada una).
