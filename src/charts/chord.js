@@ -4,11 +4,11 @@
 import { el, g, text, tip, esc } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { colorMap, readable, halo } from '../theme.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
-const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const TAU = Math.PI * 2;
 
 /** Matriz de flujos m[i][j] (de i hacia j) y nombres. */
@@ -43,7 +43,7 @@ export function prepareChord(spec) {
 
 export function chord(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { names, m } = prepareChord(spec);
   const n = names.length;
   if (n < 2) throw new PlotError('El diagrama de cuerdas necesita al menos dos grupos.', 'Entrega filas { from, to, value } entre grupos distintos.');
@@ -181,7 +181,7 @@ export function chord(spec, theme) {
 
   // Etiquetas.
   const labG = [];
-  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  const hs = halo(theme);
   for (const i of order) {
     const { mid, a0, a1 } = arc.get(i);
     if ((a1 - a0) * r1 < 6 && order.length > 6) continue; // arco demasiado chico
@@ -193,7 +193,7 @@ export function chord(spec, theme) {
       let deg = (mid * 180) / Math.PI;
       const flip = ca < 0;
       if (flip) deg += 180;
-      labG.push(el('text', { x: f(lx), y: f(ly), transform: `rotate(${deg.toFixed(1)} ${f(lx)} ${f(ly)})`, textAnchor: flip ? 'end' : 'start', dominantBaseline: 'middle', fill, fontSize: labelSize, fontWeight: 600, ...halo }, esc(labelOf(i))));
+      labG.push(el('text', { x: f(lx), y: f(ly), transform: `rotate(${deg.toFixed(1)} ${f(lx)} ${f(ly)})`, textAnchor: flip ? 'end' : 'start', dominantBaseline: 'middle', fill, fontSize: labelSize, fontWeight: 600, ...hs }, esc(labelOf(i))));
     } else {
       const [lx, ly] = P(mid, r1 + gapL);
       const anchor = Math.abs(ca) < 0.25 ? 'middle' : ca > 0 ? 'start' : 'end';
@@ -202,8 +202,8 @@ export function chord(spec, theme) {
       const lh = labelSize * 1.15;
       // Arriba del círculo el bloque crece hacia arriba; en el resto, hacia abajo.
       const y0 = Math.abs(ca) < 0.25 && sa < 0 ? ly + dy - (ls.length - 1) * lh : ly + dy - (Math.abs(ca) >= 0.25 ? ((ls.length - 1) * lh) / 2 : 0);
-      ls.forEach((l, k) => labG.push(text(lx, y0 + k * lh, l, { textAnchor: anchor, fill, fontSize: labelSize, fontWeight: 600, ...halo })));
-      labG.push(text(lx, y0 + ls.length * lh, valueOf(i), { textAnchor: anchor, fill: theme.lede, fontSize: labelSize - 1.5, ...halo }));
+      ls.forEach((l, k) => labG.push(text(lx, y0 + k * lh, l, { textAnchor: anchor, fill, fontSize: labelSize, fontWeight: 600, ...hs })));
+      labG.push(text(lx, y0 + ls.length * lh, valueOf(i), { textAnchor: anchor, fill: theme.lede, fontSize: labelSize - 1.5, ...hs }));
     }
   }
 

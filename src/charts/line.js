@@ -3,18 +3,19 @@
 // Etiquetas SIEMPRE al final de cada línea: si chocan se separan y una línea
 // guía fina las une con su punto. El eje y va por dentro para ganar ancho.
 import { tipper } from '../tooltip.js';
-import { el, g, text, tip } from '../svg.js';
+import { el, g, text, tip, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
-import { colorMap, readable } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
-import { objList, xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
+import { colorMap, readable, halo } from '../theme.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet, push } from '../data.js';
+import { objList, xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';
 import { hash } from '../frame.js';
 import { dashedMatcher, fromTest, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
+import { isEn } from '../i18n.js';
 
 export function prepareLine(spec) {
   let data = ensureData(spec);
@@ -56,10 +57,8 @@ export function prepareLine(spec) {
     if (r0 !== null && Number.isFinite(r0) && xv < r0) continue;
     if (r1 !== null && Number.isFinite(r1) && xv > r1) continue;
     const m = map.get(s);
-    if (!m.has(xv)) m.set(xv, []);
-    m.get(xv).push(num(r[y]));
-    if (!rowsAt.has(xv)) rowsAt.set(xv, []);
-    rowsAt.get(xv).push(r);
+    push(m, xv, num(r[y]));
+    push(rowsAt, xv, r);
     if (band) {
       const k = s + '\u0000' + xv;
       if (!bands.has(k)) bands.set(k, { lo: [], hi: [] });
@@ -111,7 +110,7 @@ export function line(spec, theme, variant = 'line') {
   const pct = stack && (spec.stack === 'percent' || spec.normalize);
   const xsAll = uniq(m.lines.flatMap((l) => l.points.map((p) => p.x))).sort((a, b) => a - b);
   if (!xsAll.length) return createFrame(spec, theme).finish([], { desc: '', type: variant });
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   if (!m.lines.some((l) => l.points.some((p) => Number.isFinite(p.y))))
     throw new PlotError(
       en ? `No numeric values in \`${m.y}\` to plot.` : `No hay valores numéricos en \`${m.y}\` para graficar.`,
@@ -356,7 +355,7 @@ export function line(spec, theme, variant = 'line') {
         const box = [bx0 - 2, ay - 10, bx1 + 2, ay + 3];
         if (!placedAnn.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { placedAnn.push(box); break; }
       }
-      body.push(text(ax, ay, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+      body.push(text(ax, ay, a.label, { fill: theme.lede, fontSize: 11.5, fontWeight: 500, textAnchor: right ? 'end' : 'start', ...halo(theme) }));
     }
   }
 
@@ -369,7 +368,7 @@ export function line(spec, theme, variant = 'line') {
       cutX = Math.max(inner.x, xS(Math.max(startX, x0)));
       body.push(el('rect', { x: cutX, y: inner.y, width: Math.max(0, inner.x + inner.w - cutX), height: inner.h, fill: theme.tint, opacity: 0.55, 'pointer-events': 'none' }));
       body.push(el('line', { x1: cutX, x2: cutX, y1: inner.y, y2: inner.y + inner.h, stroke: theme.muted, strokeWidth: 1, strokeDasharray: '2 3', opacity: 0.8 }));
-      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+      if (spec.dashedLabel !== false) body.push(text(cutX + 6, inner.y + 11, dashedLabel, { fill: theme.muted, fontSize: 11.5, fontWeight: 500, ...halo(theme) }));
     }
   }
   // Con xDomain/yDomain los datos fuera del rango no se salen del área de trazado.
@@ -587,7 +586,7 @@ function splitGaps(points, xS, yS) {
 // Un decimal basta en trazados (0,05 px): SVG más liviano con muchos puntos.
 const f2 = (n) => n.toFixed(1);
 function linearPath(pts) {
-  return pts.map(([x, y], i) => (i ? 'L' : 'M') + f2(x) + ',' + f2(y)).join('');
+  return polyline(pts, 1);
 }
 function stepPath(pts) {
   return pts.map(([x, y], i) => (i ? `H${f2(x)}V${f2(y)}` : `M${f2(x)},${f2(y)}`)).join('');
@@ -615,7 +614,7 @@ function monotonePath(pts) {
 }
 
 export function describeLine(m, fmt, xFmt, locale = 'es') {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const parts = m.lines.slice(0, 6).map((l) => {
     const pts = l.points.filter((p) => Number.isFinite(p.v ?? p.y));
     if (pts.length < 2) return '';

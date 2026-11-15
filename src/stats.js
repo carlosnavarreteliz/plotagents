@@ -1,6 +1,7 @@
 // Estadística liviana para los gráficos tipo seaborn: cuantiles, intervalos
 // de confianza, histogramas, densidad (KDE), regresiones y ECDF.
 // Determinista (sin bootstrap aleatorio) para que el SVG sea reproducible.
+import { niceStep } from './scale.js';
 
 export const finite = (vs) => vs.filter((v) => Number.isFinite(v));
 export const sum = (vs) => vs.reduce((a, b) => a + b, 0);
@@ -84,13 +85,6 @@ export function fiveNumber(vs) {
   };
 }
 
-const niceBinStep = (span, n) => {
-  const raw = span / Math.max(1, n);
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const f = raw / mag;
-  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
-};
-
 /**
  * Histograma con anchos "bonitos". Por defecto, regla de Freedman–Diaconis
  * acotada a 5–50 barras. Opciones: bins (número), binWidth, domain [a,b].
@@ -112,7 +106,7 @@ export function histogram(vs, { bins, binWidth, domain } = {}) {
       n = fd > 0 ? Math.ceil((hi - lo) / fd) : Math.ceil(Math.log2(s.length) + 1);
       n = Math.max(5, Math.min(50, n));
     }
-    step = bins ? (hi - lo) / bins : niceBinStep(hi - lo, n);
+    step = bins ? (hi - lo) / bins : niceStep(hi - lo, n);
   }
   const start = bins ? lo : +(Math.floor(lo / step + 1e-9) * step).toPrecision(15);
   const count = Math.max(1, Math.ceil((hi - start) / step - 1e-9));

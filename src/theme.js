@@ -15,7 +15,7 @@ export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
-import { parseRgb, isColor, lin, rgbToHex, luminance, contrast } from './rgb.js';
+import { parseRgb, isColor, lin, gam, unit, rgbToHex, luminance, contrast } from './rgb.js';
 export { parseRgb };
 
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
@@ -248,8 +248,6 @@ export function mix(a, b, t) {
   return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
 }
 
-const delin = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
-
 
 /** Texto blanco o tinta según qué contraste mejor sobre el relleno. */
 export function textOn(fill, theme) {
@@ -259,13 +257,13 @@ export function textOn(fill, theme) {
 
 /** Interpola en RGB lineal a lo largo de una rampa de colores. t ∈ [0,1]. */
 export function ramp(stops, t) {
-  t = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  t = unit(t);
   const p = t * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(p));
   const f = p - i;
   const a = hexToRgb(stops[i]).map(lin);
   const b = hexToRgb(stops[i + 1]).map(lin);
-  return rgbToHex(a.map((v, k) => delin(v + (b[k] - v) * f)));
+  return rgbToHex(a.map((v, k) => gam(v + (b[k] - v) * f)));
 }
 
 /**

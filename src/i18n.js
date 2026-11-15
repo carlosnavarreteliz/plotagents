@@ -25,8 +25,11 @@ export function langOf(locale) {
 /** Palabras de interfaz en el idioma del gráfico. */
 export const words = (locale) => WORDS[langOf(locale)];
 
+/** ¿El locale es inglés? */
+export const isEn = (locale) => String(locale || 'es').startsWith('en');
+
 /** Texto en inglés si el locale es inglés; en castellano si no. */
-export const esEn = (locale, es, en) => (String(locale || 'es').startsWith('en') ? en : es);
+export const esEn = (locale, es, en) => (isEn(locale) ? en : es);
 
 // Palabras funcionales frecuentes de cada idioma. Una palabra compartida
 // (de, la, que…) reparte su peso entre los idiomas que la usan.

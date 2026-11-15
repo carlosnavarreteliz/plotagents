@@ -1,6 +1,7 @@
 // Preparación de datos: validación con mensajes útiles para agentes,
 // inferencia de campos, formato ancho → largo y agregación.
 import { isDateLike, parseDate } from './format.js';
+import { sum } from './stats.js';
 
 export class PlotError extends Error {
   constructor(message, hint) {
@@ -160,7 +161,16 @@ export function packTable(rows) {
 }
 
 /** Lo que `highlight` destaca, como Set de textos (null si no hay). */
-export const highlightSet = (spec) => (spec.highlight === undefined ? null : new Set([].concat(spec.highlight).map(String)));
+export const highlightSet = (spec) => (spec.highlight == null ? null : new Set([].concat(spec.highlight).map(String)));
+
+/** Añade `v` a la lista de `k` en un Map de listas (la crea si falta). */
+export const push = (m, k, v) => {
+  if (!m.has(k)) m.set(k, []);
+  m.get(k).push(v);
+};
+
+/** Primer candidato que existe entre los campos. */
+export const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 
 export function ensureData(spec) {
   let data = toRows(spec.data);
@@ -245,13 +255,13 @@ export function aggregate(values, how = 'sum') {
   const v = values.filter((n) => Number.isFinite(n));
   if (!v.length) return NaN;
   switch (how) {
-    case 'mean': case 'avg': return v.reduce((a, b) => a + b, 0) / v.length;
+    case 'mean': case 'avg': return sum(v) / v.length;
     case 'max': return v.reduce((a, b) => (b > a ? b : a), -Infinity); // sin spread: no desborda con 150 mil filas
     case 'min': return v.reduce((a, b) => (b < a ? b : a), Infinity);
     case 'count': return v.length;
     case 'last': return v[v.length - 1];
     case 'first': return v[0];
-    default: return v.reduce((a, b) => a + b, 0);
+    default: return sum(v);
   }
 }
 

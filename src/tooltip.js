@@ -12,7 +12,7 @@
 
 import { tip } from './svg.js';
 import { makeFormat } from './format.js';
-import { num } from './data.js';
+import { num, push } from './data.js';
 
 const humanize = (f) => String(f).replace(/[_-]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
@@ -46,8 +46,7 @@ export function tipper(spec, data, locale) {
       const m = new Map();
       for (const r of data) {
         const k = keys.map((f) => String(r[f])).join('\u0000');
-        if (!m.has(k)) m.set(k, []);
-        m.get(k).push(r);
+        push(m, k, r);
       }
       index.set(sig, m);
     }

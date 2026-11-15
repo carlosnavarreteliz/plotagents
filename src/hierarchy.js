@@ -6,6 +6,7 @@ import { mix } from './theme.js';
 import { formatNumber } from './format.js';
 import { el, g, text } from './svg.js';
 import { measure, truncate } from './text.js';
+import { isEn } from './i18n.js';
 
 /** Resuelve los campos de ruta y valor desde el spec (path | group+label | label | x). */
 export function hierarchyFields(spec, data) {
@@ -73,9 +74,6 @@ export function focusNode(root, focus = []) {
 }
 
 export const height = (n) => (n.children.length ? 1 + Math.max(...n.children.map(height)) : 0);
-export const descendants = (n) => [n, ...n.children.flatMap(descendants)];
-
-/** Mezcla un color hacia otro (t ∈ [0,1]). */
 
 /**
  * Colores por familia: el primer nivel visible toma la paleta categórica en
@@ -118,7 +116,7 @@ export const SEP = ' › ';
  */
 export function breadcrumb(focusNode, x, y, w, theme, locale = 'es') {
   if (!focusNode || !focusNode.path.length) return { svg: '', h: 0 };
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const crumbs = [{ name: en ? 'All' : 'Todo', path: [] }, ...focusNode.path.map((name, i) => ({ name, path: focusNode.path.slice(0, i + 1) }))];
   const out = [];
   let cx = x;

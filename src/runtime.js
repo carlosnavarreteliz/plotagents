@@ -482,11 +482,6 @@ export function controlMode(s, opts = {}) {
 }
 
 
-function svgEl(tag, attrs) {
-  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-  return n;
-}
 function range(min, max, value, label) {
   const i = document.createElement('input');
   i.type = 'range'; i.min = min; i.max = max; i.step = 1; i.value = value;

@@ -11,12 +11,13 @@
 import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, ramp, hexToRgb, rgbToHex, mix } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { colorMap, ramp, hexToRgb, mix } from '../theme.js';
+import { isHex } from '../rgb.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 const RAD = Math.PI / 180;
 const MAX_LAT = 85.0511287798;
@@ -122,7 +123,6 @@ export function tileUrl(p, z, x, y) {
 }
 
 // ── Color ───────────────────────────────────────────────────────────────────
-const isHex = (c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c || ''));
 
 /**
  * Filtro "muted": casi sin saturación y llevado a dos tonos del tema. Los
@@ -177,7 +177,6 @@ function worldGeo() {
 }
 
 // ── Etiquetas ───────────────────────────────────────────────────────────────
-const hits = hitsAny;
 
 /** Valor "redondo" para la leyenda de tamaños (1, 2, 2,5 o 5 × 10ⁿ, hacia abajo). */
 function niceDown(v) {
@@ -191,7 +190,7 @@ const deg = (v, pos, neg, locale) => `${formatNumber(Math.abs(v), 1, locale, tru
 /** Mapa de puntos (lon/lat) sobre teselas reales. */
 export function pointmap(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const dark = theme.mode === 'dark';
   const data = ensureData(spec);
   const fields = fieldsOf(data);
@@ -256,7 +255,7 @@ export function pointmap(spec, theme) {
   const fv = makeFormat(spec.valueFormat ?? spec.format, locale, values);
 
   // Color: por categoría (hue), por valor (rampa) o uno solo.
-  const hl = spec.highlight === undefined || spec.highlight === null ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (p) => !hl || hl.has(p.name) || hl.has(p.k);
   let legend = [];
   let colorOf;
@@ -487,7 +486,7 @@ export function pointmap(spec, theme) {
       const own = (b) => b[0] >= p.x - r * 0.7 - 0.01 && b[2] <= p.x + r * 0.7 + 0.01 && b[1] >= p.y - r * 0.7 - 0.01 && b[3] <= p.y + r * 0.7 + 0.01;
       const others = placed.filter((b) => !own(b));
       const inside = (b) => b[0] >= box.x + 2 && b[2] <= box.x + box.w - 2 && b[1] >= box.y + 2 && b[3] <= box.y + box.h - 2;
-      const c = cands.find((cd) => inside(cd.box) && !hits(cd.box, others));
+      const c = cands.find((cd) => inside(cd.box) && !hitsAny(cd.box, others));
       if (!c) continue;
       placed.push(c.box);
       const kids = [esc(p.name)];
@@ -513,7 +512,7 @@ export function pointmap(spec, theme) {
 }
 
 function describePointmap({ pts, n, provider, world, hueF, keys, sizeF, valueF, fs, fv, locale, tileCount }) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const W = en ? 'W' : 'O';
   const lats = pts.map((p) => p.lat), lons = pts.map((p) => (p.lon > 180 ? p.lon - 360 : p.lon));
   const la0 = lo(lats), la1 = hi(lats);

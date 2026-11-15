@@ -7,7 +7,7 @@
 // líneas no carga redes, mapas ni tablas.
 import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts } from './theme.js';
 import { withContext } from './context.js';
-import { autoLocale } from './i18n.js';
+import { autoLocale, isEn } from './i18n.js';
 import { ensureData, PlotError, fieldKind, fieldsOf, uniq, num, toRows } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
@@ -51,7 +51,7 @@ function blankCategories(s) {
   const blank = (v) => v === null || v === undefined || v === '';
   const hit = [...fields].filter((f) => rows.some((r) => blank(r[f])) && rows.some((r) => f in r) && fieldKind(rows, f) === 'category');
   if (!hit.length) return;
-  const label = String(s.locale || 'es').startsWith('en') ? '(no data)' : '(sin dato)';
+  const label = isEn(s.locale) ? '(no data)' : '(sin dato)';
   s.data = rows.map((r) => (hit.some((f) => blank(r[f])) ? { ...r, ...Object.fromEntries(hit.filter((f) => blank(r[f])).map((f) => [f, label])) } : r));
 }
 

@@ -8,13 +8,14 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet, push } from '../data.js';
 import { objList, gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
-import { mean, sd, meanCI } from '../stats.js';
+import { mean, sd, meanCI, sum } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
@@ -45,8 +46,7 @@ export function prepareBar(spec) {
     const c = r[x] === null || r[x] === undefined ? '' : String(r[x]);
     const s = series ? String(r[series]) : '';
     const k = key(c, s);
-    if (!buckets.has(k)) buckets.set(k, []);
-    buckets.get(k).push(how === 'count' ? 1 : num(r[y]));
+    push(buckets, k, how === 'count' ? 1 : num(r[y]));
   }
   let cats = uniq(data.map((r) => (r[x] === null || r[x] === undefined ? '' : String(r[x]))));
   const seriesKeys = series ? uniq(data.map((r) => String(r[series]))) : [''];
@@ -70,7 +70,7 @@ export function prepareBar(spec) {
     if (errorbar === 'se') { const mm = mean(v), d = sd(v) / Math.sqrt(v.length); return [mm - d, mm + d]; }
     return meanCI(v, level);
   }));
-  const total = (c) => values.get(c).reduce((a, b) => a + b, 0);
+  const total = (c) => sum(values.get(c));
   if (kind === 'year' || kind === 'number') cats.sort((a, b) => num(a) - num(b));
   else if (kind === 'date') cats.sort((a, b) => parseDate(a) - parseDate(b));
   const nominal = kind === 'category';
@@ -88,7 +88,7 @@ export function prepareBar(spec) {
     const keep = cats.slice(0, top);
     const rest = cats.slice(top);
     folded = rest.length;
-    const otherName = String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros';
+    const otherName = isEn(spec.locale) ? 'Other' : 'Otros';
     values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
     cats = [...keep, otherName];
   }
@@ -128,7 +128,7 @@ export function bar(spec, theme) {
   const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
   // `yFormat`: las marcas del eje de valores, aparte de `format` (rótulos y tooltip).
   const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, all) : fmt;
-  const missingLabel = spec.missingLabel ?? (String(locale).startsWith('en') ? 'no data' : 'sin dato');
+  const missingLabel = spec.missingLabel ?? (isEn(locale) ? 'no data' : 'sin dato');
   const vf = (c, i, v) => (m.isMissing(c, i) ? missingLabel : fmt(v));
 
   // Orientación
@@ -405,7 +405,7 @@ function textColor(fill, theme) {
 }
 
 export function describeBar(m, fmt, locale = 'es') {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const totals = m.cats.map((c) => [c, m.total(c)]);
   if (!totals.length) return '';
   const sorted = [...totals].sort((a, b) => b[1] - a[1]);

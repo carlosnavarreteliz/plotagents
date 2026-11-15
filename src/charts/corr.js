@@ -4,7 +4,7 @@
 //   pairplot  matriz de dispersión: dispersión abajo, distribución en la diagonal, r arriba
 // La escala de color es divergente y SIEMPRE simétrica en [-1, 1]: el mismo
 // color significa la misma fuerza en cualquier gráfico.
-import { el, g, text, tip, barPath, dotLayer } from '../svg.js';
+import { el, g, text, tip, barPath, dotLayer, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { ramp, textOn, colorMap, readable, halo } from '../theme.js';
@@ -14,8 +14,8 @@ import { leaves, elbows } from '../tree.js';
 import { ctx } from '../context.js';
 import { pearson, polyfit, histogram, kde as kdeEst } from '../stats.js';
 import { hueField, axisDomain, tickFmt } from './dist.js';
+import { isEn } from '../i18n.js';
 
-const isEN = (spec) => String(spec.locale || 'es').startsWith('en');
 
 // ── Estadística ────────────────────────────────────────────────────────────
 
@@ -31,14 +31,6 @@ function ranks(vs) {
     i = j + 1;
   }
   return out;
-}
-
-/** Φ(z) (Abramowitz–Stegun 7.1.26, error < 1,5e-7). */
-function normCdf(z) {
-  const x = Math.abs(z) / Math.SQRT2;
-  const t = 1 / (1 + 0.3275911 * x);
-  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
-  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
 }
 
 /** ln Γ(x) (Lanczos, g = 7). */
@@ -172,7 +164,7 @@ export function clusterTree(r, idx = r.map((_, i) => i)) {
  */
 export function corr(spec, theme) {
   const data = ensureData(spec);
-  const en = isEN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   const method = String(spec.method || 'pearson').toLowerCase() === 'spearman' ? 'spearman' : 'pearson';
   const long = typeof spec.x === 'string' && typeof spec.y === 'string' && typeof spec.value === 'string';
@@ -263,7 +255,7 @@ export function corr(spec, theme) {
   }
   const colLabH = labH(angle);
   const gx = area.x + rowW, gy = area.y + dendroH;
-  const gw = cell * cols.length, gh = cell * rows.length;
+  const gh = cell * rows.length;
   if (spec.height === undefined) frame.setHeight(gy + gh + colLabH + 8 + frame.chrome);
 
   const lab = cell >= 70 ? 13 : 11;
@@ -335,7 +327,7 @@ export function corr(spec, theme) {
  */
 export function pairplot(spec, theme) {
   const data = ensureData(spec);
-  const en = isEN(spec);
+  const en = isEn(spec.locale);
   const locale = spec.locale || 'es';
   let vars = corrVars(spec, data);
   const explicit = spec.vars || Array.isArray(spec.y);
@@ -431,7 +423,7 @@ export function pairplot(spec, theme) {
       curves.forEach((c, gi) => {
         if (!c.length) return;
         const yOf = (d) => base - (d / mx) * (base - top);
-        const line = c.map(([x, d], t) => `${t ? 'L' : 'M'}${xs(x).toFixed(2)},${yOf(d).toFixed(2)}`).join('');
+        const line = polyline(c.map(([x, d]) => [xs(x), yOf(d)]));
         out.push(el('path', { d: `${line}L${xs(c[c.length - 1][0]).toFixed(2)},${base}L${xs(c[0][0]).toFixed(2)},${base}Z`, fill: colorOf(keys[gi]), fillOpacity: (M.areaOpacity ?? 0.12) * 1.6 }));
         out.push(el('path', { d: line, fill: 'none', stroke: colorOf(keys[gi]), strokeWidth: 1.6 }));
       });

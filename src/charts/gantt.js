@@ -20,15 +20,13 @@ import { measure, truncate } from '../text.js';
 import { makeFormat, parseDate, formatDate, formatNumber } from '../format.js';
 import { timeTicks, niceStep, linear } from '../scale.js';
 import { colorMap, ramp, textOn, readable } from '../theme.js';
-import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError, highlightSet, push } from '../data.js';
 import { objList, xLabels } from '../axes.js';
 import { createFrame, hash } from '../frame.js';
-import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
-import { esEn as T } from '../i18n.js';
+import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, truthy } from '../dashed.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 const DAY = 864e5;
-const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
-const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
 const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
 const blank = (v) => v === undefined || v === null || v === '';
 
@@ -37,13 +35,12 @@ const depsOf = (v) => (blank(v) ? [] : Array.isArray(v) ? v.map(String) : String
 
 export function gantt(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const data = ensureData(spec);
   if (!data.length) throw new PlotError(T(locale, 'La carta Gantt no tiene tareas.', 'The Gantt chart has no tasks.'), 'data: [{ task: "Diseño", start: "2026-03-02", end: "2026-03-20" }]');
   const fields = fieldsOf(data);
   const kind = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
   const pick = (re, ok = () => true) => fields.find((f) => re.test(f) && ok(f));
-  const timeLike = (f) => kind[f] === 'date' || kind[f] === 'number' || kind[f] === 'year';
   const taskF = spec.task ?? spec.label ?? (typeof spec.y === 'string' ? spec.y : null)
     ?? pick(/^(task|tarea|actividad|activity|item|nombre|name|hito|entregable|deliverable)/i, (f) => kind[f] === 'category')
     ?? fields.find((f) => kind[f] === 'category');
@@ -139,7 +136,7 @@ export function gantt(spec, theme) {
   if (spec.critical) {
     const byName = new Map(tasks.map((t) => [t.name, t]));
     const succ = new Map();
-    for (const t of tasks) for (const d of t.deps) if (byName.has(d)) { if (!succ.has(d)) succ.set(d, []); succ.get(d).push(t); }
+    for (const t of tasks) for (const d of t.deps) if (byName.has(d)) { push(succ, d, t); }
     const finish = Math.max(...tasks.map((t) => t.end));
     const slack = new Map(), seen = new Set();
     const slackOf = (t) => {
