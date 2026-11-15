@@ -5,7 +5,7 @@
 // minigráfico, avance contra la meta, estado). En pantallas angostas cada fila
 // se vuelve una tarjeta. Las filas se paginan; en el navegador, render()
 // agrega orden por columna, búsqueda y paso de página.
-import { el, g, text, tip, esc, linkWrap } from '../svg.js';
+import { el, g, text, tip, linkWrap } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js';
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';

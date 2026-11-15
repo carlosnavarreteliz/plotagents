@@ -11,7 +11,7 @@
 import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, ramp, hexToRgb, rgbToHex, mix } from '../theme.js';
+import { colorMap, ramp, hexToRgb, mix } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
@@ -177,7 +177,6 @@ function worldGeo() {
 }
 
 // ── Etiquetas ───────────────────────────────────────────────────────────────
-const hits = hitsAny;
 
 /** Valor "redondo" para la leyenda de tamaños (1, 2, 2,5 o 5 × 10ⁿ, hacia abajo). */
 function niceDown(v) {
@@ -486,7 +485,7 @@ export function pointmap(spec, theme) {
       const own = (b) => b[0] >= p.x - r * 0.7 - 0.01 && b[2] <= p.x + r * 0.7 + 0.01 && b[1] >= p.y - r * 0.7 - 0.01 && b[3] <= p.y + r * 0.7 + 0.01;
       const others = placed.filter((b) => !own(b));
       const inside = (b) => b[0] >= box.x + 2 && b[2] <= box.x + box.w - 2 && b[1] >= box.y + 2 && b[3] <= box.y + box.h - 2;
-      const c = cands.find((cd) => inside(cd.box) && !hits(cd.box, others));
+      const c = cands.find((cd) => inside(cd.box) && !hitsAny(cd.box, others));
       if (!c) continue;
       placed.push(c.box);
       const kids = [esc(p.name)];

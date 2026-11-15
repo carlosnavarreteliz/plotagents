@@ -9,7 +9,7 @@ import { tipper } from '../tooltip.js';
 import { el, g, tip, r2 } from '../svg.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, xValue, inferXY, PlotError } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldKind, xValue, inferXY, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
 import { langOf } from '../i18n.js';
 

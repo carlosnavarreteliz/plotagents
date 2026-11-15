@@ -202,8 +202,6 @@ function autoHorizontal(spec, m) {
 }
 
 const finish = (s, desc, type) => s.frame.finish([...s.body.pre, ...s.body.marks, ...s.body.post], { desc, type });
-// Con un bucle: `Math.min(...vs)` desborda la pila con ~150 mil valores.
-const extentOf = extent;
 
 /** Segmento (línea) en coordenadas de categoría/valor. */
 function seg(s, cpos0, v0, cpos1, v1, attrs) {
@@ -242,7 +240,7 @@ export function box(spec, theme) {
     stats.set(c + '\u0000' + h, f);
     ext.push(f.min, f.max);
   }
-  const s = setup(spec, theme, m, extentOf(ext), { type: 'box' });
+  const s = setup(spec, theme, m, extent(ext), { type: 'box' });
   const lw = theme.marks?.lineWidth ?? 2;
   m.cats.forEach((c) => m.hues.forEach((h, hi2) => {
     const f = stats.get(c + '\u0000' + h);
@@ -292,7 +290,7 @@ export function violin(spec, theme) {
     dens.set(c + '\u0000' + h, { d, f: fiveNumber(vs), n: vs.length, max: Math.max(...d.map((p) => p[1])) });
     ext.push(inv(mn - cut * bw), inv(mx + cut * bw));
   }
-  const s = setup(spec, theme, m, extentOf(ext), { type: 'violin', dodge: !split });
+  const s = setup(spec, theme, m, extent(ext), { type: 'violin', dodge: !split });
   const scaleMode = ['width', 'count', 'area'].includes(spec.scale) ? spec.scale : spec.densityNorm ?? 'width';
   const gMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.max), 0);
   const nMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.n), 1);
@@ -348,7 +346,7 @@ export function violin(spec, theme) {
 
 export function strip(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true });
+  const s = setup(spec, theme, m, extent(m.all), { type: 'strip', dodge: spec.dodge ?? true });
   const n = m.all.length;
   const r = spec.radius ?? (n > 600 ? 2 : n > 200 ? 2.75 : (theme.marks?.pointRadius ?? 4) - 0.5);
   const jitter = spec.jitter ?? 0.6;
@@ -405,7 +403,7 @@ export function beeswarm(positions, r) {
 
 export function swarm(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
+  const s = setup(spec, theme, m, extent(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
   const groupsOf = (c) => (s.multiHue && (spec.dodge ?? false) ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
   // Radio automático: se achica hasta que el enjambre más ancho quepa.
   let r = spec.radius ?? (theme.marks?.pointRadius ?? 4);
@@ -471,7 +469,7 @@ export function point(spec, theme) {
   const showEnd = multi && (spec.labels ?? true) && m.hues.length <= 4;
   // Reserva espacio a la derecha para las etiquetas al final.
   const endW = showEnd ? Math.min(140, Math.max(...m.hues.map((h) => measure(h, 12, 500)))) + 16 : 0;
-  const s = setup({ ...spec, width: spec.width }, theme, m, extentOf(ext), { type: 'point', dodge: false, zero: est === 'sum' });
+  const s = setup({ ...spec, width: spec.width }, theme, m, extent(ext), { type: 'point', dodge: false, zero: est === 'sum' });
   const vertical = s.vertical;
   if (vertical && showEnd) {
     // Recalcula el eje de categorías dejando espacio a la derecha.

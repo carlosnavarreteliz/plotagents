@@ -9,7 +9,6 @@ import { humanize, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
 
-const TAU = Math.PI * 2;
 const f = (n) => n.toFixed(2);
 
 

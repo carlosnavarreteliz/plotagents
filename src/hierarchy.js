@@ -73,9 +73,6 @@ export function focusNode(root, focus = []) {
 }
 
 export const height = (n) => (n.children.length ? 1 + Math.max(...n.children.map(height)) : 0);
-export const descendants = (n) => [n, ...n.children.flatMap(descendants)];
-
-/** Mezcla un color hacia otro (t ∈ [0,1]). */
 
 /**
  * Colores por familia: el primer nivel visible toma la paleta categórica en

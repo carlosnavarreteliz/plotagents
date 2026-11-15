@@ -71,6 +71,3 @@ export function pageBundle(specs, read, { dashboard = false } = {}) {
   const tail = [`global.plotagents = __req(${JSON.stringify(entry)});`, ...[...typeEntries, ...geoEntries].map((id) => `__req(${JSON.stringify(id)});`)];
   return `${P.prelude}${out.join('\n')}\n${tail.join('\n')}\n})(typeof window !== 'undefined' ? window : globalThis);\n`;
 }
-
-/** Para las pruebas: olvida la dist leída. */
-export function _resetPageBundle() { parsed = null; }

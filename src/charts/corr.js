@@ -33,14 +33,6 @@ function ranks(vs) {
   return out;
 }
 
-/** Φ(z) (Abramowitz–Stegun 7.1.26, error < 1,5e-7). */
-function normCdf(z) {
-  const x = Math.abs(z) / Math.SQRT2;
-  const t = 1 / (1 + 0.3275911 * x);
-  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
-  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
-}
-
 /** ln Γ(x) (Lanczos, g = 7). */
 function lnGamma(x) {
   const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
@@ -263,7 +255,7 @@ export function corr(spec, theme) {
   }
   const colLabH = labH(angle);
   const gx = area.x + rowW, gy = area.y + dendroH;
-  const gw = cell * cols.length, gh = cell * rows.length;
+  const gh = cell * rows.length;
   if (spec.height === undefined) frame.setHeight(gy + gh + colLabH + 8 + frame.chrome);
 
   const lab = cell >= 70 ? 13 : 11;

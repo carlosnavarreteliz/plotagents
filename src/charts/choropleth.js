@@ -14,7 +14,6 @@ import { ramp, textOn, colorMap, themeFor } from '../theme.js';
 import { resolve } from '../base.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
 import { createFrame, hash } from '../frame.js';
-import { niceStep } from '../scale.js';
 import { quantile } from '../stats.js';
 import { getGeo } from '../geo/registry.js';
 import { ISO2, microstateFeatures } from '../geo/iso.js';

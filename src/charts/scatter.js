@@ -7,7 +7,7 @@ import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
 import { colorMap } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
-import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
+import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { extent } from '../stats.js';
 import { ctx } from '../context.js';

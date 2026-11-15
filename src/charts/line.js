@@ -9,7 +9,7 @@ import { makeFormat, formatDate, parseDate } from '../format.js';
 import { niceDomain, linear, log, logDomain, timeTicks, dateUnit, niceStep, intStep, halfUnit } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, xValue, humanize, PlotError, highlightSet } from '../data.js';
-import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside, ticksWidth } from '../axes.js';
+import { xLabels, calendarSteps, refLinesY, yAxisMargin, yAxisTop, yGrid, yTickLabels, isInside } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { meanCI, mean, sd, extent } from '../stats.js';

@@ -16,7 +16,7 @@
 import { tipper } from '../tooltip.js';
 import { el, g, text } from '../svg.js';
 import { makeFormat } from '../format.js';
-import { ensureData, num, humanize } from '../data.js';
+import { ensureData, humanize } from '../data.js';
 import { createFrame } from '../frame.js';
 import { langOf } from '../i18n.js';
 import { railAccessors, railAccessor, railValues, railExtent, railMarks, railTip, textOf } from '../rail.js';

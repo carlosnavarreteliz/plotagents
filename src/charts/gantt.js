@@ -43,7 +43,6 @@ export function gantt(spec, theme) {
   const fields = fieldsOf(data);
   const kind = Object.fromEntries(fields.map((f) => [f, fieldKind(data, f)]));
   const pick = (re, ok = () => true) => fields.find((f) => re.test(f) && ok(f));
-  const timeLike = (f) => kind[f] === 'date' || kind[f] === 'number' || kind[f] === 'year';
   const taskF = spec.task ?? spec.label ?? (typeof spec.y === 'string' ? spec.y : null)
     ?? pick(/^(task|tarea|actividad|activity|item|nombre|name|hito|entregable|deliverable)/i, (f) => kind[f] === 'category')
     ?? fields.find((f) => kind[f] === 'category');

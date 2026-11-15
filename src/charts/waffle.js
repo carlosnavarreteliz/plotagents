@@ -10,7 +10,7 @@ import { tipper } from '../tooltip.js';
 import { el, g, tip } from '../svg.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { colorMap } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, highlightSet } from '../data.js';
 import { createFrame } from '../frame.js';
 import { langOf } from '../i18n.js';
 
