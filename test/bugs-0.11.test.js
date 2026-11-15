@@ -84,3 +84,9 @@ test('flowchart: etiqueta de arista larguísima se recorta', () => {
   assert.ok(svg.includes('…'));
   assert.ok(safePlot({ type: 'flowchart', nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ from: 'a', to: 'b', label: 'ok' }] }).ok);
 });
+
+test('kpi: columns enorme no deja tarjetas con ancho negativo', () => {
+  const svg = plot({ type: 'kpi', items: [{ label: 'a', value: 1 }, { label: 'b', value: 2 }], columns: 1e6 });
+  assert.ok(!/(width|height)="-/.test(svg));
+  noBad(svg);
+});
