@@ -125,5 +125,11 @@ await minifyAll(geo);
 const geoOut = wrap(geo, GEO.map((g) => `__req(${JSON.stringify(g)});`).join('\n'), `//#pa-geo ${JSON.stringify(geoMap)}\n`);
 writeFileSync(join(root, 'dist/plotagents-geo.js'), geoOut);
 
+// La Agent Skill lleva su propia copia: así funciona donde no se puede instalar de npm
+// ni cargar un CDN (el sandbox de claude.ai). La usa skills/plotagents/scripts/plot.cjs.
+mkdirSync(join(root, 'skills/plotagents/scripts'), { recursive: true });
+writeFileSync(join(root, 'skills/plotagents/scripts/plotagents.js'), coreOut);
+writeFileSync(join(root, 'skills/plotagents/scripts/plotagents-geo.js'), geoOut);
+
 console.log(`dist/plotagents.js · ${core.size} módulos · ${(coreOut.length / 1024).toFixed(0)} kB`);
 console.log(`dist/plotagents-geo.js · ${geo.size} módulos · ${(geoOut.length / 1024).toFixed(0)} kB`);
