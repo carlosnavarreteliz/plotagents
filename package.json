@@ -46,6 +46,7 @@
     "dist",
     "docs",
     "skills",
+    "!skills/plotagents/scripts/plotagents*.js",
     "bin",
     "index.d.ts",
     "views.d.ts",

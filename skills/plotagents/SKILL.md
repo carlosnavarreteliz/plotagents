@@ -36,8 +36,18 @@ Pick the first that fits:
 | Where you are | How |
 |---|---|
 | A Node, Deno or Bun project | `npm install plotagents`, then `import { safePlot } from 'plotagents'` |
-| Any shell, no project (Python, R, docs…) | write `spec.json`, run `npx -y plotagents@latest spec.json -o chart.svg` (`.html` for an interactive page; an array of specs → one page) |
-| An HTML page or artifact | `<script src="https://cdn.jsdelivr.net/npm/plotagents/dist/plotagents.js"></script>` then `plotagents.render(element, spec)` |
+| This skill has `scripts/plot.cjs` (a sandbox: Claude app, claude.ai, no npm or no network) | write `spec.json`, run `node <this skill's folder>/scripts/plot.cjs spec.json -o chart.svg`. The library is bundled next to it: **do not `npm install`, do not reach for a CDN**. `-o page.html` → self-contained interactive page; `--lint` → checks only |
+| Any other shell (Python, R, docs…) | write `spec.json`, run `npx -y plotagents@latest spec.json -o chart.svg` (`.html` for an interactive page; an array of specs → one page) |
+| A web page you host | `<script src="https://cdn.jsdelivr.net/npm/plotagents/dist/plotagents.js"></script>` then `plotagents.render(element, spec)` |
+
+**Artifacts in claude.ai** cannot load scripts from jsDelivr or unpkg. Render first, then embed the
+result: paste the SVG from `plot.cjs … -o chart.svg` straight into the HTML (or into React with
+`dangerouslySetInnerHTML`), or use the whole page from `plot.cjs … -o page.html` as the HTML artifact
+(it already carries tooltips and filters, with no external scripts). If you need the live
+browser API in the artifact, inline `scripts/plotagents.js` in a `<script>` tag instead of a CDN link.
+
+`plot.cjs` runs the same checks as `safePlot`: on an error it prints each `fix` and draws nothing;
+apply the fix and run it again.
 
 ```js
 import { safePlot } from 'plotagents';
@@ -107,5 +117,5 @@ Do not guess option names. Look them up (with `curl -sL` or your web fetch tool)
 
 - Full guide for agents: `https://unpkg.com/plotagents@latest/AGENTS.md`
 - Every chart and its fields: `https://unpkg.com/plotagents@latest/docs/charts.md`
-- JSON Schema of the spec: `npx plotagents --schema` or `https://unpkg.com/plotagents@latest/schema.json`
+- JSON Schema of the spec: `node <skill>/scripts/plot.cjs --schema` (offline), `npx plotagents --schema` or `https://unpkg.com/plotagents@latest/schema.json`
 - Gallery and playground: https://carlosnavarrete.cl/plotagents/

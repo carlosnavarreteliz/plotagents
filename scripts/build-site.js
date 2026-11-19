@@ -45,9 +45,17 @@ copy('AGENTS.md', 'AGENTS.md');
 copy('AGENTS.md', 'llms.txt');
 write('.nojekyll', '');
 // La Agent Skill: el SKILL.md suelto y un .zip con la carpeta, listo para subir a la app de Claude.
+// El .zip trae la biblioteca empaquetada y un ejecutor para Node: el sandbox de claude.ai no
+// deja instalar paquetes de npm ni cargar scripts desde jsDelivr o unpkg.
+// (npm run build copia dist/ a skills/plotagents/scripts/; se lee de dist/ por si no se corrió.)
 const skillMd = read('skills/plotagents/SKILL.md');
 write('skill/SKILL.md', skillMd);
-write('skill/plotagents-skill.zip', zip([{ name: 'plotagents/SKILL.md', data: skillMd }]));
+write('skill/plotagents-skill.zip', zip([
+  { name: 'plotagents/SKILL.md', data: skillMd },
+  { name: 'plotagents/scripts/plot.cjs', data: read('skills/plotagents/scripts/plot.cjs') },
+  { name: 'plotagents/scripts/plotagents.js', data: read('dist/plotagents.js') },
+  { name: 'plotagents/scripts/plotagents-geo.js', data: read('dist/plotagents-geo.js') },
+]));
 
 // ── Ejemplos: SVG estáticos claro y oscuro (miniaturas y primera pintura) ──
 const isFixed = (spec) => spec.theme === 'noche' || spec.theme === 'dark' || (spec.theme && typeof spec.theme === 'object');
