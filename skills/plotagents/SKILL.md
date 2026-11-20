@@ -107,9 +107,9 @@ Leave `type` out to let the library infer it.
 
 Useful options: `highlight: "Ñuble"`, `facet: "region"`, `format: "percent" | "currency" | "compact"`,
 `refLines`, `annotations`, `yScale: "log"`, `palette`, `colorScale: "viridis"`, `theme`, `legend`.
-Palette families that go together: `palette: "terracota" | "bosque" | "oceano" | "atardecer" | "jardin" | "retro"`
-(matching ramps, dark variant with `theme: "noche"`); `palettes: ["cdia", "bosque"]` or `true` bakes alternatives
-into one SVG, switched with `data-palette="bosque"` on an ancestor.
+Minimal palette families (5 muted colors): `palette: "arcilla" | "nordico" | "tinta"` (matching ramps, dark variant
+with `theme: "noche"`); `palettes: ["cdia", "nordico"]` or `true` bakes alternatives into one SVG, switched with
+`data-palette="nordico"` on an ancestor.
 
 **Dashboards**: `safeDashboard({ title, subtitle, source, data, kpis, charts, filters })`, title is
 the question, at most 5 KPIs and 4–6 charts. `toHTML([spec, …])` gives a self-contained interactive page.

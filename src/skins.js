@@ -278,8 +278,8 @@ const SELECTOR = /^[\w\s.#:>+~*,()[\]="'|^$-]{1,200}$/;
 
 // ── Paletas alternativas ────────────────────────────────────────────────────
 //
-//   plot({ ...spec, palettes: ['cdia', 'bosque', 'oceano'] })
-//   <html data-palette="bosque">   ← la página elige; sin atributo, la primera
+//   plot({ ...spec, palettes: ['cdia', 'arcilla', 'nordico', 'tinta'] })
+//   <html data-palette="nordico">   ← la página elige; sin atributo, la primera
 //
 // Cada alternativa es una piel con `when: [data-palette="nombre"]`. La primera
 // (o `palette`, si el spec la trae) es la de siempre y va en los atributos.
@@ -294,7 +294,7 @@ export function paletteAlternatives(spec, all) {
   if (!Array.isArray(list) || !list.length) return null;
   list.forEach((n, i) => {
     if (typeof n !== 'string' || !PALETTE_NAME.test(n)) {
-      throw new PlotError(`palettes[${i}] debe ser el nombre de una paleta (letras, números y guiones).`, 'palettes: ["cdia", "bosque", "oceano"]');
+      throw new PlotError(`palettes[${i}] debe ser el nombre de una paleta (letras, números y guiones).`, 'palettes: ["cdia", "arcilla", "nordico", "tinta"]');
     }
   });
   const first = typeof spec.palette === 'string' ? spec.palette : list[0];

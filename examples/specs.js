@@ -194,8 +194,8 @@ export const gallery = [
   },
   {
     id: 'familia-paletas',
-    name: 'Familias de paletas',
-    note: '`palette: "terracota"` usa una familia de colores que combinan, validada para daltonismo, con rampas a juego y variante oscura. `palettes: ["cdia", "bosque", "oceano"]` escribe varias alternativas en el mismo SVG: `data-palette` en la página elige cuál se ve.',
-    spec: { type: 'area', palette: 'terracota', palettes: ['terracota', 'bosque', 'oceano', 'atardecer', 'jardin', 'retro'], title: 'Ñuble pasó de 19% a 27% de las ventas del sur entre 2022 y 2025', subtitle: 'Participación mensual de cada región en las ventas, %', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', stack: 'percent', curve: 'smooth' },
+    name: 'Paletas minimalistas',
+    note: '`palette: "nordico"` usa una familia minimalista: cinco colores apagados, validados para daltonismo, con rampas a juego y variante oscura. `palettes: ["nordico", "arcilla", "tinta"]` escribe las alternativas en el mismo SVG: `data-palette` en la página elige cuál se ve.',
+    spec: { type: 'area', palette: 'nordico', palettes: ['nordico', 'arcilla', 'tinta'], title: 'Ñuble pasó de 19% a 27% de las ventas del sur entre 2022 y 2025', subtitle: 'Participación mensual de cada región en las ventas, %', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', stack: 'percent', curve: 'smooth' },
   },
 ];

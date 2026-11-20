@@ -95,7 +95,7 @@ export const palettes = {
 
 // Familias: la de fábrica (cdia) y las alternativas de families.js. Cada una
 // trae su categórica para claro y oscuro y sus rampas a juego; `palette:
-// "bosque"` las usa todas, según el modo del tema.
+// "nordico"` las usa todas, según el modo del tema.
 export const paletteFamilies = {
   cdia: {
     label: { es: 'CDIA', en: 'CDIA' },

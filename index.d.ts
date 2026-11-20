@@ -316,7 +316,7 @@ export interface Spec {
   /** Several color sets in one SVG, chosen by page CSS. The first is the default; the rest need `when` (a CSS selector of an ancestor). */
   skins?: Skin[] | null;
   theme?: ThemeInput;
-  /** A palette family ("bosque", "oceano", "terracota", "atardecer", "jardin", "retro": categorical + matching ramps, light and dark), a palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
+  /** A palette family ("cdia"; minimal 5-color "arcilla", "nordico", "tinta": categorical + matching ramps, light and dark), a palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
   palette?: PaletteFamily | (string & {}) | string[];
   /** Alternative palettes in one SVG (names, or true for every family). The first (or `palette`) is the default; `data-palette="name"` on an ancestor switches. */
   palettes?: Array<PaletteFamily | (string & {})> | boolean | null;
@@ -748,16 +748,16 @@ export declare function mapSprite(spec: Spec): string;
 export declare function loadGeo(url: string): Promise<object>;
 export declare const palettes: Record<string, string[]>;
 /** Built-in palette families. */
-export type PaletteFamily = 'cdia' | 'terracota' | 'bosque' | 'oceano' | 'atardecer' | 'jardin' | 'retro';
+export type PaletteFamily = 'cdia' | 'arcilla' | 'nordico' | 'tinta';
 /** A palette family: validated categorical colors for light and dark surfaces, plus matching ramps. */
-export interface PaletteFamilyDef { label: { es: string; en: string }; colors: string[]; dark: string[]; sequential: string[]; sequentialDark: string[]; diverging: string[]; divergingDark: string[] }
+export interface PaletteFamilyDef { label: { es: string; en: string }; minChroma?: number; colors: string[]; dark: string[]; sequential: string[]; sequentialDark: string[]; diverging: string[]; divergingDark: string[] }
 export declare const paletteFamilies: Record<PaletteFamily, PaletteFamilyDef> & Record<string, PaletteFamilyDef>;
 /** The colors of a family for a mode, or null if `name` is not a family. */
 export declare function familyColors(name: string, mode?: 'light' | 'dark'): { categorical: string[]; sequential: string[]; diverging: string[] } | null;
 export declare const ramps: Record<string, string[]>;
 export declare function themeFor(spec: Spec): Theme;
 export declare function timeValues(spec: Spec): (string | number)[];
-export declare function validatePalette(colors: string[], opts?: { mode?: 'light' | 'dark'; surface?: string; pairs?: 'adjacent' | 'all' }): { ok: boolean; checks: { name: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] };
+export declare function validatePalette(colors: string[], opts?: { mode?: 'light' | 'dark'; surface?: string; pairs?: 'adjacent' | 'all'; locale?: string; minChroma?: number }): { ok: boolean; checks: { name: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] };
 export declare function bundleSource(file?: string): string | null;
 export declare function toolDefinition(opts?: { name?: string; flavor?: 'anthropic' | 'openai'; kind?: 'chart' | 'dashboard' }): Record<string, unknown>;
 export declare const themes: Record<'papel' | 'noche' | 'light' | 'dark', Theme> & Record<string, Theme>;

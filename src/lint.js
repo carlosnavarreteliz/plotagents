@@ -4,7 +4,7 @@
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError, toRows } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
-import { themeFor, themes, palettes, ramps, isColor, familyNames } from './theme.js';
+import { themeFor, themes, palettes, ramps, isColor, familyNames, paletteFamilies } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
@@ -68,7 +68,10 @@ function lintSpec(spec = {}) {
 
   const series = spec.series ?? spec.color;
   const nSeries = series && fields.includes(series) ? uniq(data.map((r) => String(r[series]))).length : Array.isArray(spec.y) ? spec.y.length : 1;
-  if (nSeries > 8) warn('series-max', `${nSeries} series: solo hay 8 colores distinguibles; desde la 9.ª se pintan en gris.`, 'Agrupa la cola en "Otros", usa `highlight` o divide en varios gráficos.');
+  // Colores de la paleta en uso (8 la de fábrica, 5 las familias minimalistas): desde ahí, gris.
+  let nColors = 8;
+  try { nColors = Math.max(1, themeFor(spec).categorical.length); } catch { /* tema roto: se avisa abajo */ }
+  if (nSeries > nColors) warn('series-max', `${nSeries} series: solo hay ${nColors} colores distinguibles; desde la ${nColors + 1}.ª se pintan en gris.`, 'Agrupa la cola en "Otros", usa `highlight` o divide en varios gráficos.');
 
   if (type === 'bar') {
     const x = spec.x ?? fields.find((f) => fieldKind(data, f) === 'category');
@@ -120,7 +123,9 @@ function lintSpec(spec = {}) {
   if (custom) {
     const th = themeFor(spec);
     const n = Math.max(2, Math.min(th.categorical.length, nSeries));
-    const rep = validatePalette(th.categorical.slice(0, n), { mode: th.mode, surface: th.surface, pairs: type === 'scatter' || type === 'bubble' ? 'all' : 'adjacent' });
+    // Una familia apagada a propósito se valida con su propio piso de croma.
+    const fam = typeof spec.palette === 'string' && Object.prototype.hasOwnProperty.call(paletteFamilies, spec.palette) ? paletteFamilies[spec.palette] : null;
+    const rep = validatePalette(th.categorical.slice(0, n), { mode: th.mode, surface: th.surface, pairs: type === 'scatter' || type === 'bubble' ? 'all' : 'adjacent', ...(fam?.minChroma ? { minChroma: fam.minChroma } : {}) });
     for (const c of rep.checks) if (c.status === 'fail') warn('palette-' + c.name, `Paleta: ${c.detail}`, 'Cambia el orden o los tonos, o usa la paleta de fábrica.');
   }
 
@@ -305,7 +310,7 @@ const EN = {
   field: (m) => { const [f] = qs(m.message); const role = (/\(([^)]+)\)/.exec(m.message) || [])[1]; return [`The field "${f}" (${role}) does not exist.`, `Available fields: ${after(m.fix)}`]; },
   empty: () => ['`data` has no rows.', 'Pass at least one row.'],
   'title-fact': () => ['The title describes the chart but does not say what it shows.', 'A good title is a fact, ideally with the key number.'],
-  'series-max': (m) => [`${n0(m.message)} series: there are only 8 distinguishable colors; from the 9th on they turn gray.`, 'Fold the tail into "Other", use `highlight` or split into several charts.'],
+  'series-max': (m) => { const k = +(m.message.match(/solo hay (\d+)/) || [, 8])[1]; return [`${n0(m.message)} series: there are only ${k} distinguishable colors; from the ${k + 1}th on they turn gray.`, 'Fold the tail into "Other", use `highlight` or split into several charts.']; },
   'one-bar': () => ['A single bar compares nothing.', 'Use `type: "kpi"` to show the number.'],
   'too-many-bars': (m) => [`${n0(m.message)} categories: the 25 largest will be shown and the rest folded into "Other".`, 'Set `top: N` to control the cut.'],
   'stack-many': () => ['Stacking more than 5 series makes the middle segments hard to compare.', 'Consider grouped bars, `highlight` or `stack: "percent"`.'],
@@ -533,11 +538,11 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   if (typeof spec.palette === 'string' && !palettes[spec.palette] && !resolveColorScale(spec.palette)) {
     const near = didYouMean(spec.palette, PALETTE_NAMES());
-    warn('palette-unknown', L(`La paleta "${spec.palette}" no existe: se usa la de fábrica.`, `The palette "${spec.palette}" does not exist: the default is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Nombres: familias ("bosque", "oceano", "terracota"…), "okabe-ito", "tab10", "Set2"… o una lista de colores.', 'Names: families ("bosque", "oceano", "terracota"…), "okabe-ito", "tab10", "Set2"… or a list of colors.'));
+    warn('palette-unknown', L(`La paleta "${spec.palette}" no existe: se usa la de fábrica.`, `The palette "${spec.palette}" does not exist: the default is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Nombres: familias ("arcilla", "nordico", "tinta"), "okabe-ito", "tab10", "Set2"… o una lista de colores.', 'Names: families ("arcilla", "nordico", "tinta"), "okabe-ito", "tab10", "Set2"… or a list of colors.'));
   }
   if (spec.palettes != null && spec.palettes !== true && spec.palettes !== false) {
     const list = typeof spec.palettes === 'string' ? spec.palettes.split(/[\s,]+/).filter(Boolean) : spec.palettes;
-    if (!Array.isArray(list)) err('palettes-type', L('`palettes` debe ser una lista de nombres de paleta o `true`.', '`palettes` must be a list of palette names or `true`.'), 'palettes: ["cdia", "bosque", "oceano"]');
+    if (!Array.isArray(list)) err('palettes-type', L('`palettes` debe ser una lista de nombres de paleta o `true`.', '`palettes` must be a list of palette names or `true`.'), 'palettes: ["cdia", "arcilla", "nordico", "tinta"]');
     else for (const n of list) {
       if (typeof n === 'string' && (palettes[n] || resolveColorScale(n))) continue;
       const near = typeof n === 'string' ? didYouMean(n, PALETTE_NAMES()) : null;
