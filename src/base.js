@@ -5,7 +5,7 @@
 // Cada archivo de src/types/ registra sus tipos sobre esta base. Es la entrada
 // para un empaquetador sin tree-shaking: una isla del navegador que dibuja
 // líneas no carga redes, mapas ni tablas.
-import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts } from './theme.js';
+import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts, familyNames } from './theme.js';
 import { withContext } from './context.js';
 import { autoLocale } from './i18n.js';
 import { ensureData, PlotError, fieldKind, uniq, num, toRows } from './data.js';
@@ -13,7 +13,7 @@ import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { resolveColorScale } from './colorscales.js';
-import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
+import { expandSkins, mergeSkins, cssVars, plotWithVars, paletteAlternatives, palettesToSkins } from './skins.js';
 
 // Los tipos se registran al importarse (src/types/*.js); el núcleo los trae todos.
 export const RENDERERS = {};
@@ -74,6 +74,12 @@ export function plot(spec) {
     const full = { ...DEFAULTS, ...spec };
     const vars = cssVars(full);
     if (vars.size) return plotWithVars(full, vars, plot);
+  }
+  // Paletas alternativas: se vuelven pieles (una por paleta, bajo [data-palette]).
+  const alts = spec && typeof spec === 'object' ? paletteAlternatives({ ...DEFAULTS, ...spec }, familyNames()) : null;
+  if (alts && alts.length > 1) {
+    const { palettes: _p, ...rest } = spec;
+    return plot({ ...rest, palettes: null, palette: alts[0], skins: palettesToSkins({ ...DEFAULTS, ...spec }, alts) });
   }
   const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
   if (Array.isArray(skins) && skins.length) {
@@ -219,7 +225,7 @@ export function registerRenderer(type, fn) {
 }
 
 export { withDefaults };
-export { registerTheme, themeFor, themes, palettes, ramps } from './theme.js';
+export { registerTheme, themeFor, themes, palettes, ramps, paletteFamilies, familyColors } from './theme.js';
 export { makeFormat, formatNumber, formatCompact } from './format.js';
 export { PlotError } from './data.js';
 export { TYPES };

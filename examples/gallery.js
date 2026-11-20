@@ -21,7 +21,7 @@ export { NOTES_EN, SECTIONS_EN };
 // Galería por secciones. Orden pensado para leer de lo simple a lo avanzado.
 const SECTION = {
   barras: 'Comparar', 'barras-horizontales': 'Comparar', 'barras-agrupadas': 'Comparar', 'barras-100': 'Comparar',
-  lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración',
+  lineas: 'Tiempo', indice: 'Tiempo', 'area-meta': 'Tiempo', 'area-apilada': 'Tiempo', noche: 'Configuración', 'familia-paletas': 'Configuración',
   burbujas: 'Relaciones', calor: 'Flujos y números', sankey: 'Redes y flujos', kpi: 'Flujos y números',
 };
 export const ORDER = ['Comparar', 'Tiempo', 'Proyectos', 'Partes de un todo', 'Mapas', 'Distribuciones', 'Relaciones', 'Redes y flujos', 'Flujos y números', 'Tablas', 'Configuración'];

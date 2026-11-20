@@ -4,7 +4,7 @@
 import { ensureData, fieldsOf, fieldKind, uniq, num, PlotError, toRows } from './data.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { validatePalette } from './palette.js';
-import { themeFor, themes, palettes, ramps, isColor } from './theme.js';
+import { themeFor, themes, palettes, ramps, isColor, familyNames } from './theme.js';
 import { resolveColorScale, colorScaleNames, RAINBOW } from './colorscales.js';
 import { schema } from './schema.js';
 import { parseDate } from './format.js';
@@ -533,7 +533,16 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
   }
   if (typeof spec.palette === 'string' && !palettes[spec.palette] && !resolveColorScale(spec.palette)) {
     const near = didYouMean(spec.palette, PALETTE_NAMES());
-    warn('palette-unknown', L(`La paleta "${spec.palette}" no existe: se usa la de fábrica.`, `The palette "${spec.palette}" does not exist: the default is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Nombres: "okabe-ito", "tab10", "Set2", "Dark2"… o una lista de colores.', 'Names: "okabe-ito", "tab10", "Set2", "Dark2"… or a list of colors.'));
+    warn('palette-unknown', L(`La paleta "${spec.palette}" no existe: se usa la de fábrica.`, `The palette "${spec.palette}" does not exist: the default is used.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L('Nombres: familias ("bosque", "oceano", "terracota"…), "okabe-ito", "tab10", "Set2"… o una lista de colores.', 'Names: families ("bosque", "oceano", "terracota"…), "okabe-ito", "tab10", "Set2"… or a list of colors.'));
+  }
+  if (spec.palettes != null && spec.palettes !== true && spec.palettes !== false) {
+    const list = typeof spec.palettes === 'string' ? spec.palettes.split(/[\s,]+/).filter(Boolean) : spec.palettes;
+    if (!Array.isArray(list)) err('palettes-type', L('`palettes` debe ser una lista de nombres de paleta o `true`.', '`palettes` must be a list of palette names or `true`.'), 'palettes: ["cdia", "bosque", "oceano"]');
+    else for (const n of list) {
+      if (typeof n === 'string' && (palettes[n] || resolveColorScale(n))) continue;
+      const near = typeof n === 'string' ? didYouMean(n, PALETTE_NAMES()) : null;
+      warn('palette-unknown', L(`La paleta "${n}" de \`palettes\` no existe: esa alternativa usa la de fábrica.`, `The palette "${n}" in \`palettes\` does not exist: that alternative uses the default.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Familias: ${familyNames().join(', ')}.`, `Families: ${familyNames().join(', ')}.`));
+    }
   }
   if (typeof spec.ramp === 'string' && !ramps[spec.ramp] && !resolveColorScale(spec.ramp)) {
     const near = didYouMean(spec.ramp, [...Object.keys(ramps), ...Object.values(colorScaleNames()).flat()]);

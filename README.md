@@ -223,6 +223,18 @@ npx plotagents --tool                       # tool definition
 
 Both pass the lightness, chroma, colorblind (adjacent ΔE OKLab ≥ 8) and normal-vision (≥ 15) checks. The order is part of the validation. Typeface: Mozilla Text, falling back to `system-ui`.
 
+### Palette families: alternatives that go together
+
+Six more families pass the same checks, each with a dark variant and matching sequential and diverging ramps: `terracota`, `bosque`, `oceano`, `atardecer`, `jardin` and `retro`.
+
+```js
+plot({ ...spec, palette: 'bosque' });                       // one family (dark variant under theme: 'noche')
+plot({ ...spec, palettes: ['cdia', 'bosque', 'oceano'] });  // alternatives in one SVG
+// <html data-palette="oceano"> switches them; toHTML() adds the buttons
+```
+
+See [Themes](docs/themes.md#palette-families-alternatives-that-go-together).
+
 ## Development
 
 ```bash

@@ -217,12 +217,28 @@ export function skinSpec(spec, patch) {
   return s;
 }
 
+// Los degradados de leyenda llevan un id sacado de sus colores (pa-ramp-…):
+// entre pieles es el mismo degradado con otros colores. Todas toman los ids de
+// la primera, con un sufijo de todas las pieles para que dos gráficos de una
+// página con la misma primera piel y otras distintas no compartan id.
+const RAMP_ID = /pa-ramp-[a-z0-9]+/g;
+function sameRampIds(svgs) {
+  const ids = svgs.map((svg) => [...new Set(svg.match(RAMP_ID) || [])]);
+  if (!ids[0].length) return svgs;
+  const tag = hash(ids.map((l) => l.join(',')).join('|'));
+  return svgs.map((svg, i) => {
+    const map = new Map(ids[i].map((id, k) => [id, (ids[0][k] || id) + '-' + tag]));
+    return svg.replace(RAMP_ID, (id) => map.get(id) || id);
+  });
+}
+
 /**
  * Une los SVG de varias pieles en uno. `svgs[0]` es la piel por defecto;
  * `whens[i]` es el selector CSS (de un ancestro) bajo el que rige la piel i.
  */
 export function mergeSkins(svgs, whens) {
   if (svgs.length === 1) return svgs[0];
+  svgs = sameRampIds(svgs);
   const parts = svgs.map(tokens);
   const n = parts[0].length;
   same(parts, (i) => `La piel ${i + 1} cambia algo más que colores (posiciones, textos u orden).`,
@@ -259,6 +275,42 @@ export function mergeSkins(svgs, whens) {
 }
 
 const SELECTOR = /^[\w\s.#:>+~*,()[\]="'|^$-]{1,200}$/;
+
+// ── Paletas alternativas ────────────────────────────────────────────────────
+//
+//   plot({ ...spec, palettes: ['cdia', 'bosque', 'oceano'] })
+//   <html data-palette="bosque">   ← la página elige; sin atributo, la primera
+//
+// Cada alternativa es una piel con `when: [data-palette="nombre"]`. La primera
+// (o `palette`, si el spec la trae) es la de siempre y va en los atributos.
+
+const PALETTE_NAME = /^[\w-]{1,40}$/;
+
+/** Nombres de las alternativas de un spec (la de por defecto primero), o null. */
+export function paletteAlternatives(spec, all) {
+  let list = spec && spec.palettes;
+  if (list === true) list = all;
+  if (typeof list === 'string') list = list.split(/[\s,]+/).filter(Boolean);
+  if (!Array.isArray(list) || !list.length) return null;
+  list.forEach((n, i) => {
+    if (typeof n !== 'string' || !PALETTE_NAME.test(n)) {
+      throw new PlotError(`palettes[${i}] debe ser el nombre de una paleta (letras, números y guiones).`, 'palettes: ["cdia", "bosque", "oceano"]');
+    }
+  });
+  const first = typeof spec.palette === 'string' ? spec.palette : list[0];
+  return [...new Set([first, ...list])];
+}
+
+/** `palettes` → `skins`: una piel por alternativa, bajo [data-palette="nombre"]. */
+export function palettesToSkins(spec, names) {
+  const base = Array.isArray(spec.skins) && spec.skins.length ? spec.skins : [{}];
+  const [first, ...rest] = names;
+  return [
+    { ...base[0], palette: base[0].palette ?? first },
+    ...base.slice(1),
+    ...rest.map((n) => ({ when: `[data-palette="${n}"]`, palette: n })),
+  ];
+}
 
 /** Valida `skins` y devuelve [specs, whens]. */
 export function expandSkins(spec) {

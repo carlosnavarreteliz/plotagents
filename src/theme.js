@@ -16,6 +16,7 @@ export const FONT_CSS =
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
 import { parseRgb, isColor, lin, rgbToHex, luminance, contrast } from './rgb.js';
+import { FAMILIES } from './families.js';
 export { parseRgb };
 
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
@@ -91,6 +92,21 @@ export const palettes = {
   tableau10: ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC'],
   udec: ['#223C6A', '#E69B0A', '#D21428', '#5C7DB8'],
 };
+
+// Familias: la de fábrica (cdia) y las alternativas de families.js. Cada una
+// trae su categórica para claro y oscuro y sus rampas a juego; `palette:
+// "bosque"` las usa todas, según el modo del tema.
+export const paletteFamilies = {
+  cdia: {
+    label: { es: 'CDIA', en: 'CDIA' },
+    colors: papel.categorical, dark: noche.categorical,
+    sequential: papel.sequential, sequentialDark: noche.sequential,
+    diverging: papel.diverging, divergingDark: noche.diverging,
+  },
+  ...FAMILIES,
+};
+for (const [k, f] of Object.entries(FAMILIES)) { palettes[k] = f.colors; palettes[k + '-noche'] = f.dark; }
+
 // Rampas secuenciales (un tono, claro → oscuro) y divergentes.
 export const ramps = {
   indigo: papel.sequential,
@@ -100,6 +116,23 @@ export const ramps = {
   'indigo-magenta': papel.diverging,
   'teal-rust': ['#0F5A4F', '#1E9C89', '#8CD3C6', '#ECEBE6', '#E8B49A', '#C46A3F', '#7F3A1B'],
 };
+for (const [k, f] of Object.entries(FAMILIES)) { ramps[k] = f.sequential; ramps[k + '-diverging'] = f.diverging; }
+
+const ownFamily = (name) => (typeof name === 'string' && Object.prototype.hasOwnProperty.call(paletteFamilies, name) ? paletteFamilies[name] : null);
+
+/** Nombres de las familias de paletas (la de fábrica primero). */
+export const familyNames = () => Object.keys(paletteFamilies);
+
+/**
+ * Los colores de una familia para un modo: { categorical, sequential, diverging }.
+ * null si el nombre no es una familia.
+ */
+export function familyColors(name, mode = 'light') {
+  const f = ownFamily(name);
+  if (!f) return null;
+  const dark = mode === 'dark';
+  return { categorical: dark ? f.dark : f.colors, sequential: dark ? f.sequentialDark : f.sequential, diverging: dark ? f.divergingDark : f.diverging };
+}
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
@@ -216,7 +249,15 @@ export function getTheme(t, trusted = false) {
 /** Tema efectivo de un spec: `theme` + atajos `palette`, `ramp` y `colorScale`. */
 export function themeFor(spec = {}) {
   let t = getTheme(spec.theme);
-  if (spec.palette) {
+  const fam = familyColors(spec.palette, t.mode);
+  if (fam) {
+    // Una familia trae categórica y rampas a juego. Las rampas sólo reemplazan
+    // a las de fábrica: las de un tema propio, `ramp` y `colorScale` mandan.
+    const stock = (k) => t[k] === papel[k] || t[k] === noche[k];
+    t = { ...t, categorical: fam.categorical };
+    if (stock('sequential')) t.sequential = fam.sequential;
+    if (stock('diverging')) t.diverging = fam.diverging;
+  } else if (spec.palette) {
     const p = Array.isArray(spec.palette) ? spec.palette.filter(isColor) : namedPalette(spec.palette);
     if (p && p.length) t = { ...t, categorical: p };
   }

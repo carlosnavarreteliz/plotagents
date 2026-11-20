@@ -145,7 +145,7 @@ export function planDashboard(spec = {}) {
   const locale = spec.locale || 'es';
   const shared = spec.data ? ensureData(spec) : null;
   const base = {};
-  for (const k of ['locale', 'theme', 'font', 'palette', 'ramp', 'textScale']) if (spec[k] !== undefined) base[k] = spec[k];
+  for (const k of ['locale', 'theme', 'font', 'palette', 'palettes', 'ramp', 'textScale']) if (spec[k] !== undefined) base[k] = spec[k];
   // Gráficos: heredan datos, idioma y tema; el tipo se resuelve para decidir su ancho.
   let charts = (spec.charts || []).map((c, i) => {
     const s0 = { ...base, ...c, ...(c.data === undefined && shared ? { data: shared } : {}) };

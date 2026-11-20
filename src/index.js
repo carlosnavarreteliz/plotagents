@@ -3,7 +3,7 @@
 //   import { plot } from 'plotagents';
 //   const svg = plot({ data, x: 'region', y: 'ventas', title: 'Biobío lidera las ventas' });
 //
-import { getTheme, themeFor, themes, palettes, ramps, colorMap, fontSpec, deepMerge, registerTheme, isColor, FONT_CSS } from './theme.js';
+import { getTheme, themeFor, themes, palettes, ramps, paletteFamilies, familyColors, familyNames, colorMap, fontSpec, deepMerge, registerTheme, isColor, FONT_CSS } from './theme.js';
 import { withContext } from './context.js';
 import { validatePalette } from './palette.js';
 import { bar } from './charts/bar.js';
@@ -49,7 +49,7 @@ import { dashboard, lintDashboard, safeDashboard } from './dashboard-node.js';
 import { makeFormat, formatNumber, formatCompact } from './format.js';
 import { esc } from './svg.js';
 import { pageBundle } from './page-bundle.js';
-import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
+import { expandSkins, mergeSkins, cssVars, plotWithVars, paletteAlternatives } from './skins.js';
 import { resolveColorScale, colorScaleNames, interpolate as interpolateColor, COLORMAPS, QUALITATIVE } from './colorscales.js';
 
 import './core.js';
@@ -112,6 +112,19 @@ export function toHTML(specs, { title = 'Gráficos', lang = 'es', columns = 1 } 
     const { data: _d, ...rest } = s;
     return { ...rest, _paData: tableIdx.get(rows) };
   };
+  // Paletas alternativas (`palettes`): botones que ponen data-palette en <html>.
+  const alts = [...new Set(list.flatMap((s) => { try { return paletteAlternatives(withDefaults(s), familyNames()) || []; } catch { return []; } }))];
+  const en = String(lang).startsWith('en');
+  const switcher = alts.length > 1
+    ? `<nav class="pa-palettes" aria-label="${en ? 'Color palette' : 'Paleta de colores'}">${alts.map((n, i) => {
+      const f = paletteFamilies[n] && Object.prototype.hasOwnProperty.call(paletteFamilies, n) ? paletteFamilies[n] : null;
+      const sw = (f ? (dark ? f.dark : f.colors) : palettes[n] || []).slice(0, 4).map((c) => `<i style="background:${cssText(c)}"></i>`).join('');
+      return `<button type="button" data-palette="${esc(n)}" aria-pressed="${i === 0}">${sw}<span>${esc(f ? f.label[en ? 'en' : 'es'] : n)}</span></button>`;
+    }).join('')}</nav>`
+    : '';
+  const switcherJS = switcher
+    ? `<script>(function(){var b=document.querySelectorAll('.pa-palettes button');b.forEach(function(x,i){x.addEventListener('click',function(){if(i)document.documentElement.setAttribute('data-palette',x.dataset.palette);else document.documentElement.removeAttribute('data-palette');b.forEach(function(y){y.setAttribute('aria-pressed',String(y===x))});});});})();</script>`
+    : '';
   const charts = list.map((s, i) => `<figure class="pa" id="pa-${i}">${plot(s)}</figure>` + (bundle ? `<script type="application/json" id="pa-spec-${i}">${safeJSON(embed(s))}</script>` : '')).join('\n');
   const boot = bundle
     ? `<script>${bundle.replace(/<\/(script)/gi, '<\\/$1')}</script>\n<script type="application/json" id="pa-data">${safeJSON(tables)}</script>\n<script>(function(){var D=JSON.parse(document.getElementById('pa-data').textContent);document.querySelectorAll('figure.pa').forEach(function(f,i){var s=JSON.parse(document.getElementById('pa-spec-'+i).textContent);if(s._paData!=null){s.data=D[s._paData];delete s._paData;}plotagents.render(f,s);});})();</script>`
@@ -125,12 +138,19 @@ ${[...new Set([FONT_CSS, ...list.map((s) => themeFor(withDefaults(s)).font?.impo
 body{margin:0;background:${cssText(bg)};font-family:${cssText(themeFor(withDefaults(list[0])).font?.family || "'Mozilla Text',system-ui,sans-serif")}}
 main{max-width:${columns > 1 ? 1500 : 820}px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,${columns > 1 ? 560 : 320}px),1fr));gap:24px}
 figure.pa{margin:0;min-width:0}
-figure.pa svg{width:100%;height:auto;display:block}
+figure.pa svg{width:100%;height:auto;display:block}${switcher ? `
+.pa-palettes{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.pa-palettes button{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;color:inherit;background:transparent;border:1px solid ${dark ? '#2E3666' : '#C9CDE0'};border-radius:999px;padding:4px 10px 4px 6px;cursor:pointer}
+.pa-palettes button[aria-pressed="true"]{border-color:currentColor}
+.pa-palettes i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:-3px}
+.pa-palettes span{margin-left:5px}` : ''}
 </style></head>
-<body><main>
+<body${switcher ? ` style="color:${dark ? '#F2F3FA' : '#141A3F'}"` : ''}><main>
+${switcher}
 ${charts}
 </main>
 ${boot}
+${switcherJS}
 </body></html>`;
 }
 
@@ -175,5 +195,5 @@ export { resolveColorScale, colorScaleNames, interpolateColor, COLORMAPS, QUALIT
 export { dashboard, renderDashboard, planDashboard, lintDashboard, safeDashboard, mountDashboard, packRows, balancedRows };
 export { RENDERERS, ALIASES, registerGeo, getGeo, registeredGeo, toFeatureCollection, loadGeo, mapSprite };
 export { registerTheme, withDefaults as resolveDefaults, embedTiles, TILE_PROVIDERS };
-export { lint, schema, toolDefinition, themes, palettes, ramps, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
+export { lint, schema, toolDefinition, themes, palettes, ramps, paletteFamilies, familyColors, validatePalette, getTheme, themeFor, attach, PlotError, TYPES, squarify, makeFormat, formatNumber, formatCompact };
 export default plot;

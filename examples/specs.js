@@ -192,4 +192,10 @@ export const gallery = [
     note: '`theme: "noche"` usa la misma paleta, re-escalonada y validada para fondo oscuro. `highlight` atenúa el resto.',
     spec: { type: 'line', theme: 'noche', title: 'Ñuble creció 60% en dos años, el triple que Biobío', subtitle: 'Ventas mensuales por región, millones de pesos', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', highlight: 'Ñuble' },
   },
+  {
+    id: 'familia-paletas',
+    name: 'Familias de paletas',
+    note: '`palette: "terracota"` usa una familia de colores que combinan, validada para daltonismo, con rampas a juego y variante oscura. `palettes: ["cdia", "bosque", "oceano"]` escribe varias alternativas en el mismo SVG: `data-palette` en la página elige cuál se ve.',
+    spec: { type: 'area', palette: 'terracota', palettes: ['terracota', 'bosque', 'oceano', 'atardecer', 'jardin', 'retro'], title: 'Ñuble pasó de 19% a 27% de las ventas del sur entre 2022 y 2025', subtitle: 'Participación mensual de cada región en las ventas, %', source: SRC, data: ventasMensuales, x: 'mes', y: 'ventas', series: 'region', stack: 'percent', curve: 'smooth' },
+  },
 ];

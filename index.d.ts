@@ -316,8 +316,10 @@ export interface Spec {
   /** Several color sets in one SVG, chosen by page CSS. The first is the default; the rest need `when` (a CSS selector of an ancestor). */
   skins?: Skin[] | null;
   theme?: ThemeInput;
-  /** Palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
-  palette?: string | string[];
+  /** A palette family ("bosque", "oceano", "terracota", "atardecer", "jardin", "retro": categorical + matching ramps, light and dark), a palette name ("okabe-ito", "tab10", "Set2"…, or any colormap, sampled) or a list of colors. */
+  palette?: PaletteFamily | (string & {}) | string[];
+  /** Alternative palettes in one SVG (names, or true for every family). The first (or `palette`) is the default; `data-palette="name"` on an ancestor switches. */
+  palettes?: Array<PaletteFamily | (string & {})> | boolean | null;
   ramp?: string | string[];
   hue?: string;
   facet?: string;
@@ -701,7 +703,7 @@ export declare function configure(options?: (Partial<Spec> & { fontHosts?: strin
 export declare function registerRenderer(type: string, render: (spec: Spec, theme: Theme) => string): void;
 export interface DashboardSpec {
   title?: string; subtitle?: string; source?: string; updated?: string; note?: string;
-  locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[];
+  locale?: Locale; theme?: Spec['theme']; font?: Spec['font']; palette?: string | string[]; palettes?: Spec['palettes'];
   data?: Table;
   kpis?: Array<{ label: string; value?: number; delta?: number; period?: string; previous?: number; display?: string; trend?: number[]; good?: 'up' | 'down'; format?: Format;
     field?: string; agg?: 'sum' | 'mean' | 'median' | 'min' | 'max' | 'count' | 'distinct' | 'ratio'; over?: string; scale?: number;
@@ -745,6 +747,13 @@ export declare function mapSprite(spec: Spec): string;
 /** Browser: downloads (once per URL) a GeoJSON or TopoJSON. */
 export declare function loadGeo(url: string): Promise<object>;
 export declare const palettes: Record<string, string[]>;
+/** Built-in palette families. */
+export type PaletteFamily = 'cdia' | 'terracota' | 'bosque' | 'oceano' | 'atardecer' | 'jardin' | 'retro';
+/** A palette family: validated categorical colors for light and dark surfaces, plus matching ramps. */
+export interface PaletteFamilyDef { label: { es: string; en: string }; colors: string[]; dark: string[]; sequential: string[]; sequentialDark: string[]; diverging: string[]; divergingDark: string[] }
+export declare const paletteFamilies: Record<PaletteFamily, PaletteFamilyDef> & Record<string, PaletteFamilyDef>;
+/** The colors of a family for a mode, or null if `name` is not a family. */
+export declare function familyColors(name: string, mode?: 'light' | 'dark'): { categorical: string[]; sequential: string[]; diverging: string[] } | null;
 export declare const ramps: Record<string, string[]>;
 export declare function themeFor(spec: Spec): Theme;
 export declare function timeValues(spec: Spec): (string | number)[];
