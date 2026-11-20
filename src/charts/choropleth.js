@@ -10,17 +10,16 @@ import { binnedScale } from '../colorscales.js';
 import { el, g, text, linkWrap, hitsAny } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ramp, textOn, colorMap, themeFor } from '../theme.js';
+import { ramp, textOn, colorMap, themeFor, halo } from '../theme.js';
 import { resolve } from '../base.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, aggregate, PlotError, push } from '../data.js';
 import { createFrame, hash } from '../frame.js';
-import { niceStep } from '../scale.js';
 import { quantile } from '../stats.js';
 import { getGeo } from '../geo/registry.js';
 import { ISO2, microstateFeatures } from '../geo/iso.js';
 import { mercator, equalEarth, planar, projections, makeProjection, fit, aspectOf, pathD, centroid, rings, polygonsOf, isPointGeom, isLineGeom } from '../geo/projection.js';
 import { dashedMatcher, hatcher, dashedAttrs, dashedDefaultLabel, DASH } from '../dashed.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 
 /** `pathPrecision` / `simplify`: trazos relativos, redondeados y simplificados en la pantalla (null: los de siempre). */
@@ -55,7 +54,7 @@ function featureIndex(features, featureKey) {
 
 const nameOf = (f, locale) => {
   const p = f.properties || {};
-  return (String(locale).startsWith('en') ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? f.id ?? '');
+  return (isEn(locale) ? p.nameEn || p.name : p.name || p.nameEn) || p.NAME || p.nombre || String(p.code ?? p.id ?? f.id ?? '');
 };
 
 // Propiedades que suelen traer el nombre en GeoJSON de otras fuentes (INE, IGM, Natural Earth, GADM, censos).
@@ -266,10 +265,8 @@ function prepare(spec, locale) {
     const f = idx.get(normKey(r[key]));
     if (!f) { if (r[key] !== undefined && r[key] !== null && r[key] !== '') unmatched.push(String(r[key])); continue; }
     if (!keyOf.has(f)) keyOf.set(f, String(r[key]));
-    if (!rowsOf.has(f)) rowsOf.set(f, []);
-    rowsOf.get(f).push(r);
-    if (!buckets.has(f)) buckets.set(f, []);
-    buckets.get(f).push(categorical ? r[valueF] : num(r[valueF]));
+    push(rowsOf, f, r);
+    push(buckets, f, categorical ? r[valueF] : num(r[valueF]));
   }
   // Con `microstates: true` sólo se dibujan los que tienen datos; con "all", todos.
   if (spec.microstates && spec.microstates !== 'all') features = features.filter((f) => !f.properties?.microstate || buckets.has(f));
@@ -454,7 +451,7 @@ function drawLayer(L, proj, theme, locale) {
 
 function drawMarkers(mk, proj, theme, fmt, placed) {
   const dots = [], labs = [];
-  const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' };
+  const hl = halo(theme);
   for (const m of [...mk.items].sort((a, b) => b.r - a.r)) {
     const [x, y] = proj([m.lon, m.lat]);
     m.x = x; m.y = y;
@@ -476,7 +473,7 @@ function drawMarkers(mk, proj, theme, fmt, placed) {
     const c = cands.find((k) => !hit(k.box));
     if (!c) continue;
     placed.push(c.box);
-    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...halo }));
+    labs.push(text(c.x, c.y, String(m.label), { fill: theme.ink, fontSize: 11, fontWeight: 600, textAnchor: c.anchor, ...hl }));
   }
   return [g({ class: 'pa-markers' }, dots), g({ class: 'pa-map-label pa-marker-labels', 'pointer-events': 'none' }, labs)];
 }
@@ -556,10 +553,10 @@ function mapLabels(items, theme, placedBoxes = [], bounds = null) {
     const box = [it.cx - w / 2 - 2, it.cy - 13, it.cx + w / 2 + 2, it.cy + 13];
     if (hitsAny(box, placedBoxes)) continue;
     placedBoxes.push(box);
-    const halo = { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round', textAnchor: 'middle' };
+    const hl = { ...halo(theme), textAnchor: 'middle' };
     out.push(g({ class: 'pa-map-label', 'pointer-events': 'none' }, [
-      text(it.cx, it.cy - 2, it.name, { fill: theme.ink, fontSize: 11, fontWeight: 600, ...halo }),
-      text(it.cx, it.cy + 11, it.label, { fill: theme.lede, fontSize: 11, ...halo }),
+      text(it.cx, it.cy - 2, it.name, { fill: theme.ink, fontSize: 11, fontWeight: 600, ...hl }),
+      text(it.cx, it.cy + 11, it.label, { fill: theme.lede, fontSize: 11, ...hl }),
     ]));
   }
   return out;
@@ -942,7 +939,7 @@ export function mapSprite(spec0) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SPRITE_SIDE} ${SPRITE_SIDE}"><defs>${out.join('')}</defs></svg>`;
 }
 
-const rankText = (r, n, locale) => (String(locale).startsWith('en') ? `#${r} of ${n}` : `${r}.º de ${n}`);
+const rankText = (r, n, locale) => (isEn(locale) ? `#${r} of ${n}` : `${r}.º de ${n}`);
 
 /** Capa del mapa con recorte: el navegador la escala y desplaza (zoom). */
 function zoomLayer(B, children) {
@@ -1215,7 +1212,7 @@ export function symbolMap(spec, theme) {
 }
 
 function describeExtras(markers, layers, locale, links) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let s = '';
   if (links?.items.length) s += en ? ` ${links.items.length} lines${links.label ? ` (${links.label})` : ''}.` : ` ${links.items.length} líneas${links.label ? ` (${links.label})` : ''}.`;
   if (links?.unmatched.length) s += en ? ` Lines with an unknown end: ${links.unmatched.slice(0, 6).join(', ')}.` : ` Líneas con un extremo desconocido: ${links.unmatched.slice(0, 6).join(', ')}.`;
@@ -1226,7 +1223,7 @@ function describeExtras(markers, layers, locale, links) {
 }
 
 function describeMap(m, fmt, locale, what) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   if (m.categorical) {
     const cnt = new Map();
     for (const v of m.values.values()) cnt.set(v, (cnt.get(v) || 0) + 1);

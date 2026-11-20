@@ -2956,8 +2956,22 @@
         }
       }
     },
+    "palettes": {
+      "description": "Alternative palettes baked into one SVG: a list of names (e.g. [\"cdia\", \"arcilla\", \"nordico\", \"tinta\"]) or true for every family. The first (or `palette`) is the default; the page switches with data-palette=\"nordico\" on any ancestor (toHTML adds buttons). Geometry is identical, only colors change.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
     "palette": {
-      "description": "Categorical colors: a name (\"cdia\", \"okabe-ito\", \"tableau10\", \"udec\"), a matplotlib qualitative palette (\"tab10\", \"tab20\", \"Set1\", \"Set2\", \"Set3\", \"Pastel1\", \"Pastel2\", \"Paired\", \"Accent\", \"Dark2\"), any colormap name (sampled, e.g. \"viridis\"), or a list of colors in fixed order.",
+      "description": "Categorical colors: a palette family that also brings matching ramps and a dark-mode variant (\"cdia\" default with 8 colors; minimal 5-color families \"arcilla\", \"nordico\", \"tinta\"), a name (\"okabe-ito\", \"tableau10\", \"udec\"), a matplotlib qualitative palette (\"tab10\", \"tab20\", \"Set1\", \"Set2\", \"Set3\", \"Pastel1\", \"Pastel2\", \"Paired\", \"Accent\", \"Dark2\"), any colormap name (sampled, e.g. \"viridis\"), or a list of colors in fixed order.",
       "anyOf": [
         {
           "type": "string"

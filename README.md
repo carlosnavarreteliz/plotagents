@@ -223,6 +223,18 @@ npx plotagents --tool                       # tool definition
 
 Both pass the lightness, chroma, colorblind (adjacent ΔE OKLab ≥ 8) and normal-vision (≥ 15) checks. The order is part of the validation. Typeface: Mozilla Text, falling back to `system-ui`.
 
+### Minimal palette families
+
+Three minimal families, five muted colors each, with a dark variant and matching sequential and diverging ramps: `arcilla`, `nordico` and `tinta`. They pass the same checks with a lower chroma floor (0.04), since they are muted on purpose.
+
+```js
+plot({ ...spec, palette: 'nordico' });                               // one family (dark variant under theme: 'noche')
+plot({ ...spec, palettes: ['cdia', 'arcilla', 'nordico', 'tinta'] }); // alternatives in one SVG
+// <html data-palette="tinta"> switches them; toHTML() adds the buttons
+```
+
+See [Themes](docs/themes.md#palette-families-minimal-alternatives).
+
 ## Development
 
 ```bash

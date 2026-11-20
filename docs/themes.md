@@ -6,6 +6,8 @@ A theme is a JSON object. Pass a name or an object; objects are deep-merged over
 plot({ ...spec, theme: 'noche' });                         // built-in dark theme
 plot({ ...spec, theme: { extends: 'noche', marks: { lineWidth: 3 } } });
 plot({ ...spec, palette: 'okabe-ito' });                    // shortcut for theme.categorical
+plot({ ...spec, palette: 'nordico' });                      // a palette family: matching ramps, light and dark
+plot({ ...spec, palettes: ['cdia', 'arcilla', 'tinta'] });  // alternatives in one SVG
 plot({ ...spec, ramp: 'teal' });                            // shortcut for theme.sequential
 ```
 
@@ -78,11 +80,46 @@ Both share the same eight hues, stepped separately for each surface and validate
 | `axes` | `{ inside, grid }` | `inside: true` puts y labels on their gridlines inside the plot (more width for data). |
 | `layout` | `{ padding }` | Outer margin for every chart with this theme (same forms as the `padding` option). Default 8 top and bottom, 0 at the sides. |
 
+## Palette families: minimal alternatives
+
+Besides the default palette (`cdia`), there are three minimal families: five muted colors each, a version for light and one for dark surfaces, and a matching sequential and diverging ramp. From the 6th series on, marks go gray ("Other"), and `lint` suggests `highlight` or `facet`.
+
+```js
+plot({ ...spec, palette: 'nordico' });                    // categorical + matching ramps
+plot({ ...spec, palette: 'nordico', theme: 'noche' });    // the same family, stepped for dark
+configure({ palette: 'arcilla' });                        // every chart
+```
+
+| Name | Family | Light (fixed order) |
+|---|---|---|
+| `cdia` | CDIA | `#3A47B8` `#D42A5E` `#E8A33D` `#1E9C89` `#7B5CD6` `#B5562E` `#5BA3E0` `#8E9A2F` |
+| `arcilla` | Clay | `#A45A40` `#979873` `#6E4C4C` `#699DB6` `#CEAD87` |
+| `nordico` | Nordic | `#345785` `#B98A8D` `#386E57` `#97B7D9` `#D1AB69` |
+| `tinta` | Ink | `#3B538A` `#919EBB` `#834A41` `#E1A675` `#6179AD` |
+
+They are muted on purpose, so they are validated with a chroma floor of 0.04 instead of 0.10 (`validatePalette(colors, { minChroma: 0.04 })`); everything else is the same check as the default palette, in their fixed order: lightness band, colorblind separation between neighbors (ΔE ≥ 11.7, target 8) and between every pair (≥ 7.2), and normal vision (ΔE ≥ 15). With little chroma, colors are told apart mostly by lightness.
+
+The family's ramps replace only the built-in ones: `ramp`, `colorScale` or a theme with its own `sequential` / `diverging` still win. Each name also works on its own: `theme: { categorical: 'nordico' }`, `'nordico-noche'` for the dark list, `ramp: 'nordico'` and `'nordico-diverging'`. `paletteFamilies` exports them all and `familyColors(name, mode)` returns `{ categorical, sequential, diverging }` for one mode.
+
+### Several alternatives in one SVG
+
+`palettes` bakes alternatives into the same file, so the reader (or your page) can switch the look without a new SVG:
+
+```js
+plot({ ...spec, palettes: ['cdia', 'arcilla', 'nordico', 'tinta'] });   // or palettes: true for every family
+```
+
+```html
+<html data-palette="nordico">   <!-- any ancestor works; without it, the first palette shows -->
+```
+
+The first name (or `palette`, when set) is the default, written in the attributes, so an `<img>` shows it. Every other one is a [skin](#skins-several-color-sets-in-one-svg) under `[data-palette="name"]`; heatmaps, maps and treemaps switch their ramps too. `toHTML()` adds a row of buttons that sets `data-palette` on the page, dashboards pass `palettes` to every chart, and `configure({ palettes })` turns it on everywhere (`palettes: null` turns it off for one chart).
+
 ## Named palettes and ramps
 
 | Palettes (`categorical`) | Ramps (`sequential` / `diverging`) |
 |---|---|
-| `cdia` (default), `cdia-noche`, `okabe-ito`, `tableau10`, `udec`, plus matplotlib's `tab10`, `tab20`, `tab20b`, `tab20c`, `Set1`, `Set2`, `Set3`, `Pastel1`, `Pastel2`, `Paired`, `Accent`, `Dark2` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust`, plus every matplotlib colormap (see [Color scales](colorscales.md)) |
+| `cdia` (default), `cdia-noche`, the families above (`arcilla`, `nordico`, `tinta`, and each `-noche`), `okabe-ito`, `tableau10`, `udec`, plus matplotlib's `tab10`, `tab20`, `tab20b`, `tab20c`, `Set1`, `Set2`, `Set3`, `Pastel1`, `Pastel2`, `Paired`, `Accent`, `Dark2` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust`, each family and `<family>-diverging`, plus every matplotlib colormap (see [Color scales](colorscales.md)) |
 
 ## Validating a palette
 

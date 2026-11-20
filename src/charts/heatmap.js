@@ -4,11 +4,13 @@ import { tipper } from '../tooltip.js';
 import { el, g, text, tip, linkWrap } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
-import { ramp, textOn, isColor, hexToRgb, rgbToHex } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize } from '../data.js';
+import { ramp, textOn, isColor, mix } from '../theme.js';
+import { extent } from '../stats.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, aggregate, humanize, push } from '../data.js';
 import { xLabels, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame, hash, SIZES } from '../frame.js';
 import { binnedScale } from '../colorscales.js';
+import { isEn } from '../i18n.js';
 
 const CS = 11.5; // cuerpo del título de la esquina
 
@@ -29,9 +31,8 @@ export function heatmap(spec, theme) {
   const cellRows = new Map();
   for (const r of data) {
     const k = String(r[x]) + '\u0000' + String(r[y]);
-    if (!cells.has(k)) { cells.set(k, []); cellRows.set(k, []); }
-    cells.get(k).push(num(r[valueF]));
-    cellRows.get(k).push(r);
+    push(cells, k, num(r[valueF]));
+    push(cellRows, k, r);
   }
   const TT = tipper(spec, data, locale);
   const val = (a, b) => { const v = cells.get(a + '\u0000' + b); return v ? aggregate(v, spec.aggregate || 'sum') : NaN; };
@@ -46,7 +47,7 @@ export function heatmap(spec, theme) {
   const finite = [...cells.keys()].map((k) => { const [a, b] = k.split('\u0000'); return val(a, b); }).filter(Number.isFinite);
   const all = apart.none ? finite.filter((v) => !outside(v))
     : [...cells.keys()].filter((k) => { const [a, b] = k.split('\u0000'); return !apart.of(a, b); }).map((k) => { const [a, b] = k.split('\u0000'); return val(a, b); }).filter((v) => Number.isFinite(v) && !outside(v));
-  const vmin = Math.min(...all), vmax = Math.max(...all);
+  const [vmin, vmax] = extent(all);
   const fmt = makeFormat(spec.format, locale, finite);
   const mid = spec.midpoint ?? (spec.diverging ? 0 : undefined);
   const stops = mid !== undefined ? theme.diverging : theme.sequential;
@@ -211,7 +212,7 @@ export function heatmap(spec, theme) {
     body.push(g({ class: 'pa-corner', 'data-tip': cut ? corner.join(' ') : undefined }, nodes));
   }
 
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let best = null;
   for (const a of xs) for (const b of ys) { const v = val(a, b); if (Number.isFinite(v) && (apart.none || !apart.of(a, b)) && (!best || v > best[2])) best = [a, b, v]; }
   const desc = en
@@ -287,6 +288,5 @@ function apartCells(spec, theme, x, y, cellRows) {
 /** El color que se ve con opacidad sobre el fondo (para elegir el texto encima). */
 function mixOn(c, bg, op) {
   if (!/^#|^rgb/i.test(String(c)) || !/^#|^rgb/i.test(String(bg))) return c;
-  const a = hexToRgb(c), b = hexToRgb(bg);
-  return rgbToHex(a.map((v, i) => v * op + b[i] * (1 - op)));
+  return mix(bg, c, op);
 }

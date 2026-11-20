@@ -5,11 +5,12 @@ import { tipper } from '../tooltip.js';
 import { el, g, text, tip, arcPath } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, textOn } from '../theme.js';
+import { colorMap, textOn, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { dashedMatcher, hatcher, dashedDefaultLabel, DASH } from '../dashed.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 const f = (n) => n.toFixed(2);
 
@@ -23,7 +24,7 @@ export function donut(spec, theme) {
   requireField(data, labelF, 'label');
   requireField(data, valueF, 'value');
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const isPie = spec.thickness !== undefined && spec.thickness >= 1;
   const half = !!spec.half;
 
@@ -141,15 +142,15 @@ export function donut(spec, theme) {
     for (const q of geo) {
       const fill = colorOf(q.s);
       const ink = isDashed(q.s) ? theme.ink : textOn(fill, theme);
-      const halo = isDashed(q.s) ? { stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' } : {};
+      const hl = isDashed(q.s) ? halo(theme) : {};
       const p = pct(q.s.v);
       const size = isPie ? 13 : 12;
       const chord = (q.a1 - q.a0) * rl;
       const x = cx + rl * Math.cos(q.mid), y = cy + rl * Math.sin(q.mid);
       const showName = mode === 'inside' && chord >= measure(q.s.k, 11.5) + 12 && (isPie || thick >= 40);
       if (chord >= measure(p, size, 600) + 10 && (isPie || thick >= size + 8)) {
-        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none', ...halo }));
-        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none', ...halo }));
+        body.push(text(x, y + (showName ? -2 : size * 0.35), p, { fill: ink, fontSize: size, fontWeight: 600, textAnchor: 'middle', pointerEvents: 'none', ...hl }));
+        if (showName) body.push(text(x, y + 13, q.s.k, { fill: ink, fontSize: 11.5, textAnchor: 'middle', opacity: 0.9, pointerEvents: 'none', ...hl }));
       }
     }
   }

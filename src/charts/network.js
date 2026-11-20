@@ -10,17 +10,16 @@
 // valor; `colors["a→b"]` fija una arista; `href` enlaza cada nodo; `stretch`
 // estira x e y por separado; `minRadius` pone un piso al radio.
 import { tipper } from '../tooltip.js';
-import { el, g, tip, esc, linkWrap } from '../svg.js';
+import { el, g, tip, esc, linkWrap, f1 } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { colorMap } from '../theme.js';
 import { ctx } from '../context.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError } from '../data.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, PlotError, pick, push } from '../data.js';
 import { createFrame } from '../frame.js';
+import { isEn } from '../i18n.js';
 
-const pick = (fields, cands) => cands.find((c) => fields.includes(c));
 const GOLDEN = 2.399963229728653;
-const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 /** Disposiciones disponibles (`layout`). `circle` es alias de `circular`. */
 export const NETWORK_LAYOUTS = ['force', 'circular', 'radial', 'concentric', 'clusters', 'tree', 'grid'];
@@ -404,7 +403,7 @@ function concentricLayout(nodes, { pin, gap }) {
 /** Un racimo por grupo (espiral de girasol), con los centros en una elipse. */
 function clustersLayout(nodes, groupsCount, { pin, gap, aspect }) {
   const by = new Map();
-  for (const n of [...nodes].sort(byGroup)) { if (n === pin) continue; if (!by.has(n.gi)) by.set(n.gi, []); by.get(n.gi).push(n); }
+  for (const n of [...nodes].sort(byGroup)) { if (n === pin) continue; push(by, n.gi, n); }
   const cl = [...by.entries()].map(([gi, list]) => {
     const c = 2 * Math.sqrt(list.reduce((a, n) => a + n.r * n.r, 0) / list.length) + gap;
     const offs = list.map((n, i) => [c * Math.sqrt(i) * Math.cos(i * GOLDEN), c * Math.sqrt(i) * Math.sin(i * GOLDEN)]);
@@ -502,7 +501,7 @@ const hitsBox = (a, b) => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > 
 
 export function network(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { edges, nodes, byId, valueField } = prepareNetwork(spec);
   if (!nodes.length) throw new PlotError('La red no tiene conexiones válidas.', 'Entrega filas con { from, to, value }.');
   const layout = layoutName(spec.layout);

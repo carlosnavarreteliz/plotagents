@@ -11,12 +11,13 @@
 import { el, g, text, tip, dotLayer, esc, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
-import { colorMap, ramp, hexToRgb, rgbToHex, mix } from '../theme.js';
-import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError } from '../data.js';
+import { colorMap, ramp, hexToRgb, mix } from '../theme.js';
+import { isHex } from '../rgb.js';
+import { ensureData, requireField, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
 import { createFrame, hash } from '../frame.js';
 import { getGeo, registeredGeo } from '../geo/registry.js';
 import { pathD, rings } from '../geo/projection.js';
-import { esEn as T } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
 const RAD = Math.PI / 180;
 const MAX_LAT = 85.0511287798;
@@ -122,7 +123,6 @@ export function tileUrl(p, z, x, y) {
 }
 
 // ── Color ───────────────────────────────────────────────────────────────────
-const isHex = (c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c || ''));
 
 /**
  * Filtro "muted": casi sin saturación y llevado a dos tonos del tema. Los
@@ -177,7 +177,6 @@ function worldGeo() {
 }
 
 // ── Etiquetas ───────────────────────────────────────────────────────────────
-const hits = hitsAny;
 
 /** Valor "redondo" para la leyenda de tamaños (1, 2, 2,5 o 5 × 10ⁿ, hacia abajo). */
 function niceDown(v) {
@@ -191,7 +190,7 @@ const deg = (v, pos, neg, locale) => `${formatNumber(Math.abs(v), 1, locale, tru
 /** Mapa de puntos (lon/lat) sobre teselas reales. */
 export function pointmap(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const dark = theme.mode === 'dark';
   const data = ensureData(spec);
   const fields = fieldsOf(data);
@@ -256,7 +255,7 @@ export function pointmap(spec, theme) {
   const fv = makeFormat(spec.valueFormat ?? spec.format, locale, values);
 
   // Color: por categoría (hue), por valor (rampa) o uno solo.
-  const hl = spec.highlight === undefined || spec.highlight === null ? null : new Set([].concat(spec.highlight).map(String));
+  const hl = highlightSet(spec);
   const focus = (p) => !hl || hl.has(p.name) || hl.has(p.k);
   let legend = [];
   let colorOf;
@@ -327,6 +326,7 @@ export function pointmap(spec, theme) {
   else if (spanX < tiny && spanY < tiny) z = 12;
   else z = Math.min(17, maxZ, Math.log2(Math.min(spanX > tiny ? availW / (spanX * TILE) : Infinity, spanY > tiny ? availH / (spanY * TILE) : Infinity)));
   z = Math.max(z, Math.log2(box.h / TILE), 0); // el mundo llena el alto: nunca hay franjas vacías arriba o abajo
+  if (!Number.isFinite(z)) z = 0; // un área de ancho negativo (padding enorme) daba NaN y el ciclo de teselas no terminaba
   const k = TILE * 2 ** z;
   // Centro: el de los datos (o `center`), en el centro del área útil; sin salirse del mundo en vertical.
   let mcx, mcy;
@@ -379,7 +379,7 @@ export function pointmap(spec, theme) {
       const tx0 = Math.floor(view.mx0 * N), tx1 = Math.floor(view.mx1 * N - tiny);
       const ty0 = Math.max(0, Math.floor(view.my0 * N)), ty1 = Math.min(N - 1, Math.floor(view.my1 * N - tiny));
       grid = { N, tx0, tx1, ty0, ty1 };
-      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || zt <= 0) break;
+      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES || !(zt > 0)) break;
       zt--;
     }
     const { N, tx0, tx1, ty0, ty1 } = grid;
@@ -486,7 +486,7 @@ export function pointmap(spec, theme) {
       const own = (b) => b[0] >= p.x - r * 0.7 - 0.01 && b[2] <= p.x + r * 0.7 + 0.01 && b[1] >= p.y - r * 0.7 - 0.01 && b[3] <= p.y + r * 0.7 + 0.01;
       const others = placed.filter((b) => !own(b));
       const inside = (b) => b[0] >= box.x + 2 && b[2] <= box.x + box.w - 2 && b[1] >= box.y + 2 && b[3] <= box.y + box.h - 2;
-      const c = cands.find((cd) => inside(cd.box) && !hits(cd.box, others));
+      const c = cands.find((cd) => inside(cd.box) && !hitsAny(cd.box, others));
       if (!c) continue;
       placed.push(c.box);
       const kids = [esc(p.name)];
@@ -512,7 +512,7 @@ export function pointmap(spec, theme) {
 }
 
 function describePointmap({ pts, n, provider, world, hueF, keys, sizeF, valueF, fs, fv, locale, tileCount }) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const W = en ? 'W' : 'O';
   const lats = pts.map((p) => p.lat), lons = pts.map((p) => (p.lon > 180 ? p.lon - 360 : p.lon));
   const la0 = lo(lats), la1 = hi(lats);
@@ -565,14 +565,16 @@ function toBase64(buf) {
 // Al incrustar teselas en un servidor solo se piden URLs https a hosts públicos:
 // nada de localhost, IPs privadas o de enlace local (metadatos de la nube).
 const PRIVATE_HOST = /^(localhost|.*\.localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|\[.*\])$/i;
+// Un host sin punto ("intranet", "metadata") es de la red interna; 0.x.x.x y los rangos reservados tampoco son públicos.
+const INTERNAL_HOST = /^([^.]+|0\.\d+\.\d+\.\d+|192\.0\.0\.\d+|198\.1[89]\.\d+\.\d+|2(2[4-9]|[3-5]\d)\.\d+\.\d+\.\d+)$/;
 const MAX_TILE_BYTES = 2 * 1024 * 1024, MAX_EMBED = 400;
 function tileUrlOk(u, hosts) {
   let url;
   try { url = new URL(u); } catch { return false; }
   if (url.protocol !== 'https:' || url.username || url.password) return false;
-  const h = url.hostname.toLowerCase();
+  const h = url.hostname.toLowerCase().replace(/\.+$/, ''); // "localhost." es localhost
   if (hosts) return hosts.some((x) => h === x || h.endsWith('.' + x));
-  return !PRIVATE_HOST.test(h) && !/^\d+$/.test(h);
+  return !PRIVATE_HOST.test(h) && !INTERNAL_HOST.test(h) && !/^\d+$/.test(h);
 }
 
 export async function embedTiles(svg, { fetch: fetchFn = globalThis.fetch, userAgent, concurrency = 6, hosts } = {}) {

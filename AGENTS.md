@@ -61,6 +61,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - `highlight: "Ñuble"`: emphasize one category or series and mute the rest. `exclude: ["Maule"]` drops entries and recomputes the chart; colors stay put.
 - `legend: "top" | "bottom" | "left" | "right" | false`: where the legend goes (top by default).
 - `colorScale: "viridis"`: any matplotlib colormap for heatmaps, maps and treemaps by change (`"RdBu"` diverges around 0; `_r` reverses; or a list of colors). `palette: "tab10"` for categories.
+- `palette: "nordico"`: a minimal palette family (`arcilla`, `nordico`, `tinta`: five muted colors, the 6th series on goes gray; `cdia` is the default): validated colors plus matching ramps, with a dark variant under `theme: "noche"`. `palettes: ["cdia", "arcilla", "nordico", "tinta"]` (or `true`) bakes the alternatives into one SVG; `data-palette="nordico"` on any ancestor switches, and `toHTML` adds the buttons.
 - `dashed` for what is not a firm number (estimates, projections, provisional figures): a name, a list, or a data field (`dashed: "provisional"`). Shapes keep their color, with a hatched fill and a dashed outline. On a time axis, `dashedFrom: 2025` dashes lines, areas and columns from that year on. **Always set `dashedLabel`** ("Projection", "Preliminary") so readers know what the hatching means.
 - `facet: "region"` (+ `columns`): one panel per value, on a shared scale.
 - `time: "year"`: one period at a time (the latest) with % change vs the previous one. Time controls are **off by default**: add `slider: true` only when the person asks to move through periods (buttons for ≤ 8 periods, a minimal slider otherwise; `"buttons"` / `"slider"` force one, `play: false` hides play). Treemaps can be colored by change with `colorBy: "change"`.
@@ -88,6 +89,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - Hard-to-tell custom palette → `lint` names the offending pair.
 - Numbers as text ("1.234,5", "12%", "$ 3.000") → parsed automatically.
 - Tens of thousands of points → drawn as batched paths, still fast.
+- Empty categories (`null`, `""`) → grouped as "(no data)" / "(sin dato)", never a "null" label.
 
 ## Dashboards
 

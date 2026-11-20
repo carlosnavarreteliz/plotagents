@@ -20,9 +20,18 @@ export function parseRgb(color) {
 const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgba?|hsla?)\([\d\s.,%/+-]+\)|[a-z]{3,20}|transparent|none)$/i;
 export const isColor = (c) => typeof c === 'string' && COLOR_RE.test(c.trim());
 
+/** ¿Es un hex de 3 o 6 dígitos (#abc, #aabbcc)? */
+export const isHex = (c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c ?? ''));
+
 // ── Matemática de color compartida (theme, palette, colorscales) ───────────
 /** Canal sRGB 0–255 → lineal 0–1. */
 export const lin = (c) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+
+/** Canal lineal 0–1 → sRGB 0–255 (codificación gamma). */
+export const gam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - 0.055);
+
+/** Acota a [0, 1]; lo no finito va a 0. */
+export const unit = (t) => Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
 
 /** [r, g, b] 0–255 → '#RRGGBB' (redondeado y acotado). */
 export function rgbToHex([r, g, b]) {
@@ -49,3 +58,6 @@ export function oklab([r, g, b]) {
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
   return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
 }
+
+/** Color (hex, rgb()…) → OKLab. */
+export const toOklab = (c) => oklab(parseRgb(c).map(lin));

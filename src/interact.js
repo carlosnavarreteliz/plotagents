@@ -200,7 +200,7 @@ export function attach(root) {
     }
     if (t && t.classList && t.classList.contains('pa-near')) {
       // Capa densa: busca el punto más cercano (≤ 14 px).
-      const pts = t.__near || (t.__near = JSON.parse(t.getAttribute('data-near')));
+      const pts = t.__near || (t.__near = (() => { const j = JSON.parse(t.getAttribute('data-near')); return Array.isArray(j) ? j : j.p.map((q) => [q[0], q[1], q[2], j.c[q[3]]]); })());
       const p = toSvg(ev);
       let best = null, bd = 196;
       for (const q of pts) { const d = (q[0] - p.x) ** 2 + (q[1] - p.y) ** 2; if (d < bd) { bd = d; best = q; } }

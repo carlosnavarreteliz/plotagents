@@ -8,13 +8,14 @@ import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, band, dateUnit } from '../scale.js';
 import { colorMap } from '../theme.js';
-import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet } from '../data.js';
-import { gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
-import { mean, sd, meanCI } from '../stats.js';
+import { ensureData, inferXY, requireField, melt, uniq, aggregate, num, fieldKind, humanize, highlightSet, push } from '../data.js';
+import { objList, gridY, gridX, xLabels, calendarSteps, ticksWidth, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
+import { mean, sd, meanCI, sum } from '../stats.js';
 import { createFrame, SIZES, hash } from '../frame.js';
 import { parseDate, formatDate } from '../format.js';
 import { dashedMatcher, fromTest, hatcher, dashedAttrs, dashedDefaultLabel } from '../dashed.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 export function prepareBar(spec) {
   let data = ensureData(spec);
@@ -45,8 +46,7 @@ export function prepareBar(spec) {
     const c = r[x] === null || r[x] === undefined ? '' : String(r[x]);
     const s = series ? String(r[series]) : '';
     const k = key(c, s);
-    if (!buckets.has(k)) buckets.set(k, []);
-    buckets.get(k).push(how === 'count' ? 1 : num(r[y]));
+    push(buckets, k, how === 'count' ? 1 : num(r[y]));
   }
   let cats = uniq(data.map((r) => (r[x] === null || r[x] === undefined ? '' : String(r[x]))));
   const seriesKeys = series ? uniq(data.map((r) => String(r[series]))) : [''];
@@ -70,7 +70,7 @@ export function prepareBar(spec) {
     if (errorbar === 'se') { const mm = mean(v), d = sd(v) / Math.sqrt(v.length); return [mm - d, mm + d]; }
     return meanCI(v, level);
   }));
-  const total = (c) => values.get(c).reduce((a, b) => a + b, 0);
+  const total = (c) => sum(values.get(c));
   if (kind === 'year' || kind === 'number') cats.sort((a, b) => num(a) - num(b));
   else if (kind === 'date') cats.sort((a, b) => parseDate(a) - parseDate(b));
   const nominal = kind === 'category';
@@ -81,13 +81,14 @@ export function prepareBar(spec) {
 
   // Cola larga → "Otros" (nunca 40 barras ilegibles).
   // Solo categorías nominales: los periodos (años, meses) nunca se pliegan en "Otros".
-  const top = spec.top ?? (nominal && cats.length > 40 ? 25 : null);
+  const topN = Math.floor(+spec.top); // top ≤ 0 o no numérico: se ignora
+  const top = topN >= 1 ? topN : spec.top === false ? null : nominal && cats.length > 40 ? 25 : null;
   let folded = 0;
   if (top && cats.length > top) {
     const keep = cats.slice(0, top);
     const rest = cats.slice(top);
     folded = rest.length;
-    const otherName = String(spec.locale || 'es').startsWith('en') ? 'Other' : 'Otros';
+    const otherName = isEn(spec.locale) ? 'Other' : 'Otros';
     values.set(otherName, seriesKeys.map((_, i) => rest.reduce((a, c) => a + values.get(c)[i], 0)));
     cats = [...keep, otherName];
   }
@@ -127,7 +128,7 @@ export function bar(spec, theme) {
   const fmt = pct && typeof spec.format !== 'function' ? makeFormat({ type: 'percent', scale: 100, decimals: spec.format?.decimals }, locale) : makeFormat(spec.format, locale, all);
   // `yFormat`: las marcas del eje de valores, aparte de `format` (rótulos y tooltip).
   const axisFmt = spec.yFormat !== undefined ? makeFormat(spec.yFormat, locale, all) : fmt;
-  const missingLabel = spec.missingLabel ?? (String(locale).startsWith('en') ? 'no data' : 'sin dato');
+  const missingLabel = spec.missingLabel ?? (isEn(locale) ? 'no data' : 'sin dato');
   const vf = (c, i, v) => (m.isMissing(c, i) ? missingLabel : fmt(v));
 
   // Orientación
@@ -178,7 +179,7 @@ export function bar(spec, theme) {
   const showLabels = labelMode === true || (labelMode === 'auto' && !m.errs.size && (!multi || stack) && cats.length <= (horizontal ? 40 : 16));
   const labelOf = (c) => (stack ? (pct ? '' : fmt(m.total(c))) : vf(c, 0, values.get(c)[0]));
   const valueLabelW = showLabels ? Math.max(...cats.map((c) => measure(labelOf(c), SIZES.label, 600))) : 0;
-  const hideAxis = spec.axis === false || (showLabels && !multi && !(spec.refLines || []).length && spec.axis !== true);
+  const hideAxis = spec.axis === false || (showLabels && !multi && !objList(spec.refLines).length && spec.axis !== true);
   const maxBar = spec.barWidth || (horizontal ? theme.marks?.barMaxH ?? 22 : theme.marks?.barMax ?? 36);
 
   let area = frame.layout(legend);
@@ -190,7 +191,7 @@ export function bar(spec, theme) {
   const runs = groupF ? groupRuns(cats, m.data, m.x, groupF) : null;
   const tickEvery = Math.max(1, Math.floor((spec.xTicks ?? spec.yTicks)?.every ?? 1));
   const body = [];
-  const refs = (spec.refLines || []).map((r) => ({ ...r, y: r.value ?? r.y }));
+  const refs = objList(spec.refLines).map((r) => ({ ...r, y: r.value ?? r.y }));
 
   if (!horizontal) {
     // ── Columnas
@@ -380,7 +381,8 @@ export function bar(spec, theme) {
     body.push(refLinesX(refs.map((r) => ({ ...r, x: r.y, y: undefined })), xS, inner, theme, fmt));
   }
 
-  const desc = describeBar(m, fmt, locale);
+  // En 100% apilado cada categoría suma 1: el total crudo (p. ej. 4) saldría como "400%".
+  const desc = describeBar(pct && typeof spec.format !== 'function' ? { ...m, total: () => 1 } : m, fmt, locale);
   return frame.finish(body, { desc, type: 'bar', defs: H.defs() });
 }
 
@@ -403,7 +405,7 @@ function textColor(fill, theme) {
 }
 
 export function describeBar(m, fmt, locale = 'es') {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const totals = m.cats.map((c) => [c, m.total(c)]);
   if (!totals.length) return '';
   const sorted = [...totals].sort((a, b) => b[1] - a[1]);

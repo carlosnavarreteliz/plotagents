@@ -12,6 +12,7 @@
 //   dashedFrom: "2025"                  → desde ese x en adelante (líneas, áreas y columnas)
 //   dashedLabel: "Estimación"           → entrada de leyenda y línea en el tooltip
 import { el } from './svg.js';
+import { isHex } from './rgb.js';
 import { ramp, readable } from './theme.js';
 import { esEn as T } from './i18n.js';
 
@@ -19,7 +20,7 @@ import { esEn as T } from './i18n.js';
 export const DASH = { outline: '4 2.5', line: '5 6', legend: '3.5 2.5' };
 
 const TRUE = /^(true|1|s[ií]|yes|y|x|✓)$/i;
-const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
+export const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && TRUE.test(v.trim()));
 
 /**
  * Devuelve una función (clave, serie?) → boolean, o null si no hay `dashed`.
@@ -51,7 +52,6 @@ export function fromTest(spec, toNum) {
   return Number.isFinite(t) ? (x) => Number.isFinite(x) && x >= t : null;
 }
 
-const isHex = (c) => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(c || ''));
 
 /**
  * Fábrica de rellenos rayados, uno por color. `fill(c)` da el url(#…) y

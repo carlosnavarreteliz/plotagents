@@ -5,18 +5,55 @@
 // Cada archivo de src/types/ registra sus tipos sobre esta base. Es la entrada
 // para un empaquetador sin tree-shaking: una isla del navegador que dibuja
 // líneas no carga redes, mapas ni tablas.
-import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts } from './theme.js';
+import { themeFor, colorMap, deepMerge, isColor, fontSpec, allowFontHosts, familyNames } from './theme.js';
 import { withContext } from './context.js';
-import { autoLocale } from './i18n.js';
-import { ensureData, PlotError, fieldKind, uniq, num, toRows } from './data.js';
+import { autoLocale, isEn } from './i18n.js';
+import { ensureData, PlotError, fieldKind, fieldsOf, uniq, num, toRows } from './data.js';
 import { facet } from './facet.js';
 import { parseDate } from './format.js';
 import { inferType, TYPES, normalizeType } from './infer.js';
 import { resolveColorScale } from './colorscales.js';
-import { expandSkins, mergeSkins, cssVars, plotWithVars } from './skins.js';
+import { expandSkins, mergeSkins, cssVars, plotWithVars, paletteAlternatives, palettesToSkins } from './skins.js';
 
 // Los tipos se registran al importarse (src/types/*.js); el núcleo los trae todos.
 export const RENDERERS = {};
+const MAX_LEVELS = 24;
+const MAX_CELLS = 250000; // celdas (x × y) de un mapa de calor; 3 000 filas con ids distintos pedían 9 millones y mataban el proceso
+
+/** Cruces de categorías que crecen como producto (mapa de calor, radar, barras por serie): se rechazan antes de dibujar. */
+function guardCells(s) {
+  if (!['heatmap', 'radar', 'bar'].includes(s.type) || !Array.isArray(s.data) || s.data.length < 500) return;
+  const str = (f) => (typeof f === 'string' ? f : undefined);
+  let a, b;
+  if (s.type === 'heatmap') {
+    const nonNum = fieldsOf(s.data).filter((f) => fieldKind(s.data, f) !== 'number');
+    a = str(s.x) ?? nonNum[0]; b = str(s.y) ?? nonNum.find((f) => f !== a);
+  } else if (s.type === 'radar') { a = str(s.axis) ?? str(s.x); b = str(s.hue) ?? str(s.series); } else { a = str(s.x); b = str(s.series) ?? str(s.hue) ?? str(s.group); }
+  if (!a || !b) return;
+  const A = new Set(), B = new Set();
+  for (const r of s.data) if (r && typeof r === 'object') { A.add(r[a]); B.add(r[b]); }
+  if (A.size * B.size > MAX_CELLS) throw new PlotError(`${A.size} × ${B.size} categorías (${a} × ${b}) son ${A.size * B.size} celdas: el máximo es ${MAX_CELLS}.`, 'Agrupa o filtra los datos (`top`, `exclude`) antes de dibujar.');
+}
+
+// Campos que nombran categorías (no medidas): una celda vacía no es una categoría "null".
+const CAT_ROLES = ['x', 'y', 'series', 'hue', 'label', 'axis', 'from', 'to', 'group', 'sex', 'age'];
+const KEEP_BLANKS = new Set(['table', 'gantt', 'choropleth', 'symbolmap', 'pointmap', 'flowchart', 'kpi', 'dendrogram', 'network', 'scatter', 'bubble', 'regplot', 'residplot', 'jointplot', 'pairplot', 'corr', 'wordcloud']);
+
+/** Filas con null/undefined/'' en un campo de categoría van juntas en "(sin dato)" (como en `facet`). */
+function blankCategories(s) {
+  if (KEEP_BLANKS.has(s.type) || s.data == null) return;
+  // Flujos: `from`/`to` (o source/target) se infieren por nombre aunque el spec no los diga.
+  const flow = s.type === 'sankey' || s.type === 'chord' ? ['from', 'to', 'source', 'target'] : [];
+  const fields = new Set([...CAT_ROLES.map((k) => s[k]), ...flow, ...(Array.isArray(s.path) ? s.path : [])].filter((f) => typeof f === 'string'));
+  if (!fields.size) return;
+  let rows;
+  try { rows = ensureData(s); } catch { return; } // el renderer dará el error con su pista
+  const blank = (v) => v === null || v === undefined || v === '';
+  const hit = [...fields].filter((f) => rows.some((r) => blank(r[f])) && rows.some((r) => f in r) && fieldKind(rows, f) === 'category');
+  if (!hit.length) return;
+  const label = isEn(s.locale) ? '(no data)' : '(sin dato)';
+  s.data = rows.map((r) => (hit.some((f) => blank(r[f])) ? { ...r, ...Object.fromEntries(hit.filter((f) => blank(r[f])).map((f) => [f, label])) } : r));
+}
 
 /** Normaliza el spec: tipo inferido y datos como filas. */
 export function resolve(spec = {}) {
@@ -44,6 +81,10 @@ export function resolve(spec = {}) {
     throw new PlotError(`Tipo de gráfico "${s.type}" no soportado.`, `Usa uno de: ${TYPES.join(', ')} o "auto".`);
   }
   s.type = type;
+  guardCells(s);
+  blankCategories(s);
+  // Una jerarquía de miles de niveles agota la pila o la memoria; nadie lee más de unos pocos.
+  if (Array.isArray(s.path) && s.path.length > MAX_LEVELS) throw new PlotError(`\`path\` tiene ${s.path.length} niveles: el máximo es ${MAX_LEVELS}.`, 'Deja los niveles que se leen (2–4) o agrupa los datos antes.');
   // Idioma: `locale: "auto"` (y las tablas sin `locale`) lo reconocen del texto del spec.
   if (s.locale === 'auto' || (s.locale === undefined && type === 'table')) {
     s.locale = autoLocale(s, Array.isArray(s.data) ? s.data : []);
@@ -74,6 +115,12 @@ export function plot(spec) {
     const full = { ...DEFAULTS, ...spec };
     const vars = cssVars(full);
     if (vars.size) return plotWithVars(full, vars, plot);
+  }
+  // Paletas alternativas: se vuelven pieles (una por paleta, bajo [data-palette]).
+  const alts = spec && typeof spec === 'object' ? paletteAlternatives({ ...DEFAULTS, ...spec }, familyNames()) : null;
+  if (alts && alts.length > 1) {
+    const { palettes: _p, ...rest } = spec;
+    return plot({ ...rest, palettes: null, palette: alts[0], skins: palettesToSkins({ ...DEFAULTS, ...spec }, alts) });
   }
   const skins = spec && (spec.skins !== undefined ? spec.skins : DEFAULTS.skins);
   if (Array.isArray(skins) && skins.length) {
@@ -106,7 +153,7 @@ export function configure(options) {
   if (options) {
     const { fontHosts, ...rest } = options;
     if (fontHosts) allowFontHosts(fontHosts);
-    Object.assign(DEFAULTS, rest);
+    for (const k of Object.keys(rest)) if (k !== '__proto__') DEFAULTS[k] = rest[k];
   }
   return { ...DEFAULTS };
 }
@@ -219,7 +266,7 @@ export function registerRenderer(type, fn) {
 }
 
 export { withDefaults };
-export { registerTheme, themeFor, themes, palettes, ramps } from './theme.js';
+export { registerTheme, themeFor, themes, palettes, ramps, paletteFamilies, familyColors } from './theme.js';
 export { makeFormat, formatNumber, formatCompact } from './format.js';
 export { PlotError } from './data.js';
 export { TYPES };

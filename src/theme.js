@@ -15,7 +15,8 @@ export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
-import { parseRgb, isColor, lin, rgbToHex, luminance, contrast } from './rgb.js';
+import { parseRgb, isColor, lin, gam, unit, rgbToHex, luminance, contrast } from './rgb.js';
+import { FAMILIES } from './families.js';
 export { parseRgb };
 
 // Tokens no cromáticos, compartidos por ambos temas y configurables por JSON.
@@ -91,6 +92,21 @@ export const palettes = {
   tableau10: ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC'],
   udec: ['#223C6A', '#E69B0A', '#D21428', '#5C7DB8'],
 };
+
+// Familias: la de fábrica (cdia) y las alternativas de families.js. Cada una
+// trae su categórica para claro y oscuro y sus rampas a juego; `palette:
+// "nordico"` las usa todas, según el modo del tema.
+export const paletteFamilies = {
+  cdia: {
+    label: { es: 'CDIA', en: 'CDIA' },
+    colors: papel.categorical, dark: noche.categorical,
+    sequential: papel.sequential, sequentialDark: noche.sequential,
+    diverging: papel.diverging, divergingDark: noche.diverging,
+  },
+  ...FAMILIES,
+};
+for (const [k, f] of Object.entries(FAMILIES)) { palettes[k] = f.colors; palettes[k + '-noche'] = f.dark; }
+
 // Rampas secuenciales (un tono, claro → oscuro) y divergentes.
 export const ramps = {
   indigo: papel.sequential,
@@ -100,6 +116,23 @@ export const ramps = {
   'indigo-magenta': papel.diverging,
   'teal-rust': ['#0F5A4F', '#1E9C89', '#8CD3C6', '#ECEBE6', '#E8B49A', '#C46A3F', '#7F3A1B'],
 };
+for (const [k, f] of Object.entries(FAMILIES)) { ramps[k] = f.sequential; ramps[k + '-diverging'] = f.diverging; }
+
+const ownFamily = (name) => (typeof name === 'string' && Object.prototype.hasOwnProperty.call(paletteFamilies, name) ? paletteFamilies[name] : null);
+
+/** Nombres de las familias de paletas (la de fábrica primero). */
+export const familyNames = () => Object.keys(paletteFamilies);
+
+/**
+ * Los colores de una familia para un modo: { categorical, sequential, diverging }.
+ * null si el nombre no es una familia.
+ */
+export function familyColors(name, mode = 'light') {
+  const f = ownFamily(name);
+  if (!f) return null;
+  const dark = mode === 'dark';
+  return { categorical: dark ? f.dark : f.colors, sequential: dark ? f.sequentialDark : f.sequential, diverging: dark ? f.divergingDark : f.diverging };
+}
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
@@ -165,7 +198,7 @@ function sanitize(theme, base, trusted = false) {
 
 /** Paleta categórica por nombre: propias, matplotlib cualitativas o muestras de una colormap. */
 function namedPalette(name, n = 8) {
-  if (palettes[name]) return palettes[name];
+  if (own(palettes, name)) return palettes[name]; // own(): "constructor" no es una paleta
   const cs = resolveColorScale(name);
   if (!cs) return null;
   if (cs.kind === 'qualitative') return cs.stops;
@@ -175,7 +208,7 @@ function namedPalette(name, n = 8) {
 
 /** Rampa secuencial/divergente por nombre: propias o cualquier colormap. */
 function namedRamp(name) {
-  if (ramps[name]) return ramps[name];
+  if (own(ramps, name)) return ramps[name];
   const cs = resolveColorScale(name);
   return cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
 }
@@ -216,7 +249,15 @@ export function getTheme(t, trusted = false) {
 /** Tema efectivo de un spec: `theme` + atajos `palette`, `ramp` y `colorScale`. */
 export function themeFor(spec = {}) {
   let t = getTheme(spec.theme);
-  if (spec.palette) {
+  const fam = familyColors(spec.palette, t.mode);
+  if (fam) {
+    // Una familia trae categórica y rampas a juego. Las rampas sólo reemplazan
+    // a las de fábrica: las de un tema propio, `ramp` y `colorScale` mandan.
+    const stock = (k) => t[k] === papel[k] || t[k] === noche[k];
+    t = { ...t, categorical: fam.categorical };
+    if (stock('sequential')) t.sequential = fam.sequential;
+    if (stock('diverging')) t.diverging = fam.diverging;
+  } else if (spec.palette) {
     const p = Array.isArray(spec.palette) ? spec.palette.filter(isColor) : namedPalette(spec.palette);
     if (p && p.length) t = { ...t, categorical: p };
   }
@@ -248,8 +289,6 @@ export function mix(a, b, t) {
   return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
 }
 
-const delin = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
-
 
 /** Texto blanco o tinta según qué contraste mejor sobre el relleno. */
 export function textOn(fill, theme) {
@@ -259,13 +298,13 @@ export function textOn(fill, theme) {
 
 /** Interpola en RGB lineal a lo largo de una rampa de colores. t ∈ [0,1]. */
 export function ramp(stops, t) {
-  t = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  t = unit(t);
   const p = t * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(p));
   const f = p - i;
   const a = hexToRgb(stops[i]).map(lin);
   const b = hexToRgb(stops[i + 1]).map(lin);
-  return rgbToHex(a.map((v, k) => delin(v + (b[k] - v) * f)));
+  return rgbToHex(a.map((v, k) => gam(v + (b[k] - v) * f)));
 }
 
 /**

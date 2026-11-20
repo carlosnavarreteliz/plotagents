@@ -41,8 +41,14 @@ export function measure(str, size = 12, weight = 400) {
 export function truncate(str, max, size = 12, weight = 400) {
   str = String(str ?? '');
   if (measure(str, size, weight) <= max) return str;
-  let s = str;
-  while (s.length > 1 && measure(s + '…', size, weight) > max) s = s.slice(0, -1);
+  // Un solo recorrido (el ancho es aditivo): cortar de a una letra desde el final era cuadrático y un texto de 100 000 letras tardaba minutos.
+  const room = max - measure('…', size, weight);
+  let s = '', w = 0;
+  for (const c of str) {
+    const cw = measure(c, size, weight);
+    if (s && w + cw > room) break;
+    s += c; w += cw;
+  }
   return s.trimEnd() + '…';
 }
 

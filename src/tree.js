@@ -1,5 +1,6 @@
 // Árboles binarios de agrupamiento: { leaf } en las hojas, { left, right, h } en
 // los nodos. Los usan el clustermap (corr) y el dendrograma.
+import { push } from './data.js';
 
 /** Hojas en el orden en que se dibujan. */
 export const leaves = (node) => (node.left ? [...leaves(node.left), ...leaves(node.right)] : [node.leaf]);
@@ -23,8 +24,7 @@ export function elbows(tree, leafPos, hPos, { horizontal = false, colorOf = () =
       ? `M${f(hl)},${f(pl)}H${f(hh)}V${f(pr)}H${f(hr)}`
       : `M${f(pl)},${f(hl)}V${f(hh)}H${f(pr)}V${f(hr)}`;
     const c = colorOf(nd);
-    if (!byColor.has(c)) byColor.set(c, []);
-    byColor.get(c).push(d);
+    push(byColor, c, d);
     return [(pl + pr) / 2, hh];
   };
   walk(tree);
@@ -77,8 +77,7 @@ export function fromParents(rows, idF = 'id', parentF = 'parent', hF = 'height')
     const p = r[parentF];
     if (p !== null && p !== undefined && p !== '') {
       const k = String(p);
-      if (!kids.has(k)) kids.set(k, []);
-      kids.get(k).push(id);
+      push(kids, k, id);
     }
   }
   const known = new Set(ids);

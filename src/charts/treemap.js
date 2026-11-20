@@ -3,7 +3,7 @@
 // más profundos, encabezados de grupo cuando hay espacio y etiquetas que solo
 // aparecen si caben. Drill-down: data-drill + spec.focus.
 import { tipper } from '../tooltip.js';
-import { el, g, text, tip, esc, linkWrap } from '../svg.js';
+import { el, g, text, tip, linkWrap } from '../svg.js';
 import { measure, wrap, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { textOn, ramp } from '../theme.js';
@@ -13,6 +13,7 @@ import { createFrame } from '../frame.js';
 import { binnedScale } from '../colorscales.js';
 import { ctx } from '../context.js';
 import { buildHierarchy, focusNode, assignColors, shareFmt, breadcrumb, height, SEP } from '../hierarchy.js';
+import { isEn } from '../i18n.js';
 
 /** Algoritmo squarified (Bruls, Huizing & van Wijk, 2000). */
 export function squarify(items, x, y, w, h) {
@@ -57,10 +58,9 @@ const GAP = (d) => (d <= 1 ? 4 : d === 2 ? 2 : 1);
 
 export function treemap(spec, theme) {
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const { root, fields, valueField } = buildHierarchy(spec);
   const focus = focusNode(root, spec.focus);
-  const levels = height(focus);
   // El color sigue a la entidad: se asigna sobre el árbol completo, así al
   // entrar a un grupo sus elementos conservan la familia de color del padre.
   const single = height(root) <= 1 && spec.colorBy !== 'label';
@@ -94,7 +94,6 @@ export function treemap(spec, theme) {
   const changeColor = (c) => (c === null ? theme.tint : bins ? bins.color(c) : ramp(divRamp, 0.5 + Math.max(-1, Math.min(1, c / cMax)) / 2));
 
   // Leyenda del primer nivel visible, con su participación: la leyenda también informa.
-  const top = focus.children;
   let legend = [];
   if (byChange && spec.legend !== false) {
     const lab = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatNumber(Math.abs(v) * 100, 0, locale)}%`;

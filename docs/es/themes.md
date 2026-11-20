@@ -6,6 +6,8 @@ Un tema es un objeto JSON. Pasa un nombre o un objeto; los objetos se combinan e
 plot({ ...spec, theme: 'noche' });                         // built-in dark theme
 plot({ ...spec, theme: { extends: 'noche', marks: { lineWidth: 3 } } });
 plot({ ...spec, palette: 'okabe-ito' });                    // shortcut for theme.categorical
+plot({ ...spec, palette: 'nordico' });                      // una familia: rampas a juego, claro y oscuro
+plot({ ...spec, palettes: ['cdia', 'arcilla', 'tinta'] });  // alternativas en un SVG
 plot({ ...spec, ramp: 'teal' });                            // shortcut for theme.sequential
 ```
 
@@ -78,11 +80,46 @@ Ambos comparten los mismos ocho tonos, escalonados por separado para cada superf
 | `axes` | `{ inside, grid }` | `inside: true` pone las etiquetas de y sobre sus líneas de cuadrícula, dentro del gráfico (más ancho para los datos). |
 | `layout` | `{ padding }` | Margen exterior de todos los gráficos con este tema (mismas formas que la opción `padding`). Por defecto 8 arriba y abajo, 0 a los lados. |
 
+## Familias de paletas minimalistas
+
+Además de la paleta de fábrica (`cdia`) hay tres familias minimalistas: cinco colores apagados cada una, una versión para fondo claro y otra para fondo oscuro, y una rampa secuencial y una divergente a juego. Desde la 6ª serie, las marcas van en gris ("Otros") y `lint` sugiere `highlight` o `facet`.
+
+```js
+plot({ ...spec, palette: 'nordico' });                    // categórica + rampas a juego
+plot({ ...spec, palette: 'nordico', theme: 'noche' });    // la misma familia, escalonada para fondo oscuro
+configure({ palette: 'arcilla' });                        // todos los gráficos
+```
+
+| Nombre | Familia | Claro (orden fijo) |
+|---|---|---|
+| `cdia` | CDIA | `#3A47B8` `#D42A5E` `#E8A33D` `#1E9C89` `#7B5CD6` `#B5562E` `#5BA3E0` `#8E9A2F` |
+| `arcilla` | Arcilla | `#A45A40` `#979873` `#6E4C4C` `#699DB6` `#CEAD87` |
+| `nordico` | Nórdico | `#345785` `#B98A8D` `#386E57` `#97B7D9` `#D1AB69` |
+| `tinta` | Tinta | `#3B538A` `#919EBB` `#834A41` `#E1A675` `#6179AD` |
+
+Son apagadas a propósito, así que se validan con un piso de croma de 0,04 en vez de 0,10 (`validatePalette(colores, { minChroma: 0.04 })`); lo demás es la misma prueba que la paleta de fábrica, en su orden fijo: banda de luminosidad, separación para daltonismo entre vecinos (ΔE ≥ 11,7, meta 8) y entre todos los pares (≥ 7,2), y visión normal (ΔE ≥ 15). Con poco croma, los colores se distinguen sobre todo por luminosidad.
+
+Las rampas de la familia sólo reemplazan a las de fábrica: `ramp`, `colorScale` o un tema con su propia `sequential` / `diverging` siguen mandando. Cada nombre sirve también suelto: `theme: { categorical: 'nordico' }`, `'nordico-noche'` para la lista oscura, `ramp: 'nordico'` y `'nordico-diverging'`. `paletteFamilies` las exporta todas y `familyColors(nombre, modo)` devuelve `{ categorical, sequential, diverging }` para un modo.
+
+### Varias alternativas en un SVG
+
+`palettes` escribe las alternativas en el mismo archivo, para que el lector (o tu página) cambie el aspecto sin un SVG nuevo:
+
+```js
+plot({ ...spec, palettes: ['cdia', 'arcilla', 'nordico', 'tinta'] });   // o palettes: true para todas las familias
+```
+
+```html
+<html data-palette="nordico">   <!-- sirve cualquier ancestro; sin el atributo se ve la primera -->
+```
+
+El primer nombre (o `palette`, si viene) es la de por defecto y va en los atributos, así que un `<img>` la muestra. Cada una de las otras es una [piel](#pieles-varios-juegos-de-colores-en-un-svg) bajo `[data-palette="nombre"]`; los mapas de calor, mapas y treemaps cambian también sus rampas. `toHTML()` agrega una fila de botones que pone `data-palette` en la página, los dashboards pasan `palettes` a cada gráfico y `configure({ palettes })` lo activa en todos (`palettes: null` lo apaga en uno).
+
 ## Paletas y rampas con nombre
 
 | Paletas (`categorical`) | Rampas (`sequential` / `diverging`) |
 |---|---|
-| `cdia` (por defecto), `cdia-noche`, `okabe-ito`, `tableau10`, `udec`, más las de matplotlib `tab10`, `tab20`, `tab20b`, `tab20c`, `Set1`, `Set2`, `Set3`, `Pastel1`, `Pastel2`, `Paired`, `Accent`, `Dark2` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust`, más todos los mapas de colores de matplotlib (consulta [Escalas de color](colorscales.md)) |
+| `cdia` (por defecto), `cdia-noche`, las familias de arriba (`arcilla`, `nordico`, `tinta`, y cada `-noche`), `okabe-ito`, `tableau10`, `udec`, más las de matplotlib `tab10`, `tab20`, `tab20b`, `tab20c`, `Set1`, `Set2`, `Set3`, `Pastel1`, `Pastel2`, `Paired`, `Accent`, `Dark2` | `indigo`, `magenta`, `teal`, `amber`, `indigo-magenta`, `teal-rust`, cada familia y `<familia>-diverging`, más todos los mapas de colores de matplotlib (consulta [Escalas de color](colorscales.md)) |
 
 ## Validar una paleta
 
