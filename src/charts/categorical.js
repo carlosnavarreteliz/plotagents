@@ -2,20 +2,19 @@
 // puntos con dispersión (strip), enjambre (swarm) y estimación con
 // intervalo (point). Categorías en un eje, valores numéricos en el otro;
 // `hue` (alias de `series`) separa grupos por color.
-import { el, g, text, tip, dotLayer } from '../svg.js';
+import { el, g, text, tip, dotLayer, polyline } from '../svg.js';
 import { measure, truncate } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, band } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
-import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
+import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet, push } from '../data.js';
 import { gridX, xLabels, yAxisMargin, yAxisTop, yGrid, yTickLabels, refLinesY, refLinesX, groupRuns, groupBandX, groupBandY, groupBandWidth, GROUP_BAND } from '../axes.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { tipper } from '../tooltip.js';
 import { fiveNumber, kde, scottBandwidth, meanCI, mean, median, sd, sum, finite, quantile, extent } from '../stats.js';
-import { esEn } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
-const T = (en, es, locale) => esEn(locale, es, en);
 
 /** Pseudoaleatorio determinista en [0,1) a partir de un entero. */
 function rand(i) {
@@ -55,9 +54,8 @@ function prepare(spec) {
     const v = num(r[val]);
     if (!Number.isFinite(v)) continue;
     const k = catOf(r) + '\u0000' + (hue ? String(r[hue]) : '');
-    if (!groups.has(k)) { groups.set(k, []); groupRows.set(k, []); }
-    groups.get(k).push(v);
-    groupRows.get(k).push(r);
+    push(groups, k, v);
+    push(groupRows, k, r);
   }
   const get = (c, h) => groups.get(c + '\u0000' + h) || [];
   // Las filas detrás de cada valor, en el mismo orden (para el tooltip de cada punto).
@@ -65,7 +63,7 @@ function prepare(spec) {
   const all = [...groups.values()].flat();
   // Sin un solo número no hay eje de valores que dibujar.
   if (!all.length) {
-    const en = String(spec.locale || 'es').startsWith('en');
+    const en = isEn(spec.locale);
     throw en
       ? new PlotError(`No numeric values in \`${val}\`.`, `\`${val}\` must hold numbers (empty, null and non-finite values are skipped). To count rows per category, use \`type: "countplot"\`.`)
       : new PlotError(`No hay valores numéricos en \`${val}\`.`, `\`${val}\` debe tener números (se omiten vacíos, nulos y valores no finitos). Para contar filas por categoría usa \`type: "countplot"\`.`);
@@ -202,8 +200,6 @@ function autoHorizontal(spec, m) {
 }
 
 const finish = (s, desc, type) => s.frame.finish([...s.body.pre, ...s.body.marks, ...s.body.post], { desc, type });
-// Con un bucle: `Math.min(...vs)` desborda la pila con ~150 mil valores.
-const extentOf = extent;
 
 /** Segmento (línea) en coordenadas de categoría/valor. */
 function seg(s, cpos0, v0, cpos1, v1, attrs) {
@@ -242,7 +238,7 @@ export function box(spec, theme) {
     stats.set(c + '\u0000' + h, f);
     ext.push(f.min, f.max);
   }
-  const s = setup(spec, theme, m, extentOf(ext), { type: 'box' });
+  const s = setup(spec, theme, m, extent(ext), { type: 'box' });
   const lw = theme.marks?.lineWidth ?? 2;
   m.cats.forEach((c) => m.hues.forEach((h, hi2) => {
     const f = stats.get(c + '\u0000' + h);
@@ -259,9 +255,9 @@ export function box(spec, theme) {
     parts.push(seg(s, cpos - w / 2 + 0.75, f.median, cpos + w / 2 - 0.75, f.median, { stroke: color, strokeWidth: Math.max(2.5, lw), strokeLinecap: 'butt' }));
     if (spec.showMeans || spec.mean) { const [x, y] = s.P(cpos, f.mean); parts.push(el('path', { d: `M${x},${y - 4}L${x + 4},${y}L${x},${y + 4}L${x - 4},${y}Z`, fill: theme.surface, stroke: color, strokeWidth: 1.5 })); }
     if (!spec.points) for (const v of f.outliers) { const [x, y] = s.P(cpos, v); parts.push(el('circle', { cx: x, cy: y, r: 2.75, fill: 'none', stroke: color, strokeWidth: 1.25 })); }
-    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${f.n}`, `${T('Median', 'Mediana', s.locale)}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T('Whiskers', 'Bigotes', s.locale)}: ${s.fmt(f.whiskerLo)} – ${s.fmt(f.whiskerHi)}`, f.outliers.length ? `${T('Outliers', 'Atípicos', s.locale)}: ${f.outliers.length}` : '') }, parts));
+    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${f.n}`, `${T(s.locale, 'Mediana', 'Median')}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T(s.locale, 'Bigotes', 'Whiskers')}: ${s.fmt(f.whiskerLo)} – ${s.fmt(f.whiskerHi)}`, f.outliers.length ? `${T(s.locale, 'Atípicos', 'Outliers')}: ${f.outliers.length}` : '') }, parts));
   }));
-  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T('Box plot', 'Diagrama de caja', s.locale), T('median', 'mediana', s.locale)), 'box');
+  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T(s.locale, 'Diagrama de caja', 'Box plot'), T(s.locale, 'mediana', 'median')), 'box');
 }
 
 // ── Violín ─────────────────────────────────────────────────────────────────
@@ -292,7 +288,7 @@ export function violin(spec, theme) {
     dens.set(c + '\u0000' + h, { d, f: fiveNumber(vs), n: vs.length, max: Math.max(...d.map((p) => p[1])) });
     ext.push(inv(mn - cut * bw), inv(mx + cut * bw));
   }
-  const s = setup(spec, theme, m, extentOf(ext), { type: 'violin', dodge: !split });
+  const s = setup(spec, theme, m, extent(ext), { type: 'violin', dodge: !split });
   const scaleMode = ['width', 'count', 'area'].includes(spec.scale) ? spec.scale : spec.densityNorm ?? 'width';
   const gMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.max), 0);
   const nMax = Math.max(...[...dens.values()].filter((x) => !x.single).map((x) => x.n), 1);
@@ -315,7 +311,7 @@ export function violin(spec, theme) {
         seg(s, cpos - (side === 1 ? 0 : w), v, cpos + (side === -1 ? 0 : w), v, { stroke: color, strokeWidth: 2, strokeLinecap: 'round' }),
         el('circle', { cx: x, cy: y, r: 3.5, fill: color, stroke: theme.surface, strokeWidth: 1.5 }),
       ];
-      s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T('Value', 'Valor', s.locale)}: ${s.fmt(v)}`) }, parts));
+      s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T(s.locale, 'Valor', 'Value')}: ${s.fmt(v)}`) }, parts));
       return;
     }
     const right = D.d.map(([v, d]) => s.P(cpos + (side === -1 ? 0 : wOf(d)), v));
@@ -339,16 +335,16 @@ export function violin(spec, theme) {
     } else if (inner === 'points' || inner === 'stick') {
       for (const v of m.get(c, h)) parts.push(seg(s, cpos - 3, v, cpos + 3, v, { stroke: theme.ink, strokeOpacity: 0.55, strokeWidth: 1 }));
     }
-    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T('Median', 'Mediana', s.locale)}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T('Range', 'Rango', s.locale)}: ${s.fmt(f.min)} – ${s.fmt(f.max)}`) }, parts));
+    s.body.marks.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `n = ${D.n}`, `${T(s.locale, 'Mediana', 'Median')}: ${s.fmt(f.median)}`, `Q1–Q3: ${s.fmt(f.q1)} – ${s.fmt(f.q3)}`, `${T(s.locale, 'Rango', 'Range')}: ${s.fmt(f.min)} – ${s.fmt(f.max)}`) }, parts));
   }));
-  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T('Violin plot', 'Gráfico de violín', s.locale), T('median', 'mediana', s.locale)), 'violin');
+  return finish(s, describeGroups(m, (vs) => median(vs), s.fmt, s.locale, T(s.locale, 'Gráfico de violín', 'Violin plot'), T(s.locale, 'mediana', 'median')), 'violin');
 }
 
 // ── Puntos con dispersión (strip) ──────────────────────────────────────────
 
 export function strip(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'strip', dodge: spec.dodge ?? true });
+  const s = setup(spec, theme, m, extent(m.all), { type: 'strip', dodge: spec.dodge ?? true });
   const n = m.all.length;
   const r = spec.radius ?? (n > 600 ? 2 : n > 200 ? 2.75 : (theme.marks?.pointRadius ?? 4) - 0.5);
   const jitter = spec.jitter ?? 0.6;
@@ -371,7 +367,7 @@ export function strip(spec, theme) {
     }
     s.body.marks.push(g({}, parts));
   }));
-  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T('Strip plot', 'Gráfico de puntos por categoría', s.locale), T('mean', 'promedio', s.locale)), 'strip');
+  return finish(s, describeGroups(m, mean, s.fmt, s.locale, T(s.locale, 'Gráfico de puntos por categoría', 'Strip plot'), T(s.locale, 'promedio', 'mean')), 'strip');
 }
 
 // ── Enjambre (swarm / beeswarm) ────────────────────────────────────────────
@@ -405,7 +401,7 @@ export function beeswarm(positions, r) {
 
 export function swarm(spec, theme) {
   const m = prepare(spec);
-  const s = setup(spec, theme, m, extentOf(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
+  const s = setup(spec, theme, m, extent(m.all), { type: 'swarm', dodge: spec.dodge ?? false });
   const groupsOf = (c) => (s.multiHue && (spec.dodge ?? false) ? m.hues.map((h, hi2) => [[h], hi2]) : [[m.hues, 0]]);
   // Radio automático: se achica hasta que el enjambre más ancho quepa.
   let r = spec.radius ?? (theme.marks?.pointRadius ?? 4);
@@ -429,7 +425,7 @@ export function swarm(spec, theme) {
     parts.splice(0, parts.length, dotLayer(parts));
     s.body.marks.push(g({}, parts));
   }
-  return finish(s, describeGroups(m, median, s.fmt, s.locale, T('Swarm plot', 'Gráfico de enjambre', s.locale), T('median', 'mediana', s.locale)), 'swarm');
+  return finish(s, describeGroups(m, median, s.fmt, s.locale, T(s.locale, 'Gráfico de enjambre', 'Swarm plot'), T(s.locale, 'mediana', 'median')), 'swarm');
 }
 
 // ── Estimación con intervalo (point) ───────────────────────────────────────
@@ -471,7 +467,7 @@ export function point(spec, theme) {
   const showEnd = multi && (spec.labels ?? true) && m.hues.length <= 4;
   // Reserva espacio a la derecha para las etiquetas al final.
   const endW = showEnd ? Math.min(140, Math.max(...m.hues.map((h) => measure(h, 12, 500)))) + 16 : 0;
-  const s = setup({ ...spec, width: spec.width }, theme, m, extentOf(ext), { type: 'point', dodge: false, zero: est === 'sum' });
+  const s = setup({ ...spec, width: spec.width }, theme, m, extent(ext), { type: 'point', dodge: false, zero: est === 'sum' });
   const vertical = s.vertical;
   if (vertical && showEnd) {
     // Recalcula el eje de categorías dejando espacio a la derecha.
@@ -489,7 +485,7 @@ export function point(spec, theme) {
     const pts = m.cats.map((c) => [c, res.get(c + '\u0000' + h)]).filter(([, r]) => r);
     const parts = [];
     if (spec.join !== false && pts.length > 1) {
-      const d = pts.map(([c, r], i) => { const [x, y] = s.P(cposOf(c, hi2), r.e); return (i ? 'L' : 'M') + x.toFixed(2) + ',' + y.toFixed(2); }).join('');
+      const d = polyline(pts.map(([c, r]) => s.P(cposOf(c, hi2), r.e)));
       parts.push(el('path', { d, fill: 'none', stroke: color, strokeWidth: lw, strokeLinejoin: 'round', strokeLinecap: 'round', strokeOpacity: 0.9 }));
     }
     for (const [c, r] of pts) {
@@ -498,8 +494,8 @@ export function point(spec, theme) {
       if (eb) bits.push(seg(s, cp, r.lo, cp, r.hi, { stroke: color, strokeWidth: 2, strokeLinecap: 'round' }));
       const [x, y] = s.P(cp, r.e);
       bits.push(el('circle', { cx: x, cy: y, r: (theme.marks?.pointRadius ?? 4) + 0.5, fill: color, stroke: theme.surface, strokeWidth: theme.marks?.ring ?? 2 }));
-      const ebName = eb === 'ci' ? `IC ${Math.round((spec.level ?? 0.95) * 100)}%` : eb === 'sd' ? T('± SD', '± DE', s.locale) : eb === 'se' ? T('± SE', '± EE', s.locale) : eb === 'pi' ? T('95% range', 'rango 95%', s.locale) : '';
-      const estName = est === 'median' ? T('Median', 'Mediana', s.locale) : est === 'sum' ? T('Sum', 'Suma', s.locale) : T('Mean', 'Promedio', s.locale);
+      const ebName = eb === 'ci' ? `IC ${Math.round((spec.level ?? 0.95) * 100)}%` : eb === 'sd' ? T(s.locale, '± DE', '± SD') : eb === 'se' ? T(s.locale, '± EE', '± SE') : eb === 'pi' ? T(s.locale, 'rango 95%', '95% range') : '';
+      const estName = est === 'median' ? T(s.locale, 'Mediana', 'Median') : est === 'sum' ? T(s.locale, 'Suma', 'Sum') : T(s.locale, 'Promedio', 'Mean');
       parts.push(g({ class: 'pa-m', 'data-tip': tip(fmtTipLabel(c, h), `${estName}: ${s.fmt(r.e)}`, eb ? `${ebName}: ${s.fmt(r.lo)} – ${s.fmt(r.hi)}` : '', `n = ${r.n}`) }, bits));
     }
     if (showEnd && vertical && pts.length) {
@@ -517,14 +513,14 @@ export function point(spec, theme) {
       s.body.post.push(text(e.x, e.y + 4, truncate(e.label, endW - 12, 12, 500), { fill: readable(e.color, theme), fontSize: 12, fontWeight: 600 }));
     }
   }
-  const estW = est === 'median' ? T('median', 'mediana', s.locale) : est === 'sum' ? T('sum', 'suma', s.locale) : T('mean', 'promedio', s.locale);
-  return finish(s, describeGroups(m, (vs) => estimate(vs, est, false).e, s.fmt, s.locale, T('Point plot', 'Gráfico de estimación con intervalo', s.locale), estW), 'point');
+  const estW = est === 'median' ? T(s.locale, 'mediana', 'median') : est === 'sum' ? T(s.locale, 'suma', 'sum') : T(s.locale, 'promedio', 'mean');
+  return finish(s, describeGroups(m, (vs) => estimate(vs, est, false).e, s.fmt, s.locale, T(s.locale, 'Gráfico de estimación con intervalo', 'Point plot'), estW), 'point');
 }
 
 // ── Descripción ────────────────────────────────────────────────────────────
 
 function describeGroups(m, stat, fmt, locale, kind, statName) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const rows = [];
   for (const c of m.cats) for (const h of m.hues) {
     const vs = m.get(c, h);

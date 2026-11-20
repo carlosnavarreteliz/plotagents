@@ -1,4 +1,5 @@
-import { parseRgb, lin, oklab, contrast } from './rgb.js';
+import { parseRgb, lin, oklab, toOklab, contrast } from './rgb.js';
+import { isEn } from './i18n.js';
 // Validador de paletas categóricas: lo mismo que se usó para validar las
 // paletas de fábrica, disponible para que un agente revise la suya.
 // Umbrales: banda de luminosidad OKLCH, croma mínimo, separación ΔE (OKLab×100)
@@ -27,12 +28,12 @@ function dE(a, b, kind) {
  * status: 'pass' | 'warn' | 'fail'. `pairs: 'all'` para dispersión y mapas.
  */
 export function validatePalette(colors, { mode = 'light', surface, pairs = 'adjacent', locale = 'es', minChroma = CHROMA_FLOOR } = {}) {
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const pal = colors.map(String);
   surface = surface || (mode === 'dark' ? '#0B0F2B' : '#FCFBF9');
   const checks = [];
   const [lo, hi] = BAND[mode] || BAND.light;
-  const Ls = pal.map((c) => oklab(rgbLin(c)));
+  const Ls = pal.map(toOklab);
   const off = pal.filter((c, i) => Ls[i][0] < lo || Ls[i][0] > hi);
   checks.push({ name: 'lightness', status: off.length ? 'fail' : 'pass', detail: off.length ? (en ? `Outside the lightness band ${lo}–${hi}: ` : `Fuera de la banda de luminosidad ${lo}–${hi}: `) + off.join(', ') : en ? 'All inside the lightness band.' : 'Todos dentro de la banda de luminosidad.' });
   const gray = pal.filter((c, i) => Math.hypot(Ls[i][1], Ls[i][2]) < (Number.isFinite(+minChroma) ? +minChroma : CHROMA_FLOOR));

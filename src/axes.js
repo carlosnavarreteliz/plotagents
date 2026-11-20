@@ -2,7 +2,7 @@
 import { el, g, text, linkWrap } from './svg.js';
 import { measure, truncate } from './text.js';
 import { SIZES } from './frame.js';
-import { isColor } from './theme.js';
+import { isColor, halo } from './theme.js';
 import { ctx } from './context.js';
 
 /** Líneas de grilla horizontales con etiquetas a la izquierda. */
@@ -154,17 +154,21 @@ export function yTickLabels(ticks, y, area, theme, fmt, { inside, unit } = {}) {
     const py = Math.round(y(t)) + 0.5;
     const label = fmt(t) + (unit && i === ticks.length - 1 ? ' ' + unit : '');
     return ins
-      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' })
+      ? text(area.x, py - 5 * Math.max(1, ctx.textScale * 0.8), label, { fill: theme.muted, fontSize: size, ...halo(theme) })
       : text(area.x - 8, py + 4, label, { fill: theme.muted, fontSize: size, textAnchor: 'end' });
   }));
 }
 
+/** Lista de objetos: refLines/annotations pueden llegar como texto, número, null o un solo objeto. */
+export const objList = (v) => [].concat(v ?? []).filter((r) => r && typeof r === 'object');
+
 /** Líneas de referencia: metas, promedios, umbrales. Sólidas, nunca punteadas. */
 export function refLinesY(refs = [], y, area, theme, fmt) {
   const out = [];
-  for (const r of refs) {
-    if (r.y === undefined) continue;
+  for (const r of objList(refs)) {
+    if (r.y == null) continue;
     const py = Math.round(y(r.y)) + 0.5;
+    if (!Number.isFinite(py)) continue; // y no numérico ("abc"): no se dibuja
     if (py < area.y - 1 || py > area.y + area.h + 1) continue;
     out.push(el('line', { x1: area.x, x2: area.x + area.w, y1: py, y2: py, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7 }));
     const lab = r.label ? `${r.label} · ${fmt(r.y)}` : fmt(r.y);
@@ -177,9 +181,10 @@ export function refLinesY(refs = [], y, area, theme, fmt) {
 
 export function refLinesX(refs = [], x, area, theme, fmt) {
   const out = [];
-  for (const r of refs) {
+  for (const r of objList(refs)) {
     if (r.x === undefined || r.y !== undefined) continue;
     const px = Math.round(x(r.x)) + 0.5;
+    if (!Number.isFinite(px)) continue;
     out.push(el('line', { x1: px, x2: px, y1: area.y, y2: area.y + area.h, stroke: r.color || theme.ink, strokeWidth: 1.25, opacity: 0.7 }));
     const lab = r.label ? `${r.label} · ${fmt(r.x)}` : fmt(r.x);
     out.push(text(px + 5, area.y + 11, lab, { fill: theme.ink, fontSize: 11.5, fontWeight: 500 }));
@@ -209,6 +214,9 @@ export function quietCorner(points, inner, w, h = 14, pad = 8) {
   }
   return { x: best.tx, y: best.ty, anchor: best.anchor };
 }
+
+/** Línea base inferior del área `inner` (eje x de un gráfico con ejes propios). */
+export const xBaseline = (inner, theme) => el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis });
 
 /** Trazo de grilla y base según el tema (theme.grid { dash, width }, theme.axis { width }). */
 export function gridAttrs(theme, base = false) {

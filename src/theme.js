@@ -15,7 +15,7 @@ export const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@400;500;600;700&display=swap';
 
 import { resolveColorScale, interpolate, sample } from './colorscales.js';
-import { parseRgb, isColor, lin, rgbToHex, luminance, contrast } from './rgb.js';
+import { parseRgb, isColor, lin, gam, unit, rgbToHex, luminance, contrast } from './rgb.js';
 import { FAMILIES } from './families.js';
 export { parseRgb };
 
@@ -198,7 +198,7 @@ function sanitize(theme, base, trusted = false) {
 
 /** Paleta categórica por nombre: propias, matplotlib cualitativas o muestras de una colormap. */
 function namedPalette(name, n = 8) {
-  if (palettes[name]) return palettes[name];
+  if (own(palettes, name)) return palettes[name]; // own(): "constructor" no es una paleta
   const cs = resolveColorScale(name);
   if (!cs) return null;
   if (cs.kind === 'qualitative') return cs.stops;
@@ -208,7 +208,7 @@ function namedPalette(name, n = 8) {
 
 /** Rampa secuencial/divergente por nombre: propias o cualquier colormap. */
 function namedRamp(name) {
-  if (ramps[name]) return ramps[name];
+  if (own(ramps, name)) return ramps[name];
   const cs = resolveColorScale(name);
   return cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
 }
@@ -289,8 +289,6 @@ export function mix(a, b, t) {
   return rgbToHex(A.map((v, i) => v + (B[i] - v) * t));
 }
 
-const delin = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
-
 
 /** Texto blanco o tinta según qué contraste mejor sobre el relleno. */
 export function textOn(fill, theme) {
@@ -300,13 +298,13 @@ export function textOn(fill, theme) {
 
 /** Interpola en RGB lineal a lo largo de una rampa de colores. t ∈ [0,1]. */
 export function ramp(stops, t) {
-  t = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  t = unit(t);
   const p = t * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(p));
   const f = p - i;
   const a = hexToRgb(stops[i]).map(lin);
   const b = hexToRgb(stops[i + 1]).map(lin);
-  return rgbToHex(a.map((v, k) => delin(v + (b[k] - v) * f)));
+  return rgbToHex(a.map((v, k) => gam(v + (b[k] - v) * f)));
 }
 
 /**

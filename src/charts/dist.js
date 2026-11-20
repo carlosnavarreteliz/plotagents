@@ -1,20 +1,37 @@
 // Distribuciones al estilo seaborn: histograma (histplot), densidad (kdeplot)
 // y distribución acumulada (ecdfplot). Ejes recesivos, marcas finas y color
 // por grupo (`hue`) en orden fijo.
-import { el, g, text, tip, barPath, hitsAny } from '../svg.js';
+import { el, g, text, tip, barPath, hitsAny, polyline } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain, intStep } from '../scale.js';
 import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, num, fieldsOf, fieldKind, uniq, humanize, PlotError, highlightSet } from '../data.js';
-import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth } from '../axes.js';
+import { yAxisMargin, yAxisTop, yGrid, yTickLabels, gridX, ticksWidth, xBaseline } from '../axes.js';
 import { createFrame, hash as hashStr } from '../frame.js';
 import { ctx } from '../context.js';
 import { histogram as binValues, kde as kdeEst, scottBandwidth, ecdf as ecdfEst, quantile, finite, median, extent } from '../stats.js';
+import { isEn } from '../i18n.js';
 
 // ── Utilidades compartidas (también las usa regplot.js) ───────────────────
 
-const EN = (spec) => String(spec.locale || 'es').startsWith('en');
+
+/** Prólogo común de hist, kde y ecdf: datos, campo medido, hue, idioma y escala log. */
+function prologue(spec, horizontal = false) {
+  const data = ensureData(spec);
+  const fields = fieldsOf(data);
+  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
+  requireField(data, field, horizontal ? 'y' : 'x');
+  const hue = hueField(spec);
+  if (hue) requireField(data, hue, 'hue');
+  const en = isEn(spec.locale);
+  const locale = spec.locale || 'es';
+  const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
+  return { data, field, hue, en, locale, isLog };
+}
+
+/** Grupos con sus valores; en log, sólo los > 0 (un grupo puede quedar vacío). */
+const logGroups = (data, field, hue, isLog) => groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
 
 /** Error con pista cuando el campo no tiene ningún número graficable. */
 function noNumbers(field, en, isLog) {
@@ -104,19 +121,11 @@ function rangeLabel(a, b, fx) {
  * cumulative, commonNorm (true), xScale 'log', xDomain, yDomain.
  */
 export function hist(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
   const horizontal = !spec.x && !!spec.y;
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, horizontal ? 'y' : 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
-  const locale = spec.locale || 'es';
-  const isLog = (horizontal ? spec.yScale : spec.xScale) === 'log';
+  const { data, field, hue, en, locale, isLog } = prologue(spec, horizontal);
   const tr = T(isLog);
   // Sin valores > 0 en log, un grupo queda vacío: fuera (leyenda fantasma y 0/0 al normalizar).
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
+  const groups = logGroups(data, field, hue, isLog).filter((gr) => gr.values.length);
   const all = groups.flatMap((gr) => gr.values);
   if (!all.length) throw noNumbers(field, en, isLog);
   const N = all.length;
@@ -214,7 +223,7 @@ export function hist(spec, theme) {
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y - 2, width: inner.w, height: inner.h + 2 })));
     body.push(yGrid(vAx.ticks, yS, inner, theme));
     body.push(g({ clipPath: `url(#${clipId})` }, drawBins({ bins, H, base, K, multiple, element: spec.element, xS, yS, theme, M, colorOf, single, inner, groups, fy, fx, stat, horizontal: false, statLabel })));
-    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: k.map(([t, d], i) => `${i ? 'L' : 'M'}${xS(tr.inv(t)).toFixed(2)},${yS(d).toFixed(2)}`).join(''), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: single ? 0.8 : 1 })));
+    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: polyline(k.map(([t, d]) => [xS(tr.inv(t)), yS(d)])), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: single ? 0.8 : 1 })));
     body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: Math.round(yS(0)) + 0.5, y2: Math.round(yS(0)) + 0.5, stroke: theme.axis, strokeWidth: 1 }));
     body.push(gridX(isLog ? bAx.ticks : bAx.ticks, xS, inner, theme, tickFmt(fx, bAx), { lines: false }));
     body.push(yTickLabels(vAx.ticks, yS, inner, theme, ticksF, { inside: false }));
@@ -231,7 +240,7 @@ export function hist(spec, theme) {
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w + 2, height: inner.h })));
     body.push(gridX(vAx.ticks, xS, inner, theme, tickFmt(fy, vAx), { lines: true }));
     body.push(drawBins({ bins, H, base, K, multiple, element: spec.element, xS, yS, theme, M, colorOf, single, inner, groups, fy, fx, stat, horizontal: true, statLabel }));
-    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: k.map(([t, d], i) => `${i ? 'L' : 'M'}${xS(d).toFixed(2)},${yS(tr.inv(t)).toFixed(2)}`).join(''), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', opacity: single ? 0.8 : 1 })));
+    if (kdes) kdes.forEach((k, gi) => body.push(el('path', { d: polyline(k.map(([t, d]) => [xS(d), yS(tr.inv(t))])), fill: 'none', stroke: single ? theme.ink : colorOf(gi), strokeWidth: M.lineWidth ?? 2, strokeLinejoin: 'round', opacity: single ? 0.8 : 1 })));
     body.push(el('line', { x1: Math.round(xS(0)) + 0.5, x2: Math.round(xS(0)) + 0.5, y1: inner.y, y2: inner.y + inner.h, stroke: theme.axis, strokeWidth: 1 }));
     body.push(g({ class: 'pa-axis' }, binTicks.ticks.map((t) => text(inner.x - 8, yS(t) + 4, bf(t), { fill: theme.muted, fontSize: theme.type?.axis ?? 11.5, textAnchor: 'end' }))));
     axisTitles(body, theme, area, inner, { y: spec.yLabel === false ? null : spec.yLabel ?? humanize(field), x: spec.xLabel ?? statLabel });
@@ -260,7 +269,7 @@ function drawBins({ bins, H, base, K, multiple, element, xS, yS, theme, M, color
         if (!horizontal) { pts.push([xS(b.x0), yS(H[gi][i])], [xS(b.x1), yS(H[gi][i])]); }
         else { pts.push([xS(H[gi][i]), yS(b.x0)], [xS(H[gi][i]), yS(b.x1)]); }
       });
-      const line = pts.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(2)},${b.toFixed(2)}`).join('');
+      const line = polyline(pts);
       const baseline = bins.map((b, i) => (!horizontal ? [[xS(b.x1), yS(base[gi][i])], [xS(b.x0), yS(base[gi][i])]] : [[xS(base[gi][i]), yS(b.x1)], [xS(base[gi][i]), yS(b.x0)]])).reverse().flat();
       const area = line + 'L' + baseline.map(([a, b]) => `${a.toFixed(2)},${b.toFixed(2)}`).join('L') + 'Z';
       out.push(g({ class: 'pa-m', 'data-tip': tip(groups[gi].key || statLabel, `n = ${groups[gi].values.length}`) }, [
@@ -314,17 +323,9 @@ function drawBins({ bins, H, base, K, multiple, element, xS, yS, theme, M, color
  * rug, labels ('auto' rotula el pico de cada grupo), xScale 'log', xDomain, yDomain.
  */
 export function kde(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
-  const locale = spec.locale || 'es';
-  const isLog = spec.xScale === 'log';
+  const { data, field, hue, en, locale, isLog } = prologue(spec);
   const tr = T(isLog);
-  const groups0 = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values }));
+  const groups0 = logGroups(data, field, hue, isLog);
   if (!groups0.some((gr) => gr.values.length)) throw noNumbers(field, en, isLog);
   const groups = groups0.filter((gr) => gr.values.length > 1);
   if (!groups.length) return emptyChart(spec, theme, en);
@@ -448,16 +449,8 @@ export function kde(spec, theme) {
 
 /** Distribución acumulada empírica. Opciones: x, hue, complementary, xScale 'log', xDomain. */
 export function ecdf(spec, theme) {
-  const data = ensureData(spec);
-  const fields = fieldsOf(data);
-  const field = spec.x ?? spec.y ?? fields.find((f) => fieldKind(data, f) === 'number');
-  requireField(data, field, 'x');
-  const hue = hueField(spec);
-  if (hue) requireField(data, hue, 'hue');
-  const en = EN(spec);
-  const locale = spec.locale || 'es';
-  const isLog = spec.xScale === 'log';
-  const groups = groupValues(data, field, hue).map((gr) => ({ ...gr, values: isLog ? gr.values.filter((v) => v > 0) : gr.values })).filter((gr) => gr.values.length);
+  const { data, field, hue, en, locale, isLog } = prologue(spec);
+  const groups = logGroups(data, field, hue, isLog).filter((gr) => gr.values.length);
   if (!groups.length) throw noNumbers(field, en, isLog);
   const all = groups.flatMap((gr) => gr.values);
   const K = groups.length;
@@ -488,26 +481,37 @@ export function ecdf(spec, theme) {
     const pts = ecdfEst(groups[k].values);
     const comp = !!spec.complementary;
     const Y = (p) => (comp ? 1 - p : p);
-    let d = `M${xS(Math.max(xAx.min, pts[0][0])).toFixed(2)},${yS(Y(0)).toFixed(2)}`;
-    // Escalones a menos de medio píxel se funden en uno (50 mil valores → ~1 por columna).
-    let prev = 0, colX = NaN, colP0 = 0, colP1 = 0;
-    const flush = () => { if (Number.isFinite(colX)) { const px = colX.toFixed(2); d += `L${px},${yS(Y(colP0)).toFixed(2)}L${px},${yS(Y(colP1)).toFixed(2)}`; } };
-    for (const [x, p] of pts) {
-      const fx0 = xS(Math.min(xAx.max, Math.max(xAx.min, x)));
-      if (Number.isFinite(colX) && Math.abs(fx0 - colX) < 0.5) colP1 = p;
-      else { flush(); colX = fx0; colP0 = prev; colP1 = p; }
-      prev = p;
-    }
-    flush();
-    d += `L${xS(xAx.max).toFixed(2)},${yS(Y(1)).toFixed(2)}`;
+    // Escalones a menos de `px` píxeles se funden en uno (50 mil valores → ~1 por columna).
+    // Trazo relativo (h/v) sobre décimas de píxel ya redondeadas: el error no se acumula
+    // y cada escalón cuesta ~10 bytes en vez de ~30.
+    const T = (v) => Math.round(v * 10);
+    const stepPath = (px) => {
+      let cx = T(xS(Math.max(xAx.min, pts[0][0]))), cy = T(yS(Y(0)));
+      let d = `M${cx / 10},${cy / 10}`;
+      const go = (nx, ny) => { if (nx !== cx) d += `h${(nx - cx) / 10}`; if (ny !== cy) d += `v${(ny - cy) / 10}`; cx = nx; cy = ny; };
+      let prev = 0, colX = NaN, colP0 = 0, colP1 = 0;
+      const flush = () => { if (Number.isFinite(colX)) { go(T(colX), T(yS(Y(colP0)))); go(cx, T(yS(Y(colP1)))); } };
+      for (const [x, p] of pts) {
+        const fx0 = xS(Math.min(xAx.max, Math.max(xAx.min, x)));
+        if (Number.isFinite(colX) && Math.abs(fx0 - colX) < px) colP1 = p;
+        else { flush(); colX = fx0; colP0 = prev; colP1 = p; }
+        prev = p;
+      }
+      flush();
+      go(T(xS(xAx.max)), cy); go(cx, T(yS(Y(1))));
+      return d;
+    };
+    const d = stepPath(0.5);
+    // El área de contacto (trazo de 12 px) no necesita el detalle del trazo visible.
+    const dHit = pts.length > 400 ? stepPath(3) : d;
     const vs = [...groups[k].values].sort((a, b) => a - b);
     body.push(g({ class: 'pa-m', 'data-tip': tip(groups[k].key || humanize(field), `P25: ${fx(quantile(vs, 0.25))}`, `${en ? 'Median' : 'Mediana'}: ${fx(quantile(vs, 0.5))}`, `P75: ${fx(quantile(vs, 0.75))}`, `P90: ${fx(quantile(vs, 0.9))}`) }, [
-      el('path', { d, fill: 'none', stroke: 'transparent', strokeWidth: 12 }),
+      el('path', { d: dHit, fill: 'none', stroke: 'transparent', strokeWidth: 12 }),
       el('path', { d, fill: 'none', stroke: colorOf(k), strokeWidth: hl && hl.has(groups[k].key) ? (M.lineWidth ?? 2) + 0.75 : M.lineWidth ?? 2, strokeLinejoin: 'round' }),
     ]));
   }
   body.push(text(inner.x + inner.w, py50 - 5, en ? 'Median' : 'Mediana', { fill: theme.muted, fontSize: theme.type?.axis ?? 11.5, textAnchor: 'end', ...halo(theme) }));
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
   body.push(gridX(xAx.ticks, xS, inner, theme, tickFmt(fx, xAx), { lines: false }));
   body.push(yTickLabels(vAx.ticks, yS, inner, theme, ticksF));
   axisTitles(body, theme, area, inner, { x: spec.xLabel ?? humanize(field), y: spec.yLabel === false ? null : spec.yLabel ?? (spec.complementary ? (en ? 'Share above' : 'Proporción sobre el valor') : en ? 'Cumulative share' : 'Proporción acumulada') });

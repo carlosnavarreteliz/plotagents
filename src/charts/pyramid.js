@@ -2,16 +2,16 @@
 // central, con los tramos de edad en la columna del medio (sin ejes repetidos).
 // Opcional: comparación con otro periodo como contorno escalonado.
 import { tipper } from '../tooltip.js';
+import { sum } from '../stats.js';
 import { el, g, text, tip, barPath } from '../svg.js';
-import { measure } from '../text.js';
+import { measure, truncate } from '../text.js';
 import { makeFormat, formatNumber } from '../format.js';
 import { niceStep, linear } from '../scale.js';
 import { colorMap, readable } from '../theme.js';
 import { ensureData, requireField, num, uniq, fieldsOf, fieldKind, PlotError } from '../data.js';
 import { createFrame } from '../frame.js';
-import { esEn } from '../i18n.js';
+import { esEn as T, isEn } from '../i18n.js';
 
-const T = (en, es, locale) => esEn(locale, es, en);
 const lead = (s) => { const m = /^\s*(\d+)/.exec(String(s)); return m ? +m[1] : NaN; };
 
 export function pyramid(spec, theme) {
@@ -39,7 +39,7 @@ export function pyramid(spec, theme) {
   }
 
   const sides = spec.sides ?? uniq(rows.map((r) => String(r[sideF])));
-  if (sides.length !== 2) throw new PlotError(T(`A population pyramid needs exactly 2 groups in "${sideF}" (found ${sides.length}).`, `La pirámide necesita exactamente 2 grupos en "${sideF}" (hay ${sides.length}).`, locale), T('Filter the data to two groups, e.g. men and women.', 'Filtra los datos a dos grupos, por ejemplo hombres y mujeres.', locale));
+  if (sides.length !== 2) throw new PlotError(T(locale, `La pirámide necesita exactamente 2 grupos en "${sideF}" (hay ${sides.length}).`, `A population pyramid needs exactly 2 groups in "${sideF}" (found ${sides.length}).`), T(locale, 'Filtra los datos a dos grupos, por ejemplo hombres y mujeres.', 'Filter the data to two groups, e.g. men and women.'));
   let ages = uniq([...rows, ...(cmpRows || [])].map((r) => String(r[ageF])));
   if (ages.every((a) => Number.isFinite(lead(a)))) ages.sort((a, b) => lead(a) - lead(b));
   if (spec.ageOrder) ages = spec.ageOrder.map(String);
@@ -55,8 +55,8 @@ export function pyramid(spec, theme) {
     return m;
   };
   const cur = sumBy(rows), cmp = cmpRows ? sumBy(cmpRows) : null;
-  const total = [...cur.values()].reduce((a, b) => a + b, 0) || 1;
-  const cmpTotal = cmp ? [...cmp.values()].reduce((a, b) => a + b, 0) || 1 : 1;
+  const total = sum([...cur.values()]) || 1;
+  const cmpTotal = cmp ? sum([...cmp.values()]) || 1 : 1;
   const pct = spec.percent === true || spec.format === 'percent' || spec.format?.type === 'percent';
   const val = (m, a, s, tot) => { const v = m.get(a + '\u0000' + s) || 0; return pct ? v / tot : v; };
   const V = (a, s) => val(cur, a, s, total);
@@ -71,7 +71,7 @@ export function pyramid(spec, theme) {
 
   const cmap = colorMap(sides, theme, spec.colors);
   const colorOf = (s) => cmap.get(s);
-  const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T('Comparison', 'Comparación', locale));
+  const cmpLabel = spec.compareLabel ?? spec._prev?.label ?? (spec.compare !== undefined ? String(spec.compare) : T(locale, 'Comparación', 'Comparison'));
   const legend = cmp && spec.legend !== false ? [{ label: cmpLabel, color: theme.ink, shape: 'line' }] : [];
 
   const frame = createFrame(spec, theme, { height: 420 });
@@ -84,7 +84,9 @@ export function pyramid(spec, theme) {
     area = { ...area, h: frame.bottom - area.y };
   }
   const ageSize = theme.type?.axis ?? 11.5;
-  const centerW = Math.max(...ages.map((a) => measure(a, ageSize, 500))) + 18;
+  // Etiquetas de edad larguísimas se recortan para que las barras no queden con ancho negativo.
+  const centerMax = Math.max(40, area.w * 0.4);
+  const centerW = Math.min(Math.max(...ages.map((a) => measure(a, ageSize, 500))) + 18, centerMax);
   const labelsOn = spec.labels === true;
   const sample = fmt(vmax);
   const endPad = labelsOn ? measure(sample, 11, 600) + 8 : 4;
@@ -119,7 +121,7 @@ export function pyramid(spec, theme) {
   // Encabezados: nombre de cada lado en su color (legible) y su participación.
   const sideTot = (s) => ages.reduce((a, ag) => a + (cur.get(ag + '\u0000' + s) || 0), 0);
   sides.forEach((s, k) => {
-    const lab = s;
+    const lab = truncate(s, Math.max(30, halfW - 70), 13, 600); // nombres largos no se salen del lienzo
     const sh = share(sideTot(s)) ;
     const hx = k === 0 ? cx0 - 2 : cx1 + 2;
     const anchor = k === 0 ? 'end' : 'start';
@@ -132,7 +134,7 @@ export function pyramid(spec, theme) {
   top.forEach((a, i) => {
     const y = yOf(i);
     // Etiqueta de edad en la columna central.
-    body.push(text((cx0 + cx1) / 2, y + bh / 2 + ageSize * 0.36, a, { fill: theme.lede, fontSize: ageSize, fontWeight: 500, textAnchor: 'middle' }));
+    body.push(text((cx0 + cx1) / 2, y + bh / 2 + ageSize * 0.36, truncate(a, centerW - 12, ageSize, 500), { fill: theme.lede, fontSize: ageSize, fontWeight: 500, textAnchor: 'middle' }));
     sides.forEach((s, k) => {
       const v = V(a, s);
       const w = len(Math.min(v, dmax));
@@ -171,7 +173,7 @@ export function pyramid(spec, theme) {
   }
 
   // Descripción
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   let big = null;
   for (const a of ages) for (const s of sides) { const v = cur.get(a + '\u0000' + s) || 0; if (!big || v > big[2]) big = [a, s, v]; }
   const desc = (en ? 'Population pyramid. ' : 'Pirámide de población. ')

@@ -89,6 +89,7 @@ seaborn names work (`histplot`, `kdeplot`, `boxplot`, `violinplot`, `lmplot`, `s
 - Hard-to-tell custom palette → `lint` names the offending pair.
 - Numbers as text ("1.234,5", "12%", "$ 3.000") → parsed automatically.
 - Tens of thousands of points → drawn as batched paths, still fast.
+- Empty categories (`null`, `""`) → grouped as "(no data)" / "(sin dato)", never a "null" label.
 
 ## Dashboards
 

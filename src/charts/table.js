@@ -5,16 +5,17 @@
 // minigráfico, avance contra la meta, estado). En pantallas angostas cada fila
 // se vuelve una tarjeta. Las filas se paginan; en el navegador, render()
 // agrega orden por columna, búsqueda y paso de página.
-import { el, g, text, tip, esc, linkWrap } from '../svg.js';
+import { el, g, text, tip, linkWrap, polyline } from '../svg.js';
 import { measure, truncate, wrap } from '../text.js';
 import { makeFormat, formatDate, parseDate, currencyPrefix } from '../format.js';
 import { ensureData, fieldsOf, fieldKind, num, uniq, humanize, PlotError, aggregate } from '../data.js';
 import { createFrame } from '../frame.js';
 import { ctx } from '../context.js';
 import { ramp, textOn, readable, contrast, mix } from '../theme.js';
+import { extent } from '../stats.js';
 import { dateUnit } from '../scale.js';
 import { resolveColorScale, sample } from '../colorscales.js';
-import { words, langOf } from '../i18n.js';
+import { words, langOf, isEn } from '../i18n.js';
 import { railAccessors, railValues, railExtent, railMarks, railTip } from '../rail.js';
 
 // Tipos de columna (y sus alias): lo que el agente escriba se entiende.
@@ -157,7 +158,7 @@ function prepareColumns(spec, data, theme, locale) {
       else if (isBool) type = 'check';
       else if (kind === 'date') type = 'date';
       else if (kind === 'number' || (kind === 'year' && !c.isLabel)) {
-        const lo = Math.min(...finite), hi = Math.max(...finite);
+        const [lo, hi] = extent(finite);
         if (ID_RE.test(String(c.field))) type = 'text';
         else if (kind === 'year') type = 'number';
         else if (DELTA_RE.test(String(c.field)) || DELTA_RE.test(String(c.label))) type = 'delta';
@@ -195,7 +196,7 @@ function prepareColumns(spec, data, theme, locale) {
       // una escala recortada; lo de fuera es un chevrón (ver src/rail.js).
       c.rg = railAccessors(c);
       const ends = data.flatMap((r) => railExtent(num(r[c.field]), railValues(c.rg, r)));
-      c.rlo = Math.min(...ends); c.rhi = Math.max(...ends);
+      [c.rlo, c.rhi] = extent(ends);
       // Con `clip`, la escala de la columna va del menor mínimo al mayor máximo.
       const mins = data.map((r) => c.rg.min(r)).filter(Number.isFinite), maxs = data.map((r) => c.rg.max(r)).filter(Number.isFinite);
       c.clo = mins.length ? Math.min(...mins) : c.rlo; c.chi = maxs.length ? Math.max(...maxs) : c.rhi;
@@ -241,10 +242,10 @@ function prepareColumns(spec, data, theme, locale) {
     }
     c.align = c.align ?? (['number', 'bar', 'heat', 'delta', 'progress', 'range'].includes(type) ? 'right' : type === 'check' ? 'center' : type === 'sparkline' ? 'left' : 'left');
     if (type === 'bar' || type === 'heat') {
-      c.lo = Math.min(0, ...finite);
-      c.hi = Math.max(0, ...finite);
+      c.lo = Math.min(0, extent(finite)[0]);
+      c.hi = Math.max(0, extent(finite)[1]);
       if (type === 'heat') {
-        c.hlo = Math.min(...finite); c.hhi = Math.max(...finite);
+        [c.hlo, c.hhi] = extent(finite);
         const cs = resolveColorScale(c.colorScale ?? c.cmap);
         c.mid = c.midpoint ?? spec.midpoint ?? (cs && typeof c.colorScale === 'object' && c.colorScale.mid !== undefined ? +c.colorScale.mid : undefined) ?? ((!cs || cs.kind === 'diverging') && c.hlo < 0 && c.hhi > 0 ? 0 : undefined);
         c.stops = cs && cs.kind !== 'qualitative' ? sample(cs.stops, 17) : null;
@@ -528,7 +529,7 @@ export function table(spec, theme) {
     if (vals.length < 2) return '';
     const mn = Math.min(...vals), mx = Math.max(...vals);
     const pts = vals.map((v, k) => [x + (k / (vals.length - 1)) * (w - 4) + 1, cy + h / 2 - ((v - mn) / (mx - mn || 1)) * h]);
-    const d = pts.map(([a, b], k) => (k ? 'L' : 'M') + a.toFixed(1) + ',' + b.toFixed(1)).join('');
+    const d = polyline(pts, 1);
     const [lx, ly] = pts[pts.length - 1];
     return [
       el('path', { d: d + `L${lx.toFixed(1)},${(cy + h / 2).toFixed(1)}L${pts[0][0].toFixed(1)},${(cy + h / 2).toFixed(1)}Z`, fill: muted ? dimC : accent, fillOpacity: 0.08, stroke: 'none' }),
@@ -652,7 +653,7 @@ export function table(spec, theme) {
         }
         const rail = railMarks({ v: n, vals, a, b, x0: trackX, w: trackW, my, clipped, track: !!vals.domain, theme, dot: muted ? dimC : accent });
         out.push(...rail.out);
-        const en = String(locale).startsWith('en');
+        const en = isEn(locale);
         const tipText = railTip({ en, label: c.label, s, fr: fmtOf(c, r), vals, row: r, past: rail.past, scale: clipped ? [a, b] : null,
           labels: { band: c.bandLabel, median: c.medianLabel, min: c.minLabel, max: c.maxLabel, domain: c.domainLabel } });
         return { out, tip: tipText };

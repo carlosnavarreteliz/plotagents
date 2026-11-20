@@ -90,6 +90,7 @@ Los nombres de seaborn funcionan (`histplot`, `kdeplot`, `boxplot`, `violinplot`
 - Paleta propia difícil de distinguir → `lint` nombra el par problemático.
 - Números como texto ("1.234,5", "12%", "$ 3.000") → se interpretan automáticamente.
 - Decenas de miles de puntos → se dibujan como trazados agrupados y sigue siendo rápido.
+- Categorías vacías (`null`, `""`) → van juntas en "(sin dato)" / "(no data)", nunca como "null".
 
 ## Tableros
 

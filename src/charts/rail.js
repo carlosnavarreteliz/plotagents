@@ -14,9 +14,10 @@
 // (ni `domain`) no hay riel: se escribe la cifra (`fallback: "value"`) o
 // nada (`fallback: "none"`), nunca un punto suelto que parezca un rango.
 import { tipper } from '../tooltip.js';
+import { extent } from '../stats.js';
 import { el, g, text } from '../svg.js';
 import { makeFormat } from '../format.js';
-import { ensureData, num, humanize } from '../data.js';
+import { ensureData, humanize } from '../data.js';
 import { createFrame } from '../frame.js';
 import { langOf } from '../i18n.js';
 import { railAccessors, railAccessor, railValues, railExtent, railMarks, railTip, textOf } from '../rail.js';
@@ -58,7 +59,7 @@ export function rail(spec, theme) {
   let a, b, clipped = false;
   if (vals.domain) { [a, b] = vals.domain; clipped = true; }
   else if (hasRange && spec.clip) { a = Math.min(vals.min, vals.max); b = Math.max(vals.min, vals.max); clipped = b > a; }
-  else if (hasRange) { a = Math.min(...all); b = Math.max(...all); }
+  else if (hasRange) [a, b] = extent(all);
 
   const body = [];
   let desc;

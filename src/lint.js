@@ -544,7 +544,7 @@ function checkOptions(spec, { type, data, fields, err, warn, L }) {
     const list = typeof spec.palettes === 'string' ? spec.palettes.split(/[\s,]+/).filter(Boolean) : spec.palettes;
     if (!Array.isArray(list)) err('palettes-type', L('`palettes` debe ser una lista de nombres de paleta o `true`.', '`palettes` must be a list of palette names or `true`.'), 'palettes: ["cdia", "arcilla", "nordico", "tinta"]');
     else for (const n of list) {
-      if (typeof n === 'string' && (palettes[n] || resolveColorScale(n))) continue;
+      if (typeof n === 'string' && (Object.prototype.hasOwnProperty.call(palettes, n) || resolveColorScale(n))) continue;
       const near = typeof n === 'string' ? didYouMean(n, PALETTE_NAMES()) : null;
       warn('palette-unknown', L(`La paleta "${n}" de \`palettes\` no existe: esa alternativa usa la de fábrica.`, `The palette "${n}" in \`palettes\` does not exist: that alternative uses the default.`), (near ? L(`¿Quisiste decir "${near}"? `, `Did you mean "${near}"? `) : '') + L(`Familias: ${familyNames().join(', ')}.`, `Families: ${familyNames().join(', ')}.`));
     }

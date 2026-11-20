@@ -134,7 +134,6 @@ function rgbOf(c) {
   const m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(c);
   return m ? [+m[1], +m[2], +m[3]] : null;
 }
-const hex6 = (rgb) => '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join('');
 
 /** Las variables de color del spec: expresión → { name, fallback, probe }. */
 export function cssVars(spec) {

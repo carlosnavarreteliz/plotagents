@@ -5,12 +5,13 @@ import { el, g, text, tip, dotLayer, hitsAny } from '../svg.js';
 import { measure } from '../text.js';
 import { makeFormat } from '../format.js';
 import { niceDomain, niceStep, linear, log, logDomain } from '../scale.js';
-import { colorMap } from '../theme.js';
+import { colorMap, halo } from '../theme.js';
 import { ensureData, requireField, uniq, num, fieldsOf, fieldKind, humanize, PlotError, highlightSet } from '../data.js';
-import { gridY, gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside } from '../axes.js';
+import { gridX, ticksWidth, refLinesY, refLinesX, yAxisMargin, yAxisTop, yGrid, yTickLabels, quietCorner, isInside, xBaseline } from '../axes.js';
 import { createFrame, SIZES, hash } from '../frame.js';
-import { extent } from '../stats.js';
+import { extent, sum } from '../stats.js';
 import { ctx } from '../context.js';
+import { isEn } from '../i18n.js';
 
 /** Muestra pareja de ~n filas (inferir tipos de campo sin recorrer 50 mil filas). */
 const sampleRows = (data, n = 200) => (data.length <= n ? data : Array.from({ length: n }, (_, i) => data[Math.floor((i * (data.length - 1)) / (n - 1))]));
@@ -32,7 +33,7 @@ export function scatter(spec, theme) {
   if (size) requireField(data, size, 'size');
   if (series) requireField(data, series, 'series');
   const locale = spec.locale || 'es';
-  const en = String(locale).startsWith('en');
+  const en = isEn(locale);
   const xLog = spec.xScale === 'log', yLog = spec.yScale === 'log';
 
   // En escala log, los valores ≤ 0 no tienen posición: se omiten.
@@ -104,7 +105,7 @@ export function scatter(spec, theme) {
   const body = [];
   body.push(yGrid(yS.ticks(dy.step), yS, inner, theme, { baseline: NaN }));
   body.push(gridX(xS.ticks(dx.step), xS, inner, theme, xtf, { baseline: NaN }));
-  body.push(el('line', { x1: inner.x, x2: inner.x + inner.w, y1: inner.y + inner.h + 0.5, y2: inner.y + inner.h + 0.5, stroke: theme.axis }));
+  body.push(xBaseline(inner, theme));
   // Títulos de ejes: horizontales, nunca rotados.
   body.push(text(area.x, area.y + 10, spec.yLabel ?? humanize(y), { fill: theme.lede, fontSize: SIZES.axis, fontWeight: 500 }));
   body.push(text(inner.x + inner.w, inner.y + inner.h + 40, spec.xLabel ?? humanize(x), { fill: theme.lede, fontSize: SIZES.axis, fontWeight: 500, textAnchor: 'end' }));
@@ -113,7 +114,7 @@ export function scatter(spec, theme) {
   // Tendencia lineal (mínimos cuadrados)
   if (spec.trend) {
     const tx = pts.map((p) => (xLog ? Math.log10(p.x) : p.x)), ty = pts.map((p) => (yLog ? Math.log10(p.y) : p.y));
-    const n = tx.length, mx = tx.reduce((a, b) => a + b, 0) / n, my = ty.reduce((a, b) => a + b, 0) / n;
+    const n = tx.length, mx = sum(tx) / n, my = sum(ty) / n;
     let sxy = 0, sxx = 0, syy = 0;
     for (let i = 0; i < n; i++) { sxy += (tx[i] - mx) * (ty[i] - my); sxx += (tx[i] - mx) ** 2; syy += (ty[i] - my) ** 2; }
     const b = sxy / (sxx || 1), a = my - b * mx;
@@ -125,7 +126,7 @@ export function scatter(spec, theme) {
     const clipId = 'pa-clip-trend-' + Math.abs(hash(String(spec.title) + x + y + inner.w + pts.length)).toString(36);
     body.push(el('clipPath', { id: clipId }, el('rect', { x: inner.x, y: inner.y, width: inner.w, height: inner.h })));
     body.push(el('line', { x1: ax, y1: ay, x2: bx, y2: by, stroke: theme.ink, strokeWidth: 1.5, opacity: 0.55, clipPath: `url(#${clipId})` }));
-    const r2s = `R² = ${r2v.toFixed(2).replace('.', String(locale).startsWith('en') ? '.' : ',')}`;
+    const r2s = `R² = ${r2v.toFixed(2).replace('.', isEn(locale) ? '.' : ',')}`;
     const occ = pts.map((p) => [xS(p.x), yS(p.y)]);
     for (let i = 0; i <= 24; i++) occ.push([ax + ((bx - ax) * i) / 24, ay + ((by - ay) * i) / 24]);
     const qc = quietCorner(occ, inner, measure(r2s, 11.5) + 4, 16);
@@ -213,7 +214,7 @@ export function scatter(spec, theme) {
       const box = anchor === 'start' ? [lx, ly - 11, lx + w, ly + 3] : [lx - w, ly - 11, lx, ly + 3];
       if (hitsAny(box, placed)) continue;
       placed.push(box);
-      body.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, stroke: theme.surface, strokeWidth: 3, paintOrder: 'stroke', strokeLinejoin: 'round' }, p.name.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
+      body.push(el('text', { x: lx, y: ly, fill: theme.ink, fontSize: 12, fontWeight: 500, textAnchor: anchor, ...halo(theme) }, p.name.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])));
     }
   }
 

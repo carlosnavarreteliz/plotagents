@@ -75,7 +75,15 @@ function ensureAssets() {
 const geoCache = new Map();
 /** Descarga (una vez por URL) un GeoJSON o TopoJSON. */
 export function loadGeo(url) {
-  if (!geoCache.has(url)) geoCache.set(url, fetch(url).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); }));
+  // Sólo http(s) o rutas relativas: nada de data:, blob: ni javascript:. Las credenciales no viajan a otros orígenes.
+  let u;
+  try { u = new URL(url, globalThis.location?.href); } catch { return Promise.reject(new PlotError(`URL de mapa inválida: ${url}`)); }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return Promise.reject(new PlotError(`El mapa debe venir por http(s): ${url}`));
+  if (!geoCache.has(url)) {
+    const p = fetch(u.href, { credentials: 'same-origin' }).then((r) => { if (!r.ok) throw new PlotError(`No pude descargar el mapa (${r.status}): ${url}`); return r.json(); });
+    p.catch(() => geoCache.delete(url)); // un fallo (red caída) no queda guardado para siempre
+    geoCache.set(url, p);
+  }
   return geoCache.get(url);
 }
 
@@ -474,11 +482,6 @@ export function controlMode(s, opts = {}) {
 }
 
 
-function svgEl(tag, attrs) {
-  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-  return n;
-}
 function range(min, max, value, label) {
   const i = document.createElement('input');
   i.type = 'range'; i.min = min; i.max = max; i.step = 1; i.value = value;
